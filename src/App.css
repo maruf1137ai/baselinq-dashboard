@@ -1,0 +1,27 @@
+.generate-ai-btn {
+  border-radius: 6.977px;
+  background: radial-gradient(
+      62.64% 82.75% at 28.14% -10.42%,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    #272727;
+  box-shadow: 0 3.135px 2.508px 0 rgba(0, 0, 0, 0.12),
+    0 3.398px 3.398px 0 rgba(0, 0, 0, 0.14),
+    0 113.272px 90.618px 0 rgba(0, 0, 0, 0.15),
+    0 47.323px 37.858px 0 rgba(0, 0, 0, 0.15),
+    0 25.301px 20.241px 0 rgba(0, 0, 0, 0.14),
+    0 14.183px 11.347px 0 rgba(0, 0, 0, 0.14),
+    0 7.533px 6.026px 0 rgba(0, 0, 0, 0.13),
+    0 3.135px 2.508px 0 rgba(0, 0, 0, 0.12),
+    0 1.133px 0 0 rgba(255, 255, 255, 0.3) inset, 0 -3.398px 0 0 #080808 inset;
+}
+
+.generate-ai-btn .layer {
+  border-radius: 27.395px;
+  background: #8081f6;
+  filter: blur(6.6694016456604px);
+}
+
+
+
