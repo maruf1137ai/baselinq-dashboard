@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useProjects } from "@/supabse/hook/useProject";
+import { useProjects } from "@/hooks/useProjects";
 
 const NavbarWeather = () => {
   const [weather, setWeather] = useState<any>(null);

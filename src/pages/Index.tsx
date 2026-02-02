@@ -16,7 +16,7 @@ import Asterisk from '@/components/icons/Asterisk';
 import CashIcon from '@/components/icons/CashIcon';
 import Calander2 from '@/components/icons/Calander2';
 import useTask from "@/supabse/hook/useTask";
-import { useUser } from "@/supabse/hook/useUser";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const icons = ['/images/cash-01.png', '/images/calendar-02.png', '/images/shield-01.png', '/images/asterisk-02.png'];
 
@@ -25,7 +25,7 @@ const Index = () => {
 
   const { data: tasks = [], isLoading: loadingTasks } = useTask(projectId);
   const { data: projectsOverview, isLoading: loadingProjectsOverview } = useFetchData('project-overview/');
-  const { data: user } = useUser(); // New hook usage
+  const { data: user } = useCurrentUser(); // Django auth hook
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -50,7 +50,7 @@ const Index = () => {
         <div>
           {/* <p className="text-base text-gray3 mb-1">Dashboard</p>
           <h1 className="text-3xl  tracking-tight text-foreground">Project Overview</h1> */}
-          <p className="text-3xl  tracking-tight text-foreground capitalize">Welcome , {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"} </p>
+          <p className="text-3xl  tracking-tight text-foreground capitalize">Welcome , {user?.name || user?.email?.split('@')[0] || "User"} </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

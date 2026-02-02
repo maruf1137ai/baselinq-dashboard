@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useProjects } from "@/supabse/hook/useProject";
+import { useProjects } from "@/hooks/useProjects";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import React, { useEffect, useState } from "react";
 import { deleteFile, getTaskDocuments } from "@/supabse/api";

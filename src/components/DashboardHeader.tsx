@@ -45,10 +45,9 @@ const notifications = [
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
-  const [showWeather, setShowWeather] = useState(localStorage.getItem("weatherFeed") === "true" ? true : false);
-
-
-
+  const [showWeather, setShowWeather] = useState(
+    localStorage.getItem("weatherFeed") === "true" ? true : false,
+  );
 
   return (
     <>
@@ -123,8 +122,9 @@ export function DashboardHeader() {
                   {notifications.map((item, index) => (
                     <div
                       key={index}
-                      className={`border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${item?.active ? "bg-[#E8F1FF4D]" : "bg-white"
-                        }`}>
+                      className={`border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${
+                        item?.active ? "bg-[#E8F1FF4D]" : "bg-white"
+                      }`}>
                       <div className=" flex items-start gap-3">
                         {item?.active && (
                           <div className="h-2 w-2 bg-primary rounded-full mt-1.5"></div>

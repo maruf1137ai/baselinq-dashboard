@@ -1,4 +1,4 @@
-import { useProjects, useUpdateProject } from "@/supabse/hook/useProject";
+import { useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";

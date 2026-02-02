@@ -30,7 +30,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import useTask, { useUpdateTask } from "@/supabse/hook/useTask";
-import { useUser } from "@/supabse/hook/useUser";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
@@ -365,7 +365,7 @@ export default function TaskDetails() {
   );
   const { taskId } = useParams();
   const { data, isLoading } = useTask(projectId);
-  const { data: user } = useUser();
+  const { data: user } = useCurrentUser();
   const { mutateAsync: updateTask } = useUpdateTask();
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [activeFormats, setActiveFormats] = useState({

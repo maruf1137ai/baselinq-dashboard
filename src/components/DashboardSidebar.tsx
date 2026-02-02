@@ -33,10 +33,18 @@ import Settings from "./icons/Settings";
 import Help from "./icons/Help";
 import Document2 from "./icons/Document2";
 import Logo from "./icons/Logo";
-import { useProjects } from "@/supabse/hook/useProject"; // Restored import
-import { useUser } from "@/supabse/hook/useUser"; // New import
-import { signOutUser } from "@/supabse/api"; // New import
+import { useProjects } from "@/hooks/useProjects"; // Django API hook
+import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
+import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { OnboardingModal } from "./OnboardingModal";
+
+interface Project {
+  _id: string;
+  name: string;
+  projectNumber: string;
+  location?: string;
+  status?: string;
+}
 
 const navItems = [
   { title: "Overview", url: "/", icon: <Trending /> },
@@ -60,10 +68,11 @@ export function DashboardSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
   const { data: projects = [], isLoading } = useProjects();
-  const { data: user } = useUser(); // New hook usage
+  const { data: user } = useCurrentUser(); // Django auth hook
+  const { logout } = useLogout(); // Django logout hook
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState(() =>
-    localStorage.getItem("selectedProjectId") || ""
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    () => localStorage.getItem("selectedProjectId") || "",
   );
 
   useEffect(() => {
@@ -72,7 +81,8 @@ export function DashboardSidebar() {
     };
 
     window.addEventListener("project-change", handleProjectChange);
-    return () => window.removeEventListener("project-change", handleProjectChange);
+    return () =>
+      window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
   useEffect(() => {
@@ -80,29 +90,24 @@ export function DashboardSidebar() {
       setShowOnboarding(true);
     } else if (projects.length > 0 && !selectedProjectId) {
       // Auto select first project if none selected
-      const firstId = projects[0].id;
+      const firstId = projects[0]._id;
       setSelectedProjectId(firstId);
       localStorage.setItem("selectedProjectId", firstId);
     }
   }, [projects, isLoading, selectedProjectId]);
 
-  const handleProjectSelect = (projectId: string) => {
-    setSelectedProjectId(projectId?.id);
-    localStorage.setItem("selectedProjectId", projectId?.id);
-    localStorage.setItem("projectLocation", projectId?.location);
+  const handleProjectSelect = (project: Project) => {
+    setSelectedProjectId(project?._id);
+    localStorage.setItem("selectedProjectId", project?._id);
+    localStorage.setItem("projectLocation", project?.location || "");
     window.dispatchEvent(new Event("project-change"));
     // window.location.reload()
   };
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = projects.find((p) => p._id === selectedProjectId);
 
-  const handleLogout = async () => {
-    try {
-      await signOutUser();
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -118,7 +123,11 @@ export function DashboardSidebar() {
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <h1 className="text-sm font-regular text-[#121212] aeonik truncate">
-                      {selectedProject ? selectedProject.name : (isLoading ? "Loading..." : "Select Project")}
+                      {selectedProject
+                        ? selectedProject.name
+                        : isLoading
+                          ? "Loading..."
+                          : "Select Project"}
                     </h1>
                   </div>
                   <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -127,23 +136,23 @@ export function DashboardSidebar() {
               <DropdownMenuContent className="w-56" align="start">
                 <DropdownMenuLabel>Projects</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {projects.map((project: any) => (
+                {projects.map((project: Project) => (
                   <DropdownMenuItem
-                    key={project.id}
+                    key={project._id}
                     onClick={() => handleProjectSelect(project)}
-                    className="cursor-pointer"
-                  >
+                    className="cursor-pointer">
                     {project.name}
-                    {selectedProjectId === project.id && (
-                      <span className="ml-auto text-xs text-blue-500">Active</span>
+                    {selectedProjectId === project._id && (
+                      <span className="ml-auto text-xs text-blue-500">
+                        Active
+                      </span>
                     )}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowOnboarding(true)}
-                  className="cursor-pointer text-blue-600 gap-2"
-                >
+                  className="cursor-pointer text-blue-600 gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>Create New Project</span>
                 </DropdownMenuItem>
@@ -165,16 +174,24 @@ export function DashboardSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          className={isActive ? "!bg-white px-[16px] py-[11px] border border-[#E8E8E8] rounded-[8px]" : "border border-transparent px-[16px] py-[11px]"}>
+                          className={
+                            isActive
+                              ? "!bg-white px-[16px] py-[11px] border border-[#E8E8E8] rounded-[8px]"
+                              : "border border-transparent px-[16px] py-[11px]"
+                          }>
                           <NavLink
                             to={item.url}
                             className="flex items-center gap-3">
                             {React.cloneElement(item.icon, {
-                              className: `text-[#6B6B6B]  ${isActive ? "text-black" : ""
-                                }`,
+                              className: `text-[#6B6B6B]  ${
+                                isActive ? "text-black" : ""
+                              }`,
                             })}
                             {open && (
-                              <span className={`text-sm font-normal ${isActive ? "text-black" : "text-[#6B6B6B]"}`}>{item.title}</span>
+                              <span
+                                className={`text-sm font-normal ${isActive ? "text-black" : "text-[#6B6B6B]"}`}>
+                                {item.title}
+                              </span>
                             )}
                           </NavLink>
                         </SidebarMenuButton>
@@ -198,16 +215,24 @@ export function DashboardSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          className={isActive ? "!bg-white px-[16px] py-[11px] border border-[#E8E8E8] rounded-[8px]" : "border border-transparent px-[16px] py-[11px]"}>
+                          className={
+                            isActive
+                              ? "!bg-white px-[16px] py-[11px] border border-[#E8E8E8] rounded-[8px]"
+                              : "border border-transparent px-[16px] py-[11px]"
+                          }>
                           <NavLink
                             to={item.url}
                             className="flex items-center gap-3">
                             {React.cloneElement(item.icon, {
-                              className: `text-[#6B6B6B]  ${isActive ? "text-black" : ""
-                                }`,
+                              className: `text-[#6B6B6B]  ${
+                                isActive ? "text-black" : ""
+                              }`,
                             })}
                             {open && (
-                              <span className={`text-sm font-normal ${isActive ? "text-black" : "text-[#6B6B6B]"}`}>{item.title}</span>
+                              <span
+                                className={`text-sm font-normal ${isActive ? "text-black" : "text-[#6B6B6B]"}`}>
+                                {item.title}
+                              </span>
                             )}
                           </NavLink>
                         </SidebarMenuButton>
@@ -224,14 +249,19 @@ export function DashboardSidebar() {
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                   <img
-                    src={user?.user_metadata?.avatar_url || "/images/profile-img.png"}
+                    src={
+                      user?.user_metadata?.avatar_url ||
+                      "/images/profile-img.png"
+                    }
                     alt="User Avatar"
                     className="h-full w-full rounded-full object-cover"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm capitalize font-medium text-sidebar-foreground truncate">
-                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
+                    {user?.user_metadata?.full_name ||
+                      user?.email?.split("@")[0] ||
+                      "User"}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {user?.email || ""}
@@ -258,8 +288,7 @@ export function DashboardSidebar() {
                   <DropdownMenuContent align="end" side="top" className="w-48">
                     <DropdownMenuItem
                       onClick={handleLogout}
-                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer gap-2"
-                    >
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer gap-2">
                       <LogOut className="h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -271,7 +300,10 @@ export function DashboardSidebar() {
         </SidebarContent>
       </Sidebar>
 
-      <OnboardingModal isOpen={showOnboarding} onOpenChange={setShowOnboarding} />
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onOpenChange={setShowOnboarding}
+      />
     </>
   );
 }

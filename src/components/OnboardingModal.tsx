@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useCreateProject, useUpdateProject } from "@/supabse/hook/useProject";
+import { useCreateProject, useUpdateProject } from "@/hooks/useProjects";
 import { toast } from "sonner";
 
 const projectSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
-  number: z.string().min(1, "Project number is required"), // e.g., PRJ-001
+  project_number: z.string().min(1, "Project number is required"), // e.g., PRJ-001
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().min(1, "End date is required"),
   fx_rate: z.coerce.number().min(0, "Must be a positive number"),
@@ -52,9 +52,14 @@ interface OnboardingModalProps {
   project?: any;
 }
 
-export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingModalProps) {
+export function OnboardingModal({
+  isOpen,
+  onOpenChange,
+  project,
+}: OnboardingModalProps) {
   const { mutate: createProject, isPending: isCreating } = useCreateProject();
-  const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
+  const { mutate: updateProject, isPending: isUpdatingProject } =
+    useUpdateProject();
   const isPending = isCreating || isUpdatingProject;
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
@@ -64,12 +69,12 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
     defaultValues: {
       name: "",
       description: "",
-      number: "PRJ-001",
+      project_number: "PRJ-001",
       start_date: "",
       end_date: "",
       fx_rate: 1,
-      retention_rate: 0,
-      vat_rate: 0,
+      retention_rate: 5, // Default from generic commercial project standards or user preference
+      vat_rate: 15,
       contract_type: "JBCC",
       total_budget: 0,
       location: "",
@@ -80,17 +85,23 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
   useEffect(() => {
     if (isOpen) {
       if (project) {
+        // Helper to get formatted date YYYY-MM-DD
+        const getDate = (dateStr: string) => {
+          if (!dateStr) return "";
+          return dateStr.split("T")[0];
+        };
+
         form.reset({
           name: project.name || "",
           description: project.description || "",
-          number: project.number || "",
-          start_date: project.start_date || "",
-          end_date: project.end_date || "",
-          fx_rate: project.fx_rate || 1,
-          retention_rate: project.retention_rate || 0,
-          vat_rate: project.vat_rate || 0,
-          contract_type: project.contract_type || "JBCC",
-          total_budget: project.total_budget || 0,
+          project_number: project.projectNumber || project.project_number || "",
+          start_date: getDate(project.startDate || project.start_date),
+          end_date: getDate(project.endDate || project.end_date),
+          fx_rate: project.fxRate ?? project.fx_rate ?? 1,
+          retention_rate: project.retentionRate ?? project.retention_rate ?? 5,
+          vat_rate: project.vatRate ?? project.vat_rate ?? 15,
+          contract_type: project.contractType || project.contract_type || "JBCC",
+          total_budget: project.totalBudget ?? project.total_budget ?? 0,
           location: project.location || "",
           attachments: project.attachments || [],
         });
@@ -98,12 +109,12 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         form.reset({
           name: "",
           description: "",
-          number: "PRJ-001",
+          project_number: "PRJ-001",
           start_date: "",
           end_date: "",
           fx_rate: 1,
-          retention_rate: 0,
-          vat_rate: 0,
+          retention_rate: 5,
+          vat_rate: 15,
           contract_type: "JBCC",
           total_budget: 0,
           location: "",
@@ -116,7 +127,10 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files || [])]);
+      setSelectedFiles((prev) => [
+        ...prev,
+        ...Array.from(e.target.files || []),
+      ]);
     }
   };
 
@@ -147,7 +161,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
     const data = {
       name: values.name,
       description: values.description,
-      number: values.number,
+      project_number: values.project_number,
       start_date: values.start_date,
       end_date: values.end_date,
       fx_rate: values.fx_rate,
@@ -156,46 +170,77 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       contract_type: values.contract_type,
       total_budget: values.total_budget,
       location: values.location,
-      // id: project?.id,
+      status: "Draft",
+      ...(project?._id && { _id: project._id }),
+    };
+
+    const handleSuccess = async (result: any) => {
+      // Django API returns { message, project }
+      const projectData = result.project;
+
+      if (selectedFiles.length > 0) {
+        try {
+          await uploadAllFiles(projectData._id);
+          toast.success(
+            project
+              ? "Project updated with attachments!"
+              : "Project created with attachments!",
+          );
+        } catch (error) {
+          console.error("Attachment upload error:", error);
+          toast.error("Project saved but failed to upload attachments");
+        }
+      } else {
+        toast.success(
+          project
+            ? "Project updated successfully!"
+            : "Project created successfully!",
+        );
+      }
+
+      onOpenChange(false);
+      localStorage.setItem("selectedProjectId", projectData._id);
+      if (projectData.location) {
+        localStorage.setItem("projectLocation", projectData.location);
+      }
+      window.dispatchEvent(new Event("project-change"));
+      setSelectedFiles([]);
+    };
+
+    const handleError = (error: unknown) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(
+        `Failed to ${project ? "update" : "create"} project: ${errorMessage}`,
+      );
+    };
+
+    if (project) {
+      updateProject(data, {
+        onSuccess: handleSuccess,
+        onError: handleError,
+      });
+    } else {
+      createProject(data, {
+        onSuccess: handleSuccess,
+        onError: handleError,
+      });
     }
-
-    const mutation = project ? updateProject : createProject;
-
-    mutation(data, {
-      onSuccess: async (result) => {
-        if (selectedFiles.length > 0) {
-          try {
-            await uploadAllFiles(result.id);
-            toast.success(project ? "Project updated with attachments!" : "Project created with attachments!");
-          } catch (error) {
-            console.error("Attachment upload error:", error);
-            toast.error("Project saved but failed to upload attachments");
-          }
-        } else {
-          toast.success(project ? "Project updated successfully!" : "Project created successfully!");
-        }
-
-        onOpenChange(false);
-        localStorage.setItem("selectedProjectId", result.id);
-        if (result.location) {
-          localStorage.setItem("projectLocation", result.location);
-        }
-        window.dispatchEvent(new Event("project-change"));
-        setSelectedFiles([]);
-      },
-      onError: (error) => {
-        toast.error(`Failed to ${project ? 'update' : 'create'} project: ${error.message}`);
-      },
-    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] bg-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{project ? "Edit Project" : "Welcome! Let's set up your first project"}</DialogTitle>
+          <DialogTitle>
+            {project
+              ? "Edit Project"
+              : "Welcome! Let's set up your first project"}
+          </DialogTitle>
           <DialogDescription>
-            {project ? "Update the project details below." : "You need at least one project to get started. Fill in the details below."}
+            {project
+              ? "Update the project details below."
+              : "You need at least one project to get started. Fill in the details below."}
           </DialogDescription>
         </DialogHeader>
 
@@ -217,7 +262,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               />
               <FormField
                 control={form.control}
-                name="number"
+                name="project_number"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Number</FormLabel>
@@ -251,7 +296,10 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="Project Location (e.g. New York, NY)" {...field} />
+                    <Input
+                      placeholder="Project Location (e.g. New York, NY)"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -275,7 +323,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                       />
                       <div
                         className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => document.getElementById("project-upload")?.click()}>
+                        onClick={() =>
+                          document.getElementById("project-upload")?.click()
+                        }>
                         <p className="text-sm text-muted-foreground">
                           Drag and drop your file here
                         </p>
@@ -352,9 +402,19 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                           placeholder="0"
                           {...field}
                           className="pl-54"
-                          value={((field.value as any) === 0 || (field.value as any) === "") ? "" : (field.value !== undefined && field.value !== null ? field.value.toLocaleString() : "")}
+                          value={
+                            (field.value as any) === 0 ||
+                              (field.value as any) === ""
+                              ? ""
+                              : field.value !== undefined &&
+                                field.value !== null
+                                ? field.value.toLocaleString()
+                                : ""
+                          }
                           onChange={(e) => {
-                            const val = e.target.value.replace(/,/g, "").replace(/R\s?/, "");
+                            const val = e.target.value
+                              .replace(/,/g, "")
+                              .replace(/R\s?/, "");
                             if (val === "") {
                               field.onChange("");
                             } else if (!isNaN(Number(val))) {
@@ -396,7 +456,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contract Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select contract type" />
@@ -463,7 +525,13 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
 
             <div className="flex justify-end pt-4">
               <Button type="submit" disabled={isPending || isUploading}>
-                {isPending || isUploading ? (project ? "Updating..." : "Creating...") : (project ? "Update Project" : "Create Project")}
+                {isPending || isUploading
+                  ? project
+                    ? "Updating..."
+                    : "Creating..."
+                  : project
+                    ? "Update Project"
+                    : "Create Project"}
               </Button>
             </div>
           </form>
