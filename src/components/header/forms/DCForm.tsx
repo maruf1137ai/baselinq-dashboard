@@ -5,9 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const CAUSE_CATEGORY_OPTIONS = [
+  { value: "Consultant Delay", label: "Consultant Delay" },
+  { value: "Material Delay", label: "Material Delay" },
+  { value: "Weather", label: "Weather" },
+  { value: "Labor Shortage", label: "Labor Shortage" },
+  { value: "Permit Delay", label: "Permit Delay" },
+  { value: "Design Change", label: "Design Change" },
+  { value: "Other", label: "Other" },
+];
+import { useQueryClient } from "@tanstack/react-query";
+import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
 
 export default function DCForm({ setOpen, initialStatus }: any) {
   const [title, setTitle] = useState("");
@@ -24,19 +42,7 @@ export default function DCForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
-      toast.success("Success! DC created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating DC:", error);
-    },
-  });
+  const { mutateAsync: createDC } = usePost();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -84,33 +90,44 @@ export default function DCForm({ setOpen, initialStatus }: any) {
     setLoading(true);
 
     try {
-      const files = await uploadAllFiles(projectId);
+      // Get user ID for submitted_by
+      const user = localStorage.getItem("user");
+      const parsedUser = user ? JSON.parse(user) : null;
 
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
-
+      // Construct payload matching Django DC API requirements
       const payload = {
-        project_id: projectId,
-        title,
-        type: "DC",
-        status: initialStatus || "Todo",
-        priority: "Medium",
-        Cause: causeCategory,
-        Cost: costImpact,
-        Extension: requestedExtension,
-        description: files.length > 0 ? `${description}\n\nAttachments: ${JSON.stringify(files)}` : description,
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`
-        },
+        project: parseInt(projectId),
+        title: title,
+        cause_category: causeCategory || undefined,
+        description: description || undefined,
+        estimated_cost_impact: costImpact || undefined,
+        estimated_cost_currency: "ZAR",
+        requested_extension_days: requestedExtension ? parseInt(requestedExtension) : undefined,
+        status: initialStatus || "Draft",
+        submitted_by: parsedUser?.id || undefined,
       };
 
-      await mutateAsync(payload);
-    } catch (err) {
+      const result = await createDC({
+        url: "tasks/delay-claims/",
+        data: payload
+      });
+
+      // Refetch DCs and tasks to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["dcs"] });
+
+      toast.success("Success! DC created successfully");
+
+      if (result?.id) {
+        console.log("DC created:", result.id);
+      }
+
+      setOpen(false);
+
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating DC");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating DC";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -128,7 +145,7 @@ export default function DCForm({ setOpen, initialStatus }: any) {
         />
       </div>
 
-      <div>
+      {/* <div>
         <Label>Cause Category</Label>
         <Input
           className="mt-1"
@@ -136,14 +153,31 @@ export default function DCForm({ setOpen, initialStatus }: any) {
           value={causeCategory}
           onChange={(e) => setCauseCategory(e.target.value)}
         />
+      </div> */}
+
+      <div>
+        <Label>Cause Category</Label>
+        <Select value={causeCategory || undefined} onValueChange={setCauseCategory}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select cause category" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {CAUSE_CATEGORY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
         <Label>Cost Impact</Label>
         <Input
           className="mt-1"
+          type="number"
           placeholder="Estimated cost impact"
-          value={costImpact}
+          value={costImpact || ""}
           onChange={(e) => setCostImpact(e.target.value)}
         />
       </div>
@@ -164,9 +198,11 @@ export default function DCForm({ setOpen, initialStatus }: any) {
         <Input
           className="mt-1"
           type="number"
-          placeholder="Number of days"
-          value={((requestedExtension as any) === "0" || (requestedExtension as any) === 0) ? "" : requestedExtension}
-          onChange={(e) => setRequestedExtension(e.target.value === "" ? "" : e.target.value)}
+          min={1}
+          max={31}
+          placeholder="1-31 days"
+          value={requestedExtension || ""}
+          onChange={(e) => setRequestedExtension(e.target.value)}
         />
       </div>
 

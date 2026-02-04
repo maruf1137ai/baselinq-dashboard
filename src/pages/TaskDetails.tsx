@@ -10,6 +10,13 @@ import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { AIAnalysisModal } from "@/components/AIAnalysisModal";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
@@ -19,19 +26,16 @@ import {
   Italic,
   Underline,
   Link2,
-  List,
   Zap,
-  Plus,
-  FileText,
-  MessageSquare,
-  GitBranch,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
-import useTask, { useUpdateTask } from "@/supabse/hook/useTask";
+import { useUpdateTask } from "@/supabse/hook/useTask";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import useFetch from "@/hooks/useFetch";
+import { postData } from "@/lib/Api";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 
@@ -360,14 +364,25 @@ Failure to comply will result in rework at contractor's expense.`,
 };
 
 export default function TaskDetails() {
-  const [projectId, setProjectId] = useState(
-    () => localStorage.getItem("selectedProjectId") || undefined,
-  );
   const { taskId } = useParams();
-  const { data, isLoading } = useTask(projectId);
+  const projectId = localStorage.getItem("selectedProjectId");
+  // Fetch task details from new Django API
+  const { data: taskDetailsResponse, isLoading } = useFetch(
+    projectId && taskId ? `projects/${projectId}/tasks/${taskId}/` : "",
+    { enabled: !!taskId && !!projectId }
+  );
+
   const { data: user } = useCurrentUser();
   const { mutateAsync: updateTask } = useUpdateTask();
   const [currentTask, setCurrentTask] = useState<any>(null);
+
+  // Fetch request info for action requests
+  const { data: requestInfoResponse } = useFetch(
+    currentTask
+      ? `tasks/request-task-info/?taskType=${currentTask.taskType}&taskId=${currentTask.taskId || currentTask.id || currentTask._id}`
+      : null,
+    { enabled: !!currentTask }
+  );
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -377,41 +392,30 @@ export default function TaskDetails() {
   });
   const [aiResponse, setAiResponse] = useState<string>("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
+  const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
+  const [analysisData, setAnalysisData] = useState<any>(null);
 
-  const handleRequestInfoSubmit = async (requestData: any) => {
-    if (!currentTask) return;
-
-    const currentRequests =
-      currentTask.request_info && Array.isArray(currentTask.request_info)
-        ? currentTask.request_info
-        : [];
-
-    const userName =
-      user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      user?.user_metadata?.username ||
-      user?.email?.split("@")[0] ||
-      "User";
-    const updatedRequests = [
-      ...currentRequests,
-      { ...requestData, senderName: userName },
-    ];
+  const handleAnalyzeWithAi = async () => {
+    setIsAnalyzeModalOpen(true);
+    setIsAnalyzeLoading(true);
 
     try {
-      await updateTask({
-        id: currentTask.id,
-        request_info: updatedRequests,
+      const response = await postData({
+        url: 'ai_analysis/vo/',
+        data: {
+          contract_document_id: 2,
+          task_id: taskId,
+        },
       });
-      toast.success("Request sent successfully");
 
-      // Optimistically update local state
-      setCurrentTask((prev: any) => ({
-        ...prev,
-        request_info: updatedRequests,
-      }));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to send request");
+      setAnalysisData(response);
+    } catch (error) {
+      console.error('Error fetching AI analysis:', error);
+      toast.error('Failed to analyze. Please try again.');
+      setIsAnalyzeModalOpen(false);
+    } finally {
+      setIsAnalyzeLoading(false);
     }
   };
 
@@ -518,9 +522,7 @@ export default function TaskDetails() {
     }
 
     const userName =
-      user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      user?.user_metadata?.username ||
+      user?.name ||
       user?.email?.split("@")[0] ||
       "User";
 
@@ -577,97 +579,296 @@ export default function TaskDetails() {
   };
 
   useEffect(() => {
-    if (isLoading || !data) return;
-    const task = data.find((t: any) => t.id === taskId);
-    setCurrentTask(task);
-  }, [taskId, data, isLoading]);
+    if (isLoading || !taskDetailsResponse) return;
+    setCurrentTask(taskDetailsResponse);
+  }, [taskId, taskDetailsResponse, isLoading]);
+
+  // useEffect(() => {
+  //   console.log(isAnalyzeModalOpen, isAnalyzeLoading)
+  // }, [isAnalyzeModalOpen, isAnalyzeLoading]);
 
   // console.log("data", currentTask);
 
+  // Helper function to transform API response based on task type
+  const transformTaskData = (apiResponse: any, actionRequestsData?: any[]) => {
+    if (!apiResponse) return null;
+
+    const taskType = apiResponse.taskType;
+    const task = apiResponse.task || {};
+    const assignedBy = apiResponse.assignedBy;
+    const assignedTo = apiResponse.assignedTo || [];
+
+    // Map action requests if data is provided
+    const mappedActionRequests = actionRequestsData?.map(req => ({
+      id: req._id,
+      senderName: req.requestedBy?.name || "User",
+      recipient: req.recipient?.name || "Recipient",
+      role: req.requestedBy?.role || "Team Member",
+      task: req.requestDetails,
+      date: req.dueDate,
+      status: "Pending"
+    })) || apiResponse.request_info || [];
+
+    // Common fields
+    const baseData = {
+      id: apiResponse.taskId || task._id,
+      type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
+      creator: {
+        name: task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || assignedBy?.name || "User",
+        role: assignedBy?.role || "Creator",
+        badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
+      },
+      watcher: {
+        name: assignedTo[0]?.name || "Watcher",
+        role: assignedTo[0]?.role || "Watcher",
+      },
+      assignedTo: assignedTo,
+      actionRequests: mappedActionRequests,
+      timeline: {
+        current: task.status || apiResponse.status || "Pending",
+        stages: ["Pending", "In Review", "Approved", "Closed"],
+      },
+      impact: {
+        time: "N/A",
+        cost: "R 0",
+        riskScore: 0,
+        riskMax: 100,
+      },
+      linked: [],
+      audit: [
+        {
+          action: `${taskType} created by ${task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || "User"}`,
+          date: new Date(task.createdAt || apiResponse.created_at).toLocaleDateString(),
+          isAI: false,
+        },
+      ],
+    };
+
+    // Type-specific transformations
+    switch (taskType) {
+      case "VO":
+        return {
+          ...baseData,
+          displayId: `#${task.voNumber || `VO-${task._id}`}`,
+          title: task.title,
+          task_code: task.voNumber,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          formFields: {
+            title: task.title,
+            discipline: task.discipline,
+            description: task.description,
+            currency: task.currency || "ZAR",
+            subTotal: task.subTotal || 0,
+            grandTotal: task.grandTotal || 0,
+            tax: task.tax || { type: "VAT", rate: 15, amount: 0 },
+            lineItems: task.lineItems || [],
+          },
+          question: {
+            text: task.description || "",
+            tags: [],
+          },
+          deadlines: {
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            contractWindow: "21 days",
+          },
+          impact: {
+            time: "0 days",
+            cost: task.grandTotal ? `R ${Number(task.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R 0.00",
+            riskScore: 35,
+            riskMax: 100,
+          },
+        };
+
+      case "RFI":
+        return {
+          ...baseData,
+          displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
+          title: task.subject,
+          task_code: task.rfiNumber,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          formFields: {
+            subject: task.subject,
+            discipline: task.discipline,
+            question: task.question,
+            description: task.description,
+            priority: task.priority,
+          },
+          question: {
+            text: task.question || "",
+            tags: [],
+          },
+          deadlines: {
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            contractWindow: "14 days",
+          },
+          impact: {
+            time: "5 days",
+            cost: "R 0",
+            riskScore: 50,
+            riskMax: 100,
+          },
+        };
+
+      case "SI":
+        return {
+          ...baseData,
+          displayId: `#${task.siNumber || `SI-${task._id}`}`,
+          title: task.title,
+          task_code: task.siNumber,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          formFields: {
+            title: task.title,
+            discipline: task.discipline,
+            instruction: task.instruction,
+            location: task.location,
+            urgency: task.urgency,
+            dueDate: task.dueDate,
+            voReference: task.voReference,
+            description: task.description,
+          },
+          question: {
+            text: task.instruction || "",
+            tags: task.urgency ? [task.urgency] : [],
+          },
+          deadlines: {
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            contractWindow: "7 days",
+          },
+          impact: {
+            time: "3 days",
+            cost: "R 0",
+            riskScore: 40,
+            riskMax: 100,
+          },
+        };
+
+      case "DC":
+        return {
+          ...baseData,
+          displayId: `#DC-${task._id}`,
+          title: task.title,
+          task_code: `DC-${task._id}`,
+          dueDate: "No Date",
+          formFields: {
+            title: task.title,
+            causeCategory: task.causeCategory,
+            costImpact: task.estimatedCostImpact?.amount
+              ? `R ${Number(task.estimatedCostImpact.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "",
+            description: task.description,
+            requestedExtension: task.requestedExtensionDays?.toString() || "",
+          },
+          question: {
+            text: task.description || "",
+            tags: task.causeCategory ? [task.causeCategory] : [],
+          },
+          deadlines: {
+            replyDue: "N/A",
+            contractWindow: "28 days",
+          },
+          impact: {
+            time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
+            cost: task.estimatedCostImpact?.amount
+              ? `R ${Number(task.estimatedCostImpact.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "R 0.00",
+            riskScore: 75,
+            riskMax: 100,
+          },
+        };
+
+      case "CRITICALPATHITEM":
+        return {
+          ...baseData,
+          displayId: `#CPI-${task._id}`,
+          title: task.taskActivityName,
+          task_code: `CPI-${task._id}`,
+          dueDate: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "No Date",
+          formFields: {
+            title: task.taskActivityName,
+            description: task.description,
+            duration: task.duration,
+            startDate: task.startDate,
+            finishDate: task.finishDate,
+            predecessors: task.predecessors,
+            successors: task.successors,
+            resources: task.resources,
+          },
+          question: {
+            text: task.description || "",
+            tags: ["Critical Path"],
+          },
+          deadlines: {
+            replyDue: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "N/A",
+            contractWindow: "7 days",
+          },
+          impact: {
+            time: task.duration ? `${task.duration} days` : "N/A",
+            cost: "R 0",
+            riskScore: 80,
+            riskMax: 100,
+          },
+        };
+
+      case "GI":
+        return {
+          ...baseData,
+          displayId: `#${task.giNumber || `GI-${task._id}`}`,
+          title: task.title,
+          task_code: task.giNumber,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          formFields: {
+            title: task.title,
+            discipline: task.discipline,
+            instruction: task.instruction,
+            effectiveDate: task.effectiveDate,
+            applicableTo: task.applicableTo,
+            complianceRequired: task.complianceRequired,
+            description: task.description,
+          },
+          question: {
+            text: task.instruction || "",
+            tags: [],
+          },
+          deadlines: {
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            contractWindow: "14 days",
+          },
+          impact: {
+            time: "0 days",
+            cost: "R 0",
+            riskScore: 20,
+            riskMax: 100,
+          },
+        };
+
+      default:
+        return {
+          ...baseData,
+          displayId: `#${taskType}-${task._id}`,
+          title: task.title || task.subject || task.taskActivityName || "Unknown",
+          task_code: task._id,
+          dueDate: "No Date",
+          formFields: {
+            title: task.title,
+            description: task.description,
+          },
+          question: {
+            text: task.description || "",
+            tags: [],
+          },
+          deadlines: {
+            replyDue: "N/A",
+            contractWindow: "14 days",
+          },
+        };
+    }
+  };
+
   // Normalize task data for display
   const displayTask = currentTask
-    ? ({
-        id: currentTask.id,
-        displayId: `#${currentTask.type}-${currentTask.id.slice(0, 4)}`,
-        title: currentTask.title,
-        dueDate: currentTask.due_date
-          ? new Date(currentTask.due_date).toLocaleDateString()
-          : "No Date",
-        type: currentTask.type,
-        creator: { name: "User", role: "Creator", badge: currentTask.type },
-        watcher: { name: "Watcher", role: "Watcher" },
-        task_code: currentTask.task_code,
-        formFields: {
-          subject: currentTask.title,
-          discipline: currentTask.Discipline,
-          question: currentTask.Question,
-          instruction: currentTask.Instruction,
-          location: currentTask.Location,
-          urgency: currentTask.Urgency,
-          voReference: currentTask["VO Reference"],
-          costImpact: currentTask.Cost,
-          description: currentTask.description,
-          causeCategory: currentTask.Cause,
-          requestedExtension: currentTask.Extension,
-          effectiveDate: currentTask.Effective_Date,
-          applicableTo: currentTask.Applicable_To,
-          complianceRequired: currentTask.Compliance,
-          proposedCost: currentTask.Cost, // For CPI if reused
-          items: null, // VO items are in description text now
-          justification: currentTask.description,
-          impactOnSchedule: "See description",
-        },
-        question: {
-          text:
-            currentTask.Question ||
-            currentTask.description ||
-            currentTask.Instruction ||
-            "",
-          tags: [],
-        },
-        actionRequests: currentTask?.request_info || [],
-        timeline: {
-          current:
-            currentTask.timeline_status || currentTask.status || "Pending",
-          stages: ["Pending", "In Review", "Approved", "Closed"],
-        },
-        deadlines: {
-          replyDue: currentTask.due_date
-            ? new Date(currentTask.due_date).toLocaleDateString()
-            : "N/A",
-          contractWindow: "14 days",
-        },
-        impact: {
-          time: currentTask.impact?.time_impact
-            ? `${currentTask.impact.time_impact} days`
-            : "N/A",
-          cost: currentTask.impact?.cost_impact
-            ? `R ${Number(currentTask.impact.cost_impact).toLocaleString()}`
-            : "R 0",
-          riskScore: currentTask.impact?.score
-            ? parseInt(currentTask.impact.score.split("/")[0])
-            : 0,
-          riskMax: currentTask.impact?.score
-            ? parseInt(currentTask.impact.score.split("/")[1])
-            : 100,
-        },
-        linked: [],
-        audit: [
-          ...(currentTask.request_info || []).map((req: any) => ({
-            action: `Action request sent to ${req.recipient} by ${req.senderName || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "User"}`,
-            date: new Date(req.createdAt || req.date).toLocaleDateString(),
-            isAI: false,
-          })),
-          ...(currentTask.responses || []).map((resp: any) => ({
-            action: `Response submitted by ${resp.sender}`,
-            date: new Date(resp.date).toLocaleDateString(),
-            isAI: false,
-          })),
-          ...(currentTask.audit || []),
-        ],
-      } as any)
+    ? (transformTaskData(currentTask, requestInfoResponse?.results) as any)
     : ((taskDataMap[taskId as keyof typeof taskDataMap] ||
-        taskDataMap["RFI-001"]) as any);
+      taskDataMap["RFI-001"]) as any);
 
   const currentStageIndex =
     displayTask.timeline.stages.indexOf(displayTask.timeline.current) !== -1
@@ -815,6 +1016,31 @@ export default function TaskDetails() {
                       </span>
                     </div>
                   </div>
+
+                  {/* assignees */}
+                  {displayTask.assignedTo && displayTask.assignedTo.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <TooltipProvider delayDuration={0}>
+                        <div className="flex items-center">
+                          {displayTask.assignedTo.map((assignee: any, index: number) => (
+                            <Tooltip key={assignee.userId || index}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="h-8 w-8 rounded-full bg-[#8081F6] border-2 border-white flex items-center justify-center text-white text-xs font-medium cursor-pointer"
+                                  style={{ marginLeft: index > 0 ? "-8px" : "0" }}
+                                >
+                                  {assignee.name?.charAt(0).toUpperCase() || "U"}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{assignee.name || "Unknown"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      </TooltipProvider>
+                    </div>
+                  )}
                 </div>
               </Card>
 
@@ -838,7 +1064,7 @@ export default function TaskDetails() {
 
                 <TaskContentRenderer displayTask={displayTask} />
 
-                <div className="flex gap-2 mt-4 pt-4 border-t">
+                {/* <div className="flex gap-2 mt-4 pt-4 border-t">
                   {displayTask.question.tags &&
                     displayTask.question.tags.map((tag: any, i: any) => (
                       <Badge
@@ -848,7 +1074,7 @@ export default function TaskDetails() {
                         {tag}
                       </Badge>
                     ))}
-                </div>
+                </div> */}
               </Card>
 
               {/* Previous Responses Section */}
@@ -933,13 +1159,13 @@ export default function TaskDetails() {
                     className={`p-2 hover:bg-gray-100 rounded ${editor?.isActive("link") ? "bg-gray-200" : ""}`}>
                     <Link2 className="h-4 w-4 text-gray-600" />
                   </button>
-                  <button
+                  {/* <button
                     onClick={() =>
                       editor?.chain().focus().toggleBulletList().run()
                     }
                     className={`p-2 hover:bg-gray-100 rounded ${editor?.isActive("bulletList") ? "bg-gray-200" : ""}`}>
                     <List className="h-4 w-4 text-gray-600" />
-                  </button>
+                  </button> */}
                   {/* <Separator orientation="vertical" className="h-6 mx-2" /> */}
                   {/* <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 rounded text-sm">
                     <Zap className="h-4 w-4 text-[#8081F6]" />
@@ -971,18 +1197,21 @@ export default function TaskDetails() {
                     <span>Powered by Baseline Intelligence</span>
                   </div> */}
                   <div className="flex items-center gap-3">
-                    <Button variant="outline" className="text-sm">
-                      Save Draft
-                    </Button>
+                    {/* <Button
+                      variant="outline"
+                      className="text-sm"
+                      onClick={handleAnalyzeWithAi}
+                    >
+                      Analyze with Ai
+                    </Button> */}
                     <button
-                      onClick={fetchAIResponse}
-                      disabled={isLoadingAI}
-                      className="bg-gray-900 flex items-center gap-3 px-3 py-2.5 rounded-[8px] hover:bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Zap className="h-4 w-4 mr-2" />
-                      {isLoadingAI ? "Generating..." : "Insert AI Draft"}
+                      onClick={handleAnalyzeWithAi}
+                      disabled={isAnalyzeLoading}
+                      className="bg-gray-900 flex items-center gap-1 px-3 py-2.5 rounded-[8px] hover:bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Zap className="h-4 w-4" />
+                      {isAnalyzeLoading ? "Generating..." : "Analyze with Ai"}
                     </button>
 
-                    {/* <RequestInfoDialog onSubmit={handleRequestInfoSubmit} /> */}
                     <Button className="font-normal" onClick={handleSubmitReply}>
                       Submit Reply
                     </Button>
@@ -1037,7 +1266,8 @@ export default function TaskDetails() {
 
                   <RequestInfoDialog
                     wFull={true}
-                    onSubmit={handleRequestInfoSubmit}
+                    taskType={displayTask.type}
+                    taskId={taskId || ''}
                   />
                 </div>
               </Card>
@@ -1067,7 +1297,7 @@ export default function TaskDetails() {
             ) : (
               <div className="space-y-6 px-[25px] py-[45px] border-l">
                 {/* Decision Timeline */}
-                <div>
+                <div className="hidden">
                   <h3 className="text-xs text-[#6B7280] uppercase tracking-wide mb-5">
                     Decision Timeline
                   </h3>
@@ -1093,22 +1323,20 @@ export default function TaskDetails() {
                                 className="relative flex flex-col items-center flex-1">
                                 {/* Dot */}
                                 <div
-                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
-                                    i <= currentStageIndex
-                                      ? "bg-[#8081F6] border-[#8081F6]"
-                                      : "bg-[#E7E9EB] border-[#E7E9EB]"
-                                  }`}
+                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
+                                    ? "bg-[#8081F6] border-[#8081F6]"
+                                    : "bg-[#E7E9EB] border-[#E7E9EB]"
+                                    }`}
                                 />
                                 {/* Label */}
                                 <span
-                                  className={`text-sm mt-3 text-[#6B7280] w-full ${
-                                    i === 0
+                                  className={`text-sm mt-3 text-[#6B7280] w-full ${i === 0
+                                    ? "text-center"
+                                    : i ===
+                                      displayTask.timeline.stages.length - 1
                                       ? "text-center"
-                                      : i ===
-                                          displayTask.timeline.stages.length - 1
-                                        ? "text-center"
-                                        : "text-center"
-                                  }`}>
+                                      : "text-center"
+                                    }`}>
                                   {stage}
                                 </span>
                               </div>
@@ -1121,7 +1349,7 @@ export default function TaskDetails() {
                 </div>
 
                 {/* Deadlines */}
-                <Card className="p-[17px] shadow-none rounded-[10px] bg-[#F3F2F0] border-0">
+                {/* <Card className="p-[17px] shadow-none rounded-[10px] bg-[#F3F2F0] border-0">
                   <h3 className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mb-3">
                     Deadlines
                   </h3>
@@ -1141,19 +1369,19 @@ export default function TaskDetails() {
                       </span>
                     </div>
                   </div>
-                </Card>
+                </Card> */}
 
-                <Button
+                {/* <Button
                   className="w-full mt-4 font-normal"
                   onClick={handleApproveTask}
                   disabled={currentTask?.timeline_status === "Approved"}>
                   {currentTask?.timeline_status === "Approved"
                     ? "Approved"
                     : "Approve"}
-                </Button>
+                </Button> */}
 
                 {/* Impact */}
-                <Card className="p-[17px] rounded-[10px] text-[#6B7280] bg-white shadow-none border-[#E7E9EB]">
+                {/* <Card className="p-[17px] rounded-[10px] text-[#6B7280] bg-white shadow-none border-[#E7E9EB]">
                   <h3 className="text-xs  text-[#6B7280] uppercase tracking-wide mb-3">
                     Impact
                   </h3>
@@ -1188,7 +1416,7 @@ export default function TaskDetails() {
                       </div>
                     </div>
                   </div>
-                </Card>
+                </Card> */}
 
                 {/* Linked */}
                 {/* <Card className="pt-4 bg-white shadow-none border-0">
@@ -1225,11 +1453,10 @@ export default function TaskDetails() {
                     {displayTask.audit.map((entry: any, i: any) => (
                       <div
                         key={i}
-                        className={`p-3 border border-[#E7E9EB] rounded-[10px] ${
-                          entry.isAI
-                            ? "bg-indigo-50 border border-[#8081F6B0] border-indigo-200"
-                            : "bg-white"
-                        }`}>
+                        className={`p-3 border border-[#E7E9EB] rounded-[10px] ${entry.isAI
+                          ? "bg-indigo-50 border border-[#8081F6B0] border-indigo-200"
+                          : "bg-white"
+                          }`}>
                         <p className="text-sm text-gray-900 flex items-center gap-2">
                           {entry.isAI && (
                             <div className="flex items-center gap-2">
@@ -1250,6 +1477,14 @@ export default function TaskDetails() {
           </div>
         </div>
       </div>
+
+      {/* Analyze with AI Modal */}
+      <AIAnalysisModal
+        isOpen={isAnalyzeModalOpen}
+        onOpenChange={setIsAnalyzeModalOpen}
+        isLoading={isAnalyzeLoading}
+        analysisData={analysisData}
+      />
     </DashboardLayout>
   );
 }

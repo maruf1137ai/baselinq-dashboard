@@ -10,11 +10,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+
+const DISCIPLINE_OPTIONS = [
+  "Architectural",
+  "Structural",
+  "Mechanical",
+  "Electrical",
+  "Plumbing",
+  "Civil",
+  "Fire & Safety",
+  "Landscape",
+  "MEP",
+  "Interior",
+  "Facade",
+  "HVAC",
+];
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
 
 const initialValues = {
   title: "",
@@ -37,19 +53,7 @@ export default function SIForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
-      toast.success("Success! SI created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating SI:", error);
-    },
-  });
+  const { mutateAsync: createSI } = usePost();
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -101,39 +105,41 @@ export default function SIForm({ setOpen, initialStatus }: any) {
     setLoading(true);
 
     try {
-      const files = await uploadAllFiles(projectId);
-
-      const formatUrgency = (u: string) => u ? u.charAt(0).toUpperCase() + u.slice(1) : "Medium";
-
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
-
+      // Construct payload matching Django SI API requirements
       const payload = {
-        project_id: projectId,
+        project: parseInt(projectId),
         title: formData.title,
-        type: "SI",
-        status: initialStatus || "Todo",
-        priority: "Medium",
-        Discipline: formData.discipline,
-        Instruction: formData.instruction,
-        Location: formData.location,
-        Urgency: formatUrgency(formData.urgency),
-        due_date: formData.dueDate || null,
-        "VO Reference": formData.voReference,
-        Cost: formData.costImpact,
-        description: files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : "",
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`
-        },
+        discipline: formData.discipline || undefined,
+        instruction: formData.instruction,
+        location: formData.location || undefined,
+        urgency: formData.urgency || "Normal",
+        due_date: formData.dueDate || undefined,
+        vo_reference: formData.voReference || undefined,
+        expectedCostImpact: formData.costImpact || undefined,
+        status: initialStatus || "Open",
       };
 
-      await mutateAsync(payload);
-    } catch (err) {
+      const result = await createSI({
+        url: "tasks/site-instructions/",
+        data: payload
+      });
+
+      // Refetch SIs and tasks to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["sis"] });
+
+      toast.success("Success! SI created successfully");
+
+      if (result?.id) {
+        console.log("SI created:", result.id);
+      }
+
+      setOpen(false);
+
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating SI");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating SI";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,12 +159,18 @@ export default function SIForm({ setOpen, initialStatus }: any) {
 
       <div>
         <Label>Discipline</Label>
-        <Input
-          className="mt-1"
-          placeholder="Discipline"
-          value={formData.discipline}
-          onChange={(e) => handleChange("discipline", e.target.value)}
-        />
+        <Select value={formData.discipline} onValueChange={(val) => handleChange("discipline", val)}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select discipline" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {DISCIPLINE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -192,9 +204,9 @@ export default function SIForm({ setOpen, initialStatus }: any) {
             <SelectValue placeholder="Select urgency" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="low">Low</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="Low">Low</SelectItem>
+            <SelectItem value="Normal">Normal</SelectItem>
+            <SelectItem value="High">High</SelectItem>
           </SelectContent>
         </Select>
       </div>

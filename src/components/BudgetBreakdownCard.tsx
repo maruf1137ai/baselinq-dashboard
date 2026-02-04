@@ -10,7 +10,7 @@ import { format, differenceInDays, isAfter, parseISO } from 'date-fns';
 export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDaysStatus }) {
   const { data: projects = [], isLoading } = useProjects();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const selectedProject = projects.find((project: any) => project.id === selectedProjectId);
+  const selectedProject = projects.find((project: any) => (project._id || project.id) === selectedProjectId);
 
   const dynamicTimelineData = useMemo(() => {
     if (!selectedProject) {
@@ -20,8 +20,18 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
       };
     }
 
-    const start = parseISO(selectedProject.start_date);
-    const end = parseISO(selectedProject.end_date);
+    const startDateStr = selectedProject.startDate || selectedProject.start_date;
+    const endDateStr = selectedProject.endDate || selectedProject.end_date;
+
+    if (!startDateStr || !endDateStr) {
+      return {
+        progress: propProgress,
+        daysStatus: propDaysStatus
+      };
+    }
+
+    const start = parseISO(startDateStr);
+    const end = parseISO(endDateStr);
     const now = new Date();
 
     const totalDays = differenceInDays(end, start);
@@ -47,7 +57,7 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
 
   const { progress, daysStatus } = dynamicTimelineData;
 
-  const projectTotalBudget = selectedProject?.total_budget || 0;
+  const projectTotalBudget = selectedProject?.totalBudget ?? selectedProject?.total_budget ?? 0;
 
   const dynamicBudgetData = [
     { name: 'Development', value: projectTotalBudget * 0.45, percentage: 45, color: '#8081F6' },
@@ -85,7 +95,7 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg text-[#111827]">R {projectTotalBudget.toLocaleString()}</p>
+                <p className="text-lg text-[#111827]">R {projectTotalBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p className="text-xs text-[#6B7280]">Total Budget</p>
               </div>
             </div>
@@ -99,7 +109,7 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
                   <span className="text-sm text-[#111827]">{item.name}</span>
                 </div>
                 <span className="text-sm text-[#111827]">
-                  R {item.value.toLocaleString()} <span className="text-xs text-[#6B7280]">({item.percentage}%)</span>
+                  R {item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-[#6B7280]">({item.percentage}%)</span>
                 </span>
               </div>
             ))}

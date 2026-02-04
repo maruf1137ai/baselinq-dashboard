@@ -26,7 +26,10 @@ interface CostLedgerTableProps {
 }
 
 const formatCurrency = (value: number) => {
-  return `R ${value.toLocaleString("en-ZA")}`;
+  return `R ${value.toLocaleString("en-ZA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 const ActionsCell = ({
@@ -180,9 +183,8 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                 <th
                   key={header}
                   scope="col"
-                  className={`px-6 py-4 text-left text-sm text-[#6B7280] font-normal uppercase ${
-                    header === "Actions" ? "text-center" : ""
-                  }`}>
+                  className={`px-6 py-4 text-left text-sm text-[#6B7280] font-normal uppercase ${header === "Actions" ? "text-center" : ""
+                    }`}>
                   {header}
                 </th>
               ))}

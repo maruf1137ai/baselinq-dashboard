@@ -16,7 +16,7 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields }) => {
             Days Requested
           </label>
           <p className="text-sm text-[#1B1C1F] mt-1 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> 5 Days
+            <Clock className="w-3.5 h-3.5" /> {formFields.requestedExtension || 0} Days
           </p>
         </div>
         <div>
@@ -24,12 +24,12 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields }) => {
             Days Approved
           </label>
           <p className="text-sm text-[#1B1C1F] mt-1 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" /> 0 Days
+            <CheckCircle2 className="w-3.5 h-3.5" /> {formFields.approvedDays || 0} Days
           </p>
         </div>
       </div>
 
-      {/* <div>
+      <div>
         <label className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">
           Description
         </label>
@@ -44,7 +44,7 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields }) => {
         <p className="text-sm text-[#1B1C1F] mt-1">
           {formFields.requestedExtension} days
         </p>
-      </div> */}
+      </div>
     </div>
   );
 };

@@ -9,7 +9,8 @@ import { MessageSquare, Paperclip, Eye, GitBranch, Plus, Link2 } from 'lucide-re
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Spark from '@/components/icons/Spark';
 import { useNavigate } from 'react-router-dom';
-import useTask, { useUpdateTask } from '@/supabse/hook/useTask';
+import useFetch from '@/hooks/useFetch';
+import { usePatch } from '@/hooks/usePatch';
 import { toast } from 'sonner';
 import CreateRequestDialog from '@/components/header/CreateRequestDialog';
 import {
@@ -78,7 +79,8 @@ function TaskCard({ task, isDragging }: any) {
     ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : (task.created_at ? new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Date');
 
-  const displayId = `#${task.type || 'TSK'}-${task.task_code || task.id.slice(0, 4)}`;
+  const displayId = `#${task.task_code}`;
+  // const displayId = `#${task.type || 'TSK'}-${task.task_code || task.id}`;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-3">
@@ -180,9 +182,15 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
 }
 
 export default function Task() {
-  const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
-  const { data: serverTasks = [], isLoading } = useTask(projectId);
-  const { mutateAsync: updateTask } = useUpdateTask();
+  const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
+
+  // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
+  const { data: taskResponse, isLoading } = useFetch<{ count: number; results: any[] }>(
+    projectId ? `projects/${projectId}/tasks/` : "",
+    { enabled: !!projectId }
+  );
+
+  const { mutateAsync: updateTask } = usePatch();
 
   /* State */
   const [tasks, setTasks] = useState<{ todo: any[], inReview: any[], done: any[] }>({
@@ -201,7 +209,7 @@ export default function Task() {
 
   useEffect(() => {
     const handleProjectChange = () => {
-      setProjectId(localStorage.getItem("selectedProjectId") || undefined);
+      setProjectId(localStorage.getItem("selectedProjectId") || "");
     };
 
     window.addEventListener("project-change", handleProjectChange);
@@ -209,14 +217,37 @@ export default function Task() {
   }, []);
 
   useEffect(() => {
+    const serverTasks = taskResponse?.tasks || [];
     if (serverTasks) {
+      // Transform new API response to match existing UI structure
+      const transformedTasks = serverTasks.map((item: any) => {
+        return ({
+          id: item.taskId || item.task?._id,
+          title: item.task?.subject || item.task?.title || '',
+          type: item?.taskType,
+          status: item.status || item.task?.status || 'todo',
+          priority: item.task?.priority,
+          discipline: item.task?.discipline,
+          task_code: item.task?.rfiNumber || item.task?.voNumber || item.taskId,
+          due_date: item.task?.dueDate,
+          created_at: item.created_at || item.task?.createdAt,
+          assignedTo: item.assignedTo,
+          assignedBy: item.assignedBy,
+          attachments: item.task?.attachments || [],
+          chat: [],
+        })
+      });
+
+      // setTasks(transformedTasks)
       setTasks({
-        todo: serverTasks.filter((t: any) => !t.status || t.status === 'Todo'),
-        inReview: serverTasks.filter((t: any) => t.status === 'In Review' || t.status === 'inReview'),
-        done: serverTasks.filter((t: any) => t.status === 'Done'),
+        todo: transformedTasks.filter((t: any) => !t.status || t.status === 'todo' || t.status === 'Todo' || t.status === 'Open' || t.status === 'Draft'),
+
+        inReview: transformedTasks.filter((t: any) => t.status === 'in review' || t.status === 'In Review' || t.status === 'inReview' || t.status === 'Pending' || t.status === 'Answered' || t.status === 'IN_REVIEW'),
+
+        done: transformedTasks.filter((t: any) => t.status === 'done' || t.status === 'Done' || t.status === 'Closed'),
       });
     }
-  }, [serverTasks]);
+  }, [taskResponse]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -298,12 +329,17 @@ export default function Task() {
 
     // If moved to a different container compared to start
     if (activeStartContainer !== overContainer) {
-      let newStatus = 'Todo';
-      if (overContainer === 'inReview') newStatus = 'In Review';
-      if (overContainer === 'done') newStatus = 'Done';
+      let newStatus = 'todo';
+      if (overContainer === 'inReview') newStatus = 'in review';
+      if (overContainer === 'done') newStatus = 'done';
+
+      const apiUrl = `tasks/tasks/${active.id}/`;
 
       try {
-        await updateTask({ id: active.id, status: newStatus });
+        await updateTask({
+          url: apiUrl,
+          data: { status: newStatus }
+        });
         toast.success(`Task moved to ${newStatus}`);
       } catch (error) {
         toast.error("Failed to update status");

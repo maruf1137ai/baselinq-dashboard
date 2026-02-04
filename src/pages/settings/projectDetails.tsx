@@ -2,10 +2,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/useProjects";
 import { OnboardingModal } from "@/components/OnboardingModal";
-import React, { useEffect, useState } from "react";
-import { deleteFile, getTaskDocuments } from "@/supabse/api";
+import React, { useState } from "react";
+import { deleteProjectDocument, ProjectDocument } from "@/lib/Api";
 import { FileText, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -14,46 +15,46 @@ import {
 } from "@/components/ui/dialog";
 
 const ProjectDetails = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
-  const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<ProjectDocument | null>(null);
+  const [docToDelete, setDocToDelete] = useState<ProjectDocument | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const { data: projects = [], isLoading } = useProjects();
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const queryClient = useQueryClient();
+  const { data: projects = [], isLoading } = useProjects();
+
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const selectedProject = projects.find((project: any) => project.id === selectedProjectId);
+  const selectedProject = projects.find((project: any) =>
+    (project._id || project.id) == selectedProjectId
+  );
 
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (selectedProject?.id) {
-        try {
-          const docs = await getTaskDocuments(selectedProject.id);
-          setDocuments(docs);
-          console.log("Project Documents:", docs);
-        } catch (error) {
-          console.error("Failed to fetch project documents", error);
-        }
-      }
-    };
+  // Get documents from project response (supports both camelCase and snake_case)
+  const documents: ProjectDocument[] = selectedProject?.documents || [];
 
-    fetchDocuments();
-  }, [selectedProject?.id]);
+  // Helper to get document properties (handles both naming conventions)
+  const getDocName = (doc: ProjectDocument) => doc.file_name || doc.fileName || doc.name || "Unknown";
+  const getDocUrl = (doc: ProjectDocument) => doc.file_url || doc.fileUrl || "";
+  const getDocDate = (doc: ProjectDocument) => doc.uploaded_at || doc.uploadedAt;
+  const getDocId = (doc: ProjectDocument) => doc.id || doc._id;
 
-  const handleDeleteDocument = (e: React.MouseEvent, doc: any) => {
+  const handleDeleteDocument = (e: React.MouseEvent, doc: ProjectDocument) => {
     e.stopPropagation();
     setDocToDelete(doc);
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = async () => {
-    if (!selectedProject?.id || !docToDelete) return;
+    const pId = selectedProject?._id || selectedProject?.id;
+    const docId = docToDelete ? getDocId(docToDelete) : null;
+    // console.log(pId, docToDelete);
+    if (!pId || !docId) return;
 
     setIsDeleting(true);
     try {
-      await deleteFile(selectedProject.id, docToDelete.name);
-      setDocuments((prev) => prev.filter((d) => d.name !== docToDelete.name));
+      await deleteProjectDocument(pId, docId);
+      // Invalidate projects query to refetch updated documents
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Document deleted successfully");
       setShowDeleteConfirm(false);
       setDocToDelete(null);
@@ -107,7 +108,7 @@ const ProjectDetails = () => {
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">Project Code</div>
-                <div className="text-base text-[#1A1A1A]">{selectedProject?.number || "N/A"}</div>
+                <div className="text-base text-[#1A1A1A]">{selectedProject?.projectNumber || selectedProject?.project_number || "N/A"}</div>
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">Location</div>
@@ -115,19 +116,32 @@ const ProjectDetails = () => {
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">Project Type</div>
-                <div className="text-base text-[#1A1A1A]">{selectedProject?.contract_type || "N/A"}</div>
+                <div className="text-base text-[#1A1A1A]">{selectedProject?.contractType || selectedProject?.contract_type || "N/A"}</div>
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">Start Date</div>
-                <div className="text-base text-[#1A1A1A]">{selectedProject?.start_date || "N/A"}</div>
+                <div className="text-base text-[#1A1A1A]">
+                  {selectedProject?.startDate || selectedProject?.start_date
+                    ? new Date(selectedProject.startDate || selectedProject.start_date!).toLocaleDateString()
+                    : "N/A"}
+                </div>
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">End Date</div>
-                <div className="text-base text-[#1A1A1A]">{selectedProject?.end_date || "N/A"}</div>
+                <div className="text-base text-[#1A1A1A]">
+                  {selectedProject?.endDate || selectedProject?.end_date
+                    ? new Date(selectedProject.endDate || selectedProject.end_date!).toLocaleDateString()
+                    : "N/A"}
+                </div>
               </div>
               <div className="item">
                 <div className="text-xs text-[#6B7280] mb-1">Total Budget</div>
-                <div className="text-base text-[#1A1A1A]">R {selectedProject?.total_budget?.toLocaleString() || "0"}</div>
+                <div className="text-base text-[#1A1A1A]">
+                  R {(selectedProject?.totalBudget ?? selectedProject?.total_budget)?.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  }) || "0.00"}
+                </div>
               </div>
               <div className="item col-span-2">
                 <div className="text-xs text-[#6B7280] mb-1">Description</div>
@@ -142,12 +156,12 @@ const ProjectDetails = () => {
       <div className="item border border-border_color rounded-[14px] mt-4 bg-white">
         <div className="p-6 flex gap-3">
           <div className="w-full">
-            <div className="title text-base text-[#1A1A1A] mb-6">Documents</div>
+            <div className="title text-base text-[#1A1A1A] mb-6">Documents ({documents.length})</div>
             {documents.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {documents.map((doc, i) => (
                   <div
-                    key={i}
+                    key={getDocId(doc) || i}
                     className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => setSelectedDocument(doc)}
                   >
@@ -155,9 +169,9 @@ const ProjectDetails = () => {
                       <FileText className="h-5 w-5 text-gray-500" />
                     </div>
                     <div className="overflow-hidden flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{getDocName(doc)}</p>
                       <p className="text-xs text-gray-500">
-                        {(doc.metadata?.size / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString()}
+                        {getDocDate(doc) ? new Date(getDocDate(doc)!).toLocaleDateString() : "N/A"}
                       </p>
                     </div>
                     <button
@@ -187,35 +201,47 @@ const ProjectDetails = () => {
       <Dialog open={!!selectedDocument} onOpenChange={(open) => !open && setSelectedDocument(null)}>
         <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0 gap-0 [&>button]:text-white [&>button]:hover:text-white/80">
           <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0 bg-[#101828] text-white rounded-t-lg">
-            <DialogTitle className="truncate pr-8 text-white">{selectedDocument?.name}</DialogTitle>
+            <DialogTitle className="truncate pr-8 text-white">{selectedDocument ? getDocName(selectedDocument) : ""}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 bg-gray-100 overflow-hidden relative flex items-center justify-center rounded-b-lg">
-            {selectedDocument && (
-              selectedDocument.metadata?.mimetype?.startsWith('image/') ? (
-                <img
-                  src={selectedDocument.url}
-                  alt={selectedDocument.name}
-                  className="max-w-full max-h-full object-contain"
-                />
-              ) : selectedDocument.metadata?.mimetype === 'application/pdf' ? (
-                <iframe
-                  src={selectedDocument.url}
-                  className="w-full h-full"
-                  title={selectedDocument.name}
-                />
-              ) : (
-                <div className="text-center p-8">
-                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-900 mb-2">No Preview Available</p>
-                  <p className="text-sm text-gray-500 mb-6">This file type cannot be previewed directly.</p>
-                  <Button asChild>
-                    <a href={selectedDocument.url} download={selectedDocument.name} target="_blank" rel="noreferrer">
-                      Download File
-                    </a>
-                  </Button>
-                </div>
-              )
-            )}
+            {selectedDocument && (() => {
+              const docUrl = getDocUrl(selectedDocument);
+              const docName = getDocName(selectedDocument);
+              const fileExt = docName.split('.').pop()?.toLowerCase();
+              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt || '');
+              const isPdf = fileExt === 'pdf';
+
+              if (isImage) {
+                return (
+                  <img
+                    src={docUrl}
+                    alt={docName}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                );
+              } else if (isPdf) {
+                return (
+                  <iframe
+                    src={docUrl}
+                    className="w-full h-full"
+                    title={docName}
+                  />
+                );
+              } else {
+                return (
+                  <div className="text-center p-8">
+                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-lg font-medium text-gray-900 mb-2">No Preview Available</p>
+                    <p className="text-sm text-gray-500 mb-6">This file type cannot be previewed directly.</p>
+                    <Button asChild>
+                      <a href={docUrl} download={docName} target="_blank" rel="noreferrer">
+                        Download File
+                      </a>
+                    </Button>
+                  </div>
+                );
+              }
+            })()}
           </div>
         </DialogContent>
       </Dialog>
@@ -231,7 +257,7 @@ const ProjectDetails = () => {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500">
-              Are you sure you want to delete <span className="font-semibold text-gray-900">{docToDelete?.name}</span>? This action cannot be undone.
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{docToDelete ? getDocName(docToDelete) : ""}</span>? This action cannot be undone.
             </p>
           </div>
           <div className="flex justify-end gap-3">

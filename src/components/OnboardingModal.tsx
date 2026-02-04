@@ -2,8 +2,9 @@ import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { uploadFile } from "@/supabse/api";
-import { Loader2 } from "lucide-react";
+import { uploadProjectDocument, validateFile, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
+import { X, FileText } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,8 @@ export function OnboardingModal({
   const isPending = isCreating || isUpdatingProject;
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [fileErrors, setFileErrors] = React.useState<Record<string, string>>({});
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
@@ -127,34 +130,67 @@ export function OnboardingModal({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles((prev) => [
-        ...prev,
-        ...Array.from(e.target.files || []),
-      ]);
+      const newFiles = Array.from(e.target.files);
+      const validFiles: File[] = [];
+      const errors: Record<string, string> = {};
+
+      newFiles.forEach((file) => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          errors[file.name] = validation.error || "Invalid file";
+          toast.error(`${file.name}: ${validation.error}`);
+        }
+      });
+
+      setFileErrors((prev) => ({ ...prev, ...errors }));
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
     }
+    // Reset input so same file can be selected again
+    e.target.value = "";
   };
 
   const handleRemoveFile = (index: number) => {
+    const fileToRemove = selectedFiles[index];
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadProgress((prev) => {
+      const updated = { ...prev };
+      delete updated[fileToRemove.name];
+      return updated;
+    });
+    setFileErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[fileToRemove.name];
+      return updated;
+    });
   };
 
   const uploadAllFiles = async (projectId: string) => {
     if (!selectedFiles.length) return [];
     setIsUploading(true);
-    const uploadedUrls: string[] = [];
+    const uploadedDocs: any[] = [];
 
     for (const file of selectedFiles) {
       try {
-        const url = await uploadFile(file, projectId);
-        uploadedUrls.push(url);
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+        const doc = await uploadProjectDocument(projectId, file, (progress) => {
+          setUploadProgress((prev) => ({ ...prev, [file.name]: progress }));
+        });
+        uploadedDocs.push(doc);
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
+        setFileErrors((prev) => ({
+          ...prev,
+          [file.name]: err instanceof Error ? err.message : "Upload failed",
+        }));
       }
     }
 
     setIsUploading(false);
-    return uploadedUrls;
+    return uploadedDocs;
   };
 
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
@@ -162,16 +198,27 @@ export function OnboardingModal({
       name: values.name,
       description: values.description,
       project_number: values.project_number,
+      projectNumber: values.project_number,
       start_date: values.start_date,
+      startDate: values.start_date,
       end_date: values.end_date,
+      endDate: values.end_date,
       fx_rate: values.fx_rate,
+      fxRate: values.fx_rate,
       retention_rate: values.retention_rate,
+      retentionRate: values.retention_rate,
       vat_rate: values.vat_rate,
+      vatRate: values.vat_rate,
       contract_type: values.contract_type,
+      contractType: values.contract_type,
       total_budget: values.total_budget,
+      totalBudget: values.total_budget,
       location: values.location,
       status: "Draft",
-      ...(project?._id && { _id: project._id }),
+      ...((project?.id || project?._id) && {
+        id: project.id || project?._id,
+        _id: project?._id || project?.id
+      }),
     };
 
     const handleSuccess = async (result: any) => {
@@ -180,7 +227,7 @@ export function OnboardingModal({
 
       if (selectedFiles.length > 0) {
         try {
-          await uploadAllFiles(projectData._id);
+          await uploadAllFiles(projectData.id || projectData._id);
           toast.success(
             project
               ? "Project updated with attachments!"
@@ -199,7 +246,8 @@ export function OnboardingModal({
       }
 
       onOpenChange(false);
-      localStorage.setItem("selectedProjectId", projectData._id);
+      const newProjectId = projectData.id || projectData._id;
+      localStorage.setItem("selectedProjectId", newProjectId);
       if (projectData.location) {
         localStorage.setItem("projectLocation", projectData.location);
       }
@@ -320,6 +368,7 @@ export function OnboardingModal({
                         className="hidden"
                         onChange={handleFileChange}
                         multiple
+                        accept={ALLOWED_FILE_EXTENSIONS.join(',')}
                       />
                       <div
                         className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -332,22 +381,49 @@ export function OnboardingModal({
                         <p className="text-sm text-muted-foreground">
                           or click to browse
                         </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          PDF, JPG, PNG, GIF, WEBP, XLSX, XLS (max 20MB)
+                        </p>
                       </div>
 
                       {/* Selected files */}
                       {selectedFiles.length > 0 && (
-                        <div className="mt-2 flex flex-col gap-2">
+                        <div className="mt-3 flex flex-col gap-2">
                           {selectedFiles.map((file, index) => (
                             <div
                               key={index}
-                              className="flex justify-between items-center border p-2 rounded">
-                              <span className="text-sm">{file.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFile(index)}
-                                className="text-red-500 text-xs hover:underline">
-                                Remove
-                              </button>
+                              className="border rounded-lg p-3 bg-gray-50">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium truncate">{file.name}</p>
+                                    <p className="text-xs text-gray-500">
+                                      {(file.size / 1024).toFixed(1)} KB
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFile(index)}
+                                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  disabled={isUploading}>
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                              {/* Upload progress */}
+                              {uploadProgress[file.name] !== undefined && (
+                                <div className="mt-2">
+                                  <Progress value={uploadProgress[file.name]} className="h-1" />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {uploadProgress[file.name] === 100 ? "Uploaded" : `${uploadProgress[file.name]}%`}
+                                  </p>
+                                </div>
+                              )}
+                              {/* Error message */}
+                              {fileErrors[file.name] && (
+                                <p className="text-xs text-red-500 mt-1">{fileErrors[file.name]}</p>
+                              )}
                             </div>
                           ))}
                         </div>

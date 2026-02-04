@@ -10,6 +10,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+
+const DISCIPLINE_OPTIONS = [
+  "Architectural",
+  "Structural",
+  "Mechanical",
+  "Electrical",
+  "Plumbing",
+  "Civil",
+  "Fire & Safety",
+  "Landscape",
+  "MEP",
+  "Interior",
+  "Facade",
+  "HVAC",
+];
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,11 +50,12 @@ export default function GIForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
+  const projectId = localStorage.getItem("selectedProjectId");
 
   const { mutateAsync } = useMutation({
     mutationFn: (newTask: any) => addNewTask({ newTask }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
+      queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
       toast.success("Success! GI created successfully");
       setOpen(false);
     },
@@ -147,12 +163,18 @@ export default function GIForm({ setOpen, initialStatus }: any) {
 
       <div>
         <Label>Discipline</Label>
-        <Input
-          className="mt-1"
-          placeholder="Discipline"
-          value={formData.discipline}
-          onChange={(e) => handleChange("discipline", e.target.value)}
-        />
+        <Select value={formData.discipline} onValueChange={(val) => handleChange("discipline", val)}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select discipline" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {DISCIPLINE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>

@@ -5,10 +5,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Trash2, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
+import { uploadFile } from "@/supabse/api";
+
+const DISCIPLINE_OPTIONS = [
+  "Architectural",
+  "Structural",
+  "Mechanical",
+  "Electrical",
+  "Plumbing",
+  "Civil",
+  "Fire & Safety",
+  "Landscape",
+  "MEP",
+  "Interior",
+  "Facade",
+  "HVAC",
+];
 
 export default function VOForm({ setOpen, initialStatus }: any) {
   const [title, setTitle] = useState("");
@@ -24,19 +47,7 @@ export default function VOForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
-      toast.success("Success! VO created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating VO:", error);
-    },
-  });
+  const { mutateAsync: createVO } = usePost();
 
   const addItem = () => {
     setItems([...items, { description: "", qty: 1, rate: 0 }]);
@@ -102,43 +113,58 @@ export default function VOForm({ setOpen, initialStatus }: any) {
     try {
       const files = await uploadAllFiles(projectId);
 
-      const totalCostVal = items.reduce((acc, item) => acc + (item.qty || 0) * (item.rate || 0), 0);
-      const itemsDetails = items.map(i => `- ${i.description} (x${i.qty}) @ R${i.rate} = R${((i.qty || 0) * (i.rate || 0)).toFixed(2)}`).join("\n");
+      // Calculate totals from line items
+      const subTotal = items.reduce((acc, item) => acc + (item.qty || 0) * (item.rate || 0), 0);
+      const taxRate = 15; // Default VAT rate
+      const taxAmount = (subTotal * taxRate) / 100;
+      const grandTotal = subTotal + taxAmount;
 
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
+      const fullDescription = files.length > 0
+        ? `${description}\n\nAttachments: ${JSON.stringify(files)}`
+        : description;
 
-      const fullDescription = `
-${description}
-
-Line Items:
-${itemsDetails}
-Total: R${totalCostVal.toFixed(2)}
-
-${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
-      `.trim();
-
+      // Construct payload matching Django VO API requirements
       const payload = {
-        project_id: projectId,
-        title,
-        type: "VO",
-        status: initialStatus || "Todo",
-        priority: "Medium",
-        Discipline: discipline,
-        Cost: `R${totalCostVal.toFixed(2)}`,
+        project: parseInt(projectId),
+        title: title,
+        discipline: discipline || undefined,
         description: fullDescription,
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`
-        },
+        status: initialStatus || "Draft",
+        line_items: items.map(item => ({
+          description: item.description,
+          quantity: item.qty,
+          unitRate: item.rate,
+          // total: (item.qty || 0) * (item.rate || 0)
+        })),
+        currency: "ZAR",
+        sub_total: 125000.00,
+        tax_type: "VAT",
+        tax_rate: 15.00,
+        tax_amount: 18750.00,
+        grand_total: 143750.00,
       };
 
-      await mutateAsync(payload);
-    } catch (err) {
+      const result = await createVO({
+        url: "tasks/variation-orders/",
+        data: payload
+      });
+
+      // Refetch VOs and tasks to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["vos"] });
+
+      toast.success("Success! VO created successfully");
+
+      if (result?.id) {
+        console.log("VO created:", result.id);
+      }
+
+      setOpen(false);
+
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating VO");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating VO";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -158,12 +184,18 @@ ${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
 
       <div>
         <Label>Discipline</Label>
-        <Input
-          className="mt-1"
-          placeholder="Discipline"
-          value={discipline}
-          onChange={(e) => setDiscipline(e.target.value)}
-        />
+        <Select value={discipline} onValueChange={setDiscipline}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select discipline" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {DISCIPLINE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -217,12 +249,18 @@ ${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
 
             <div className="col-span-2">
               <Label>Total</Label>
-              <Input readOnly value={"R" + getTotal(index).toFixed(2)} />
+              <Input
+                readOnly
+                value={"R " + getTotal(index).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              />
             </div>
 
             <button
               type="button"
-              className="col-span-1 text-red-500"
+              className="col-span-1 text-red-500 pb-4"
               onClick={() => removeItem(index)}>
               <Trash2 size={18} />
             </button>
@@ -266,11 +304,17 @@ ${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
                 key={index}
                 className="flex justify-between items-center border p-2 rounded">
                 <span className="text-sm">{file.name}</span>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => handleRemoveFile(index)}
                   className="text-red-500 text-xs hover:underline">
-                  Remove
+                  <X size={18} />
+                </button> */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile(index)}
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}
@@ -305,4 +349,3 @@ ${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
     </form>
   );
 }
-

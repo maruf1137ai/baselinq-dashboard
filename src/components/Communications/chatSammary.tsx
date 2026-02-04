@@ -1,18 +1,16 @@
-import { Check, ExternalLink, TriangleAlert, FileText, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { Check, ExternalLink, TriangleAlert, FileText } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { RequestInfoDialog } from '../commons/RequestInfoDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useUpdateTask } from '@/supabse/hook/useTask';
 import { getTaskDocuments } from '@/supabse/api';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 
 const ChatSammary = ({ task }: { task: any }) => {
   const navigate = useNavigate();
-  const { mutateAsync: updateTask } = useUpdateTask();
+  // const { mutateAsync: updateTask } = useUpdateTask();
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
@@ -42,27 +40,6 @@ const ChatSammary = ({ task }: { task: any }) => {
 
   const handleViewTask = () => {
     navigate(`/tasks/${task.id}`);
-  };
-
-  const handleRequestInfoSubmit = async (requestData: any) => {
-    if (!task) return;
-
-    const currentRequests = task.request_info && Array.isArray(task.request_info)
-      ? task.request_info
-      : [];
-
-    const updatedRequests = [...currentRequests, requestData];
-
-    try {
-      await updateTask({
-        id: task.id,
-        request_info: updatedRequests
-      });
-      toast.success("Request sent successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to send request");
-    }
   };
 
   return (
@@ -212,7 +189,7 @@ const ChatSammary = ({ task }: { task: any }) => {
           <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">
             <ExternalLink className="mr-2 h-4 w-4" /> View Task
           </Button>
-          <RequestInfoDialog onSubmit={handleRequestInfoSubmit} wFull />
+          <RequestInfoDialog taskType={task.type || 'RFI'} taskId={task.id} wFull />
         </div>
       </div>
     </div>

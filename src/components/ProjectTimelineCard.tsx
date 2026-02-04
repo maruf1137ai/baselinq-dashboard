@@ -17,7 +17,7 @@ interface ProjectTimelineCardProps {
 export function ProjectTimelineCard({ startDate: propStartDate, currentDate: propCurrentDate, deadline: propDeadline, progress: propProgress, daysStatus: propDaysStatus }: ProjectTimelineCardProps) {
   const { data: projects = [], isLoading } = useProjects();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const selectedProject = projects.find((project: any) => project.id === selectedProjectId);
+  const selectedProject = projects.find((project: any) => (project._id || project.id) === selectedProjectId);
 
   const dynamicData = React.useMemo(() => {
     if (!selectedProject) {
@@ -30,8 +30,21 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
       };
     }
 
-    const start = parseISO(selectedProject.start_date);
-    const end = parseISO(selectedProject.end_date);
+    const startDateStr = selectedProject.startDate || selectedProject.start_date;
+    const endDateStr = selectedProject.endDate || selectedProject.end_date;
+
+    if (!startDateStr || !endDateStr) {
+      return {
+        startDate: propStartDate,
+        currentDate: propCurrentDate,
+        deadline: propDeadline,
+        progress: propProgress,
+        daysStatus: propDaysStatus
+      };
+    }
+
+    const start = parseISO(startDateStr);
+    const end = parseISO(endDateStr);
     const now = new Date();
 
     const totalDays = differenceInDays(end, start);

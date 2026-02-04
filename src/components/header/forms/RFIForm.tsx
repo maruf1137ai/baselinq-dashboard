@@ -5,36 +5,47 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const DISCIPLINE_OPTIONS = [
+  "Architectural",
+  "Structural",
+  "Mechanical",
+  "Electrical",
+  "Plumbing",
+  "Civil",
+  "Fire & Safety",
+  "Landscape",
+  "MEP",
+  "Interior",
+  "Facade",
+  "HVAC",
+];
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
+import { uploadFile } from "@/supabse/api";
 
 export default function RFIForm({ setOpen, initialStatus }: any) {
   const [subject, setSubject] = useState("");
   const [discipline, setDiscipline] = useState("");
   const [question, setQuestion] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("Medium");
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<
-    { name: string; url: string }[]
-  >([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string }[]>([]);
 
   const queryClient = useQueryClient();
-
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
-      toast.success("Success! RFI created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating RFI:", error);
-    },
-  });
+  const { mutateAsync: createRFI } = usePost();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -82,31 +93,37 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
     setLoading(true);
 
     try {
-      const files = await uploadAllFiles(projectId);
-
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
-
+      // Construct payload matching Django RFI API requirements
       const payload = {
-        project_id: projectId,
-        title: subject,
-        type: "RFI",
-        status: initialStatus || "Todo",
-        priority: "Medium",
-        Discipline: discipline,
-        Question: question,
-        description: files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : "",
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`
-        },
+        project: parseInt(projectId),
+        subject: subject,
+        discipline: discipline || undefined,
+        question: question,
+        status: initialStatus || "Open",
+        description: description,
       };
-      await mutateAsync(payload);
-    } catch (err) {
+
+      const result = await createRFI({
+        url: "tasks/requests-for-information/",
+        data: payload
+      });
+
+      // Refetch RFIs and tasks to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["rfis"] });
+
+      toast.success("Success! RFI created successfully");
+
+      if (result?.id) {
+        console.log("RFI created:", result.id);
+      }
+
+      setOpen(false);
+
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating RFI");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating RFI";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -115,23 +132,43 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
-        <Label>Subject</Label>
+        <Label>Subject *</Label>
         <Input
           placeholder="Enter subject"
           className="mt-1"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
+          required
         />
       </div>
 
       <div>
+        <Label>Priority</Label>
+        <select
+          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+        >
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
+      <div>
         <Label>Discipline</Label>
-        <Input
-          placeholder="Enter discipline"
-          className="mt-1"
-          value={discipline}
-          onChange={(e) => setDiscipline(e.target.value)}
-        />
+        <Select value={discipline} onValueChange={setDiscipline}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select discipline" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {DISCIPLINE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -142,6 +179,17 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
           className="mt-1"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <Label>Description</Label>
+        <Textarea
+          rows={3}
+          placeholder="Additional details"
+          className="mt-1"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
         />
       </div>
 
@@ -216,4 +264,3 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
     </form>
   );
 }
-

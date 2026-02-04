@@ -7,6 +7,8 @@ interface TaskRFIProps {
 export const TaskRFI: React.FC<TaskRFIProps> = ({ formFields }) => {
   if (!formFields) return null;
 
+  // console.log(formFields);
+
   return (
     <div className="space-y-4">
       <div>
@@ -23,7 +25,7 @@ export const TaskRFI: React.FC<TaskRFIProps> = ({ formFields }) => {
       </div>
       {formFields.description && (
         <div>
-          <label className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Attachments</label>
+          <label className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">Description</label>
           <p className="text-sm text-[#4B5563] leading-relaxed whitespace-pre-line mt-1">{formFields.description}</p>
         </div>
       )}

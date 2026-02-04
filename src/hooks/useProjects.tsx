@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getProjects,
+  getProject,
   createProject,
   updateProject,
   deleteProject,
@@ -17,6 +18,14 @@ export const useProjects = () => {
       // Extract the results array
       return response?.results || [];
     },
+  });
+};
+
+export const useProject = (projectId?: string | number) => {
+  return useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => getProject(projectId as any),
+    enabled: !!projectId,
   });
 };
 

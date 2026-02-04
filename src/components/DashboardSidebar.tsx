@@ -39,9 +39,9 @@ import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { OnboardingModal } from "./OnboardingModal";
 
 interface Project {
-  _id: string;
+  id: string;
   name: string;
-  projectNumber: string;
+  project_number: string;
   location?: string;
   status?: string;
 }
@@ -75,6 +75,8 @@ export function DashboardSidebar() {
     () => localStorage.getItem("selectedProjectId") || "",
   );
 
+
+
   useEffect(() => {
     const handleProjectChange = () => {
       setSelectedProjectId(localStorage.getItem("selectedProjectId") || "");
@@ -86,25 +88,27 @@ export function DashboardSidebar() {
   }, []);
 
   useEffect(() => {
+    // console.log(selectedProjectId)
     if (!isLoading && projects.length === 0) {
       setShowOnboarding(true);
     } else if (projects.length > 0 && !selectedProjectId) {
       // Auto select first project if none selected
-      const firstId = projects[0]._id;
+      const firstId = projects[0].id || projects[0]._id;
       setSelectedProjectId(firstId);
       localStorage.setItem("selectedProjectId", firstId);
     }
   }, [projects, isLoading, selectedProjectId]);
 
   const handleProjectSelect = (project: Project) => {
-    setSelectedProjectId(project?._id);
-    localStorage.setItem("selectedProjectId", project?._id);
+    const pId = project?.id || (project as any)?._id;
+    setSelectedProjectId(pId);
+    localStorage.setItem("selectedProjectId", pId);
     localStorage.setItem("projectLocation", project?.location || "");
     window.dispatchEvent(new Event("project-change"));
     // window.location.reload()
   };
 
-  const selectedProject = projects.find((p) => p._id === selectedProjectId);
+  const selectedProject = projects.find((p: any) => (p.id || p._id) === selectedProjectId);
 
   const handleLogout = () => {
     logout();
@@ -136,13 +140,13 @@ export function DashboardSidebar() {
               <DropdownMenuContent className="w-56" align="start">
                 <DropdownMenuLabel>Projects</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {projects.map((project: Project) => (
+                {projects.map((project: any) => (
                   <DropdownMenuItem
-                    key={project._id}
+                    key={project.id || project._id}
                     onClick={() => handleProjectSelect(project)}
                     className="cursor-pointer">
                     {project.name}
-                    {selectedProjectId === project._id && (
+                    {selectedProjectId === (project.id || project._id) && (
                       <span className="ml-auto text-xs text-blue-500">
                         Active
                       </span>
@@ -183,9 +187,8 @@ export function DashboardSidebar() {
                             to={item.url}
                             className="flex items-center gap-3">
                             {React.cloneElement(item.icon, {
-                              className: `text-[#6B6B6B]  ${
-                                isActive ? "text-black" : ""
-                              }`,
+                              className: `text-[#6B6B6B]  ${isActive ? "text-black" : ""
+                                }`,
                             })}
                             {open && (
                               <span
@@ -224,9 +227,8 @@ export function DashboardSidebar() {
                             to={item.url}
                             className="flex items-center gap-3">
                             {React.cloneElement(item.icon, {
-                              className: `text-[#6B6B6B]  ${
-                                isActive ? "text-black" : ""
-                              }`,
+                              className: `text-[#6B6B6B]  ${isActive ? "text-black" : ""
+                                }`,
                             })}
                             {open && (
                               <span

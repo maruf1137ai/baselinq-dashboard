@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
 
 export default function CPIForm({ setOpen, initialStatus }: any) {
   const [activityName, setActivityName] = useState("");
@@ -26,20 +27,12 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
     { name: string; url: string }[]
   >([]);
 
-  const queryClient = useQueryClient();
+  const user = localStorage.getItem("user");
+  const userObj = user ? JSON.parse(user) : null;
+  // console.log(userObj);
 
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task"] });
-      toast.success("Success! CPI created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating CPI:", error);
-    },
-  });
+  const queryClient = useQueryClient();
+  const { mutateAsync: createCPI } = usePost();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -89,47 +82,41 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
     setLoading(true);
 
     try {
-      const files = await uploadAllFiles(projectId);
-
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
-
-      const fullDescription = `
-${description}
-
-Duration: ${duration} days
-Start Date: ${startDate}
-Finish Date: ${finishDate}
-Predecessors: ${predecessors}
-Successors: ${successors}
-Resources: ${resources}
-
-${files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : ""}
-      `.trim();
-
+      // Construct payload matching Django CPI API requirements
       const payload = {
-        project_id: projectId,
-        title: activityName,
-        type: "CPI",
-        status: initialStatus || "Todo",
-        priority: "High",
-        Activity: activityName,
-        Duration: duration,
-        StartDate: startDate,
-        FinishDate: finishDate,
-        description: fullDescription,
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`,
-        },
+        project: parseInt(projectId),
+        task_activity_name: activityName,
+        description: description || undefined,
+        duration: duration ? parseInt(duration) : undefined,
+        start_date: startDate || undefined,
+        finish_date: finishDate || undefined,
+        predecessors: predecessors || undefined,
+        successors: successors || undefined,
+        resources: resources || undefined,
+        created_by: userObj?.id || undefined,
       };
 
-      await mutateAsync(payload);
-    } catch (err) {
+      const result = await createCPI({
+        url: "tasks/critical-path-items/",
+        data: payload
+      });
+
+      // Refetch CPIs and tasks to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["cpis"] });
+
+      toast.success("Success! CPI created successfully");
+
+      if (result?.id) {
+        console.log("CPI created:", result.id);
+      }
+
+      setOpen(false);
+
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating CPI");
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating CPI";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

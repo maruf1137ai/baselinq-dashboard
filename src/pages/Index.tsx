@@ -8,7 +8,6 @@ import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Clock, Shield, TrendingUp } from 'lucide-react';
 import svgPaths from '../components/svg-msqaf6zyu8';
-import { useFetchData } from '@/hooks/useFetchData';
 import MyAction from '@/components/icons/MyAction';
 import Caution from '@/components/icons/Caution';
 import Caution2 from '@/components/icons/Caution2';
@@ -17,15 +16,23 @@ import CashIcon from '@/components/icons/CashIcon';
 import Calander2 from '@/components/icons/Calander2';
 import useTask from "@/supabse/hook/useTask";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useProject } from "@/hooks/useProjects";
+import useFetch from "@/hooks/useFetch";
 
 const icons = ['/images/cash-01.png', '/images/calendar-02.png', '/images/shield-01.png', '/images/asterisk-02.png'];
 
 const Index = () => {
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
 
-  const { data: tasks = [], isLoading: loadingTasks } = useTask(projectId);
-  const { data: projectsOverview, isLoading: loadingProjectsOverview } = useFetchData('project-overview/');
+  // const { data: tasks = [], isLoading: loadingTasks } = useTask(projectId);
+  const { data: tasks, isLoading: loadingTasks } = useFetch<{ count: number; results: any[] }>(
+    projectId ? `tasks/?project=${projectId}` : "",
+    { enabled: !!projectId }
+  );
+  const { data: project, isLoading: loadingProject } = useProject(projectId);
   const { data: user } = useCurrentUser(); // Django auth hook
+
+  // console.log("Project:", project);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -36,13 +43,23 @@ const Index = () => {
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
-  const enhancedData = projectsOverview?.map((item: any, index: number) => ({
-    ...item,
-    icon: icons[index],
-  }));
+  const taskList = tasks?.results || [];
+  const myActions = taskList.filter((t: any) => t.status !== 'Done');
+  const recentActivity = [...taskList].sort((a: any, b: any) => {
+    const dateA = new Date(b.updated_at || b.created_at).getTime();
+    const dateB = new Date(a.updated_at || a.created_at).getTime();
+    return dateA - dateB;
+  }).slice(0, 5);
 
-  const myActions = tasks.filter((t: any) => t.status !== 'Done');
-  const recentActivity = [...tasks].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5);
+  const formatCurrency = (value: string | number) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(num || 0);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <DashboardLayout>
@@ -72,9 +89,9 @@ const Index = () => {
                   <ActionItem
                     key={task.id}
                     title={task.title}
-                    description={task.title}
+                    description={task.description || task.question || task.title}
                     priority={task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) as any : "Medium"}
-                    dueDate={task.due_date ? new Date(task.due_date).toLocaleDateString() : "No Date"}
+                    dueDate={task.due_date ? new Date(task.due_date).toLocaleDateString() : (task.updated_at ? new Date(task.updated_at).toLocaleDateString() : "No Date")}
                     id={task.id}
                   />
                 ))
@@ -101,10 +118,10 @@ const Index = () => {
                 recentActivity.map((task: any) => (
                   <ActivityFeedItem
                     key={task.id}
-                    title={`${task.type}: ${task.title}`}
+                    title={`${task.type || 'Task'}: ${task.title}`}
                     status={task.status}
-                    author="User"
-                    timeAgo={task.created_at ? new Date(task.created_at).toLocaleDateString() : "Just now"}
+                    author={task.discipline || "User"}
+                    timeAgo={task.updated_at || task.created_at ? new Date(task.updated_at || task.created_at).toLocaleDateString() : "Just now"}
                   />
                 ))
               ) : (
@@ -115,8 +132,14 @@ const Index = () => {
         </div>
 
 
-        <BudgetBreakdownCard progress={65} daysStatus="8 days behind" />
-        <ProjectTimelineCard startDate="Jan 15" currentDate="Mar 8" deadline="May 30" progress={65} daysStatus="8 days behind" />
+        <BudgetBreakdownCard progress={65} daysStatus="On track" />
+        <ProjectTimelineCard
+          startDate={formatDate(project?.startDate || project?.start_date)}
+          currentDate={formatDate(new Date().toISOString())}
+          deadline={formatDate(project?.endDate || project?.end_date)}
+          progress={45}
+          daysStatus={project?.status || "In Progress"}
+        />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <ProjectStatusCard

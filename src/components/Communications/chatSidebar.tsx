@@ -63,9 +63,9 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
                 <span>K</span>
               </div> */}
               </div>
-              <button className="py-[15px] border rounded-[9px] px-[15px]">
+              {/* <button className="py-[15px] border rounded-[9px] px-[15px]">
                 <UserPlus size={14} />
-              </button>
+              </button> */}
             </div>
             <div className="mt-5 flex flex-col gap-2">
               {tasks.map((task) => {
