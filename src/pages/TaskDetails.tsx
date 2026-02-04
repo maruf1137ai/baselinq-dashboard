@@ -368,7 +368,8 @@ export default function TaskDetails() {
   const projectId = localStorage.getItem("selectedProjectId");
   // Fetch task details from new Django API
   const { data: taskDetailsResponse, isLoading } = useFetch(
-    projectId && taskId ? `projects/${projectId}/tasks/${taskId}/` : "",
+    projectId && taskId ? `tasks/tasks/${taskId}/` : "",
+    // projectId && taskId ? `projects/${projectId}/tasks/${taskId}/` : "",
     { enabled: !!taskId && !!projectId }
   );
 
