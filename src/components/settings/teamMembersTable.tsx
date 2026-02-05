@@ -3,7 +3,7 @@ import { Category, LedgerEntry } from "../finance/costLadger";
 import { MoreHorizontal, ChevronsUpDown, Check } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
 import { cn } from "@/lib/utils";
-import { postData, deleteData } from "@/lib/Api";
+import { postData, deleteData, patchData } from "@/lib/Api";
 import { toast } from "sonner";
 // import CategoryBadge from './CategoryBadge';
 import {
@@ -128,14 +128,20 @@ const ActionsCell = ({
   member,
   projectId,
   onRefetch,
+  onRefetchRoles,
+  roles,
 }: {
   member: TeamMember;
   projectId: string;
   onRefetch: () => void;
+  onRefetchRoles: () => void;
+  roles: Role[];
 }) => {
-  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -147,11 +153,44 @@ const ActionsCell = ({
       toast.success("Team member removed successfully");
       setShowDeleteDialog(false);
       onRefetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error removing team member:", error);
-      toast.error("Failed to remove team member. Please try again.");
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to remove team member. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEditRole = async () => {
+    if (!selectedRole) {
+      toast.error("Please select a role");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await patchData({
+        url: `projects/${projectId}/team-members/${member._id}/`,
+        data: {
+          roleName: selectedRole.name,
+          roleId: selectedRole.id,
+        },
+      });
+      toast.success("Role updated successfully");
+      setShowEditDialog(false);
+      setSelectedRole(null);
+      onRefetch();
+      onRefetchRoles();
+
+      // Dispatch event to refetch user role in DashboardSidebar
+      window.dispatchEvent(new Event("user-role-change"));
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to update role. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -164,7 +203,7 @@ const ActionsCell = ({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
-          <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
+          <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
             Edit Role
           </DropdownMenuItem>
           <DropdownMenuItem>Suspend</DropdownMenuItem>
@@ -196,6 +235,75 @@ const ActionsCell = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+            <DialogDescription>
+              Update the role for this team member
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* User Information - Read Only */}
+            <div className="space-y-2">
+              <Label>Team Member</Label>
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
+                  {member.user.name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{member.user.name}</p>
+                  <p className="text-xs text-gray-500">{member.user.email}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="role">Select Role</Label>
+              <Select
+                value={selectedRole?.id?.toString()}
+                onValueChange={(value) => {
+                  const role = roles.find((r) => r.id.toString() === value);
+                  setSelectedRole(role || null);
+                }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={member.roleName || "Select a role"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-sm text-gray-500">
+              Current role: <span className="font-medium">{member.roleName}</span>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditDialog(false);
+                setSelectedRole(null);
+              }}
+              disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditRole}
+              disabled={isUpdating || !selectedRole}
+              className="bg-blue-600 hover:bg-blue-700">
+              {isUpdating ? "Updating..." : "Update Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent>
@@ -397,9 +505,10 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
       // Refetch project users to update the table
       await refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding team member:", error);
-      toast.error("Failed to add team member. Please try again.");
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to add team member. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -625,10 +734,10 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </td>
                   {/* Status column - commented out as data not available in API */}
                   <td className="px-6 py-4 whitespace-nowrap text-base">
-                    <StatusBadge status={(member.user as any)?.status || "N/A"} />
+                    <StatusBadge status={(member.user as any)?.is_active ? "Active" : "Rejected"} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-base text-center">
-                    <ActionsCell member={member} projectId={projectId} onRefetch={refetch} />
+                    <ActionsCell member={member} projectId={projectId} onRefetch={refetch} onRefetchRoles={refetchRoles} roles={roles} />
                   </td>
                 </tr>
               ))}

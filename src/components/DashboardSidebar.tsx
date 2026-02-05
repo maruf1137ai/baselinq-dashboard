@@ -37,7 +37,7 @@ import { useProjects } from "@/hooks/useProjects"; // Django API hook
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { OnboardingModal } from "./OnboardingModal";
-import { deleteProject } from "@/lib/Api";
+import { deleteProject, fetchData } from "@/lib/Api";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -50,6 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import useFetch from "@/hooks/useFetch";
+import { useUserRoleStore } from "@/store/useUserRoleStore";
 
 interface Project {
   id: string;
@@ -84,6 +85,7 @@ export function DashboardSidebar() {
   const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`)
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
+  const { setUserRole, clearUserRole } = useUserRoleStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
@@ -101,6 +103,18 @@ export function DashboardSidebar() {
       window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
+  // Fetch user role for the selected project
+  const fetchUserRole = async (projectId: string, userId: number) => {
+    try {
+      const response = await fetchData(`projects/${projectId}/user-role/?userId=${userId}`);
+      if (response?.roleName) {
+        setUserRole(response.roleName);
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+    }
+  };
+
   useEffect(() => {
     // console.log(selectedProjectId)
     if (!isLoading && projects.length === 0) {
@@ -110,21 +124,53 @@ export function DashboardSidebar() {
       const firstId = projects[0]._id;
       setSelectedProjectId(firstId);
       localStorage.setItem("selectedProjectId", firstId);
+
+      // Fetch user role for the first project
+      if (user?.id) {
+        fetchUserRole(firstId, user.id);
+      }
     }
   }, [projects, isLoading, selectedProjectId]);
 
-  const handleProjectSelect = (project: Project) => {
+  // Fetch user role when project or user changes
+  useEffect(() => {
+    if (selectedProjectId && user?.id) {
+      fetchUserRole(selectedProjectId, user.id);
+    }
+  }, [selectedProjectId, user?.id]);
+
+  // Listen for user-role-change event from team members table
+  useEffect(() => {
+    const handleUserRoleChange = () => {
+      if (selectedProjectId && user?.id) {
+        fetchUserRole(selectedProjectId, user.id);
+      }
+    };
+
+    window.addEventListener("user-role-change", handleUserRoleChange);
+    return () =>
+      window.removeEventListener("user-role-change", handleUserRoleChange);
+  }, [selectedProjectId, user?.id]);
+
+  const handleProjectSelect = async (project: Project) => {
     const pId = (project as any)?._id;
     setSelectedProjectId(pId);
     localStorage.setItem("selectedProjectId", pId);
     localStorage.setItem("projectLocation", project?.location || "");
+
+    // Fetch user role for the selected project
+    if (user?.id) {
+      await fetchUserRole(pId, user.id);
+    }
+
     window.dispatchEvent(new Event("project-change"));
-    window.location.reload()
+    window.location.reload();
   };
 
   const selectedProject = projects.find((p: any) => p._id === selectedProjectId);
 
   const handleLogout = () => {
+    clearUserRole();
     logout();
   };
 
@@ -156,11 +202,17 @@ export function DashboardSidebar() {
         localStorage.setItem("selectedProjectId", nextId);
         localStorage.setItem("projectLocation", nextProject?.location || "");
         window.dispatchEvent(new Event("project-change"));
+
+        // Fetch user role for the next project
+        if (user?.id) {
+          await fetchUserRole(nextId, user.id);
+        }
       } else {
         // No projects left
         localStorage.removeItem("selectedProjectId");
         localStorage.removeItem("projectLocation");
         setSelectedProjectId("");
+        clearUserRole();
         window.dispatchEvent(new Event("project-change"));
       }
 
@@ -206,7 +258,14 @@ export function DashboardSidebar() {
                     key={project._id}
                     onClick={() => handleProjectSelect(project)}
                     className="cursor-pointer flex justify-between">
-                    {project.name}
+                    <div>
+                      {selectedProjectId === project._id && (
+                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500">
+                        </span>
+                      )}
+                      {project.name}
+
+                    </div>
                     <div className="flex items-center gap-2">
                       <Trash2
                         className="h-4 w-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
@@ -216,10 +275,7 @@ export function DashboardSidebar() {
                           setShowDeleteDialog(true);
                         }}
                       />
-                      {selectedProjectId === project._id && (
-                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500">
-                        </span>
-                      )}
+
                     </div>
                   </DropdownMenuItem>
                 ))}

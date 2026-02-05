@@ -433,7 +433,7 @@ export function AIAnalysisModal({
               )}
 
               {/* Price Breakdown - Section 5 */}
-              {data.price_breakdown && (
+              {data?.price_breakdown && (
                 <div className={sectionClass(5)}>
                   <div className="p-4 bg-white border border-[#E7E9EB] rounded-lg">
                     <h4 className="text-sm font-medium text-[#1B1C1F] mb-3 flex items-center gap-2">
@@ -556,13 +556,12 @@ export function AIAnalysisModal({
                                 <div>
                                   <p className="text-xs text-gray-500 mb-1">Variance & Fair Value</p>
                                   <div className="flex items-center gap-3 text-xs">
-                                    <span className={`font-medium ${
-                                      item.market_verification.variance_percentage > 10
+                                    <span className={`font-medium ${item.market_verification.variance_percentage > 10
                                         ? "text-red-600"
                                         : item.market_verification.variance_percentage < -10
-                                        ? "text-green-600"
-                                        : "text-blue-600"
-                                    }`}>
+                                          ? "text-green-600"
+                                          : "text-blue-600"
+                                      }`}>
                                       {item.market_verification.variance_percentage > 0 ? "+" : ""}
                                       {item.market_verification.variance_percentage}%
                                     </span>

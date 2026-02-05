@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CreateRequestDialog from "./CreateRequestDialog";
 import { Bell, Plus, X } from "lucide-react";
+import { useUserRoleStore } from "@/store/useUserRoleStore";
 
 const btns = [
   {
@@ -56,11 +57,39 @@ const btns = [
   },
 ];
 
+// Role to document type mapping
+const rolePermissions: Record<string, string[]> = {
+  "Client": ["VO"],
+  "Owner": ["VO"],
+  "Client Project Manager": ["VO"],
+  "Architect": ["VO", "SI"],
+  "Consultant Quantity Surveyor": ["VO"],
+  "Consultant Planning Engineer": ["CPI", "DC"],
+  "Construction Manager": ["RFI", "SI", "DC", "CPI"],
+  "Contracts Manager": ["VO", "DC"],
+  "Planning Engineer": ["CPI", "DC"],
+  "Site Engineer": ["RFI"],
+  "Site Supervisor": ["RFI", "SI"],
+  "Foreman": ["RFI"],
+  "Project Manager": ["SI", "DC", "CPI"],
+};
+
 
 export default function CreateRequestButton() {
   const [open, setOpen] = useState(false);
   const [selectedType, setSelectedType] = useState("");
   const [btnsOpen, setBtnsOpen] = useState(false);
+  const { userRole } = useUserRoleStore();
+
+  // Filter buttons based on user role
+  const filteredBtns = useMemo(() => {
+    if (!userRole) return btns; // Show all if no role set
+
+    const allowedDocTypes = rolePermissions[userRole] || [];
+    if (allowedDocTypes.length === 0) return btns; // Show all if role not in mapping
+
+    return btns.filter(btn => allowedDocTypes.includes(btn.code));
+  }, [userRole]);
 
   const handleClick = (btn) => {
     setSelectedType(btn);
@@ -88,7 +117,7 @@ export default function CreateRequestButton() {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent className="w-72 p-0 rounded-[19px] overflow-hidden rounded-[13px]">
-            {btns.map((item, index) => (
+            {filteredBtns.map((item, index) => (
               <DropdownMenuItem
                 key={index}
                 onSelect={(e) => {
@@ -128,8 +157,6 @@ export default function CreateRequestButton() {
 
         </DropdownMenu>
       </div>
-
-
 
       <CreateRequestDialog
         open={open}

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useUserRoleStore } from "@/store/useUserRoleStore";
 
 const btns = [
   {
@@ -64,6 +65,23 @@ const btns = [
     active: false,
   },
 ];
+
+// Role to document type mapping
+const rolePermissions: Record<string, string[]> = {
+  "Client": ["VO"],
+  "Owner": ["VO"],
+  "Client Project Manager": ["VO"],
+  "Architect": ["VO", "SI"],
+  "Consultant Quantity Surveyor": ["VO"],
+  "Consultant Planning Engineer": ["CPI", "DC"],
+  "Construction Manager": ["RFI", "SI", "DC", "CPI"],
+  "Contracts Manager": ["VO", "DC"],
+  "Planning Engineer": ["CPI", "DC"],
+  "Site Engineer": ["RFI"],
+  "Site Supervisor": ["RFI", "SI"],
+  "Foreman": ["RFI"],
+  "Project Manager": ["SI", "DC", "CPI"],
+};
 
 function TaskCard({ task, isDragging }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
@@ -183,6 +201,7 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
 
 export default function Task() {
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
+  const { userRole } = useUserRoleStore();
 
   // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
   const { data: taskResponse, isLoading } = useFetch<{ count: number; results: any[] }>(
@@ -191,6 +210,16 @@ export default function Task() {
   );
 
   const { mutateAsync: updateTask } = usePatch();
+
+  // Filter buttons based on user role
+  const filteredBtns = useMemo(() => {
+    if (!userRole) return btns; // Show all if no role set
+
+    const allowedDocTypes = rolePermissions[userRole] || [];
+    if (allowedDocTypes.length === 0) return btns; // Show all if role not in mapping
+
+    return btns.filter(btn => allowedDocTypes.includes(btn.code));
+  }, [userRole]);
 
   /* State */
   const [tasks, setTasks] = useState<{ todo: any[], inReview: any[], done: any[] }>({
@@ -397,7 +426,7 @@ export default function Task() {
             <DialogTitle className="text-base font-medium">Select Request Type</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col">
-            {btns.map((item, index) => (
+            {filteredBtns.map((item, index) => (
               <div
                 key={index}
                 onClick={() => {
