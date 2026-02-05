@@ -1210,7 +1210,7 @@ export default function TaskDetails() {
                       disabled={isAnalyzeLoading}
                       className="bg-gray-900 flex items-center gap-1 px-3 py-2.5 rounded-[8px] hover:bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       <Zap className="h-4 w-4" />
-                      {isAnalyzeLoading ? "Generating..." : "Analyze with Ai"}
+                      {isAnalyzeLoading ? "Generating..." : "Analyze with AI"}
                     </button>
 
                     <Button className="font-normal" onClick={handleSubmitReply}>

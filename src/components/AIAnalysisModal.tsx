@@ -19,6 +19,9 @@ import {
   Scale,
   BookOpen,
   Lightbulb,
+  DollarSign,
+  TrendingUp,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +52,8 @@ interface AnalysisData {
       variance_percentage: number;
       finding: string;
     };
+    new_rates_permitted?: boolean;
+    threshold_triggered?: boolean;
   };
   time_impact: {
     critical_path_affected: boolean;
@@ -59,8 +64,16 @@ interface AnalysisData {
       compliant: boolean;
       clause_reference: string;
     };
+    eot_entitlement?: string;
+    float_provisions?: string;
   };
-  risk_flags: string[];
+  risk_flags: string[] | {
+    title: string;
+    severity: string;
+    description: string;
+    clause_reference: string;
+    recommended_action: string;
+  }[];
   contract_citations: {
     clause_number: string;
     clause_title: string;
@@ -70,7 +83,47 @@ interface AnalysisData {
   recommendations: {
     for_employer: string[];
     for_contractor: string[];
-    immediate_actions: string[];
+    immediate_actions: (string | {
+      action: string;
+      deadline: string;
+      responsible_party: string;
+    })[];
+  };
+  price_breakdown?: {
+    items_analysis: {
+      item_number: string;
+      description: string;
+      quantity: number;
+      unit: string;
+      unit_price: number;
+      total: number;
+      market_verification: {
+        market_rate_range: {
+          low: number;
+          high: number;
+          average: number;
+        };
+        variance_percentage: number;
+        fair_value_estimate: number;
+        assessment: string;
+        web_search_result: {
+          sources_checked: string[];
+          market_context: string;
+          confidence_level: string;
+        };
+      };
+    }[];
+    overall_assessment: {
+      items_verified: number;
+      items_above_market: number;
+      items_within_market: number;
+      items_below_market: number;
+    };
+    summary: {
+      total_claimed: number;
+      estimated_fair_value: number;
+      potential_savings: number;
+    };
   };
   processing_time_seconds: number;
 }
@@ -89,7 +142,7 @@ export function AIAnalysisModal({
   analysisData,
 }: AIAnalysisModalProps) {
   const [visibleSections, setVisibleSections] = useState<number>(0);
-  const totalSections = 8; // Status, Summary, Procedural, Valuation, Time, Citations, Recommendations, Risk Flags
+  const totalSections = 9; // Status, Summary, Procedural, Valuation, Time, Price Breakdown, Citations, Recommendations, Risk Flags
 
   // Reset and start streaming when loading completes and data is available
   useEffect(() => {
@@ -379,9 +432,179 @@ export function AIAnalysisModal({
                 </div>
               )}
 
-              {/* Contract Citations - Section 5 */}
-              {data.contract_citations && data.contract_citations.length > 0 && (
+              {/* Price Breakdown - Section 5 */}
+              {data.price_breakdown && (
                 <div className={sectionClass(5)}>
+                  <div className="p-4 bg-white border border-[#E7E9EB] rounded-lg">
+                    <h4 className="text-sm font-medium text-[#1B1C1F] mb-3 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-[#8081F6]" />
+                      Price Breakdown & Market Verification
+                    </h4>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                        <p className="text-xs text-blue-700 mb-1">Total Claimed</p>
+                        <p className="text-lg font-bold text-blue-900">
+                          £{data.price_breakdown.summary?.total_claimed?.toLocaleString() || 0}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                        <p className="text-xs text-green-700 mb-1">Fair Value</p>
+                        <p className="text-lg font-bold text-green-900">
+                          £{data.price_breakdown.summary?.estimated_fair_value?.toLocaleString() || 0}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+                        <p className="text-xs text-amber-700 mb-1">Potential Savings</p>
+                        <p className="text-lg font-bold text-amber-900">
+                          £{data.price_breakdown.summary?.potential_savings?.toLocaleString() || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Overall Assessment */}
+                    {data.price_breakdown.overall_assessment && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-4 text-xs">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="text-gray-600">
+                              {data.price_breakdown.overall_assessment.items_verified} verified
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-red-500" />
+                            <span className="text-gray-600">
+                              {data.price_breakdown.overall_assessment.items_above_market} above market
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                            <span className="text-gray-600">
+                              {data.price_breakdown.overall_assessment.items_within_market} within market
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-green-500 rotate-180" />
+                            <span className="text-gray-600">
+                              {data.price_breakdown.overall_assessment.items_below_market} below market
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items Analysis */}
+                    <div className="space-y-3">
+                      {data.price_breakdown.items_analysis?.map((item: any, index: number) => (
+                        <div
+                          key={index}
+                          className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {item.item_number}
+                                </Badge>
+                                <span className="text-sm font-medium text-gray-800">
+                                  {item.description}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-gray-600">
+                                <span>Qty: {item.quantity} {item.unit}</span>
+                                <span>Unit Price: £{item.unit_price?.toLocaleString()}</span>
+                                <span className="font-medium">Total: £{item.total?.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Market Verification */}
+                          {item.market_verification && (
+                            <div className="mt-3 p-3 bg-white rounded border border-indigo-100">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Search className="h-3 w-3 text-indigo-500" />
+                                    <span className="text-xs font-medium text-indigo-700">
+                                      Market Verification
+                                    </span>
+                                    <Badge className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
+                                      {item.market_verification.web_search_result?.confidence_level || "N/A"}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-gray-700 mb-2">
+                                    {item.market_verification.assessment}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 mb-2">
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Market Range</p>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-gray-700">
+                                      £{item.market_verification.market_rate_range?.low?.toLocaleString()} -
+                                      £{item.market_verification.market_rate_range?.high?.toLocaleString()}
+                                    </span>
+                                    <span className="text-gray-500">
+                                      (avg: £{item.market_verification.market_rate_range?.average?.toLocaleString()})
+                                    </span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Variance & Fair Value</p>
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <span className={`font-medium ${
+                                      item.market_verification.variance_percentage > 10
+                                        ? "text-red-600"
+                                        : item.market_verification.variance_percentage < -10
+                                        ? "text-green-600"
+                                        : "text-blue-600"
+                                    }`}>
+                                      {item.market_verification.variance_percentage > 0 ? "+" : ""}
+                                      {item.market_verification.variance_percentage}%
+                                    </span>
+                                    <span className="text-gray-700">
+                                      FV: £{item.market_verification.fair_value_estimate?.toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Web Search Context */}
+                              {item.market_verification.web_search_result && (
+                                <div className="mt-2 pt-2 border-t border-indigo-100">
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    {item.market_verification.web_search_result.market_context}
+                                  </p>
+                                  {item.market_verification.web_search_result.sources_checked && (
+                                    <div className="flex items-center gap-1 flex-wrap mt-1">
+                                      <span className="text-xs text-gray-500">Sources:</span>
+                                      {item.market_verification.web_search_result.sources_checked.map(
+                                        (source: string, idx: number) => (
+                                          <Badge key={idx} variant="outline" className="text-xs">
+                                            {source}
+                                          </Badge>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Contract Citations - Section 6 */}
+              {data.contract_citations && data.contract_citations.length > 0 && (
+                <div className={sectionClass(6)}>
                   <div className="p-4 bg-white border border-[#E7E9EB] rounded-lg">
                     <h4 className="text-sm font-medium text-[#1B1C1F] mb-3 flex items-center gap-2">
                       <BookOpen className="h-4 w-4 text-[#8081F6]" />
@@ -412,9 +635,9 @@ export function AIAnalysisModal({
                 </div>
               )}
 
-              {/* Recommendations - Section 6 */}
+              {/* Recommendations - Section 7 */}
               {data.recommendations && (
-                <div className={sectionClass(6)}>
+                <div className={sectionClass(7)}>
                   <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
                     <h4 className="text-sm font-medium text-[#1B1C1F] mb-3 flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 text-[#8081F6]" />
@@ -499,9 +722,9 @@ export function AIAnalysisModal({
                 </div>
               )}
 
-              {/* Risk Flags */}
+              {/* Risk Flags - Section 8 */}
               {data.risk_flags && data.risk_flags.length > 0 && (
-                <div className={sectionClass(7)}>
+                <div className={sectionClass(8)}>
                   <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                     <h4 className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-red-600" />

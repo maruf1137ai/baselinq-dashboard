@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, PlusCircle, LogOut } from "lucide-react";
+import { ChevronDown, PlusCircle, LogOut, Trash2 } from "lucide-react";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -37,6 +37,19 @@ import { useProjects } from "@/hooks/useProjects"; // Django API hook
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { OnboardingModal } from "./OnboardingModal";
+import { deleteProject } from "@/lib/Api";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import useFetch from "@/hooks/useFetch";
 
 interface Project {
   id: string;
@@ -67,15 +80,16 @@ const settingsItems = [
 export function DashboardSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
-  const { data: projects = [], isLoading } = useProjects();
   const { data: user } = useCurrentUser(); // Django auth hook
+  const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`)
+  const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
-
-
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -93,25 +107,72 @@ export function DashboardSidebar() {
       setShowOnboarding(true);
     } else if (projects.length > 0 && !selectedProjectId) {
       // Auto select first project if none selected
-      const firstId = projects[0].id || projects[0]._id;
+      const firstId = projects[0]._id;
       setSelectedProjectId(firstId);
       localStorage.setItem("selectedProjectId", firstId);
     }
   }, [projects, isLoading, selectedProjectId]);
 
   const handleProjectSelect = (project: Project) => {
-    const pId = project?.id || (project as any)?._id;
+    const pId = (project as any)?._id;
     setSelectedProjectId(pId);
     localStorage.setItem("selectedProjectId", pId);
     localStorage.setItem("projectLocation", project?.location || "");
     window.dispatchEvent(new Event("project-change"));
-    // window.location.reload()
+    window.location.reload()
   };
 
-  const selectedProject = projects.find((p: any) => (p.id || p._id) === selectedProjectId);
+  const selectedProject = projects.find((p: any) => p._id === selectedProjectId);
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+
+    try {
+      const projectId = (projectToDelete as any)._id;
+      await deleteProject(projectId);
+
+      toast.success("Project deleted successfully");
+
+      // Find next project to select
+      const currentIndex = projects.findIndex((p: any) => p._id === projectId);
+      let nextProject = null;
+
+      if (projects.length > 1) {
+        // Select next project, or previous if deleting the last one
+        if (currentIndex < projects.length - 1) {
+          nextProject = projects[currentIndex + 1];
+        } else if (currentIndex > 0) {
+          nextProject = projects[currentIndex - 1];
+        }
+      }
+
+      if (nextProject) {
+        const nextId = (nextProject as any)._id;
+        setSelectedProjectId(nextId);
+        localStorage.setItem("selectedProjectId", nextId);
+        localStorage.setItem("projectLocation", nextProject?.location || "");
+        window.dispatchEvent(new Event("project-change"));
+      } else {
+        // No projects left
+        localStorage.removeItem("selectedProjectId");
+        localStorage.removeItem("projectLocation");
+        setSelectedProjectId("");
+        window.dispatchEvent(new Event("project-change"));
+      }
+
+      // Refetch projects to update the list
+      await refetch();
+
+      setShowDeleteDialog(false);
+      setProjectToDelete(null);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast.error("Failed to delete project. Please try again.");
+    }
   };
 
   return (
@@ -142,15 +203,24 @@ export function DashboardSidebar() {
                 <DropdownMenuSeparator />
                 {projects.map((project: any) => (
                   <DropdownMenuItem
-                    key={project.id || project._id}
+                    key={project._id}
                     onClick={() => handleProjectSelect(project)}
-                    className="cursor-pointer">
+                    className="cursor-pointer flex justify-between">
                     {project.name}
-                    {selectedProjectId === (project.id || project._id) && (
-                      <span className="ml-auto text-xs text-blue-500">
-                        Active
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Trash2
+                        className="h-4 w-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjectToDelete(project);
+                          setShowDeleteDialog(true);
+                        }}
+                      />
+                      {selectedProjectId === project._id && (
+                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500">
+                        </span>
+                      )}
+                    </div>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -306,6 +376,27 @@ export function DashboardSidebar() {
         isOpen={showOnboarding}
         onOpenChange={setShowOnboarding}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProject}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

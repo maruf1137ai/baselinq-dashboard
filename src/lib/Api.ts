@@ -150,6 +150,26 @@ export const loginUser = async ({
   return res.data; // { message, user, tokens: { access, refresh } }
 };
 
+export const registerUser = async ({
+  email,
+  password,
+  password_confirm,
+  name,
+}: {
+  email: string;
+  password: string;
+  password_confirm: string;
+  name: string;
+}) => {
+  const res = await api.post("auth/register/", {
+    email,
+    password,
+    password_confirm,
+    name,
+  });
+  return res.data;
+};
+
 export const logoutUser = async () => {
   try {
     const res = await api.post("auth/logout/");

@@ -173,9 +173,13 @@ const LoginPage = () => {
             <div className="mt-6 grid grid-cols-1 gap-3">
               <button
                 onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError("");
-                  setSuccessMsg("");
+                  if (isLogin) {
+                    navigate("/signup");
+                  } else {
+                    setIsLogin(!isLogin);
+                    setError("");
+                    setSuccessMsg("");
+                  }
                 }}
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8081F6]">
                 {isLogin ? "Create an account" : "Sign in to existing account"}

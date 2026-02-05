@@ -7,6 +7,7 @@ import AiWorkSpace from "./pages/AiWorkSpace";
 import Communications from "./pages/Communications";
 import Finance from "./pages/finance";
 import Login from "./pages/login";
+import Signup from "./pages/signup";
 import ProtectedRoute from "./ProtectedRoute";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
@@ -100,6 +101,7 @@ const App = () => (
             }
           />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/tasks" element={<Task />} />
           <Route path="/tasks/:taskId" element={<TaskDetails />} />
