@@ -5,6 +5,7 @@ import * as z from "zod";
 import { uploadProjectDocument, validateFile, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
 import { X, FileText } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ export function OnboardingModal({
   onOpenChange,
   project,
 }: OnboardingModalProps) {
+  const queryClient = useQueryClient();
   const { mutate: createProject, isPending: isCreating } = useCreateProject();
   const { mutate: updateProject, isPending: isUpdatingProject } =
     useUpdateProject();
@@ -245,6 +247,9 @@ export function OnboardingModal({
         );
       }
 
+      // Refetch projects list
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+
       onOpenChange(false);
       const newProjectId = projectData.id || projectData._id;
       localStorage.setItem("selectedProjectId", newProjectId);
@@ -255,7 +260,47 @@ export function OnboardingModal({
       setSelectedFiles([]);
     };
 
-    const handleError = (error: unknown) => {
+    const handleError = (error: any) => {
+      // Parse API error response structure
+      // Expected format: { field_name: ["error message"] } or { field_name: "error message" }
+      console.log(error?.response?.data);
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+
+        // Handle field-specific errors
+        if (typeof errorData === 'object' && !Array.isArray(errorData)) {
+          // Extract all error messages
+          const errorMessages: string[] = [];
+
+          Object.entries(errorData).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              messages.forEach((msg) => errorMessages.push(`${field}: ${msg}`));
+            } else if (typeof messages === 'string') {
+              errorMessages.push(`${field}: ${messages}`);
+            }
+          });
+
+          // Display each error as a separate toast
+          if (errorMessages.length > 0) {
+            errorMessages.forEach((msg) => toast.error(msg));
+            return;
+          }
+        }
+
+        // Handle string error message
+        if (typeof errorData === 'string') {
+          toast.error(errorData);
+          return;
+        }
+
+        // Handle error message in errorData.message
+        if (errorData.message) {
+          toast.error(errorData.message);
+          return;
+        }
+      }
+
+      // Fallback to generic error
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(

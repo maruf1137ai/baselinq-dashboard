@@ -227,6 +227,8 @@ export function DashboardSidebar() {
     }
   };
 
+  console.log(showOnboarding)
+
   return (
     <>
       <Sidebar className="border-r border-[#DEDEDE] bg-sidebar">
@@ -375,15 +377,12 @@ export function DashboardSidebar() {
           {open && (
             <div className="p-4 border-t border-[#DEDEDE]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                  <img
-                    src={
-                      user?.user_metadata?.avatar_url ||
-                      "/images/profile-img.png"
-                    }
-                    alt="User Avatar"
-                    className="h-full w-full rounded-full object-cover"
-                  />
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+                  <span className="text-white text-sm font-medium uppercase">
+                    {(user?.user_metadata?.full_name ||
+                      user?.email?.split("@")[0] ||
+                      "U")[0]}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm capitalize font-medium text-sidebar-foreground truncate">

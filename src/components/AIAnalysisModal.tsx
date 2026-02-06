@@ -454,19 +454,19 @@ export function AIAnalysisModal({
                       <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                         <p className="text-xs text-blue-700 mb-1">Total Claimed</p>
                         <p className="text-lg font-bold text-blue-900">
-                          £{data.price_breakdown.summary?.total_claimed?.toLocaleString() || 0}
+                          R {data.price_breakdown.summary?.total_claimed?.toLocaleString() || 0}
                         </p>
                       </div>
                       <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
                         <p className="text-xs text-green-700 mb-1">Fair Value</p>
                         <p className="text-lg font-bold text-green-900">
-                          £{data.price_breakdown.summary?.estimated_fair_value?.toLocaleString() || 0}
+                          R {data.price_breakdown.summary?.estimated_fair_value?.toLocaleString() || 0}
                         </p>
                       </div>
                       <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200">
                         <p className="text-xs text-amber-700 mb-1">Potential Savings</p>
                         <p className="text-lg font-bold text-amber-900">
-                          £{data.price_breakdown.summary?.potential_savings?.toLocaleString() || 0}
+                          R {data.price_breakdown.summary?.potential_savings?.toLocaleString() || 0}
                         </p>
                       </div>
                     </div>
@@ -522,8 +522,8 @@ export function AIAnalysisModal({
                               </div>
                               <div className="flex items-center gap-4 text-xs text-gray-600">
                                 <span>Qty: {item.quantity} {item.unit}</span>
-                                <span>Unit Price: £{item.unit_price?.toLocaleString()}</span>
-                                <span className="font-medium">Total: £{item.total?.toLocaleString()}</span>
+                                <span>Unit Price: R {item.unit_price?.toLocaleString()}</span>
+                                <span className="font-medium">Total: R {item.total?.toLocaleString()}</span>
                               </div>
                             </div>
                           </div>
@@ -553,11 +553,11 @@ export function AIAnalysisModal({
                                   <p className="text-xs text-gray-500 mb-1">Market Range</p>
                                   <div className="flex items-center gap-2 text-xs">
                                     <span className="text-gray-700">
-                                      £{item.market_verification.market_rate_range?.low?.toLocaleString()} -
-                                      £{item.market_verification.market_rate_range?.high?.toLocaleString()}
+                                      R {item.market_verification.market_rate_range?.low?.toLocaleString()} -
+                                      R {item.market_verification.market_rate_range?.high?.toLocaleString()}
                                     </span>
                                     <span className="text-gray-500">
-                                      (avg: £{item.market_verification.market_rate_range?.average?.toLocaleString()})
+                                      (avg: R {item.market_verification.market_rate_range?.average?.toLocaleString()})
                                     </span>
                                   </div>
                                 </div>
@@ -574,7 +574,7 @@ export function AIAnalysisModal({
                                       {item.market_verification.variance_percentage}%
                                     </span>
                                     <span className="text-gray-700">
-                                      FV: £{item.market_verification.fair_value_estimate?.toLocaleString()}
+                                      FV: R {item.market_verification.fair_value_estimate?.toLocaleString()}
                                     </span>
                                   </div>
                                 </div>
