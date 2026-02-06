@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { RequestInfoDialog } from '../commons/RequestInfoDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FilePreviewModal } from '../TaskComponents/FilePreviewModal';
 import { getTaskDocuments } from '@/supabse/api';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
@@ -39,7 +40,10 @@ const ChatSammary = ({ task }: { task: any }) => {
   }
 
   const handleViewTask = () => {
-    navigate(`/tasks/${task.id}`);
+    const taskId = task.taskId || task.id;
+    if (taskId) {
+      navigate(`/tasks/${taskId}`);
+    }
   };
 
   return (
@@ -54,11 +58,11 @@ const ChatSammary = ({ task }: { task: any }) => {
       <div className="py-3.5 px-6">
         <div className="title text-base text-[#101828]">Status</div>
         <div className="flex items-center gap-2 mt-2">
-          <div className={`date text-xs py-2 px-3 border rounded-full ${task.status === 'Overdue' || new Date(task.due_date) < new Date()
+          <div className={`date text-xs py-2 px-3 border rounded-full ${task.status === 'Overdue' || (task.due_date && new Date(task.due_date) < new Date())
             ? 'bg-[#FEF2F2] border-[#FECACA] text-[#EF4444]'
             : 'bg-green-50 border-green-200 text-green-700'
             }`}>
-            {task.status || (new Date(task.due_date) < new Date() ? 'Overdue' : 'On Track')}
+            {task.status || (task.due_date && new Date(task.due_date) < new Date() ? 'Overdue' : 'On Track')}
           </div>
           <p className="text text-sm text-[#4A5565]">
             {task.due_date ? `Response required by ${new Date(task.due_date).toLocaleDateString()}` : 'No deadline'}
@@ -121,41 +125,14 @@ const ChatSammary = ({ task }: { task: any }) => {
           </>
         )}
 
-        {/* Document Preview Dialog */}
-        <Dialog open={!!selectedDocument} onOpenChange={(open) => !open && setSelectedDocument(null)}>
-          <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0 gap-0 [&>button]:text-white [&>button]:hover:text-white/80">
-            <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0 bg-[#101828] text-white rounded-t-lg">
-              <DialogTitle className="truncate pr-8 text-white">{selectedDocument?.name}</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 bg-gray-100 overflow-hidden relative flex items-center justify-center rounded-b-lg">
-              {selectedDocument && (
-                selectedDocument.metadata?.mimetype?.startsWith('image/') ? (
-                  <img
-                    src={selectedDocument.url}
-                    alt={selectedDocument.name}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                ) : selectedDocument.metadata?.mimetype === 'application/pdf' ? (
-                  <iframe
-                    src={selectedDocument.url}
-                    className="w-full h-full"
-                    title={selectedDocument.name}
-                  />
-                ) : (
-                  <div className="text-center p-8">
-                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">This file type cannot be previewed directly.</p>
-                    <Button asChild>
-                      <a href={selectedDocument.url} target="_blank" rel="noopener noreferrer">
-                        Download File
-                      </a>
-                    </Button>
-                  </div>
-                )
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <FilePreviewModal
+          isOpen={!!selectedDocument}
+          onOpenChange={(open) => !open && setSelectedDocument(null)}
+          file={selectedDocument ? {
+            name: selectedDocument.name,
+            url: selectedDocument.url
+          } : null}
+        />
 
 
         {/* Action Requests Section */}
@@ -185,12 +162,14 @@ const ChatSammary = ({ task }: { task: any }) => {
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5 mt-8">
-          <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">
-            <ExternalLink className="mr-2 h-4 w-4" /> View Task
-          </Button>
-          <RequestInfoDialog taskType={task.type || 'RFI'} taskId={task.id} wFull />
-        </div>
+        {(task.taskId || task.id) && (
+          <div className="flex flex-col gap-2.5 mt-8">
+            <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">
+              <ExternalLink className="mr-2 h-4 w-4" /> View Task
+            </Button>
+            <RequestInfoDialog taskType={task.type || 'RFI'} taskId={task.taskId || task.id} wFull />
+          </div>
+        )}
       </div>
     </div>
   );

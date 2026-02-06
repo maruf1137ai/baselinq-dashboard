@@ -8,10 +8,10 @@ import {
   AlertCircle,
   Clock,
   User,
-  FileText,
   Zap,
   Calendar,
 } from "lucide-react";
+import { TaskAttachments } from "./TaskAttachments";
 
 interface TaskSidebarProps {
   taskType: string;
@@ -184,6 +184,9 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           </div>
         </div>
       </Card>
+
+      {/* Attachments */}
+      <TaskAttachments attachments={taskData?.attachments} />
     </>
   );
 
@@ -255,11 +258,10 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           <div>
             <p className="text-xs text-[#6B7280] mb-1">Urgency</p>
             <Badge
-              className={`${
-                taskData?.formFields?.urgency === "high"
+              className={`${taskData?.formFields?.urgency === "high"
                   ? "bg-red-50 text-red-700 border-red-200"
                   : "bg-amber-50 text-amber-700 border-amber-200"
-              } border text-xs`}>
+                } border text-xs`}>
               {taskData?.formFields?.urgency}
             </Badge>
           </div>
@@ -313,11 +315,10 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           {taskData?.audit?.map((entry: any, i: number) => (
             <div
               key={i}
-              className={`p-3 border rounded-[10px] ${
-                entry.isAI
+              className={`p-3 border rounded-[10px] ${entry.isAI
                   ? "bg-indigo-50 border-[#8081F6B0]"
                   : "bg-white border-[#E7E9EB]"
-              }`}>
+                }`}>
               <p className="text-sm text-gray-900 flex items-center gap-2">
                 {entry.isAI && <Zap className="h-3.5 w-3.5 text-indigo-600" />}
                 {entry.action}

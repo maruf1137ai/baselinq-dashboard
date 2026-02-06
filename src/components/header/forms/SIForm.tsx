@@ -28,9 +28,17 @@ const DISCIPLINE_OPTIONS = [
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { format } from "date-fns";
+import { CalendarIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const initialValues = {
   title: "",
@@ -38,7 +46,7 @@ const initialValues = {
   instruction: "",
   location: "",
   urgency: "",
-  dueDate: "",
+  dueDate: undefined as Date | undefined,
   voReference: "",
   costImpact: "",
 };
@@ -53,9 +61,9 @@ export default function SIForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-  const { mutateAsync: createSI } = usePost();
+  const { mutateAsync: postRequest } = usePost();
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -69,15 +77,34 @@ export default function SIForm({ setOpen, initialStatus }: any) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const uploadAllFiles = async (projectId: string) => {
+  const uploadAttachments = async (siId: string | number) => {
     if (!selectedFiles.length) return [];
     setUploading(true);
     const uploaded: { name: string; url: string }[] = [];
 
     for (const file of selectedFiles) {
       try {
-        const url = await uploadFile(file, projectId);
-        uploaded.push({ name: file.name, url });
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload to tasks/site-instructions/{siId}/attachments/
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}tasks/site-instructions/${siId}/attachments/`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access')}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const data = await response.json();
+        uploaded.push({ name: file.name, url: data.file_url || data.url || '' });
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
@@ -104,44 +131,77 @@ export default function SIForm({ setOpen, initialStatus }: any) {
 
     setLoading(true);
 
-    try {
-      // Construct payload matching Django SI API requirements
-      const payload = {
-        project: parseInt(projectId),
-        title: formData.title,
-        discipline: formData.discipline || undefined,
-        instruction: formData.instruction,
-        location: formData.location || undefined,
-        urgency: formData.urgency || "Normal",
-        due_date: formData.dueDate || undefined,
-        vo_reference: formData.voReference || undefined,
-        expectedCostImpact: formData.costImpact || undefined,
-        status: initialStatus || "Open",
-      };
+    // Construct payload matching Django SI API requirements
+    const payload = {
+      project: parseInt(projectId),
+      title: formData.title,
+      discipline: formData.discipline || undefined,
+      instruction: formData.instruction,
+      location: formData.location || undefined,
+      urgency: formData.urgency || "Normal",
+      due_date: formData.dueDate ? format(formData.dueDate, "yyyy-MM-dd") : undefined,
+      vo_reference: formData.voReference || undefined,
+      expectedCostImpact: formData.costImpact || undefined,
+      status: initialStatus || "Open",
+    };
 
-      const result = await createSI({
-        url: "tasks/site-instructions/",
-        data: payload
-      });
-
-      // Refetch SIs and tasks to update the UI
-      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      await queryClient.invalidateQueries({ queryKey: ["sis"] });
-
-      toast.success("Success! SI created successfully");
-
-      if (result?.id) {
-        console.log("SI created:", result.id);
+    const handleSuccess = async (result: any) => {
+      // Create channel after SI is created
+      console.log("SI created:", result);
+      try {
+        await postRequest({
+          url: "channels/",
+          data: {
+            project: parseInt(projectId),
+            taskId: result?._id || result?.id,
+            taskType: result?.taskType,
+            name: formData.title,
+            description: formData.instruction,
+            channel_type: "private"
+          }
+        });
+      } catch (error) {
+        console.error("Error creating channel:", error);
       }
 
-      setOpen(false);
+      // Upload attachments after SI is created
+      console.log("SI created:", result?._id);
+      if (selectedFiles.length > 0 && result?._id) {
+        try {
+          await uploadAttachments(result._id);
+          toast.success("SI created and files uploaded successfully");
+        } catch (error) {
+          console.error("Attachment upload error:", error);
+          toast.error("SI created but failed to upload attachments");
+        }
+      } else {
+        toast.success("Success! SI created successfully");
+      }
 
-    } catch (err: any) {
+      // Refetch SIs, tasks, and channels to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["sis"] });
+      await queryClient.invalidateQueries({ queryKey: [`channels/?project_id=${projectId}`] });
+
+      setOpen(false);
+      setLoading(false);
+    };
+
+    const handleError = (err: any) => {
       console.error(err);
       const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating SI";
       toast.error(errorMessage);
-    } finally {
       setLoading(false);
+    };
+
+    try {
+      const result = await postRequest({
+        url: "tasks/site-instructions/",
+        data: payload
+      });
+      await handleSuccess(result);
+    } catch (err: any) {
+      handleError(err);
     }
   };
 
@@ -212,13 +272,33 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       </div>
 
       <div>
-        <Label>Due Date</Label>
-        <Input
-          type="date"
-          className="mt-1"
-          value={formData.dueDate}
-          onChange={(e) => handleChange("dueDate", e.target.value)}
-        />
+        <Label className="block mb-1">Due Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal mt-1",
+                !formData.dueDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {formData.dueDate ? (
+                format(formData.dueDate, "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <Calendar
+              mode="single"
+              selected={formData.dueDate}
+              onSelect={(date) => handleChange("dueDate", date)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div>
@@ -284,8 +364,8 @@ export default function SIForm({ setOpen, initialStatus }: any) {
                 <button
                   type="button"
                   onClick={() => handleRemoveFile(index)}
-                  className="text-red-500 text-xs hover:underline">
-                  Remove
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}

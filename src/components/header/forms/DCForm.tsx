@@ -23,9 +23,9 @@ const CAUSE_CATEGORY_OPTIONS = [
   { value: "Other", label: "Other" },
 ];
 import { useQueryClient } from "@tanstack/react-query";
-import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { X } from "lucide-react";
 
 export default function DCForm({ setOpen, initialStatus }: any) {
   const [title, setTitle] = useState("");
@@ -42,7 +42,7 @@ export default function DCForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-  const { mutateAsync: createDC } = usePost();
+  const { mutateAsync: postRequest } = usePost();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -54,15 +54,34 @@ export default function DCForm({ setOpen, initialStatus }: any) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const uploadAllFiles = async (projectId: string) => {
+  const uploadAttachments = async (dcId: string | number) => {
     if (!selectedFiles.length) return [];
     setUploading(true);
     const uploaded: { name: string; url: string }[] = [];
 
     for (const file of selectedFiles) {
       try {
-        const url = await uploadFile(file, projectId);
-        uploaded.push({ name: file.name, url });
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload to tasks/delay-claims/{dcId}/attachments/
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}tasks/delay-claims/${dcId}/attachments/`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access')}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const data = await response.json();
+        uploaded.push({ name: file.name, url: data.file_url || data.url || '' });
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
@@ -89,47 +108,79 @@ export default function DCForm({ setOpen, initialStatus }: any) {
 
     setLoading(true);
 
-    try {
-      // Get user ID for submitted_by
-      const user = localStorage.getItem("user");
-      const parsedUser = user ? JSON.parse(user) : null;
+    // Get user ID for submitted_by
+    const user = localStorage.getItem("user");
+    const parsedUser = user ? JSON.parse(user) : null;
 
-      // Construct payload matching Django DC API requirements
-      const payload = {
-        project: parseInt(projectId),
-        title: title,
-        cause_category: causeCategory || undefined,
-        description: description || undefined,
-        estimated_cost_impact: costImpact || undefined,
-        estimated_cost_currency: "ZAR",
-        requested_extension_days: requestedExtension ? parseInt(requestedExtension) : undefined,
-        status: initialStatus || "Draft",
-        submitted_by: parsedUser?.id || undefined,
-      };
+    // Construct payload matching Django DC API requirements
+    const payload = {
+      project: parseInt(projectId),
+      title: title,
+      cause_category: causeCategory || undefined,
+      description: description || undefined,
+      estimated_cost_impact: costImpact || undefined,
+      estimated_cost_currency: "ZAR",
+      requested_extension_days: requestedExtension ? parseInt(requestedExtension) : undefined,
+      status: initialStatus || "Draft",
+      submitted_by: parsedUser?.id || undefined,
+    };
 
-      const result = await createDC({
-        url: "tasks/delay-claims/",
-        data: payload
-      });
-
-      // Refetch DCs and tasks to update the UI
-      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      await queryClient.invalidateQueries({ queryKey: ["dcs"] });
-
-      toast.success("Success! DC created successfully");
-
-      if (result?.id) {
-        console.log("DC created:", result.id);
+    const handleSuccess = async (result: any) => {
+      // Create channel after DC is created
+      try {
+        await postRequest({
+          url: "channels/",
+          data: {
+            project: parseInt(projectId),
+            taskId: result?._id || result?.id,
+            taskType: result?.taskType,
+            name: title,
+            description: description,
+            channel_type: "private"
+          }
+        });
+      } catch (error) {
+        console.error("Error creating channel:", error);
       }
 
-      setOpen(false);
+      // Upload attachments after DC is created
+      console.log("DC created:", result?._id);
+      if (selectedFiles.length > 0 && result?._id) {
+        try {
+          await uploadAttachments(result._id);
+          toast.success("DC created and files uploaded successfully");
+        } catch (error) {
+          console.error("Attachment upload error:", error);
+          toast.error("DC created but failed to upload attachments");
+        }
+      } else {
+        toast.success("Success! DC created successfully");
+      }
 
-    } catch (err: any) {
+      // Refetch DCs, tasks, and channels to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["dcs"] });
+      await queryClient.invalidateQueries({ queryKey: [`channels/?project_id=${projectId}`] });
+
+      setOpen(false);
+      setLoading(false);
+    };
+
+    const handleError = (err: any) => {
       console.error(err);
       const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating DC";
       toast.error(errorMessage);
-    } finally {
       setLoading(false);
+    };
+
+    try {
+      const result = await postRequest({
+        url: "tasks/delay-claims/",
+        data: payload
+      });
+      await handleSuccess(result);
+    } catch (err: any) {
+      handleError(err);
     }
   };
 
@@ -241,8 +292,8 @@ export default function DCForm({ setOpen, initialStatus }: any) {
                 <button
                   type="button"
                   onClick={() => handleRemoveFile(index)}
-                  className="text-red-500 text-xs hover:underline">
-                  Remove
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}

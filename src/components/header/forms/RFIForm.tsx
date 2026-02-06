@@ -30,7 +30,7 @@ const DISCIPLINE_OPTIONS = [
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
-import { uploadFile } from "@/supabse/api";
+import { X } from "lucide-react";
 
 export default function RFIForm({ setOpen, initialStatus }: any) {
   const [subject, setSubject] = useState("");
@@ -45,7 +45,7 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
   const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string }[]>([]);
 
   const queryClient = useQueryClient();
-  const { mutateAsync: createRFI } = usePost();
+  const { mutateAsync: postRequest } = usePost();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -57,15 +57,34 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const uploadAllFiles = async (projectId: string) => {
+  const uploadAttachments = async (rfiId: string | number) => {
     if (!selectedFiles.length) return [];
     setUploading(true);
     const uploaded: { name: string; url: string }[] = [];
 
     for (const file of selectedFiles) {
       try {
-        const url = await uploadFile(file, projectId);
-        uploaded.push({ name: file.name, url });
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload to tasks/requests-for-information/{rfiId}/attachments/
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}tasks/requests-for-information/${rfiId}/attachments/`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access')}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const data = await response.json();
+        uploaded.push({ name: file.name, url: data.file_url || data.url || '' });
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
@@ -92,40 +111,72 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
 
     setLoading(true);
 
-    try {
-      // Construct payload matching Django RFI API requirements
-      const payload = {
-        project: parseInt(projectId),
-        subject: subject,
-        discipline: discipline || undefined,
-        question: question,
-        status: initialStatus || "Open",
-        description: description,
-      };
+    // Construct payload matching Django RFI API requirements
+    const payload = {
+      project: parseInt(projectId),
+      subject: subject,
+      discipline: discipline || undefined,
+      question: question,
+      status: initialStatus || "Open",
+      description: description,
+    };
 
-      const result = await createRFI({
-        url: "tasks/requests-for-information/",
-        data: payload
-      });
-
-      // Refetch RFIs and tasks to update the UI
-      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      await queryClient.invalidateQueries({ queryKey: ["rfis"] });
-
-      toast.success("Success! RFI created successfully");
-
-      if (result?.id) {
-        console.log("RFI created:", result.id);
+    const handleSuccess = async (result: any) => {
+      // Create channel after RFI is created
+      try {
+        await postRequest({
+          url: "channels/",
+          data: {
+            project: parseInt(projectId),
+            taskId: result?._id || result?.id,
+            taskType: result?.taskType,
+            name: subject,
+            description: description,
+            channel_type: "private"
+          }
+        });
+      } catch (error) {
+        console.error("Error creating channel:", error);
       }
 
-      setOpen(false);
+      // Upload attachments after RFI is created
+      console.log("RFI created:", result?._id);
+      if (selectedFiles.length > 0 && result?._id) {
+        try {
+          await uploadAttachments(result._id);
+          toast.success("RFI created and files uploaded successfully");
+        } catch (error) {
+          console.error("Attachment upload error:", error);
+          toast.error("RFI created but failed to upload attachments");
+        }
+      } else {
+        toast.success("Success! RFI created successfully");
+      }
 
-    } catch (err: any) {
+      // Refetch RFIs, tasks, and channels to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["rfis"] });
+      await queryClient.invalidateQueries({ queryKey: [`channels/?project_id=${projectId}`] });
+
+      setOpen(false);
+      setLoading(false);
+    };
+
+    const handleError = (err: any) => {
       console.error(err);
       const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating RFI";
       toast.error(errorMessage);
-    } finally {
       setLoading(false);
+    };
+
+    try {
+      const result = await postRequest({
+        url: "tasks/requests-for-information/",
+        data: payload
+      });
+      await handleSuccess(result);
+    } catch (err: any) {
+      handleError(err);
     }
   };
 
@@ -144,15 +195,16 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
 
       <div>
         <Label>Priority</Label>
-        <select
-          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-        >
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-        </select>
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select priority" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            <SelectItem value="Low">Low</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="High">High</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -228,8 +280,8 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
                 <button
                   type="button"
                   onClick={() => handleRemoveFile(index)}
-                  className="text-red-500 text-xs hover:underline">
-                  Remove
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}

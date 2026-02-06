@@ -38,6 +38,7 @@ import useFetch from "@/hooks/useFetch";
 import { postData } from "@/lib/Api";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
+import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 
 export default function TaskDetails() {
   const { taskId } = useParams();
@@ -319,7 +320,14 @@ export default function TaskDetails() {
         riskScore: 0,
         riskMax: 100,
       },
-      linked: [],
+      attachments: (task.attachments || []).map((attachment: any) => ({
+        id: attachment.id,
+        type: 'document',
+        name: attachment.fileName || attachment.file_name || 'Unknown File',
+        url: attachment.url || attachment.fileUrl || '',
+        fileType: attachment.fileType || attachment.file_type || '',
+        uploadedAt: attachment.uploadedAt || attachment.uploaded_at
+      })),
       audit: [
         {
           action: `${taskType} created by ${task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || "User"}`,
@@ -668,7 +676,7 @@ export default function TaskDetails() {
                         {displayTask.title}
                       </h1>
                       {/* <p className="text-[#6B7280] text-sm">{displayTask.displayId || displayTask.id}</p> */}
-                      <p className="text-[#6B7280] text-sm">{`#${displayTask.type || "TSK"}-${displayTask.task_code || displayTask.id.slice(0, 4)}`}</p>
+                      <p className="text-[#6B7280] text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1111,31 +1119,35 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
+                {/* Attachments */}
+                <TaskAttachments attachments={displayTask?.attachments} />
+
+
                 {/* Linked */}
                 {/* <Card className="pt-4 bg-white shadow-none border-0">
-                <h3 className="text-xs  text-[#6B7280] uppercase tracking-wide mb-3">Linked</h3>
-                <div className="space-y-2">
-                  {displayTask.linked.map((item: any, i: any) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 px-[13px] py-[15px] border border-[#E7E9EB] rounded-[10px] hover:bg-white  transition-colors cursor-pointer"
-                    >
-                      {item.type === 'document' && <FileText className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                      {item.type === 'message' && <MessageSquare className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                      {item.type === 'vo' && <Link2 className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                      <div className="flex-1">
-                        <p className="text-sm text-[#1B1C1F]">{item.name}</p>
-                        {item.count && <p className="text-xs text-gray-500">{item.count} messages</p>}
-                        {item.status && (
-                          <Badge className="mt-1 rounded-[4px] bg-orange-50 text-orange-600 hover:bg-orange-50 text-xs">
-                            {item.status}
-                          </Badge>
-                        )}
+                  <h3 className="text-xs  text-[#6B7280] uppercase tracking-wide mb-3">Linked</h3>
+                  <div className="space-y-2">
+                    {displayTask.linked.map((item: any, i: any) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 px-[13px] py-[15px] border border-[#E7E9EB] rounded-[10px] hover:bg-white  transition-colors cursor-pointer"
+                      >
+                        {item.type === 'document' && <FileText className="h-4 w-4 text-[#6B7280] mt-0.5" />}
+                        {item.type === 'message' && <MessageSquare className="h-4 w-4 text-[#6B7280] mt-0.5" />}
+                        {item.type === 'vo' && <Link2 className="h-4 w-4 text-[#6B7280] mt-0.5" />}
+                        <div className="flex-1">
+                          <p className="text-sm text-[#1B1C1F]">{item.name}</p>
+                          {item.count && <p className="text-xs text-gray-500">{item.count} messages</p>}
+                          {item.status && (
+                            <Badge className="mt-1 rounded-[4px] bg-orange-50 text-orange-600 hover:bg-orange-50 text-xs">
+                              {item.status}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </Card> */}
+                    ))}
+                  </div>
+                </Card> */}
 
                 {/* Audit */}
                 <Card className="pt-4 bg-white shadow-none border-0">

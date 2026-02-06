@@ -32,6 +32,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCreateProject, useUpdateProject } from "@/hooks/useProjects";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const projectSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -64,6 +73,8 @@ export function OnboardingModal({
   const { mutate: updateProject, isPending: isUpdatingProject } =
     useUpdateProject();
   const isPending = isCreating || isUpdatingProject;
+  const user = localStorage.getItem("user");
+  const userObj = user ? JSON.parse(user) : null;
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -148,6 +159,10 @@ export function OnboardingModal({
 
       setFileErrors((prev) => ({ ...prev, ...errors }));
       setSelectedFiles((prev) => [...prev, ...validFiles]);
+
+      if (validFiles.length > 0) {
+        form.clearErrors("attachments");
+      }
     }
     // Reset input so same file can be selected again
     e.target.value = "";
@@ -196,6 +211,18 @@ export function OnboardingModal({
   };
 
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
+    // Check if documents are provided
+    const hasExistingAttachments = project?.attachments && project.attachments.length > 0;
+    const hasNewFiles = selectedFiles.length > 0;
+
+    if (!hasExistingAttachments && !hasNewFiles) {
+      form.setError("attachments", {
+        type: "manual",
+        message: "At least one project document is required",
+      });
+      return;
+    }
+
     const data = {
       name: values.name,
       description: values.description,
@@ -219,17 +246,25 @@ export function OnboardingModal({
       status: "Draft",
       ...((project?.id || project?._id) && {
         id: project.id || project?._id,
-        _id: project?._id || project?.id
+        _id: project?._id || project?.id,
       }),
     };
 
     const handleSuccess = async (result: any) => {
-      // Django API returns { message, project }
-      const projectData = result.project;
+      // Django API sometimes returns { message, project } or just the project object
+      const projectData = result?.project || result;
 
-      if (selectedFiles.length > 0) {
+      if (!projectData) {
+        console.error("Unexpected API response structure:", result);
+        toast.error("Failed to retrieve project details after save");
+        return;
+      }
+
+      const pId = projectData._id || projectData.id;
+
+      if (selectedFiles.length > 0 && pId) {
         try {
-          await uploadAllFiles(projectData.id || projectData._id);
+          await uploadAllFiles(pId);
           toast.success(
             project
               ? "Project updated with attachments!"
@@ -249,14 +284,25 @@ export function OnboardingModal({
 
       // Refetch projects list
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // Also invalidate the specific URL key used in the sidebar
+      const userId = userObj?.id || project?.user_id;
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: [`projects/?userId=${userId}`] });
+      }
 
       onOpenChange(false);
-      const newProjectId = projectData.id || projectData._id;
-      localStorage.setItem("selectedProjectId", newProjectId);
-      if (projectData.location) {
-        localStorage.setItem("projectLocation", projectData.location);
+
+      if (pId) {
+        // console.log("Setting selectedProjectId to:", pId);
+        localStorage.setItem("selectedProjectId", String(pId));
+        if (projectData.location) {
+          localStorage.setItem("projectLocation", projectData.location);
+        }
+        // window.dispatchEvent(new Event("project-change"));
+      } else {
+        console.warn("Could not find project ID in response:", projectData);
       }
-      window.dispatchEvent(new Event("project-change"));
+
       setSelectedFiles([]);
     };
 
@@ -404,7 +450,7 @@ export function OnboardingModal({
               name="attachments"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project Documents</FormLabel>
+                  <FormLabel>Project Documents *</FormLabel>
                   <FormControl>
                     <div>
                       <Input
@@ -485,11 +531,39 @@ export function OnboardingModal({
                 control={form.control}
                 name="start_date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(parseISO(field.value), "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-white" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? parseISO(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -498,11 +572,39 @@ export function OnboardingModal({
                 control={form.control}
                 name="end_date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>End Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(parseISO(field.value), "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-white" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? parseISO(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

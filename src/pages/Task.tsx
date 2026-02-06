@@ -117,10 +117,10 @@ function TaskCard({ task, isDragging }: any) {
             <Avatar className="h-6 w-6">
               <AvatarFallback className={`text-xs bg-orange-100 text-orange-600`}>UA</AvatarFallback>
             </Avatar>
-            <span className="text-[#E6E8EB]">•</span>
+            {/* <span className="text-[#E6E8EB]">•</span>
             <Badge variant="secondary" className="text-[11px] bg-orange-50 border border-[#FED7AA] text-orange-600 hover:bg-orange-50">
               Unassigned
-            </Badge>
+            </Badge> */}
           </div>
 
           <div>
@@ -129,7 +129,7 @@ function TaskCard({ task, isDragging }: any) {
 
           {task.status && (
             <div>
-              <span className={`text-xs block ${task.status === 'Overdue' ? 'text-[#DC2626]' : 'text-[#717784] '}`}>{task.status}</span>
+              <span className={`text-xs block ${task.status === 'Overdue' ? 'text-[#DC2626]' : 'text-[#717784] capitalize'}`}>{task.status}</span>
             </div>
           )}
 
@@ -257,7 +257,7 @@ export default function Task() {
           status: item.status || item.task?.status || 'todo',
           priority: item.task?.priority,
           discipline: item.task?.discipline,
-          task_code: item.task?.rfiNumber || item.task?.voNumber || item.taskId,
+          task_code: `${item.taskType}-${String(item.taskId).padStart(3, '0')}`,
           due_date: item.task?.dueDate,
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,

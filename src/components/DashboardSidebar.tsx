@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -81,8 +82,9 @@ const settingsItems = [
 export function DashboardSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser(); // Django auth hook
-  const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`)
+  const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
   const { setUserRole, clearUserRole } = useUserRoleStore();
@@ -117,20 +119,34 @@ export function DashboardSidebar() {
 
   useEffect(() => {
     // console.log(selectedProjectId)
-    if (!isLoading && projects.length === 0) {
+    const isTrulyEmpty = !isLoading && user && projectsData && projects.length === 0;
+
+    if (isTrulyEmpty) {
+      if (selectedProjectId) {
+        // Clear stale localStorage when no projects exist
+        // console.log("No projects found, clearing selection");
+        localStorage.removeItem("selectedProjectId");
+        localStorage.removeItem("projectLocation");
+        setSelectedProjectId("");
+        clearUserRole();
+      }
       setShowOnboarding(true);
     } else if (projects.length > 0 && !selectedProjectId) {
       // Auto select first project if none selected
-      const firstId = projects[0]._id;
-      setSelectedProjectId(firstId);
-      localStorage.setItem("selectedProjectId", firstId);
+      const firstProject = projects[0];
+      const firstId = firstProject._id || firstProject.id;
+      if (firstId) {
+        // console.log("Auto-selecting first project:", firstId);
+        setSelectedProjectId(String(firstId));
+        localStorage.setItem("selectedProjectId", String(firstId));
 
-      // Fetch user role for the first project
-      if (user?.id) {
-        fetchUserRole(firstId, user.id);
+        // Fetch user role for the first project
+        if (user?.id) {
+          fetchUserRole(String(firstId), user.id);
+        }
       }
     }
-  }, [projects, isLoading, selectedProjectId]);
+  }, [projects, isLoading, selectedProjectId, projectsData, user?.id]);
 
   // Fetch user role when project or user changes
   useEffect(() => {
@@ -167,7 +183,7 @@ export function DashboardSidebar() {
     window.location.reload();
   };
 
-  const selectedProject = projects.find((p: any) => p._id === selectedProjectId);
+  const selectedProject = projects.find((p: any) => (p._id || p.id) === selectedProjectId);
 
   const handleLogout = () => {
     clearUserRole();
@@ -209,6 +225,8 @@ export function DashboardSidebar() {
         }
       } else {
         // No projects left
+        // Invalidate specific query key for projects
+        queryClient.invalidateQueries({ queryKey: [`projects/?userId=${user?.id}`] });
         localStorage.removeItem("selectedProjectId");
         localStorage.removeItem("projectLocation");
         setSelectedProjectId("");
@@ -227,7 +245,6 @@ export function DashboardSidebar() {
     }
   };
 
-  console.log(showOnboarding)
 
   return (
     <>
@@ -257,11 +274,11 @@ export function DashboardSidebar() {
                 <DropdownMenuSeparator />
                 {projects.map((project: any) => (
                   <DropdownMenuItem
-                    key={project._id}
+                    key={project._id || project.id}
                     onClick={() => handleProjectSelect(project)}
                     className="cursor-pointer flex justify-between">
                     <div>
-                      {selectedProjectId === project._id && (
+                      {(selectedProjectId === String(project._id) || selectedProjectId === String(project.id)) && (
                         <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500">
                         </span>
                       )}

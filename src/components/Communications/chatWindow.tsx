@@ -277,19 +277,20 @@ const ChatWindow = ({ task }: { task: any }) => {
     );
   }
 
-  const displayId = task.type ? `${task.type}-${task.id.slice(0, 4)}` : `Task-${task.id.slice(0, 4)}`;
+  const displayId = task.taskId
+    ? `${task.taskType || "TSK"}-${String(task.taskId).padStart(3, '0')}`
+    : `# ${task.name}`;
 
   return (
     <div>
       <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex items-center justify-between gap-2 flex-wrap">
         <div>
           <div className="title text-base text-[#101828]">{displayId}</div>
-          <p className="text text-sm text-[#6A7282] mt-1">
-            {task.title}
-          </p>
-        </div>
-        <div className="date text-xs py-2 px-3 bg-[#FFF7ED] border border-[#FED7AA] text-[#F97316] rounded-full">
-          Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No Date'}
+          {task.description && (
+            <p className="text text-sm text-[#6A7282] mt-1">
+              {task.description}
+            </p>
+          )}
         </div>
       </div>
 

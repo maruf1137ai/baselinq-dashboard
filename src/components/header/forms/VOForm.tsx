@@ -16,7 +16,6 @@ import { Trash2, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
-import { uploadFile } from "@/supabse/api";
 
 const DISCIPLINE_OPTIONS = [
   "Architectural",
@@ -47,7 +46,7 @@ export default function VOForm({ setOpen, initialStatus }: any) {
   >([]);
 
   const queryClient = useQueryClient();
-  const { mutateAsync: createVO } = usePost();
+  const { mutateAsync: postRequest } = usePost();
 
   const addItem = () => {
     setItems([...items, { description: "", qty: 1, rate: 0 }]);
@@ -75,15 +74,34 @@ export default function VOForm({ setOpen, initialStatus }: any) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const uploadAllFiles = async (projectId: string) => {
+  const uploadAttachments = async (voId: string | number) => {
     if (!selectedFiles.length) return [];
     setUploading(true);
     const uploaded: { name: string; url: string }[] = [];
 
     for (const file of selectedFiles) {
       try {
-        const url = await uploadFile(file, projectId);
-        uploaded.push({ name: file.name, url });
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload to tasks/variation-orders/{voId}/attachments/
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}tasks/variation-orders/${voId}/attachments/`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access')}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const data = await response.json();
+        uploaded.push({ name: file.name, url: data.file_url || data.url || '' });
       } catch (err) {
         console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
@@ -110,63 +128,89 @@ export default function VOForm({ setOpen, initialStatus }: any) {
 
     setLoading(true);
 
-    try {
-      const files = await uploadAllFiles(projectId);
+    // Calculate totals from line items
+    const subTotal = items.reduce((acc, item) => acc + (item.qty || 0) * (item.rate || 0), 0);
+    const taxRate = 15; // Default VAT rate
+    const taxAmount = (subTotal * taxRate) / 100;
+    const grandTotal = subTotal + taxAmount;
 
-      // Calculate totals from line items
-      const subTotal = items.reduce((acc, item) => acc + (item.qty || 0) * (item.rate || 0), 0);
-      const taxRate = 15; // Default VAT rate
-      const taxAmount = (subTotal * taxRate) / 100;
-      const grandTotal = subTotal + taxAmount;
+    // Construct payload matching Django VO API requirements
+    const payload = {
+      project: parseInt(projectId),
+      title: title,
+      discipline: discipline || undefined,
+      description: description,
+      status: initialStatus || "Draft",
+      line_items: items.map(item => ({
+        description: item.description,
+        quantity: item.qty,
+        unitRate: item.rate,
+      })),
+      currency: "ZAR",
+      sub_total: subTotal,
+      tax_type: "VAT",
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      grand_total: grandTotal,
+    };
 
-      const fullDescription = files.length > 0
-        ? `${description}\n\nAttachments: ${JSON.stringify(files)}`
-        : description;
-
-      // Construct payload matching Django VO API requirements
-      const payload = {
-        project: parseInt(projectId),
-        title: title,
-        discipline: discipline || undefined,
-        description: fullDescription,
-        status: initialStatus || "Draft",
-        line_items: items.map(item => ({
-          description: item.description,
-          quantity: item.qty,
-          unitRate: item.rate,
-          // total: (item.qty || 0) * (item.rate || 0)
-        })),
-        currency: "ZAR",
-        sub_total: 125000.00,
-        tax_type: "VAT",
-        tax_rate: 15.00,
-        tax_amount: 18750.00,
-        grand_total: 143750.00,
-      };
-
-      const result = await createVO({
-        url: "tasks/variation-orders/",
-        data: payload
-      });
-
-      // Refetch VOs and tasks to update the UI
-      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      await queryClient.invalidateQueries({ queryKey: ["vos"] });
-
-      toast.success("Success! VO created successfully");
-
-      if (result?.id) {
-        console.log("VO created:", result.id);
+    const handleSuccess = async (result: any) => {
+      // Create channel after VO is created
+      // console.log("VO created:", result);
+      try {
+        await postRequest({
+          url: "channels/",
+          data: {
+            project: parseInt(projectId),
+            taskId: result?._id || result?.id,
+            taskType: result?.taskType,
+            name: title,
+            description: description,
+            channel_type: "private"
+          }
+        });
+      } catch (error) {
+        console.error("Error creating channel:", error);
       }
 
-      setOpen(false);
+      // Upload attachments after VO is created
+      console.log("VO created:", result?._id);
+      if (selectedFiles.length > 0 && result?._id) {
+        try {
+          await uploadAttachments(result._id);
+          toast.success("VO created and files uploaded successfully");
+        } catch (error) {
+          console.error("Attachment upload error:", error);
+          toast.error("VO created but failed to upload attachments");
+        }
+      } else {
+        toast.success("Success! VO created successfully");
+      }
 
-    } catch (err: any) {
+      // Refetch VOs, tasks, and channels to update the UI
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["vos"] });
+      await queryClient.invalidateQueries({ queryKey: [`channels/?project_id=${projectId}`] });
+
+      setOpen(false);
+      setLoading(false);
+    };
+
+    const handleError = (err: any) => {
       console.error(err);
       const errorMessage = err?.response?.data?.detail || err?.response?.data?.message || err?.message || "Error creating VO";
       toast.error(errorMessage);
-    } finally {
       setLoading(false);
+    };
+
+    try {
+      const result = await postRequest({
+        url: "tasks/variation-orders/",
+        data: payload
+      });
+      await handleSuccess(result);
+    } catch (err: any) {
+      handleError(err);
     }
   };
 

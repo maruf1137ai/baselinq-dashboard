@@ -476,7 +476,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
   const teamMembers = projectUsersData?.teamMembers || [];
   const allUsers = allUsersData?.results || [];
-  const roles = rolesData?.results || [];
+  const roles = rolesData || [];
 
   // Filter out users who are already in the project
   const availableUsers = allUsers.filter(

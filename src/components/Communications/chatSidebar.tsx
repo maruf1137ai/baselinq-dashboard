@@ -68,31 +68,33 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
               </button> */}
             </div>
             <div className="mt-5 flex flex-col gap-2">
-              {tasks.map((task) => {
-                const displayId = task.type ? `${task.type}-${task.id.slice(0, 4)}` : `Task-${task.id.slice(0, 4)}`;
-                const count = task.chat?.length || 0;
-                const isSelected = selectedTask?.id === task.id;
+              {tasks.map((channel) => {
+                const displayId = channel.taskId
+                  ? `${channel.taskType || "TSK"}-${String(channel.taskId).padStart(3, '0')}`
+                  : `# ${channel.name}`;
+                const count = channel.message_count || 0;
+                const isSelected = selectedTask?.id === channel.id;
 
                 return (
                   <div
-                    key={task.id}
-                    onClick={() => onSelectTask(task)}
-                    className={`py-3.5 px-4 rounded-[8px] cursor-pointer border relative
-                      ${isSelected ? 'bg-[#F3F4F6] border-[#E8E8E8]' : 'bg-white border-transparent hover:bg-[#F3F4F6] border-[#E8E8E8]'}
+                    key={channel.id}
+                    onClick={() => onSelectTask(channel)}
+                    className={`py-3.5 px-4 rounded-[8px] cursor-pointer border relative border-[#E8E8E8]
+                      ${isSelected ? 'bg-[#F3F4F6]' : 'bg-white hover:bg-[#F3F4F6]'}
                     `}>
-                    {count > 0 && (
+                    {/* {count > 0 && (
                       <div className="py-[2px] px-2 bg-black rounded-full inline-block text-white absolute top-2 right-2 text-xs">
                         {count}
                       </div>
-                    )}
+                    )} */}
 
-                    <div className="flex flex-col gap-2.5">
-                      <div className="title text-black text-sm">{displayId}</div>
-                      <div className="title text-[#4B5563] text-sm line-clamp-2">
-                        {task.title}
+                    <div className="">
+                      <div className="title text-black text-sm mb-2.5">{displayId}</div>
+                      <div className="title text-[#4B5563] text-sm line-clamp-2 mb-2.5">
+                        {channel.name}
                       </div>
                       <div className="title text-[#6B7280] text-xs">
-                        Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No Date'}
+                        {channel.description || "No description"}
                       </div>
                     </div>
                   </div>

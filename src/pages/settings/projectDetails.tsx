@@ -4,6 +4,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import React, { useState } from "react";
 import { deleteProjectDocument, ProjectDocument } from "@/lib/Api";
+import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
 import { FileText, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -197,54 +198,14 @@ const ProjectDetails = () => {
         project={selectedProject}
       />
 
-      {/* Document Preview Dialog */}
-      <Dialog open={!!selectedDocument} onOpenChange={(open) => !open && setSelectedDocument(null)}>
-        <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col p-0 gap-0 [&>button]:text-white [&>button]:hover:text-white/80">
-          <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0 bg-[#101828] text-white rounded-t-lg">
-            <DialogTitle className="truncate pr-8 text-white">{selectedDocument ? getDocName(selectedDocument) : ""}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 bg-gray-100 overflow-hidden relative flex items-center justify-center rounded-b-lg">
-            {selectedDocument && (() => {
-              const docUrl = getDocUrl(selectedDocument);
-              const docName = getDocName(selectedDocument);
-              const fileExt = docName.split('.').pop()?.toLowerCase();
-              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt || '');
-              const isPdf = fileExt === 'pdf';
-
-              if (isImage) {
-                return (
-                  <img
-                    src={docUrl}
-                    alt={docName}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                );
-              } else if (isPdf) {
-                return (
-                  <iframe
-                    src={docUrl}
-                    className="w-full h-full"
-                    title={docName}
-                  />
-                );
-              } else {
-                return (
-                  <div className="text-center p-8">
-                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium text-gray-900 mb-2">No Preview Available</p>
-                    <p className="text-sm text-gray-500 mb-6">This file type cannot be previewed directly.</p>
-                    <Button asChild>
-                      <a href={docUrl} download={docName} target="_blank" rel="noreferrer">
-                        Download File
-                      </a>
-                    </Button>
-                  </div>
-                );
-              }
-            })()}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <FilePreviewModal
+        isOpen={!!selectedDocument}
+        onOpenChange={(open) => !open && setSelectedDocument(null)}
+        file={selectedDocument ? {
+          name: getDocName(selectedDocument),
+          url: getDocUrl(selectedDocument)
+        } : null}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
