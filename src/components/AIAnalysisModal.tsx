@@ -128,11 +128,18 @@ interface AnalysisData {
   processing_time_seconds: number;
 }
 
+interface AIAnalysisResponse {
+  analysis?: AnalysisData;
+  price_breakdown?: AnalysisData['price_breakdown'];
+  mock_used?: boolean;
+  status?: string;
+}
+
 interface AIAnalysisModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isLoading: boolean;
-  analysisData: AnalysisData | null;
+  analysisData: AnalysisData | AIAnalysisResponse | null;
 }
 
 export function AIAnalysisModal({
@@ -169,7 +176,11 @@ export function AIAnalysisModal({
     }
   }, [isOpen]);
 
-  const data = analysisData?.analysis || analysisData;
+  // Destructure nested structure from API response
+  const data = (analysisData && 'analysis' in analysisData) ? {
+    ...(analysisData as AIAnalysisResponse).analysis,
+    price_breakdown: (analysisData as AIAnalysisResponse).price_breakdown
+  } : analysisData as AnalysisData;
 
   const sectionClass = (index: number) =>
     cn(
@@ -178,9 +189,6 @@ export function AIAnalysisModal({
         ? "opacity-100 translate-y-0"
         : "opacity-0 translate-y-4"
     );
-
-
-  // console.log({ data, isLoading })
 
   if (!data && !isLoading) return null;
 
@@ -557,10 +565,10 @@ export function AIAnalysisModal({
                                   <p className="text-xs text-gray-500 mb-1">Variance & Fair Value</p>
                                   <div className="flex items-center gap-3 text-xs">
                                     <span className={`font-medium ${item.market_verification.variance_percentage > 10
-                                        ? "text-red-600"
-                                        : item.market_verification.variance_percentage < -10
-                                          ? "text-green-600"
-                                          : "text-blue-600"
+                                      ? "text-red-600"
+                                      : item.market_verification.variance_percentage < -10
+                                        ? "text-green-600"
+                                        : "text-blue-600"
                                       }`}>
                                       {item.market_verification.variance_percentage > 0 ? "+" : ""}
                                       {item.market_verification.variance_percentage}%

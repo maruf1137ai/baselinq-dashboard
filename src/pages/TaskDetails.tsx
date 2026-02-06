@@ -39,6 +39,198 @@ import { postData } from "@/lib/Api";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 
+// Mock AI Analysis Data
+const MOCK_ANALYSIS_DATA = {
+  "analysis": {
+    "vo_id": "VO-001",
+    "contract_id": "doc_2",
+    "analysis_timestamp": "2026-02-05T10:30:11.477253",
+    "overall_status": "COMPLIANT",
+    "risk_level": "LOW",
+    "summary": "The Variation Order VO-001 is compliant with the contract clauses. It is properly issued, includes all required details, and follows the prescribed valuation methods. There are no significant risks or compliance issues identified.",
+    "procedural_compliance": {
+      "authorized_issuer": {
+        "status": "COMPLIANT",
+        "clause_reference": "Clause 8.1.1",
+        "page_number": "8",
+        "clause_text": "The Principal Agent may instruct variations to the Works by issuing a written Variation Order (VO).",
+        "finding": "The VO was issued by the Principal Agent as required."
+      },
+      "written_form": {
+        "status": "COMPLIANT",
+        "clause_reference": "Clause 8.2.1",
+        "page_number": "8",
+        "clause_text": "The Principal Agent shall issue Variation Orders using a standard VO form numbered sequentially (VO-001, VO-002, etc.).",
+        "finding": "The VO is properly numbered and formatted as per the contract requirements."
+      },
+      "notification_timeline": {
+        "status": "COMPLIANT",
+        "clause_reference": "No specific timeline clause provided",
+        "page_number": "N/A",
+        "required_days": null,
+        "actual_days": null,
+        "deadline_date": null,
+        "clause_text": "No specific timeline clause provided",
+        "finding": "No specific timeline for issuing VOs is mentioned in the provided clauses."
+      },
+      "required_approvals": {
+        "status": "COMPLIANT",
+        "clause_reference": "No specific approval clause provided",
+        "page_number": "N/A",
+        "clause_text": "No specific approval clause provided",
+        "finding": "No additional approvals beyond the Principal Agent's issuance are specified in the provided clauses."
+      }
+    },
+    "valuation_assessment": {
+      "applicable_method": {
+        "method": "BoQ rates",
+        "clause_reference": "Clause 8.4.1",
+        "page_number": "8",
+        "clause_text": "Variations shall be valued using Bill of Quantities rates where applicable.",
+        "finding": "The VO uses rates that should be verified against the Bill of Quantities to ensure compliance."
+      },
+      "rate_analysis": {
+        "rates_compliant": true,
+        "variance_percentage": 0,
+        "finding": "Assuming the rates for cement and bricks are from the BoQ, they are compliant. Verification needed."
+      },
+      "new_rates_permitted": true,
+      "threshold_triggered": false
+    },
+    "time_impact": {
+      "critical_path_affected": false,
+      "days_claimed": 0,
+      "days_assessment": "No delay claimed in the VO.",
+      "notice_requirement": {
+        "days_required": null,
+        "compliant": null,
+        "clause_reference": "No specific notice requirement clause provided",
+        "page_number": "N/A"
+      },
+      "eot_entitlement": "No EOT claimed",
+      "float_provisions": "No float provisions applicable"
+    },
+    "risk_flags": [],
+    "contract_citations": [
+      {
+        "clause_number": "8.1.1",
+        "clause_title": "Variation Order Process",
+        "quoted_text": "The Principal Agent may instruct variations to the Works by issuing a written Variation Order (VO).",
+        "relevance": "This clause authorizes the issuance of the VO."
+      },
+      {
+        "clause_number": "8.4.1",
+        "clause_title": "Valuation of Variations",
+        "quoted_text": "Variations shall be valued using Bill of Quantities rates where applicable.",
+        "relevance": "This clause dictates the valuation method for the VO."
+      }
+    ],
+    "recommendations": {
+      "for_employer": [
+        "Verify that the rates used in the VO are consistent with the Bill of Quantities."
+      ],
+      "for_contractor": [
+        "Ensure all documentation and justifications for the rates used are readily available for audit."
+      ],
+      "immediate_actions": [
+        {
+          "action": "Verify rates against Bill of Quantities.",
+          "deadline": "Within 5 business days",
+          "responsible_party": "Contractor's Quantity Surveyor"
+        }
+      ]
+    },
+    "retrieved_chunks_count": 7,
+    "llm_model": "gpt-4-turbo",
+    "processing_time_seconds": 22.683649
+  },
+  "price_breakdown": {
+    "currency": "ZAR",
+    "region": "South Africa",
+    "market_context": "South Africa construction market rates",
+    "total_items": 2,
+    "items_analysis": [
+      {
+        "item_number": 1,
+        "description": "Cement",
+        "quantity": 100.0,
+        "unit": "bags",
+        "unit_price": 70.0,
+        "total": 7000.0,
+        "market_verification": {
+          "status": "verified",
+          "data_quality": "high",
+          "confidence_note": "Real SA market data",
+          "market_rate_range": {
+            "low": 85.0,
+            "high": 120.0,
+            "average": 100.0,
+            "note": "Based on real South Africa market data from suppliers and industry sources",
+            "source": "web_search"
+          },
+          "variance_percentage": 30.0,
+          "fair_value_estimate": 7000.0,
+          "potential_adjustment": 0.0,
+          "assessment": "ℹ️ Price is 30.0% BELOW South Africa market rate (ZAR 100.00 average). Verify specifications, quality standards, and SANS compliance.",
+          "web_search_result": {
+            "sources_checked": ["AI-powered South Africa market analysis"],
+            "market_context": "Current South African Market Price Range: ZAR 85-120 per bag. Major suppliers include Builders Warehouse, Cashbuild, Afrisam and PPC Cement.",
+            "confidence_level": "High"
+          }
+        }
+      },
+      {
+        "item_number": 2,
+        "description": "Bricks",
+        "quantity": 1000.0,
+        "unit": "units",
+        "unit_price": 50.0,
+        "total": 50000.0,
+        "market_verification": {
+          "status": "verified",
+          "data_quality": "high",
+          "confidence_note": "Real SA market data",
+          "market_rate_range": {
+            "low": 171.7,
+            "high": 232.3,
+            "average": 202.0,
+            "note": "Based on real South Africa market data from suppliers and industry sources",
+            "source": "web_search"
+          },
+          "variance_percentage": 75.25,
+          "fair_value_estimate": 50000.0,
+          "potential_adjustment": 0.0,
+          "assessment": "ℹ️ Price is 75.2% BELOW South Africa market rate (ZAR 202.00 average). Verify specifications, quality standards, and SANS compliance.",
+          "web_search_result": {
+            "sources_checked": ["AI-powered South Africa market analysis"],
+            "market_context": "Current South African Market Price Range: ZAR 1.50-3.00 per brick. Major suppliers include Builders Warehouse and Cashbuild.",
+            "confidence_level": "High"
+          }
+        }
+      }
+    ],
+    "overall_assessment": {
+      "items_verified": 2,
+      "items_above_market": 0,
+      "items_within_market": 0,
+      "items_below_market": 2,
+      "items_failed_verification": 0,
+      "verification_notes": [
+        "ℹ️ 2 item(s) priced below South Africa market average - verify quality standards, SANS compliance, and specifications meet project requirements",
+        "ℹ️ Prices verified against South Africa construction market standards. Regional variations may apply (Gauteng, Western Cape, KZN, etc.)"
+      ]
+    },
+    "summary": {
+      "total_claimed": 57000.0,
+      "estimated_fair_value": 57000.0,
+      "potential_savings": 0.0,
+      "variance_percentage": 0.0
+    }
+  },
+  "mock_used": true,
+  "status": "success"
+};
+
 const taskDataMap = {
   "RFI-001": {
     id: "RFI-001",
@@ -401,16 +593,24 @@ export default function TaskDetails() {
     setIsAnalyzeModalOpen(true);
     setIsAnalyzeLoading(true);
 
-    try {
-      const response = await postData({
-        url: 'ai_analysis/vo/',
-        data: {
-          contract_document_id: 2,
-          task_id: taskId,
-        },
-      });
+    // Toggle between mock and real API: set USE_MOCK to false to use real API
+    const USE_MOCK = false;
 
-      setAnalysisData(response);
+    try {
+      if (USE_MOCK) {
+        // Simulate API delay for realistic experience
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // setAnalysisData(MOCK_ANALYSIS_DATA);
+      } else {
+        const response = await postData({
+          url: 'ai_analysis/vo/',
+          data: {
+            contract_document_id: 2,
+            task_id: taskId,
+          },
+        });
+        setAnalysisData(response);
+      }
     } catch (error) {
       console.error('Error fetching AI analysis:', error);
       toast.error('Failed to analyze. Please try again.');
