@@ -129,11 +129,11 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
           url: "channels/",
           data: {
             project: parseInt(projectId),
-            taskId: result?._id || result?.id,
-            taskType: result?.taskType,
+            taskId: result?.task?.id,
+            taskType: result?.task?.taskType,
             name: activityName,
             description: description,
-            channel_type: "private"
+            channel_type: "public"
           }
         });
       } catch (error) {
@@ -157,7 +157,7 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
       // Refetch CPIs, tasks, and channels to update the UI
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
       await queryClient.invalidateQueries({ queryKey: ["cpis"] });
-      await queryClient.invalidateQueries({ queryKey: [`channels/?project_id=${projectId}`] });
+      await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
 
       setOpen(false);
       setLoading(false);

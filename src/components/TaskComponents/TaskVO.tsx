@@ -44,14 +44,14 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
       {/* Stats card */}
       <div className="grid gap-2.5 mt-[27px] md:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-[#F3F2F0] !border-0 rounded-[13px] shadow-none">
-          <CardContent className="p-2.5">
+          <CardContent className="p-2.5 flex-1 flex flex-col h-full">
             <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
               <div className="flex items-center gap-2.5">
                 <CashIcon />
                 <p className="text-sm text-gray2 mb-1">Total Value</p>
               </div>
             </div>
-            <div className="bg-white py-[6px] px-[14px] rounded-[6px]">
+            <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
               <div className="">
                 <h3 className="text-2xl text-[#0F172A]">{formatCurrency(grandTotal)}</h3>
               </div>

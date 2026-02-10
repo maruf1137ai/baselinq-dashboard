@@ -19,6 +19,34 @@ import {
 import { AIAnalysisModal } from "@/components/AIAnalysisModal";
 import { Separator } from "@/components/ui/separator";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   ArrowLeft,
   MoreVertical,
   User,
@@ -27,7 +55,11 @@ import {
   Underline,
   Link2,
   Zap,
+  UserPlus,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
@@ -35,7 +67,7 @@ import { useUpdateTask } from "@/supabse/hook/useTask";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
-import { postData } from "@/lib/Api";
+import { postData, patchData } from "@/lib/Api";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
@@ -44,7 +76,7 @@ export default function TaskDetails() {
   const { taskId } = useParams();
   const projectId = localStorage.getItem("selectedProjectId");
   // Fetch task details from new Django API
-  const { data: taskDetailsResponse, isLoading } = useFetch(
+  const { data: taskDetailsResponse, isLoading, refetch: refetchTask } = useFetch(
     projectId && taskId ? `tasks/tasks/${taskId}/` : "",
     // projectId && taskId ? `projects/${projectId}/tasks/${taskId}/` : "",
     { enabled: !!taskId && !!projectId }
@@ -55,12 +87,18 @@ export default function TaskDetails() {
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   // Fetch request info for action requests
-  const { data: requestInfoResponse } = useFetch(
+  const { data: requestInfoResponse, refetch: refetchRequestInfo } = useFetch(
     currentTask
       ? `tasks/request-task-info/?taskType=${currentTask.taskType}&taskId=${currentTask.taskId || currentTask.id || currentTask._id}`
       : null,
     { enabled: !!currentTask }
   );
+  // Fetch audit logs
+  const { data: auditLogs, refetch: refetchAuditLogs } = useFetch<any[]>(
+    taskId ? `tasks/tasks/${taskId}/audits/` : "",
+    { enabled: !!taskId }
+  );
+
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -73,6 +111,19 @@ export default function TaskDetails() {
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
+
+  // Assign user modal state
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedAssignUsers, setSelectedAssignUsers] = useState<any[]>([]);
+  const [assignUserPopoverOpen, setAssignUserPopoverOpen] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Fetch project team members for assign modal
+  const { data: projectTeamData } = useFetch<any>(
+    projectId ? `projects/${projectId}/team-members/` : "",
+    { enabled: !!projectId }
+  );
+  const projectMembers = projectTeamData?.teamMembers || [];
 
   const handleAnalyzeWithAi = async () => {
     setIsAnalyzeModalOpen(true);
@@ -261,6 +312,37 @@ export default function TaskDetails() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve task");
+    }
+  };
+  // console.log("selectedAssignUsers", taskDetailsResponse)
+  const handleAssignUser = async () => {
+    if (selectedAssignUsers.length === 0 || !taskId) return;
+
+    // console.log("selectedAssignUsers", selectedAssignUsers);
+    setIsAssigning(true);
+    try {
+      await patchData({
+        url: `tasks/tasks/${taskId}/`,
+        data: {
+          assignedTo: selectedAssignUsers.map((u) => {
+            return u.userId
+          }),
+        },
+      });
+
+      toast.success("User(s) assigned successfully");
+      setShowAssignModal(false);
+      setSelectedAssignUsers([]);
+      await refetchTask();
+    } catch (error: any) {
+      console.error("Error assigning user:", error);
+      const errorMessage =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to assign user. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -685,9 +767,29 @@ export default function TaskDetails() {
                       className="bg-[#FFF7ED] rounded-[28px] px-[14px] py-2 text-[#F97316] border-[#FED7AA] text-xs">
                       Due: {displayTask.dueDate}
                     </Badge>
-                    <button className="text-gray-500 hover:text-gray-600">
-                      <MoreVertical className="h-5 w-5" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="text-gray-500 hover:text-gray-600">
+                          <MoreVertical className="h-5 w-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const assignedTo = currentTask?.assignedTo || [];
+                            const preSelected = projectMembers.filter((m: any) =>
+                              assignedTo.some((a: any) => a.userId === m.userId)
+                            );
+                            setSelectedAssignUsers(preSelected);
+                            setShowAssignModal(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Assign
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -951,9 +1053,9 @@ export default function TaskDetails() {
                               {request.recipient}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 mb-1">
+                          {/* <p className="text-xs text-gray-500 mb-1">
                             {request.role}
-                          </p>
+                          </p> */}
                           <p className="text-xs text-black">{request.task}</p>
                           <p className="text-xs text-gray-500 mt-1">
                             Due {new Date(request.date).toLocaleDateString()}
@@ -969,6 +1071,8 @@ export default function TaskDetails() {
                     wFull={true}
                     taskType={displayTask.type}
                     taskId={taskId || ''}
+                    assignedTo={currentTask?.assignedTo || []}
+                    onSuccess={() => { refetchTask(); refetchRequestInfo(); refetchAuditLogs(); }}
                   />
                 </div>
               </Card>
@@ -1155,23 +1259,16 @@ export default function TaskDetails() {
                     Audit
                   </h3>
                   <div className="space-y-3">
-                    {displayTask.audit.map((entry: any, i: any) => (
+                    {(auditLogs || []).map((entry: any) => (
                       <div
-                        key={i}
-                        className={`p-3 border border-[#E7E9EB] rounded-[10px] ${entry.isAI
-                          ? "bg-indigo-50 border border-[#8081F6B0] border-indigo-200"
-                          : "bg-white"
-                          }`}>
-                        <p className="text-sm text-gray-900 flex items-center gap-2">
-                          {entry.isAI && (
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-3.5 w-3.5 text-indigo-600" />
-                            </div>
-                          )}
-                          {entry.action}
+                        key={entry.id}
+                        className="p-3 border border-[#E7E9EB] rounded-[10px] bg-white"
+                      >
+                        <p className="text-sm text-gray-900">
+                          {entry.description}
                         </p>
                         <p className="text-xs text-[#6B7280] mt-1">
-                          {entry.date}
+                          {entry.createdByName} &middot; {new Date(entry.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     ))}
@@ -1190,6 +1287,120 @@ export default function TaskDetails() {
         isLoading={isAnalyzeLoading}
         analysisData={analysisData}
       />
+
+      {/* Assign User Modal */}
+      <Dialog open={showAssignModal} onOpenChange={(open) => {
+        setShowAssignModal(open);
+        if (!open) {
+          setSelectedAssignUsers([]);
+          setAssignUserPopoverOpen(false);
+        }
+      }}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle>Assign User</DialogTitle>
+            <DialogDescription>
+              Select project members to assign to this task.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Users</label>
+              <Popover open={assignUserPopoverOpen} onOpenChange={setAssignUserPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={assignUserPopoverOpen}
+                    className="w-full justify-between font-normal min-h-[40px] h-auto"
+                  >
+                    {selectedAssignUsers.length > 0 ? (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {selectedAssignUsers.map((u) => (
+                          <span
+                            key={u._id}
+                            className="inline-flex items-center gap-1 bg-[#F0F0FF] text-[#8081F6] text-xs px-2 py-1 rounded-md"
+                          >
+                            {u.user?.name || u.name || "User"}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select users...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search team members..." />
+                    <CommandList>
+                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandGroup>
+                        {projectMembers.map((member: any) => {
+                          const memberName = member.user?.name || member.name || member.user?.email || "";
+                          const memberEmail = member.user?.email || member.email || "";
+                          const isSelected = selectedAssignUsers.some((u) => u._id === member._id);
+                          return (
+                            <CommandItem
+                              key={member._id}
+                              value={memberName || memberEmail}
+                              onSelect={() => {
+                                setSelectedAssignUsers((prev) =>
+                                  isSelected
+                                    ? prev.filter((u) => u._id !== member._id)
+                                    : [...prev, member]
+                                );
+                              }}
+                              className="cursor-pointer aria-selected:bg-transparent"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-[#8081F6] text-white flex items-center justify-center text-sm font-medium">
+                                    {(memberName || memberEmail).charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{memberName || memberEmail}</span>
+                                    {memberEmail && memberName && (
+                                      <span className="text-xs text-muted-foreground">{memberEmail}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div
+                                  className={cn(
+                                    "h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                                    isSelected ? "border-[#8081F6] bg-[#8081F6]" : "border-gray-300 bg-white"
+                                  )}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50">
+                Cancel
+              </button>
+            </DialogClose>
+            <button
+              onClick={handleAssignUser}
+              disabled={selectedAssignUsers.length === 0 || isAssigning}
+              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-[#8081F6] hover:bg-[#6c6de0] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAssigning ? "Assigning..." : "Submit"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

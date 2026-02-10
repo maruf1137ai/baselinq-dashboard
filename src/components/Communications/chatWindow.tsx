@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Mic, X, Pause } from "lucide-react";
-import { useUpdateTask } from "@/supabse/hook/useTask";
 import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
+import { fetchData, postData } from "@/lib/Api";
 
-const ChatWindow = ({ task }: { task: any }) => {
+const ChatWindow = ({ channel }: { channel: any }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
-  const { mutateAsync: updateTask } = useUpdateTask();
 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -19,14 +18,47 @@ const ChatWindow = ({ task }: { task: any }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Sync messages with selected task
-  useEffect(() => {
-    if (task?.chat) {
-      setMessages(task.chat);
-    } else {
-      setMessages([]);
+  const userStr = localStorage.getItem("user");
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+
+  // Fetch messages from API
+  const fetchMessages = async () => {
+    if (!channel?.id) return;
+    try {
+      const response = await fetchData(`channels/${channel.id}/messages/`);
+      if (response) {
+        const formattedMessages = response.map((msg: any) => ({
+          id: msg.id,
+          sender_id: msg.sender_id,
+          content: msg.content,
+          sender_name: msg.sender_name,
+          timestamp: new Date(msg.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          files: msg.attachments || [],
+          is_urgent: msg.is_urgent,
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error("Failed to fetch messages", error);
     }
-  }, [task]);
+  };
+
+  useEffect(() => {
+    fetchMessages();
+
+    // Set up polling to refetch messages every 2.5 seconds
+    const intervalId = setInterval(() => {
+      fetchMessages();
+    }, 2500); // 2.5 seconds
+
+    // Cleanup: Clear interval when component unmounts or channel changes
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [channel]);
 
   // Auto-scroll to bottom when new messages are added
   const scrollToBottom = () => {
@@ -52,7 +84,7 @@ const ChatWindow = ({ task }: { task: any }) => {
       // Upload files if any
       for (const fileData of attachedFiles) {
         try {
-          const url = await uploadFile(fileData.file, task.id);
+          const url = await uploadFile(fileData.file, channel.id);
           uploadedFiles.push({
             name: fileData.name,
             type: fileData.type,
@@ -64,27 +96,21 @@ const ChatWindow = ({ task }: { task: any }) => {
         }
       }
 
-      // Add user message
-      const newUserMessage = {
-        id: Date.now(),
-        type: "user",
-        content: message.trim(),
-        files: uploadedFiles,
-        sender: "You",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
+      // Post message to API
+      await postData({
+        url: `channels/${channel.id}/messages/`,
+        data: {
+          content: message.trim(),
+          is_urgent: false,
+          parent: null,
+        },
+      });
 
-      const newChatHistory = [...(messages || []), newUserMessage];
-      setMessages(newChatHistory);
       setMessage("");
       setAttachedFiles([]);
 
-      if (task?.id) {
-        await updateTask({ id: task.id, chat: newChatHistory });
-      }
+      // Refresh messages from API
+      await fetchMessages();
     } catch (error) {
       console.error("Failed to send message", error);
       toast.error("Failed to send message");
@@ -191,30 +217,21 @@ const ChatWindow = ({ task }: { task: any }) => {
   const handleAudioUploadAndSend = async (audioFile: File) => {
     setIsUploading(true);
     try {
-      const url = await uploadFile(audioFile, task.id);
+      // Upload audio file first
+      const url = await uploadFile(audioFile, channel.id);
 
-      const newUserMessage = {
-        id: Date.now(),
-        type: "user",
-        content: "", // Empty content for voice messages
-        files: [{
-          name: "Voice Message",
-          type: "audio/webm",
-          url: url
-        }],
-        sender: "You",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
+      // Post voice message to API
+      await postData({
+        url: `channels/${channel.id}/messages/`,
+        data: {
+          content: `[Voice Message: ${url}]`,
+          is_urgent: false,
+          parent: null,
+        },
+      });
 
-      const newChatHistory = [...(messages || []), newUserMessage];
-      setMessages(newChatHistory);
-
-      if (task?.id) {
-        await updateTask({ id: task.id, chat: newChatHistory });
-      }
+      // Refresh messages from API
+      await fetchMessages();
     } catch (error) {
       console.error("Failed to send voice message", error);
       toast.error("Failed to send voice message");
@@ -269,26 +286,26 @@ const ChatWindow = ({ task }: { task: any }) => {
     );
   };
 
-  if (!task) {
+  if (!channel) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500">
-        Select a task to view conversation
+        Select a channel to view conversation
       </div>
     );
   }
 
-  const displayId = task.taskId
-    ? `${task.taskType || "TSK"}-${String(task.taskId).padStart(3, '0')}`
-    : `# ${task.name}`;
+  const displayId = channel.taskId
+    ? `${channel.taskType || "TSK"}-${String(channel.taskId).padStart(3, '0')}`
+    : `# ${channel.name}`;
 
   return (
     <div>
       <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex items-center justify-between gap-2 flex-wrap">
         <div>
           <div className="title text-base text-[#101828]">{displayId}</div>
-          {task.description && (
+          {channel.description && (
             <p className="text text-sm text-[#6A7282] mt-1">
-              {task.description}
+              {channel.description}
             </p>
           )}
         </div>
@@ -301,123 +318,101 @@ const ChatWindow = ({ task }: { task: any }) => {
             <div
               className="box-border content-stretch flex flex-col gap-[30.667px] items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
               data-name="chat">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`relative max-w-[396px] w-full ${msg.type === "user" ? "" : "self-start"
-                    }`}>
-                  {msg.type === "user" ? (
-                    // User Message
-                    <div className="relative rounded-[10px] w-full bg-[#F3F2F0] py-5 px-4">
-                      <div className="relative text-[#101828] text-base">
-                        <p className="leading-[26px] whitespace-pre-wrap">
-                          {msg.content}
-                        </p>
-                      </div>
-                      {/* Files */}
-                      {msg.files && msg.files.length > 0 && (
-                        <div className="flex items-start gap-2 flex-wrap mt-2">
-                          {msg.files.map((file, index) => (
-                            file.type.startsWith('audio/') || file.name.endsWith('.webm') ? (
-                              <div key={index} className="w-full min-w-[200px] mt-2">
-                                <audio controls className="w-full h-8">
-                                  <source src={file.url} type={file.type || "audio/webm"} />
-                                  Your browser does not support the audio element.
-                                </audio>
-                              </div>
-                            ) : (
-                              <a
-                                key={index}
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
-                                <FileIcon type={file.type} />
-                                <div className="text-[#364153] text-[14px]">
-                                  <p className="leading-[20px]">{file.name}</p>
-                                </div>
-                              </a>
-                            )
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    // AI Message
-                    <div
-                      className="content-stretch flex gap-[20.444px] items-start relative shrink-0 w-full"
-                      data-name="gpt-response">
-                      {/* AppIcons */}
-                      <div
-                        className="relative rounded-[20.444px] shrink-0 size-[35.778px]"
-                        data-name="app-icons">
-                        <div className="box-border content-stretch flex flex-col gap-[10.222px] items-center justify-center overflow-clip p-[10.222px] relative rounded-[inherit] size-[35.778px] border-[#e0e0e0] border-[1.278px]">
-                          <div className="h-[14.842px] relative shrink-0 w-[14.374px]">
-                            <svg
-                              className="block size-full"
-                              fill="none"
-                              preserveAspectRatio="none"
-                              viewBox="0 0 15 15">
-                              <g id="Group 6">
-                                <g id="Vector">
-                                  <path
-                                    d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
-                                    fill="var(--fill-0, black)"
-                                  />
-                                  <path
-                                    d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
-                                    fill="var(--fill-1, black)"
-                                  />
-                                </g>
-                                <g id="Vector_2">
-                                  <path
-                                    d="M14.3421 7.03081C11.1709 5.32661 7.8272 4.88233 4.30017 5.48914V0.370621C5.26111 0.0811511 6.25231 -0.0380774 7.25715 0.0105631C9.01711 0.0953874 10.6792 0.561624 12.2054 1.44131C12.9006 1.84229 13.5436 2.33344 14.2027 2.79434C14.2756 2.84536 14.3367 2.96696 14.3385 3.05712C14.3575 4.32948 14.3664 5.60244 14.3747 6.8754C14.3747 6.92879 14.3527 6.98217 14.3421 7.03081Z"
-                                    fill="var(--fill-0, black)"
-                                  />
-                                  <path
-                                    d="M14.3421 7.03081C11.1709 5.32661 7.8272 4.88233 4.30017 5.48914V0.370621C5.26111 0.0811511 6.25231 -0.0380774 7.25715 0.0105631C9.01711 0.0953874 10.6792 0.561624 12.2054 1.44131C12.9006 1.84229 13.5436 2.33344 14.2027 2.79434C14.2756 2.84536 14.3367 2.96696 14.3385 3.05712C14.3575 4.32948 14.3664 5.60244 14.3747 6.8754C14.3747 6.92879 14.3527 6.98217 14.3421 7.03081Z"
-                                    fill="var(--fill-1, black)"
-                                  />
-                                </g>
-                                <g id="Vector_3">
-                                  <path
-                                    d="M14.3435 10.8195H4.2969C4.29038 10.7376 4.2797 10.6617 4.2797 10.5864C4.27851 9.2535 4.28207 7.92064 4.27555 6.58836C4.27436 6.38787 4.31707 6.31669 4.5407 6.27101C5.70866 6.03315 6.89264 5.97502 8.06832 6.06043C10.2429 6.21881 12.3155 6.7586 14.1484 8.00902C14.2279 8.06359 14.3335 8.15909 14.3346 8.2368C14.3483 9.09275 14.3429 9.94871 14.3429 10.8195H14.3435Z"
-                                    fill="var(--fill-0, black)"
-                                  />
-                                  <path
-                                    d="M14.3435 10.8195H4.2969C4.29038 10.7376 4.2797 10.6617 4.2797 10.5864C4.27851 9.2535 4.28207 7.92064 4.27555 6.58836C4.27436 6.38787 4.31707 6.31669 4.5407 6.27101C5.70866 6.03315 6.89264 5.97502 8.06832 6.06043C10.2429 6.21881 12.3155 6.7586 14.1484 8.00902C14.2279 8.06359 14.3335 8.15909 14.3346 8.2368C14.3483 9.09275 14.3429 9.94871 14.3429 10.8195H14.3435Z"
-                                    fill="var(--fill-1, black)"
-                                  />
-                                </g>
-                              </g>
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                      {/* TextArea */}
-                      <div
-                        className="basis-0 box-border content-stretch flex flex-col gap-[15.333px] grow items-start min-h-px min-w-px pt-[11.5px] px-0 relative shrink-0"
-                        data-name="text-area">
-                        <div className="leading-[28.111px] not-italic relative shrink-0 text-[#0d0d0d] text-[16.611px] w-full">
-                          <p className="mb-0 whitespace-pre-wrap">
+              {messages.map((msg) => {
+                const isCurrentUser = currentUser?.id === msg.sender_id;
+                const senderInitial = msg.sender_name?.charAt(0)?.toUpperCase() || "?";
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`relative max-w-[396px] w-full ${isCurrentUser ? "" : "self-start"}`}>
+                    {isCurrentUser ? (
+                      // Current User Message (right side)
+                      <div className="relative rounded-[10px] w-full bg-[#F3F2F0] py-5 px-4">
+                        <div className="relative text-[#101828] text-base">
+                          <p className="leading-[26px] whitespace-pre-wrap">
                             {msg.content}
                           </p>
                         </div>
+                        {/* Files */}
+                        {msg.files && msg.files.length > 0 && (
+                          <div className="flex items-start gap-2 flex-wrap mt-2">
+                            {msg.files.map((file: any, index: number) => (
+                              file.type?.startsWith('audio/') || file.name?.endsWith('.webm') ? (
+                                <div key={index} className="w-full min-w-[200px] mt-2">
+                                  <audio controls className="w-full h-8">
+                                    <source src={file.url} type={file.type || "audio/webm"} />
+                                    Your browser does not support the audio element.
+                                  </audio>
+                                </div>
+                              ) : (
+                                <a
+                                  key={index}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
+                                  <FileIcon type={file.type} />
+                                  <div className="text-[#364153] text-[14px]">
+                                    <p className="leading-[20px]">{file.name}</p>
+                                  </div>
+                                </a>
+                              )
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                  {/* <div className="flex items-center justify-between mt-2.5">
-                    <div className="text-[#6a7282] text-[12px]">
-                      <p className="leading-[16px]">
-                        {msg.type === "user" ? msg.sender : "AI Assistant"}
-                      </p>
-                    </div>
-                    <div className="text-[#99a1af] text-[12px]">
-                      <p className="leading-[16px]">{msg.timestamp}</p>
-                    </div>
-                  </div> */}
-                </div>
-              ))}
+                    ) : (
+                      // Other User Message (left side with avatar)
+                      <div className="flex gap-3 items-start">
+                        {/* Avatar */}
+                        <div className="w-9 h-9 rounded-full bg-[#101828] flex items-center justify-center shrink-0">
+                          <span className="text-white text-sm font-medium">{senderInitial}</span>
+                        </div>
+                        <div className="flex-1">
+                          {/* Sender Name */}
+                          <p className="text-[#6A7282] text-xs mb-1 capitalize">{msg.sender_name}</p>
+                          {/* Message Box */}
+                          <div className="relative rounded-[10px] w-full bg-[#F3F2F0] py-5 px-4">
+                            <div className="relative text-[#101828] text-base">
+                              <p className="leading-[26px] whitespace-pre-wrap">
+                                {msg.content}
+                              </p>
+                            </div>
+                            {/* Files */}
+                            {msg.files && msg.files.length > 0 && (
+                              <div className="flex items-start gap-2 flex-wrap mt-2">
+                                {msg.files.map((file: any, index: number) => (
+                                  file.type?.startsWith('audio/') || file.name?.endsWith('.webm') ? (
+                                    <div key={index} className="w-full min-w-[200px] mt-2">
+                                      <audio controls className="w-full h-8">
+                                        <source src={file.url} type={file.type || "audio/webm"} />
+                                        Your browser does not support the audio element.
+                                      </audio>
+                                    </div>
+                                  ) : (
+                                    <a
+                                      key={index}
+                                      href={file.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
+                                      <FileIcon type={file.type} />
+                                      <div className="text-[#364153] text-[14px]">
+                                        <p className="leading-[20px]">{file.name}</p>
+                                      </div>
+                                    </a>
+                                  )
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Typing Indicator */}
               {isTyping && (

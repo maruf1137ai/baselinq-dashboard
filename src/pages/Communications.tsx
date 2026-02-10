@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 const Communications = () => {
   const [projectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
   const { data: channelsData, isLoading } = useFetch<any[]>(
-    projectId ? `channels/?project_id=${projectId}` : ""
+    projectId ? `channels/?projectId=${projectId}` : ""
   );
   const channels = Array.isArray(channelsData) ? channelsData : [];
   const [selectedChannel, setSelectedChannel] = useState<any>(null);
@@ -32,7 +32,7 @@ const Communications = () => {
           />
         </div>
         <div className="chatWindow flex-1">
-          <ChatWindow task={selectedChannel} />
+          <ChatWindow channel={selectedChannel} />
         </div>
         <div className="chatSummary flex-shrink-0 w-80">
           <ChatSammary task={selectedChannel} />

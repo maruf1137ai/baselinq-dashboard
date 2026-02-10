@@ -21,7 +21,7 @@ const ChatSammary = ({ task }: { task: any }) => {
         try {
           const docs = await getTaskDocuments(task.id);
           setDocuments(docs);
-          console.log("Task Documents:", docs);
+          // console.log("Task Documents:", docs);
         } catch (error) {
           console.error("Failed to fetch task documents", error);
         }

@@ -272,14 +272,15 @@ export function DashboardSidebar() {
               <DropdownMenuContent className="w-56" align="start">
                 <DropdownMenuLabel>Projects</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {projects.map((project: any) => (
-                  <DropdownMenuItem
+                {projects.map((project: any) => {
+                  // console.log(selectedProjectId == String(project._id))
+                  return <DropdownMenuItem
                     key={project._id || project.id}
                     onClick={() => handleProjectSelect(project)}
                     className="cursor-pointer flex justify-between">
-                    <div>
-                      {(selectedProjectId === String(project._id) || selectedProjectId === String(project.id)) && (
-                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500">
+                    <div className="flex items-center gap-2">
+                      {(selectedProjectId == String(project._id) || selectedProjectId == String(project.id)) && (
+                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500 block">
                         </span>
                       )}
                       {project.name}
@@ -297,7 +298,7 @@ export function DashboardSidebar() {
 
                     </div>
                   </DropdownMenuItem>
-                ))}
+                })}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowOnboarding(true)}

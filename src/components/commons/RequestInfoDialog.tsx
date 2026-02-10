@@ -15,15 +15,25 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import useFetch from '@/hooks/useFetch';
-import { postData } from '@/lib/Api';
+import { postData, patchData } from '@/lib/Api';
 import { toast } from 'sonner';
+
+interface UserRole {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 interface ProjectUser {
   id: number;
   email: string;
   name: string;
   organization: string | null;
-  role: string | null;
+  role: UserRole | null;
   profile: string | null;
   is_email_verified: boolean;
   is_active: boolean;
@@ -43,34 +53,37 @@ interface RequestInfoDialogProps {
   wFull?: boolean;
   taskType: string;
   taskId: string | number;
+  assignedTo?: { userId: string; role: string; name: string }[];
   onSuccess?: () => void;
 }
 
-export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: RequestInfoDialogProps) {
+export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], onSuccess }: RequestInfoDialogProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>();
-  const [selectedRecipients, setSelectedRecipients] = useState<ProjectUser[]>([]);
+  const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
   const [recipientPopoverOpen, setRecipientPopoverOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: usersData } = useFetch<ProjectUsersResponse>('projects/1/users/');
-  const availableUsers = usersData?.users || [];
+  const SelectedProjectID = localStorage.getItem('selectedProjectId')
 
-  const toggleRecipient = (user: ProjectUser) => {
-    setSelectedRecipients(prev => {
-      const isSelected = prev.some(r => r.id === user.id);
+  const { data: usersData } = useFetch<any>(`projects/${SelectedProjectID}/team-members/`);
+  const availableUsers = usersData?.teamMembers || [];
+
+  const toggleRecipient = (member: any) => {
+    setSelectedRecipients((prev: any[]) => {
+      const isSelected = prev.some(r => r._id === member._id);
       if (isSelected) {
-        return prev.filter(r => r.id !== user.id);
+        return prev.filter(r => r._id !== member._id);
       } else {
-        return [...prev, user];
+        return [...prev, member];
       }
     });
   };
 
-  const removeRecipient = (userId: number) => {
-    setSelectedRecipients(prev => prev.filter(r => r.id !== userId));
+  const removeRecipient = (memberId: string) => {
+    setSelectedRecipients((prev: any[]) => prev.filter(r => r._id !== memberId));
   };
 
   const handleSend = async () => {
@@ -89,7 +102,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: Reques
           data: {
             taskType,
             taskId: String(taskId),
-            recipientId: recipient.id,
+            recipientId: recipient.user?.id || recipient.id,
             requestDetails: message,
             optionalNote: note || '',
             dueDate: date ? format(date, 'yyyy-MM-dd') : null,
@@ -98,6 +111,21 @@ export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: Reques
       );
 
       await Promise.all(promises);
+
+      // Assign recipients who are not already assigned to the task
+      const newUserIds = selectedRecipients
+        .filter((r) => !assignedTo.some((a) => String(a.userId) === String(r.userId)))
+        .map((r) => String(r.userId));
+
+      if (newUserIds.length > 0) {
+        const existingUserIds = assignedTo.map((a) => a.userId);
+        await patchData({
+          url: `tasks/tasks/${taskId}/`,
+          data: {
+            assignedTo: [...existingUserIds, ...newUserIds],
+          },
+        });
+      }
 
       toast.success('Request sent successfully');
       setOpen(false);
@@ -147,18 +175,18 @@ export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: Reques
                   >
                     {selectedRecipients.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {selectedRecipients.map((user) => (
+                        {selectedRecipients.map((member) => (
                           <Badge
-                            key={user.id}
+                            key={member._id}
                             variant="secondary"
                             className="mr-1 mb-1 bg-[#F3F4F6] text-[#1A1F36] hover:bg-[#E5E7EB]"
                           >
-                            {user.name}
+                            {member.user?.name || member.name}
                             <button
                               className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  removeRecipient(user.id);
+                                  removeRecipient(member._id);
                                 }
                               }}
                               onMouseDown={(e) => {
@@ -168,7 +196,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: Reques
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                removeRecipient(user.id);
+                                removeRecipient(member._id);
                               }}
                             >
                               <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -188,24 +216,25 @@ export function RequestInfoDialog({ wFull, taskType, taskId, onSuccess }: Reques
                     <CommandList>
                       <CommandEmpty>No team member found.</CommandEmpty>
                       <CommandGroup>
-                        {availableUsers.map((user) => {
-                          const isSelected = selectedRecipients.some(r => r.id === user.id);
+                        {availableUsers.map((member: any) => {
+                          const memberName = member.user?.name || member.name || member.user?.email || "";
+                          const memberRole = member.user?.role?.name || member.roleName || "No role";
+                          const isSelected = selectedRecipients.some(r => r._id === member._id);
                           return (
                             <CommandItem
-                              key={user.id}
-                              value={user.name}
-                              onSelect={() => toggleRecipient(user)}
+                              key={member._id}
+                              value={memberName}
+                              onSelect={() => toggleRecipient(member)}
                               className="cursor-pointer w-full"
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  {/* Avatar circle with first letter */}
                                   <div className="h-8 w-8 rounded-full bg-[#8081F6] flex items-center justify-center text-white text-sm font-medium">
-                                    {user.name.charAt(0).toUpperCase()}
+                                    {memberName.charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="text-sm font-medium">{user.name}</span>
-                                    <span className="text-xs text-muted-foreground">{user.role || 'No role'}</span>
+                                    <span className="text-sm font-medium">{memberName}</span>
+                                    <span className="text-xs text-muted-foreground">{memberRole}</span>
                                   </div>
                                 </div>
                                 {/* Radio-like check circle */}
