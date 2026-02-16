@@ -734,6 +734,8 @@ export default function TaskDetails() {
     );
   }
 
+  console.log(displayTask.actionRequests)
+
   return (
     <DashboardLayout padding="p-0">
       <div className="min-h-screen ">

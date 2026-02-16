@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Bell, Search, Wand2, Command, X } from "lucide-react";
+import useFetch from "@/hooks/useFetch";
+import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,33 +20,21 @@ import AiButton from "./AiButton";
 import WeatherWidget from "./NavbarWeather";
 import NavbarWeather from "./NavbarWeather";
 
-const notifications = [
-  {
-    title: "VO-001 approval overdue",
-    description: "Client approval for VO-001 is now 2 days overdue",
-    time: "2 hours ago",
-    active: true,
-  },
-  {
-    title: "New RFI submitted",
-    description: "RFI-014 has been submitted by John Davidson",
-    time: "5 hours ago",
-    active: true,
-  },
-  {
-    title: "Task completed",
-    description: "Sarah Kim completed HSE Induction task",
-    time: "1 day ago",
-  },
-  {
-    title: "Payment milestone reached",
-    description: "Foundation phase milestone marked as complete",
-    time: "2 days ago",
-  },
-];
+interface Notification {
+  _id: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string;
+  data: Record<string, any>;
+  readAt: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
+  const { data: notifications = [], isLoading } = useFetch<Notification[]>("notifications/");
   const [showWeather, setShowWeather] = useState(
     localStorage.getItem("weatherFeed") === "true" ? true : false,
   );
@@ -105,7 +95,7 @@ export function DashboardHeader() {
 
             <DropdownMenuContent
               align="end"
-              className="max-w-[384px] w-full p-0 rounded-[19px] z-50">
+              className="min-w-[384px] w-full p-0 rounded-[19px] z-50">
               <div className="flex items-center justify-between p-6">
                 <h3 className="text-lg">Notifications</h3>
                 <Button
@@ -119,28 +109,38 @@ export function DashboardHeader() {
 
               <ScrollArea className="max-h-80 h-full overflow-auto border-0">
                 <div className="">
-                  {notifications.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${
-                        item?.active ? "bg-[#E8F1FF4D]" : "bg-white"
-                      }`}>
-                      <div className=" flex items-start gap-3">
-                        {item?.active && (
-                          <div className="h-2 w-2 bg-primary rounded-full mt-1.5"></div>
-                        )}
-                        <div className="">
-                          <p className="text-sm text-[#1A1A1A]">{item.title}</p>
-                          <p className="text-xs text-[#717784] mt-1">
-                            {item.description}
-                          </p>
-                          <p className="text-xs text-[#717784] mt-2">
-                            {item.time}
-                          </p>
-                        </div>
-                      </div>
+                  {isLoading ? (
+                    <div className="p-4 text-center text-sm text-[#717784]">
+                      Loading...
                     </div>
-                  ))}
+                  ) : notifications.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-[#717784]">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((item) => (
+                      <a
+                        key={item._id}
+                        href={item.link}
+                        className={`block border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"
+                          }`}>
+                        <div className="flex items-start gap-3">
+                          {!item.isRead && (
+                            <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0"></div>
+                          )}
+                          <div>
+                            <p className="text-sm text-[#1A1A1A]">{item.title}</p>
+                            <p className="text-xs text-[#717784] mt-1">
+                              {item.body}
+                            </p>
+                            <p className="text-xs text-[#717784] mt-2">
+                              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      </a>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </DropdownMenuContent>
