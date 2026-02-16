@@ -21,12 +21,21 @@ export const subscribeToPush = async (
 
 /**
  * GET /api/notifications/ (auth required)
- * Optional query param ?unread_only=true
+ * Optional: unread_only, project_id for project-wise list.
+ * Pass a boolean for unreadOnly only, or an object { unreadOnly?, projectId? }.
  */
 export const getNotifications = async (
-  unreadOnly?: boolean
+  unreadOnlyOrOptions?: boolean | { unreadOnly?: boolean; projectId?: string | number }
 ): Promise<Notification[]> => {
-  const url = unreadOnly ? "notifications/?unread_only=true" : "notifications/";
+  const options =
+    typeof unreadOnlyOrOptions === "boolean"
+      ? { unreadOnly: unreadOnlyOrOptions }
+      : unreadOnlyOrOptions ?? {};
+  const params = new URLSearchParams();
+  if (options.unreadOnly) params.set("unread_only", "true");
+  if (options.projectId != null) params.set("project_id", String(options.projectId));
+  const qs = params.toString();
+  const url = qs ? `notifications/?${qs}` : "notifications/";
   return fetchData(url);
 };
 
@@ -39,9 +48,16 @@ export const getNotification = async (id: string): Promise<Notification> => {
 
 /**
  * GET /api/notifications/unread_count/ (auth required)
+ * Optional: project_id (or projectId) for project-wise count
  */
-export const getUnreadCount = async (): Promise<{ count: number }> => {
-  return fetchData("notifications/unread_count/");
+export const getUnreadCount = async (
+  projectId?: string | number
+): Promise<{ count: number }> => {
+  const url =
+    projectId != null
+      ? `notifications/unread_count/?project_id=${encodeURIComponent(String(projectId))}`
+      : "notifications/unread_count/";
+  return fetchData(url);
 };
 
 /**

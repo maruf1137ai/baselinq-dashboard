@@ -7,17 +7,21 @@ import {
   markAllAsRead as apiMarkAllAsRead,
 } from "@/lib/notificationApi";
 
+type GetNotificationsOptions =
+  | boolean
+  | { unreadOnly?: boolean; projectId?: string | number };
+
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
 
-  fetchNotifications: (unreadOnly?: boolean) => Promise<void>;
-  fetchUnreadCount: () => Promise<void>;
+  fetchNotifications: (unreadOnlyOrOptions?: GetNotificationsOptions) => Promise<void>;
+  fetchUnreadCount: (projectId?: string | number) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   addNotification: (notification: Notification) => void;
-  refresh: () => Promise<void>;
+  refresh: (projectId?: string | number) => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -25,19 +29,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   unreadCount: 0,
   isLoading: false,
 
-  fetchNotifications: async (unreadOnly?: boolean) => {
+  fetchNotifications: async (unreadOnlyOrOptions?: GetNotificationsOptions) => {
     set({ isLoading: true });
     try {
-      const data = await fetchNotifications(unreadOnly);
+      const data = await fetchNotifications(unreadOnlyOrOptions);
       set({ notifications: Array.isArray(data) ? data : [], isLoading: false });
     } catch {
       set({ isLoading: false });
     }
   },
 
-  fetchUnreadCount: async () => {
+  fetchUnreadCount: async (projectId?: string | number) => {
     try {
-      const { count } = await fetchUnreadCount();
+      const { count } = await fetchUnreadCount(projectId);
       set({ unreadCount: count });
     } catch {
       // silently fail — count stays as-is
@@ -86,8 +90,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
   },
 
-  refresh: async () => {
+  refresh: async (projectId?: string | number) => {
     const { fetchNotifications, fetchUnreadCount } = get();
-    await Promise.all([fetchNotifications(), fetchUnreadCount()]);
+    await Promise.all([fetchNotifications(), fetchUnreadCount(projectId)]);
   },
 }));

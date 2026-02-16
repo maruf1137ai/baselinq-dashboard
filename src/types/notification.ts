@@ -1,15 +1,34 @@
+export type NotificationType =
+  | "channel_message"
+  | "channel_urgent"
+  | "mention"
+  | "vo_created"
+  | "si_created"
+  | "rfi_created"
+  | "dc_created"
+  | "cpi_created"
+  | "team_member_added";
+
 export interface Notification {
   _id: string;
-  type: "channel_message" | "channel_urgent" | "mention";
+  type: NotificationType;
   title: string;
   body: string;
   link: string;
   data: {
     channelId?: number;
     messageId?: number;
-    projectId?: number;
+    projectId?: string | number;
+    entityType?: string;
+    entityId?: number;
+    voNumber?: string;
+    siNumber?: string;
+    rfiNumber?: string;
+    projectNumber?: string;
+    role?: string;
     [key: string]: any;
   };
+  projectId?: string | null;
   readAt: string | null;
   isRead: boolean;
   createdAt: string;
