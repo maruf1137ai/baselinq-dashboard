@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Search, Wand2, Command, X } from "lucide-react";
-import useFetch from "@/hooks/useFetch";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -19,25 +19,42 @@ import AskAI from "./icons/AskAI";
 import AiButton from "./AiButton";
 import WeatherWidget from "./NavbarWeather";
 import NavbarWeather from "./NavbarWeather";
-
-interface Notification {
-  _id: string;
-  type: string;
-  title: string;
-  body: string;
-  link: string;
-  data: Record<string, any>;
-  readAt: string | null;
-  isRead: boolean;
-  createdAt: string;
-}
+import { useNotifications } from "@/hooks/useNotifications";
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
-  const { data: notifications = [], isLoading } = useFetch<Notification[]>("notifications/");
+  const navigate = useNavigate();
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    fetchNotifications,
+  } = useNotifications();
+
   const [showWeather, setShowWeather] = useState(
     localStorage.getItem("weatherFeed") === "true" ? true : false,
   );
+
+  const handleNotificationClick = async (item: (typeof notifications)[0]) => {
+    if (!item.isRead) {
+      await markAsRead(item._id);
+    }
+    setOpen(false);
+    navigate(item.link);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead();
+  };
+
+  const handleDropdownOpen = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      fetchNotifications();
+    }
+  };
 
   return (
     <>
@@ -83,13 +100,18 @@ export function DashboardHeader() {
           </button>
 
           {/* Notification Dropdown */}
-          <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenu open={open} onOpenChange={handleDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 flex justify-center items-center bg-[#FFFFFF] border border-[#EDEDED]">
+                className="relative h-10 w-10 flex justify-center items-center bg-[#FFFFFF] border border-[#EDEDED]">
                 <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
 
@@ -98,13 +120,24 @@ export function DashboardHeader() {
               className="min-w-[384px] w-full p-0 rounded-[19px] z-50">
               <div className="flex items-center justify-between p-6">
                 <h3 className="text-lg">Notifications</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setOpen(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-primary h-6 px-2"
+                      onClick={handleMarkAllAsRead}>
+                      Mark all read
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setOpen(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <ScrollArea className="max-h-80 h-full overflow-auto border-0">
@@ -119,10 +152,10 @@ export function DashboardHeader() {
                     </div>
                   ) : (
                     notifications.map((item) => (
-                      <a
+                      <button
                         key={item._id}
-                        href={item.link}
-                        className={`block border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"
+                        onClick={() => handleNotificationClick(item)}
+                        className={`w-full text-left block border border-[#EDEDED] p-4 hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"
                           }`}>
                         <div className="flex items-start gap-3">
                           {!item.isRead && (
@@ -138,7 +171,7 @@ export function DashboardHeader() {
                             </p>
                           </div>
                         </div>
-                      </a>
+                      </button>
                     ))
                   )}
                 </div>
