@@ -61,7 +61,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useUpdateTask } from "@/supabse/hook/useTask";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -74,6 +74,7 @@ import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 
 export default function TaskDetails() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId");
   // Fetch task details from new Django API
   const { data: taskDetailsResponse, isLoading, refetch: refetchTask } = useFetch(
@@ -744,12 +745,12 @@ export default function TaskDetails() {
             {/* Left Column - Main Content */}
             <div className="col-span-2 space-y-4 px-8 py-[17px]">
               {/* Back Button */}
-              <Link
-                to={"/tasks"}
+              <button
+                onClick={() => navigate(-1)}
                 className="flex mb-[24px] items-center gap-2 text-sm text-[#6B7280] hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4" />
-                Back to Tasks
-              </Link>
+                Back
+              </button>
 
               {/* Header Card */}
               <Card className="p-6 bg-[#F3F2F0] shadow-none rounded-[10px] px-[25px] py-[17px] border-[#F3F4F6]">

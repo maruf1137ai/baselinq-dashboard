@@ -25,14 +25,12 @@ const Index = () => {
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
 
   // const { data: tasks = [], isLoading: loadingTasks } = useTask(projectId);
-  const { data: tasks, isLoading: loadingTasks } = useFetch<{ count: number; results: any[] }>(
-    projectId ? `tasks/?project=${projectId}` : "",
+  const { data: tasksResponse, isLoading: loadingTasks } = useFetch<{ tasks: any[] }>(
+    projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
   const { data: project, isLoading: loadingProject } = useProject(projectId);
   const { data: user } = useCurrentUser(); // Django auth hook
-
-  // console.log("Project:", project);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -43,8 +41,24 @@ const Index = () => {
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
-  const taskList = tasks?.results || [];
-  const myActions = taskList.filter((t: any) => t.status !== 'Done');
+  const taskList = (tasksResponse?.tasks || []).map((item: any) => ({
+    id: item.taskId || item.task?._id,
+    title: item.task?.subject || item.task?.title || item.task?.taskActivityName || "",
+    description: item.task?.description || item.task?.question || item.task?.instruction || "",
+    type: item.taskType,
+    status: item.status || item.task?.status || "todo",
+    priority: item.task?.priority,
+    discipline: item.task?.discipline,
+    due_date: item.task?.dueDate || item.task?.finishDate,
+    created_at: item.created_at || item.task?.createdAt,
+    updated_at: item.task?.updatedAt || item.created_at || item.task?.createdAt,
+    assignedBy: item.assignedBy,
+  }));
+
+  const myActions = taskList.filter((t: any) => {
+    const s = t.status?.toLowerCase();
+    return s !== "done" && s !== "closed";
+  });
   const recentActivity = [...taskList].sort((a: any, b: any) => {
     const dateA = new Date(b.updated_at || b.created_at).getTime();
     const dateB = new Date(a.updated_at || a.created_at).getTime();
@@ -88,10 +102,10 @@ const Index = () => {
                 myActions.map((task: any) => (
                   <ActionItem
                     key={task.id}
-                    title={task.title}
-                    description={task.description || task.question || task.title}
+                    title={`${task.type}: ${task.title}`}
+                    description={task.description || task.title}
                     priority={task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) as any : "Medium"}
-                    dueDate={task.due_date ? new Date(task.due_date).toLocaleDateString() : (task.updated_at ? new Date(task.updated_at).toLocaleDateString() : "No Date")}
+                    dueDate={task.due_date ? new Date(task.due_date).toLocaleDateString() : "No Date"}
                     id={task.id}
                   />
                 ))
@@ -115,15 +129,23 @@ const Index = () => {
               {loadingTasks ? (
                 <div className="p-4 text-center text-gray-500">Loading activity...</div>
               ) : recentActivity.length > 0 ? (
-                recentActivity.map((task: any) => (
-                  <ActivityFeedItem
-                    key={task.id}
-                    title={`${task.type || 'Task'}: ${task.title}`}
-                    status={task.status}
-                    author={task.discipline || "User"}
-                    timeAgo={task.updated_at || task.created_at ? new Date(task.updated_at || task.created_at).toLocaleDateString() : "Just now"}
-                  />
-                ))
+                recentActivity.map((task: any) => {
+                  const s = task.status?.toLowerCase();
+                  const displayStatus: "In Progress" | "Pending" | "Completed" =
+                    s === "done" || s === "closed" ? "Completed"
+                      : s === "in review" || s === "in_review" || s === "inreview" || s === "answered" ? "In Progress"
+                        : "Pending";
+
+                  return (
+                    <ActivityFeedItem
+                      key={task.id}
+                      title={`${task.type || 'Task'}: ${task.title}`}
+                      status={displayStatus}
+                      author={task.assignedBy?.name || task.discipline || "User"}
+                      timeAgo={task.updated_at || task.created_at ? new Date(task.updated_at || task.created_at).toLocaleDateString() : "Just now"}
+                    />
+                  );
+                })
               ) : (
                 <div className="p-4 text-center text-gray-500">No recent activity.</div>
               )}

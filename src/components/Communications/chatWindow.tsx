@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare } from "lucide-react";
 import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
@@ -10,6 +10,7 @@ const ChatWindow = ({ channel }: { channel: any }) => {
 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -60,13 +61,21 @@ const ChatWindow = ({ channel }: { channel: any }) => {
     };
   }, [channel]);
 
-  // Auto-scroll to bottom when new messages are added
+  // Auto-scroll to bottom only when user is near the bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const isNearBottom = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+  };
+
   useEffect(() => {
-    scrollToBottom();
+    if (isNearBottom()) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   const handleSend = async () => {
@@ -288,8 +297,9 @@ const ChatWindow = ({ channel }: { channel: any }) => {
 
   if (!channel) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
-        Select a channel to view conversation
+      <div className="h-full flex flex-col items-center justify-center text-[#9CA3AF] gap-3">
+        <MessageSquare className="h-10 w-10 stroke-[1.5]" />
+        <p className="text-sm">Select a channel to view conversation</p>
       </div>
     );
   }
@@ -312,12 +322,34 @@ const ChatWindow = ({ channel }: { channel: any }) => {
       </div>
 
       <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-138px)] relative overflow-hidden pb-[70px]">
-        <div className="relative w-full px-5 h-full overflow-y-auto ">
+        <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
           <div className="relative size-full">
             {/* Chat Messages */}
             <div
-              className="box-border content-stretch flex flex-col gap-[30.667px] items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
+              className="box-border content-stretch flex flex-col gap-2 items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
               data-name="chat">
+              {/* Channel welcome banner */}
+              <div className="flex flex-col items-center justify-center w-full py-8 self-center">
+                <div className="w-14 h-14 rounded-full bg-[#E8F5E9] flex items-center justify-center mb-3">
+                  <MessageSquare className="h-7 w-7 text-[#43A047]" />
+                </div>
+                <p className="text-sm font-medium text-[#101828]">
+                  {channel.name || displayId}
+                </p>
+                <p className="text-xs text-[#9CA3AF] mt-1">
+                  Channel created{channel.created_at ? ` on ${new Date(channel.created_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}` : ""}{channel.created_by_name ? ` by ${channel.created_by_name}` : ""}
+                </p>
+                {channel.description && (
+                  <p className="text-xs text-[#6A7282] mt-1.5 max-w-sm text-center">{channel.description}</p>
+                )}
+              </div>
+
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
+                  <MessageSquare className="h-8 w-8 stroke-[1.5]" />
+                  <p className="text-xs">No messages yet — start the conversation below</p>
+                </div>
+              )}
               {messages.map((msg) => {
                 const isCurrentUser = currentUser?.id === msg.sender_id;
                 const senderInitial = msg.sender_name?.charAt(0)?.toUpperCase() || "?";
@@ -325,10 +357,10 @@ const ChatWindow = ({ channel }: { channel: any }) => {
                 return (
                   <div
                     key={msg.id}
-                    className={`relative max-w-[396px] w-full ${isCurrentUser ? "" : "self-start"}`}>
+                    className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
                     {isCurrentUser ? (
                       // Current User Message (right side)
-                      <div className="relative rounded-[10px] w-full bg-[#F3F2F0] py-5 px-4">
+                      <div className="relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4">
                         <div className="relative text-[#101828] text-base">
                           <p className="leading-[26px] whitespace-pre-wrap">
                             {msg.content}
@@ -373,7 +405,7 @@ const ChatWindow = ({ channel }: { channel: any }) => {
                           {/* Sender Name */}
                           <p className="text-[#6A7282] text-xs mb-1 capitalize">{msg.sender_name}</p>
                           {/* Message Box */}
-                          <div className="relative rounded-[10px] w-full bg-[#F3F2F0] py-5 px-4">
+                          <div className="relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4">
                             <div className="relative text-[#101828] text-base">
                               <p className="leading-[26px] whitespace-pre-wrap">
                                 {msg.content}

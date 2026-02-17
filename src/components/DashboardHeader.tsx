@@ -41,8 +41,8 @@ export function DashboardHeader() {
     if (!item.isRead) {
       await markAsRead(item._id);
     }
-    setOpen(false);
-    navigate(item.link);
+    // setOpen(false);
+    // navigate(item.link);
   };
 
   const handleMarkAllAsRead = async () => {
@@ -117,7 +117,7 @@ export function DashboardHeader() {
 
             <DropdownMenuContent
               align="end"
-              className="min-w-[384px] w-full p-0 rounded-[19px] z-50">
+              className="max-w-[384px] w-full min-w-[384px] p-0 rounded-[19px] z-50">
               <div className="flex items-center justify-between p-6">
                 <h3 className="text-lg">Notifications</h3>
                 <div className="flex items-center gap-2">
@@ -140,7 +140,7 @@ export function DashboardHeader() {
                 </div>
               </div>
 
-              <ScrollArea className="max-h-80 h-full overflow-auto border-0">
+              <ScrollArea className="max-h-[calc(100vh-8rem)] h-full overflow-auto border-0">
                 <div className="">
                   {isLoading ? (
                     <div className="p-4 text-center text-sm text-[#717784]">

@@ -93,9 +93,9 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
                       <div className="title text-[#4B5563] text-sm line-clamp-2 mb-2.5">
                         {channel.name}
                       </div>
-                      <div className="title text-[#6B7280] text-xs">
+                      {/* <div className="title text-[#6B7280] text-xs">
                         {channel.description || "No description"}
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 );
