@@ -1,36 +1,10 @@
 import { useState } from "react";
-import {
-  Plus,
-  PenSquare,
-  MoreVertical,
-  PanelLeft,
-  Grid3x3,
-  UserPlus,
-  MoreHorizontal,
-  Search,
-  Command,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import SideBar from "../icons/SideBar";
-import NewChat from "../icons/NewChat";
-import Explorer from "../icons/Explorer";
-import NewDoc from "../icons/NewDoc";
-import InviteMember from "../icons/InviteMember";
+import { SidebarFooter } from "@/components/ui/sidebar";
 import { Input } from "../ui/input";
+import { Badge } from "@/components/ui/badge";
+import InviteMember from "../icons/InviteMember";
 
 interface ChatSidebarProps {
   onNewChat: () => void;
@@ -39,75 +13,144 @@ interface ChatSidebarProps {
   onSelectTask: (task: any) => void;
 }
 
+const TASK_COLORS: Record<string, string> = {
+  VO: "#8B5CF6", // Violet
+  SI: "#3B82F6", // Blue
+  RFI: "#F97316", // Orange
+  DC: "#10B981", // Emerald
+  CPI: "#EF4444", // Red
+  GI: "#06B6D4", // Cyan
+  DEFAULT: "#9CA3AF" // Gray
+};
+
 export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: ChatSidebarProps) {
   const [open, setOpen] = useState(true);
+  const [filter, setFilter] = useState<'All' | 'My Actions' | 'Unread'>('All');
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTasks = tasks.filter(task => {
+    // Search filter
+    const searchLower = searchQuery.toLowerCase();
+    const taskName = task.name?.toLowerCase() || "";
+    const taskId = task.taskId ? String(task.taskId) : "";
+    const matchesSearch = taskName.includes(searchLower) || taskId.includes(searchLower);
+
+    if (!matchesSearch) return false;
+
+    // Tab filter
+    if (filter === 'All') return true;
+    if (filter === 'Unread') return (task.message_count || 0) > 0;
+    if (filter === 'My Actions') {
+      // Assuming 'My Actions' implies tasks where action is needed or assigned to user.
+      // For MVP, we can treat 'pending' or specific statuses as 'My Actions' if user ID check isn't available yet.
+      // Or simply tasks with high priority or specific status. 
+      // Based on user prompt "purely frontend filtering on the existing tasks array", checks status.
+      return task.status === 'Pending' || task.status === 'In Progress';
+    }
+    return true;
+  });
 
   return (
     <div
-      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all justify-between max-h-[calc(100vh-65px)] overflow-y-auto ${open ? "w-64" : "w-16"
+      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all justify-between max-h-[calc(100vh-65px)] overflow-y-auto ${open ? "w-80" : "w-16"
         }`}>
-      <div className=" p-3">
-        {/* Toggle button commented out in original, keeping it that way or as is */}
-
+      <div className="p-3">
         {open && (
           <>
-            <div className="flex items-center gap-1.5">
-              <div className="relative max-w-md flex-1 hidden md:block ">
+            <div className="flex items-center gap-1.5 mb-4">
+              <div className="relative max-w-md flex-1 hidden md:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-[18px] w-[18px] text-muted-foreground" />
                 <Input
-                  placeholder="Search Channels"
+                  placeholder="Search Channels" // Changed from Search Channels
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-[#F7F7F7] py-[12px] placeholder:text-[#6B6B6B] border-[#EDEDED] rounded-[11px]"
                 />
-                {/* <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1 text-sm text-muted-foreground border border-[#EDEDED] bg-white p-[9px] rounded-[9px]">
-                <Command color="#000" className="h-[14px] w-[14px]" />
-                <span>K</span>
-              </div> */}
               </div>
-              {/* <button className="py-[15px] border rounded-[9px] px-[15px]">
-                <UserPlus size={14} />
-              </button> */}
             </div>
-            <div className="mt-5 flex flex-col gap-2">
-              {tasks.map((channel) => {
+
+            {/* Filter Tabs */}
+            <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
+              {['All', 'My Actions', 'Unread'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setFilter(tab as any)}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filter === tab
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {filteredTasks.map((channel) => {
+                const taskType = channel.taskType || "TSK";
                 const displayId = channel.taskId
-                  ? `${channel.taskType || "TSK"}-${String(channel.taskId).padStart(3, '0')}`
+                  ? `${taskType}-${String(channel.taskId).padStart(3, '0')}`
                   : `# ${channel.name}`;
                 const count = channel.message_count || 0;
                 const isSelected = selectedTask?.id === channel.id;
+                const status = channel.status || "Open";
+                const borderColor = TASK_COLORS[taskType] || TASK_COLORS.DEFAULT;
 
                 return (
                   <div
                     key={channel.id}
                     onClick={() => onSelectTask(channel)}
-                    className={`py-3.5 px-4 rounded-[8px] cursor-pointer border relative border-[#E8E8E8]
-                      ${isSelected ? 'bg-[#F3F4F6]' : 'bg-white hover:bg-[#F3F4F6]'}
-                    `}>
-                    {/* {count > 0 && (
-                      <div className="py-[2px] px-2 bg-black rounded-full inline-block text-white absolute top-2 right-2 text-xs">
-                        {count}
-                      </div>
-                    )} */}
+                    className={`py-3 px-4 rounded-[8px] cursor-pointer border relative transition-colors group
+                      ${isSelected ? 'bg-[#F3F4F6] border-gray-200' : 'bg-white hover:bg-[#F9FAFB] border-transparent hover:border-gray-200'}
+                    `}
+                    style={{ borderLeft: `4px solid ${borderColor}` }}
+                  >
+                    {/* Header Row: ID and Date/Status */}
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-semibold text-gray-900">
+                        {displayId}
+                      </span>
+                      {/* Using status as a badge-like element */}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${status === 'Done' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                        {status}
+                      </span>
+                    </div>
 
-                    <div className="">
-                      <div className="title text-black text-sm mb-2.5">{displayId}</div>
-                      <div className="title text-[#4B5563] text-sm line-clamp-2 mb-2.5">
-                        {channel.name}
+                    {/* Title */}
+                    <div className="text-sm text-gray-700 font-medium line-clamp-1 mb-1" title={channel.name}>
+                      {channel.name}
+                    </div>
+
+                    {/* Footer: Count and optional snippet (if we had it) */}
+                    <div className="flex justify-between items-center mt-1">
+                      {/* You could put last message snippet here if available */}
+                      <div className="text-xs text-gray-400 truncate max-w-[80%]">
+                        {channel.description || "No specific details"}
                       </div>
-                      {/* <div className="title text-[#6B7280] text-xs">
-                        {channel.description || "No description"}
-                      </div> */}
+
+                      {count > 0 && (
+                        <div className="flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-black rounded-full text-white text-[10px] font-bold">
+                          {count}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
+              {filteredTasks.length === 0 && (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No channels found
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
 
-      <SidebarFooter className=" p-3">
+      <SidebarFooter className="p-3">
         {open ? (
-          <button className="flex items-center gap-2 text-sm text-[#0D0D0D] hover:text-foreground">
+          <button className="flex items-center gap-2 text-sm text-[#0D0D0D] hover:text-foreground w-full justify-center py-2">
             <InviteMember />
             <span>Add members</span>
           </button>

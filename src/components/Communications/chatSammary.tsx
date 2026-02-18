@@ -1,4 +1,4 @@
-import { Check, ExternalLink, TriangleAlert, FileText } from 'lucide-react';
+import { Check, ExternalLink, TriangleAlert, FileText, Calendar, AlertCircle, Clock, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -8,20 +8,63 @@ import { FilePreviewModal } from '../TaskComponents/FilePreviewModal';
 import { getTaskDocuments } from '@/supabse/api';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
+import useFetch from '@/hooks/useFetch';
 
-const ChatSammary = ({ task }: { task: any }) => {
+const ChatSammary = ({ task: channelTask }: { task: any }) => {
   const navigate = useNavigate();
-  // const { mutateAsync: updateTask } = useUpdateTask();
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
+  // Fetch full task details using the taskId from the channel
+  const taskId = channelTask?.taskId;
+  const { data: taskDetails, isLoading } = useFetch(
+    taskId ? `tasks/tasks/${taskId}/` : null,
+    { enabled: !!taskId }
+  );
+
+  // Normalize task data across types
+  const task = taskDetails?.task || channelTask;
+  const taskType = taskDetails?.taskType || channelTask?.taskType;
+
+  // Helper to extract common fields based on type
+  const getTaskFields = () => {
+    if (!task) return {};
+
+    // Default values
+    let description = task.description || "No description provided";
+    let date = task.dueDate || task.finishDate;
+    let priority = task.priority;
+    let discipline = task.discipline;
+
+    // Type specific overrides
+    if (taskType === 'RFI') {
+      description = task.question || task.description;
+    } else if (taskType === 'SI' || taskType === 'GI') {
+      description = task.instruction || task.description;
+    } else if (taskType === 'CPI') {
+      description = task.description; // CPI might use different fields
+    }
+
+    return {
+      description,
+      date: date ? new Date(date) : null,
+      priority,
+      discipline,
+      status: task.status || channelTask?.status || "Unknown"
+    };
+  };
+
+  const { description, date, priority, discipline, status } = getTaskFields();
+
   useEffect(() => {
     const fetchDocuments = async () => {
-      if (task?.id) {
+      const targetId = channelTask?.id || taskId;
+      if (targetId) {
         try {
-          const docs = await getTaskDocuments(task.id);
-          setDocuments(docs);
-          // console.log("Task Documents:", docs);
+          // Try fetching by channel ID first, then task ID if needed
+          // Assuming getTaskDocuments handles linking logic or we might need to adjust
+          const docs = await getTaskDocuments(targetId);
+          setDocuments(docs || []);
         } catch (error) {
           console.error("Failed to fetch task documents", error);
         }
@@ -29,9 +72,9 @@ const ChatSammary = ({ task }: { task: any }) => {
     };
 
     fetchDocuments();
-  }, [task?.id]);
+  }, [channelTask?.id, taskId]);
 
-  if (!task) {
+  if (!channelTask) {
     return (
       <div className="p-6 text-center text-gray-500 text-sm">
         Select a task to view summary
@@ -40,70 +83,75 @@ const ChatSammary = ({ task }: { task: any }) => {
   }
 
   const handleViewTask = () => {
-    const taskId = task.taskId || task.id;
-    if (taskId) {
-      navigate(`/tasks/${taskId}`);
+    const targetId = taskId || channelTask.id;
+    if (targetId) {
+      navigate(`/tasks/${targetId}`);
     }
   };
 
+  // Status Color Logic
+  const getStatusColor = (status: string) => {
+    if (!status) return 'bg-gray-100 text-gray-600 border-gray-200';
+    const s = status.toLowerCase();
+    if (s.includes('overdue') || s.includes('risk')) return 'bg-red-50 text-red-700 border-red-200';
+    if (s.includes('approved') || s.includes('done') || s.includes('closed')) return 'bg-green-50 text-green-700 border-green-200';
+    if (s.includes('progress') || s.includes('pending')) return 'bg-orange-50 text-orange-700 border-orange-200';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  };
+
   return (
-    <div>
-      <div className="nav py-3 px-6 border-b border-[#DEDEDE] flex items-center justify-between gap-2 flex-wrap">
-        <div>
-          <div className="title text-base text-[#101828]">AI Summary</div>
-          <p className="text text-sm text-[#6A7282] mt-1">Current status and recommendations</p>
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="py-4 px-6 border-b border-[#DEDEDE]">
+        <h2 className="text-base font-semibold text-[#101828]">Task Context</h2>
+        <div className="flex items-center gap-2 mt-2">
+          <Badge variant="outline" className={`${getStatusColor(status)} border px-2.5 py-0.5 rounded-full text-xs font-medium`}>
+            {status}
+          </Badge>
+          <span className="text-xs text-gray-500 flex items-center gap-1">
+            {date ? <><Clock className="w-3 h-3" /> Due {date.toLocaleDateString()}</> : "No Due Date"}
+          </span>
         </div>
       </div>
 
-      <div className="py-3.5 px-6">
-        <div className="title text-base text-[#101828]">Status</div>
-        <div className="flex items-center gap-2 mt-2">
-          <div className={`date text-xs py-2 px-3 border rounded-full ${task.status === 'Overdue' || (task.due_date && new Date(task.due_date) < new Date())
-            ? 'bg-[#FEF2F2] border-[#FECACA] text-[#EF4444]'
-            : 'bg-green-50 border-green-200 text-green-700'
-            }`}>
-            {task.status || (task.due_date && new Date(task.due_date) < new Date() ? 'Overdue' : 'On Track')}
+      <div className="flex-1 overflow-y-auto py-4 px-6 space-y-6">
+
+        {/* Core Fields Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Priority
+            </div>
+            <div className="text-sm font-medium text-gray-900">{priority || "Normal"}</div>
           </div>
-          <p className="text text-sm text-[#4A5565]">
-            {task.due_date ? `Response required by ${new Date(task.due_date).toLocaleDateString()}` : 'No deadline'}
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> Discipline
+            </div>
+            <div className="text-sm font-medium text-gray-900">{discipline || "General"}</div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Description</h3>
+          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
+            {isLoading ? "Loading details..." : description}
           </p>
         </div>
 
-        {/* Next Steps - Only show if data exists (mocked or real) */}
-        {task.nextSteps && task.nextSteps.length > 0 && (
-          <>
-            <div className="title text-base mt-6 text-[#101828]">Next Steps</div>
-            <div className="items">
-              {task.nextSteps.map((step: string, i: number) => (
-                <div key={i} className="item flex gap-2 text-[#4A5565] text-sm mt-2.5">
-                  <Check className="text-[#99A1AF] h-4 w-4 mt-[2px]" />
-                  {step}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Risks - Only show if data exists */}
-        {task.risks && task.risks.length > 0 && (
-          <>
-            <div className="title text-base mt-6 text-[#101828]">Risks</div>
-            <div className="items">
-              {task.risks.map((risk: string, i: number) => (
-                <div key={i} className="item flex gap-2 text-[#EF4444] text-sm mt-2.5">
-                  <TriangleAlert className="text-[#EF4444] h-4 w-4 mt-[2px]" />
-                  {risk}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        {/* Action Buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={handleViewTask}>Approve</Button>
+          <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleViewTask}>Reject</Button>
+          <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50" onClick={handleViewTask}>Escalate</Button>
+        </div>
 
         {/* Documents Section */}
         {documents.length > 0 && (
-          <>
-            <div className="title text-base mt-6 text-[#101828]">Documents</div>
-            <div className="flex flex-col gap-2 mt-2">
+          <div>
+            <div className="title text-base text-[#101828] mb-3">Documents</div>
+            <div className="flex flex-col gap-2">
               {documents.map((doc, i) => (
                 <div
                   key={i}
@@ -122,7 +170,7 @@ const ChatSammary = ({ task }: { task: any }) => {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
 
         <FilePreviewModal
@@ -134,40 +182,18 @@ const ChatSammary = ({ task }: { task: any }) => {
           } : null}
         />
 
+        {/* Legacy Sections (Next Steps / Risks) - Kept if needed, but data usually comes from AI analysis */}
+        {/* Can be re-enabled if present in taskDetails response */}
+      </div>
 
-        {/* Action Requests Section */}
-        {task.request_info && task.request_info.length > 0 && (
-          <div className="mt-8">
-            <div className="title text-base text-[#101828] mb-4">Action Requests</div>
-            <div className="space-y-3">
-              {task.request_info.map((request: any) => (
-                <div key={request.id} className="flex items-start gap-4 p-3 bg-white border rounded-[10px]">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gray-200 text-gray-600 text-xs">DC</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 text-xs">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-black">{request.recipient}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-1">{request.role}</p>
-                    <p className="text-xs text-black">{request.task}</p>
-                    <p className="text-xs text-gray-500 mt-1">Due {new Date(request.date).toLocaleDateString()}</p>
-                  </div>
-                  <Badge className="bg-[#FFF7ED] text-[#F97316] py-1.5 px-3 hover:bg-orange-50 border-[#FED7AA] text-xs">
-                    Pending
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(task.taskId || task.id) && (
-          <div className="flex flex-col gap-2.5 mt-8">
+      <div className="p-4 border-t border-[#DEDEDE] mt-auto">
+        {(taskId || channelTask.id) && (
+          <div className="flex flex-col gap-2.5">
             <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">
-              <ExternalLink className="mr-2 h-4 w-4" /> View Task
+              <ExternalLink className="mr-2 h-4 w-4" /> View Full Task
             </Button>
-            <RequestInfoDialog taskType={task.type || 'RFI'} taskId={task.taskId || task.id} wFull />
+            {/* Request Info Dialog kept as is */}
+            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId || channelTask.id} wFull />
           </div>
         )}
       </div>

@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock } from "lucide-react";
 import { uploadFile } from "@/supabse/api";
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
+import { Badge } from "../ui/badge";
 
-const ChatWindow = ({ channel }: { channel: any }) => {
+const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel: any, projectName?: string, taskDetails?: any }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+  const [showContext, setShowContext] = useState(true);
 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -21,6 +23,72 @@ const ChatWindow = ({ channel }: { channel: any }) => {
 
   const userStr = localStorage.getItem("user");
   const currentUser = userStr ? JSON.parse(userStr) : null;
+
+  // Extract task specific fields for the context card
+  const getContextFields = () => {
+    if (!taskDetails?.task) return null;
+
+    const task = taskDetails.task;
+    const type = taskDetails.taskType;
+
+    const common = {
+      title: task.title || task.subject || task.taskActivityName,
+      status: task.status || channel?.status,
+      dueDate: task.dueDate || task.finishDate,
+      priority: task.priority
+    };
+
+    switch (type) {
+      case 'VO':
+        return {
+          ...common,
+          cost: task.grandTotal ? `R ${Number(task.grandTotal).toLocaleString()}` : null,
+          impact: "Cost & Time",
+          details: [
+            { label: "Amount", value: `R ${Number(task.grandTotal || 0).toLocaleString()}` },
+            { label: "Extension", value: task.extensionDays ? `${task.extensionDays} Days` : "None" }
+          ]
+        };
+      case 'DC':
+        return {
+          ...common,
+          cost: task.estimatedCostImpact?.amount ? `R ${Number(task.estimatedCostImpact.amount).toLocaleString()}` : null,
+          impact: "Delay Claim",
+          details: [
+            { label: "Claimed", value: task.requestedExtensionDays ? `${task.requestedExtensionDays} Days` : "N/A" },
+            { label: "Cause", value: task.causeCategory || "General" }
+          ]
+        };
+      case 'RFI':
+        return {
+          ...common,
+          details: [
+            { label: "Discipline", value: task.discipline },
+            { label: "Question", value: task.question, fullWidth: true }
+          ]
+        };
+      case 'SI':
+        return {
+          ...common,
+          details: [
+            { label: "Instruction", value: task.instruction, fullWidth: true },
+            { label: "Location", value: task.location || "General" }
+          ]
+        };
+      case 'CPI':
+        return {
+          ...common,
+          details: [
+            { label: "Start", value: task.startDate ? new Date(task.startDate).toLocaleDateString() : "N/A" },
+            { label: "Duration", value: `${task.duration || 0} Days` }
+          ]
+        }
+      default:
+        return common;
+    }
+  };
+
+  const contextData = getContextFields();
 
   // Fetch messages from API
   const fetchMessages = async () => {
@@ -310,18 +378,93 @@ const ChatWindow = ({ channel }: { channel: any }) => {
 
   return (
     <div>
-      <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex items-center justify-between gap-2 flex-wrap">
-        <div>
-          <div className="title text-base text-[#101828]">{displayId}</div>
-          {channel.description && (
-            <p className="text text-sm text-[#6A7282] mt-1">
-              {channel.description}
-            </p>
+      <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3">
+        {/* Breadcrumb & Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <div className="text-xs text-gray-500 font-medium breadcrumb flex items-center gap-1">
+              <span>{projectName}</span>
+              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <span>Communications</span>
+              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <span className="text-gray-900 font-semibold">{displayId}</span>
+            </div>
+          </div>
+          {contextData && (
+            <button
+              onClick={() => setShowContext(!showContext)}
+              className="text-xs flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors"
+            >
+              <Info className="w-3 h-3" />
+              {showContext ? "Hide Context" : "Show Context"}
+            </button>
           )}
         </div>
+
+        {/* Document Context Card */}
+        {showContext && contextData && (
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-sm font-semibold text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
+                {contextData.title}
+              </h3>
+              <div className="flex gap-2 shrink-0">
+                {contextData.status && (
+                  <Badge variant="outline" className="bg-white text-gray-700 border-gray-200 text-[10px] h-5">
+                    {contextData.status}
+                  </Badge>
+                )}
+                {contextData.priority && (
+                  <Badge variant="outline" className={`text-[10px] h-5 ${contextData.priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}>
+                    {contextData.priority}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4">
+              {contextData.dueDate && (
+                <div className="flex items-start gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium">Due Date</p>
+                    <p className="text-xs text-gray-900">{new Date(contextData.dueDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )}
+
+              {(contextData as any).cost && (
+                <div className="flex items-start gap-2">
+                  <DollarSign className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium">Cost Impact</p>
+                    <p className="text-xs text-gray-900 font-medium">{(contextData as any).cost}</p>
+                  </div>
+                </div>
+              )}
+
+              {(contextData as any).details?.map((detail: any, i: number) => (
+                <div key={i} className={`flex items-start gap-2 ${detail.fullWidth ? 'col-span-2' : ''}`}>
+                  <div className="w-3.5 shrink-0" /> {/* Spacer for alignment */}
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium">{detail.label}</p>
+                    <p className="text-xs text-gray-900 line-clamp-1" title={detail.value}>{detail.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {channel.description && !showContext && (
+          <p className="text text-sm text-[#6A7282] mt-1">
+            {channel.description}
+          </p>
+        )}
       </div>
 
-      <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-138px)] relative overflow-hidden pb-[70px]">
+      <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-209px)] relative overflow-hidden pb-[70px]">
         <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
           <div className="relative size-full">
             {/* Chat Messages */}
@@ -602,7 +745,7 @@ const ChatWindow = ({ channel }: { channel: any }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -81,6 +81,8 @@ export default function CreateRequestButton() {
   const [btnsOpen, setBtnsOpen] = useState(false);
   const { userRole } = useUserRoleStore();
 
+  // console.log(userRole)
+
   // Filter buttons based on user role
   const filteredBtns = useMemo(() => {
     if (!userRole) return btns; // Show all if no role set

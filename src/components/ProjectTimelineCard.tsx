@@ -94,13 +94,23 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
           </div>
         </div>
 
-        <div className=" bg-white flex flex-col justify-between p-4 rounded-[6px] relative">
-          <div className="flex justify-between px-1 h-[58px]">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="h-full w-[1px] bg-[#E5E7EB]" />
+        <div className="bg-white flex flex-col justify-between p-4 rounded-[6px] relative">
+          {/* Phase labels */}
+          <div className="flex w-full mb-1">
+            {[
+              { name: 'Foundation', width: '15%', color: '#8081F6' },
+              { name: 'Structure', width: '25%', color: '#3B82F6' },
+              { name: 'Envelope', width: '20%', color: '#10B981' },
+              { name: 'Fitout', width: '25%', color: '#F97316' },
+              { name: 'Handover', width: '15%', color: '#6B7280' },
+            ].map((phase, i) => (
+              <div key={i} className="flex flex-col items-center" style={{ width: phase.width }}>
+                <span className="text-[10px] text-[#6B7280] mb-1.5">{phase.name}</span>
+                <div className="w-full h-6 rounded-sm mx-[1px]" style={{ backgroundColor: `${phase.color}15`, borderBottom: `2px solid ${phase.color}` }} />
+              </div>
             ))}
           </div>
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 mt-2">
             <Progress value={progress} className="h-2" />
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray2 text-sm">Started: {startDate}</span>

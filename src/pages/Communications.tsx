@@ -20,6 +20,14 @@ const Communications = () => {
     }
   }, [channels, selectedChannel]);
 
+  const { data: projectData } = useFetch(projectId ? `projects/${projectId}/` : "");
+  const projectName = projectData?.name || "Project";
+
+  const { data: taskDetails } = useFetch(
+    selectedChannel?.taskId ? `tasks/tasks/${selectedChannel.taskId}/` : null,
+    { enabled: !!selectedChannel?.taskId }
+  );
+
   return (
     <DashboardLayout padding="p-0">
       <div className="h-full flex">
@@ -32,7 +40,11 @@ const Communications = () => {
           />
         </div>
         <div className="chatWindow flex-1">
-          <ChatWindow channel={selectedChannel} />
+          <ChatWindow
+            channel={selectedChannel}
+            projectName={projectName}
+            taskDetails={taskDetails}
+          />
         </div>
         <div className="chatSummary flex-shrink-0 w-80">
           <ChatSammary task={selectedChannel} />

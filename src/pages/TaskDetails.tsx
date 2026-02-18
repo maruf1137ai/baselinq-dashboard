@@ -58,6 +58,12 @@ import {
   UserPlus,
   Check,
   ChevronsUpDown,
+  FileText,
+  MessageSquare,
+  Printer,
+  CheckCircle2,
+  Circle,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -71,6 +77,18 @@ import { postData, patchData } from "@/lib/Api";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
+import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
+import { useUserRoleStore } from "@/store/useUserRoleStore";
+
+// Role to approval permission mapping per document type
+const approvalPermissions: Record<string, string[]> = {
+  VO: ["Client", "Owner", "Client Project Manager", "Consultant Quantity Surveyor", "Architect"],
+  SI: ["Construction Manager", "Project Manager", "Architect", "Client Project Manager"],
+  RFI: ["Architect", "Construction Manager", "Project Manager", "Site Engineer"],
+  DC: ["Client", "Owner", "Client Project Manager", "Consultant Planning Engineer", "Contracts Manager"],
+  CPI: ["Planning Engineer", "Consultant Planning Engineer", "Project Manager", "Construction Manager"],
+  GI: ["Project Manager", "Construction Manager", "Architect"],
+};
 
 export default function TaskDetails() {
   const { taskId } = useParams();
@@ -84,8 +102,11 @@ export default function TaskDetails() {
   );
 
   const { data: user } = useCurrentUser();
+  const { userRole } = useUserRoleStore();
   const { mutateAsync: updateTask } = useUpdateTask();
   const [currentTask, setCurrentTask] = useState<any>(null);
+
+  // console.log(userRole)
 
   // Fetch request info for action requests
   const { data: requestInfoResponse, refetch: refetchRequestInfo } = useFetch(
@@ -119,6 +140,30 @@ export default function TaskDetails() {
   const [assignUserPopoverOpen, setAssignUserPopoverOpen] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
+  // VO Structured Pricing Response state
+  const [recommendedAmount, setRecommendedAmount] = useState<string>("");
+  const [pricingDecision, setPricingDecision] = useState<string>("");
+  const [pricingConditions, setPricingConditions] = useState<string>("");
+
+  // DC (Delay Claim) Response state
+  const [dcExtensionGranted, setDcExtensionGranted] = useState<string>("");
+  const [dcNewCompletionDate, setDcNewCompletionDate] = useState<string>("");
+
+  // CPI (Critical Path) Response state
+  const [cpiProgress, setCpiProgress] = useState<number>(0);
+  const [cpiForecastDate, setCpiForecastDate] = useState<string>("");
+  const [cpiRecoveryPlan, setCpiRecoveryPlan] = useState<string>("");
+  const [cpiRiskLevel, setCpiRiskLevel] = useState<string>("");
+  const [cpiMilestoneImpact, setCpiMilestoneImpact] = useState<string>("");
+
+  // RFI (Status) state
+  const [rfiResponseStatus, setRfiResponseStatus] = useState<string>("");
+
+  // SI (Site Instruction) state
+  const [siAcknowledgeReceipt, setSiAcknowledgeReceipt] = useState<boolean>(false);
+  const [siLeadsToVariationResponse, setSiLeadsToVariationResponse] = useState<boolean>(false);
+  const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
+
   // Fetch project team members for assign modal
   const { data: projectTeamData } = useFetch<any>(
     projectId ? `projects/${projectId}/team-members/` : "",
@@ -130,31 +175,28 @@ export default function TaskDetails() {
     setIsAnalyzeModalOpen(true);
     setIsAnalyzeLoading(true);
 
-    // Toggle between mock and real API: set USE_MOCK to false to use real API
-    const USE_MOCK = false;
-
-    try {
-      if (USE_MOCK) {
-        // Simulate API delay for realistic experience
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        // setAnalysisData(MOCK_ANALYSIS_DATA);
-      } else {
-        const response = await postData({
-          url: 'ai_analysis/vo/',
-          data: {
-            contract_document_id: 2,
-            task_id: taskId,
-          },
-        });
-        setAnalysisData(response);
-      }
-    } catch (error) {
-      console.error('Error fetching AI analysis:', error);
-      toast.error('Failed to analyze. Please try again.');
-      setIsAnalyzeModalOpen(false);
-    } finally {
+    // Simulate loading for 20 seconds then show content
+    // TODO: Re-enable API call when ready and remove setTimeout
+    setTimeout(() => {
       setIsAnalyzeLoading(false);
-    }
+    }, 20000);
+
+    // try {
+    //   const response = await postData({
+    //     url: 'ai_analysis/vo/',
+    //     data: {
+    //       contract_document_id: 2,
+    //       task_id: taskId,
+    //     },
+    //   });
+    //   setAnalysisData(response);
+    // } catch (error) {
+    //   console.error('Error fetching AI analysis:', error);
+    //   toast.error('Failed to analyze. Please try again.');
+    //   setIsAnalyzeModalOpen(false);
+    // } finally {
+    //   setIsAnalyzeLoading(false);
+    // }
   };
 
   const fetchAIResponse = async () => {
@@ -264,11 +306,40 @@ export default function TaskDetails() {
       user?.email?.split("@")[0] ||
       "User";
 
+    const getStructuredData = () => {
+      if (displayTask.type === "VO") {
+        return { recommendedAmount, pricingDecision, pricingConditions };
+      }
+      if (displayTask.type === "RFI") {
+        return { rfiResponseStatus };
+      }
+      if (displayTask.type === "DC") {
+        return { dcExtensionGranted, dcNewCompletionDate };
+      }
+      if (displayTask.type === "CPI") {
+        return {
+          cpiProgress,
+          cpiForecastDate,
+          cpiRecoveryPlan,
+          cpiRiskLevel,
+          cpiMilestoneImpact
+        };
+      }
+      if (displayTask.type === "SI") {
+        return { siAcknowledgeReceipt, siLeadsToVariationResponse };
+      }
+      if (displayTask.type === "GI") {
+        return { giAcknowledgeReceipt };
+      }
+      return null;
+    };
+
     const newResponse = {
       content,
       sender: userName,
       date: new Date().toISOString(),
       id: crypto.randomUUID(),
+      structuredData: getStructuredData()
     };
 
     const currentResponses =
@@ -279,16 +350,77 @@ export default function TaskDetails() {
     const updatedResponses = [...currentResponses, newResponse];
 
     try {
-      await updateTask({
+      const updateData: any = {
         id: currentTask.id,
         responses: updatedResponses,
-      });
+      };
+
+      // Automate Status Transitions based on Decision
+      if (displayTask.type === "VO" && pricingDecision) {
+        if (pricingDecision === "approved") updateData.status = "Approved";
+        if (pricingDecision === "rejected") updateData.status = "Rejected";
+        if (pricingDecision === "partially_approved") updateData.status = "Priced";
+      }
+
+      if (displayTask.type === "RFI" && rfiResponseStatus) {
+        if (rfiResponseStatus === "clarification_provided") updateData.status = "Response Provided";
+        if (rfiResponseStatus === "further_info_required") updateData.status = "Further Info Required";
+        if (rfiResponseStatus === "as_per_drawing") updateData.status = "Closed";
+      }
+
+      if (displayTask.type === "DC" && dcExtensionGranted) {
+        updateData.status = "EOT Awarded";
+      }
+
+      if (displayTask.type === "CPI") {
+        if (cpiProgress === 100) {
+          updateData.status = "Completed";
+        } else if (cpiRiskLevel === "High" || cpiRiskLevel === "Medium") {
+          updateData.status = "On Track / At Risk";
+        } else {
+          updateData.status = "In Progress";
+        }
+      }
+
+      if (displayTask.type === "SI") {
+        if (siAcknowledgeReceipt) {
+          updateData.status = "Acknowledged";
+        } else {
+          updateData.status = "Actioned";
+        }
+      }
+
+      if (displayTask.type === "GI") {
+        if (giAcknowledgeReceipt) {
+          updateData.status = "Acknowledged";
+        } else {
+          updateData.status = "Distributed";
+        }
+      }
+
+      await updateTask(updateData);
       toast.success("Reply submitted successfully");
       editor.commands.setContent("");
 
+      // Reset Fields
+      setRecommendedAmount("");
+      setPricingDecision("");
+      setPricingConditions("");
+      setRfiResponseStatus("");
+      setDcExtensionGranted("");
+      setDcNewCompletionDate("");
+      setCpiProgress(0);
+      setCpiForecastDate("");
+      setCpiRecoveryPlan("");
+      setCpiRiskLevel("");
+      setCpiMilestoneImpact("");
+      setSiAcknowledgeReceipt(false);
+      setSiLeadsToVariationResponse(false);
+      setGiAcknowledgeReceipt(false);
+
       setCurrentTask((prev: any) => ({
         ...prev,
-        responses: updatedResponses,
+        ...updateData
       }));
     } catch (err) {
       console.error(err);
@@ -296,20 +428,19 @@ export default function TaskDetails() {
     }
   };
 
-  const handleApproveTask = async () => {
-    if (!currentTask) return;
+  const handleApproveTask = async (status: string) => {
+    if (!currentTask || !taskId) return;
 
     try {
-      await updateTask({
-        id: currentTask.id,
-        timeline_status: "Approved",
+      await patchData({
+        url: `tasks/tasks/${taskId}/update-entity/`,
+        data: {
+          status,
+          taskStatus: ["Completed", "Closed", "Approved"].includes(status) ? "Done" : "In Review",
+        },
       });
       toast.success("Task approved successfully");
-
-      setCurrentTask((prev: any) => ({
-        ...prev,
-        timeline_status: "Approved",
-      }));
+      await refetchTask();
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve task");
@@ -447,6 +578,10 @@ export default function TaskDetails() {
             replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "21 days",
           },
+          timeline: {
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Submitted", "Under Review", "Priced", "Approved"],
+          },
           impact: {
             time: "0 days",
             cost: task.grandTotal ? `R ${Number(task.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R 0.00",
@@ -476,6 +611,10 @@ export default function TaskDetails() {
           deadlines: {
             replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "14 days",
+          },
+          timeline: {
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
           },
           impact: {
             time: "5 days",
@@ -510,6 +649,10 @@ export default function TaskDetails() {
             replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "7 days",
           },
+          timeline: {
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
+          },
           impact: {
             time: "3 days",
             cost: "R 0",
@@ -541,6 +684,10 @@ export default function TaskDetails() {
           deadlines: {
             replyDue: "N/A",
             contractWindow: "28 days",
+          },
+          timeline: {
+            current: task.status || apiResponse.status || "Delay Identified",
+            stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
           },
           impact: {
             time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
@@ -577,6 +724,10 @@ export default function TaskDetails() {
             replyDue: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "N/A",
             contractWindow: "7 days",
           },
+          timeline: {
+            current: task.status || apiResponse.status || "Scheduled",
+            stages: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
+          },
           impact: {
             time: task.duration ? `${task.duration} days` : "N/A",
             cost: "R 0",
@@ -608,6 +759,10 @@ export default function TaskDetails() {
           deadlines: {
             replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "14 days",
+          },
+          timeline: {
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Issued", "Distributed", "Acknowledged"],
           },
           impact: {
             time: "0 days",
@@ -645,11 +800,27 @@ export default function TaskDetails() {
     ? (transformTaskData(currentTask, requestInfoResponse?.results) as any)
     : null;
 
+  // Map API statuses that don't directly match timeline stage names
+  const statusToStageMap: Record<string, string> = {
+    "Completed": "Approved",
+  };
+
   const currentStageIndex = displayTask
-    ? displayTask.timeline.stages.indexOf(displayTask.timeline.current) !== -1
-      ? displayTask.timeline.stages.indexOf(displayTask.timeline.current)
-      : 0
+    ? (() => {
+      const current = displayTask.timeline.current;
+      const mapped = statusToStageMap[current] || current;
+      const idx = displayTask.timeline.stages.indexOf(mapped);
+      return idx !== -1 ? idx : displayTask.timeline.stages.length - 1;
+    })()
     : 0;
+
+  // Check if the current user's role is authorized to approve this task type
+  const taskType = displayTask?.type || currentTask?.taskType || "";
+  const normalizedTaskType = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
+  const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
+  // Support compound roles like "Client / Owner" by splitting on " / "
+  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim()) : [];
+  const canApprove = userRoles.some((role) => allowedApprovers.includes(role));
 
   const editor = useEditor({
     extensions: [
@@ -735,7 +906,7 @@ export default function TaskDetails() {
     );
   }
 
-  console.log(displayTask.actionRequests)
+  // console.log(displayTask)
 
   return (
     <DashboardLayout padding="p-0">
@@ -744,13 +915,20 @@ export default function TaskDetails() {
           <div className="grid  grid-cols-3  ">
             {/* Left Column - Main Content */}
             <div className="col-span-2 space-y-4 px-8 py-[17px]">
-              {/* Back Button */}
-              <button
-                onClick={() => navigate(-1)}
-                className="flex mb-[24px] items-center gap-2 text-sm text-[#6B7280] hover:text-gray-900">
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
+              <div className="flex items-center justify-between mb-[24px]">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 text-sm text-[#6B7280] hover:text-gray-900">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-all shadow-sm">
+                  <Printer className="h-4 w-4 text-gray-500" />
+                  Print / Export
+                </button>
+              </div>
 
               {/* Header Card */}
               <Card className="p-6 bg-[#F3F2F0] shadow-none rounded-[10px] px-[25px] py-[17px] border-[#F3F4F6]">
@@ -850,6 +1028,8 @@ export default function TaskDetails() {
                 </div>
               </Card>
 
+
+
               {/* Question & Context */}
               <Card className="p-[25px] shadow-none pt-[22px] bg-white rounded-[14px] border-[#E7E9EB]">
                 <h2 className="text-base  text-[#0E1C2E] mb-5">
@@ -862,7 +1042,7 @@ export default function TaskDetails() {
                         : displayTask.type === "DC"
                           ? "Delay Reason & Impact"
                           : displayTask.type === "CPI"
-                            ? "Cost Proposal Details"
+                            ? "Critical Path Details"
                             : displayTask.type === "GI"
                               ? "General Instruction Details"
                               : "Details"}
@@ -941,6 +1121,261 @@ export default function TaskDetails() {
                               : "Response"}
                 </h2>
 
+                {/* Structured Pricing Response Fields - Only for VO */}
+                {displayTask.type === "VO" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Recommended Amount */}
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Recommended Amount
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">R</span>
+                          <input
+                            type="text"
+                            value={recommendedAmount}
+                            onChange={(e) => {
+                              // Allow only numbers and decimal point
+                              const value = e.target.value.replace(/[^\d.]/g, '');
+                              setRecommendedAmount(value);
+                            }}
+                            placeholder="0.00"
+                            className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Your assessed value for this variation</p>
+                      </div>
+
+                      {/* Decision */}
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Decision
+                        </label>
+                        <select
+                          value={pricingDecision}
+                          onChange={(e) => setPricingDecision(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select decision...</option>
+                          <option value="approved">Approved</option>
+                          <option value="partially_approved">Partially Approved</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="needs_clarification">Needs Clarification</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Your formal assessment</p>
+                      </div>
+                    </div>
+
+                    {/* Conditions */}
+                    <div>
+                      <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                        Conditions / Caveats
+                      </label>
+                      <textarea
+                        value={pricingConditions}
+                        onChange={(e) => setPricingConditions(e.target.value)}
+                        placeholder="Any conditions or caveats on your approval/rejection..."
+                        rows={2}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Optional notes on conditions for this decision</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Structured RFI Response Fields */}
+                {displayTask.type === "RFI" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+                    <div>
+                      <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                        Response Status
+                      </label>
+                      <select
+                        value={rfiResponseStatus}
+                        onChange={(e) => setRfiResponseStatus(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select status...</option>
+                        <option value="clarification_provided">Clarification Provided</option>
+                        <option value="further_info_required">Instruction Follows</option>
+                        <option value="as_per_drawing">Work as per Drawing</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Formal classification of this RFI response</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Structured DC Response Fields */}
+                {displayTask.type === "DC" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Extension Granted (Days)
+                        </label>
+                        <input
+                          type="number"
+                          value={dcExtensionGranted}
+                          onChange={(e) => setDcExtensionGranted(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          New Completion Date
+                        </label>
+                        <input
+                          type="date"
+                          value={dcNewCompletionDate}
+                          onChange={(e) => setDcNewCompletionDate(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Structured CPI Response Fields */}
+                {displayTask.type === "CPI" && (
+                  <div className="space-y-6 mb-6 pb-6 border-b border-gray-200">
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {/* Progress Slider */}
+                      <div className="md:col-span-2">
+                        <div className="flex justify-between mb-2">
+                          <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide">
+                            Current Progress
+                          </label>
+                          <span className="text-xs font-medium text-blue-600">{cpiProgress}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={cpiProgress}
+                          onChange={(e) => setCpiProgress(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                      </div>
+
+                      {/* Forecast Date */}
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Expected Finish Date
+                        </label>
+                        <input
+                          type="date"
+                          value={cpiForecastDate}
+                          onChange={(e) => setCpiForecastDate(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Update the predicted completion date</p>
+                      </div>
+
+                      {/* Risk Level */}
+                      <div>
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Risk Assessment
+                        </label>
+                        <select
+                          value={cpiRiskLevel}
+                          onChange={(e) => setCpiRiskLevel(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="Low">Low Risk (On Track)</option>
+                          <option value="Medium">Medium Risk (Monitoring)</option>
+                          <option value="High">High Risk (At Risk)</option>
+                        </select>
+                      </div>
+
+                      {/* Milestone Impact */}
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Milestone Impact
+                        </label>
+                        <select
+                          value={cpiMilestoneImpact}
+                          onChange={(e) => setCpiMilestoneImpact(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select affected milestone...</option>
+                          <option value="Practical Completion">Impacts Practical Completion</option>
+                          <option value="Roof Wet">Impacts Roof Wet Milestone</option>
+                          <option value="Handover">Impacts Handover</option>
+                          <option value="None">None / Internal Buffer Used</option>
+                        </select>
+                      </div>
+
+                      {/* Recovery Plan */}
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-normal text-[#6B7280] uppercase tracking-wide block mb-2">
+                          Recovery Strategy / Plan
+                        </label>
+                        <textarea
+                          value={cpiRecoveryPlan}
+                          onChange={(e) => setCpiRecoveryPlan(e.target.value)}
+                          placeholder="What steps are being taken to recover the schedule?"
+                          rows={2}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Structured SI Response Fields */}
+                {displayTask.type === "SI" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 bg-blue-50/30 p-4 rounded-lg border-blue-100">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="siAcknowledge"
+                          checked={siAcknowledgeReceipt}
+                          onChange={(e) => setSiAcknowledgeReceipt(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="siAcknowledge" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          I formally acknowledge receipt of this Site Instruction
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="siVariation"
+                          checked={siLeadsToVariationResponse}
+                          onChange={(e) => setSiLeadsToVariationResponse(e.target.checked)}
+                          className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                        />
+                        <label htmlFor="siVariation" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          This instruction will lead to a Variation Order request
+                        </label>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-[#6B7280] italic">Receipt and potential cost impact must be declared as per contract protocols.</p>
+                  </div>
+                )}
+                {/* Structured GI Response Fields */}
+                {displayTask.type === "GI" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 bg-purple-50/30 p-4 rounded-lg border-purple-100">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="giAcknowledge"
+                        checked={giAcknowledgeReceipt}
+                        onChange={(e) => setGiAcknowledgeReceipt(e.target.checked)}
+                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      />
+                      <label htmlFor="giAcknowledge" className="text-sm font-medium text-gray-900 cursor-pointer">
+                        I formally acknowledge receipt of this General Instruction
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-[#6B7280] italic">General instructions must be distributed and acknowledged by all relevant lead stakeholders.</p>
+                  </div>
+                )}
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 mb-4 pb-4 border-b">
                   <button
@@ -1085,6 +1520,8 @@ export default function TaskDetails() {
             {displayTask.creator.badge === "DC" ? (
               <TaskSidebar
                 taskType={displayTask.creator.badge}
+                canApprove={canApprove}
+                auditLogs={auditLogs}
                 taskData={{
                   ...displayTask,
                   // Add DC-specific fields
@@ -1094,7 +1531,10 @@ export default function TaskDetails() {
                   createdBy: displayTask.creator.name,
                   status: displayTask.timeline.current,
                 }}
-                onApprove={handleApproveTask}
+                onApprove={() => {
+                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
+                  handleApproveTask(lastStage);
+                }}
                 onReject={() => {
                   toast.info("Task rejected");
                 }}
@@ -1105,52 +1545,50 @@ export default function TaskDetails() {
             ) : (
               <div className="space-y-6 px-[25px] py-[45px] border-l">
                 {/* Decision Timeline */}
-                <div className="hidden">
+                <div className="">
                   <h3 className="text-xs text-[#6B7280] uppercase tracking-wide mb-5">
                     Decision Timeline
                   </h3>
                   <div className="relative">
-                    <div className="relative w-full max-w-3xl mx-auto">
+                    <div className="relative w-full max-w-3xl mx-auto px-1">
                       {/* Line */}
                       <div className="absolute top-2 left-0 right-0 h-[2px] bg-gray-200">
                         <div
                           className="h-[2px] bg-[#8081F6] transition-all duration-500"
                           style={{
-                            width: `${(currentStageIndex / (displayTask.timeline.stages.length - 1)) * 110}%`,
+                            width: `${(currentStageIndex / (displayTask.timeline.stages.length - 1)) * 100}%`,
                           }}
                         />
                       </div>
 
                       {/* Steps */}
                       <div className="flex justify-between relative z-10">
-                        <div className="relative flex items-center justify-between w-full">
-                          {displayTask.timeline.stages.map(
-                            (stage: any, i: any) => (
-                              <div
-                                key={stage}
-                                className="relative flex flex-col items-center flex-1">
-                                {/* Dot */}
-                                <div
-                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                                    ? "bg-[#8081F6] border-[#8081F6]"
-                                    : "bg-[#E7E9EB] border-[#E7E9EB]"
-                                    }`}
-                                />
-                                {/* Label */}
-                                <span
-                                  className={`text-sm mt-3 text-[#6B7280] w-full ${i === 0
-                                    ? "text-center"
-                                    : i ===
-                                      displayTask.timeline.stages.length - 1
-                                      ? "text-center"
-                                      : "text-center"
-                                    }`}>
-                                  {stage}
-                                </span>
-                              </div>
-                            ),
-                          )}
-                        </div>
+                        {displayTask.timeline.stages.map((stage: any, i: any) => (
+                          <button
+                            key={stage}
+                            disabled={!canApprove}
+                            onClick={() => canApprove && handleApproveTask(stage)}
+                            className={cn(
+                              "relative flex flex-col items-center flex-1",
+                              canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                            )}>
+                            {/* Dot */}
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
+                                ? "bg-[#8081F6] border-[#8081F6]"
+                                : "bg-white border-[#E7E9EB]"
+                                }`}
+                            />
+                            {/* Label */}
+                            <span
+                              className={cn(
+                                "text-[10px] mt-3 text-[#6B7280] w-full text-center break-words px-1",
+                                i === currentStageIndex && "text-[#1B1C1F] font-medium"
+                              )}>
+                              {stage}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1179,14 +1617,14 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                {/* <Button
+                <Button
                   className="w-full mt-4 font-normal"
-                  onClick={handleApproveTask}
-                  disabled={currentTask?.timeline_status === "Approved"}>
-                  {currentTask?.timeline_status === "Approved"
+                  onClick={() => handleApproveTask('Completed')}
+                  disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
+                  {["Approved", "Completed"].includes(displayTask.timeline.current)
                     ? "Approved"
                     : "Approve"}
-                </Button> */}
+                </Button>
 
                 {/* Impact */}
                 {/* <Card className="p-[17px] rounded-[10px] text-[#6B7280] bg-white shadow-none border-[#E7E9EB]">
@@ -1229,54 +1667,67 @@ export default function TaskDetails() {
                 {/* Attachments */}
                 <TaskAttachments attachments={displayTask?.attachments} />
 
-
-                {/* Linked */}
-                {/* <Card className="pt-4 bg-white shadow-none border-0">
-                  <h3 className="text-xs  text-[#6B7280] uppercase tracking-wide mb-3">Linked</h3>
-                  <div className="space-y-2">
-                    {displayTask.linked.map((item: any, i: any) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-3 px-[13px] py-[15px] border border-[#E7E9EB] rounded-[10px] hover:bg-white  transition-colors cursor-pointer"
-                      >
-                        {item.type === 'document' && <FileText className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                        {item.type === 'message' && <MessageSquare className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                        {item.type === 'vo' && <Link2 className="h-4 w-4 text-[#6B7280] mt-0.5" />}
-                        <div className="flex-1">
-                          <p className="text-sm text-[#1B1C1F]">{item.name}</p>
-                          {item.count && <p className="text-xs text-gray-500">{item.count} messages</p>}
-                          {item.status && (
-                            <Badge className="mt-1 rounded-[4px] bg-orange-50 text-orange-600 hover:bg-orange-50 text-xs">
-                              {item.status}
-                            </Badge>
-                          )}
-                        </div>
+                {/* Linked Documents - Phase 3 enhancement */}
+                {/* <Card className="p-[17px] mt-4 rounded-[10px] bg-white shadow-none border-[#E7E9EB]">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-medium text-[#6B7280] uppercase tracking-wide">
+                      Linked Documents
+                    </h3>
+                    <Button variant="ghost" className="h-6 w-6 p-0 text-[#8081F6] hover:bg-transparent">
+                      <Link2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-2 border border-gray-100 rounded-md hover:bg-gray-50 cursor-pointer">
+                      <div className="bg-blue-50 p-1.5 rounded text-blue-600">
+                        <FileText className="h-4 w-4" />
                       </div>
-                    ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-normal text-gray-900 truncate">SI-042: Slab Revision</p>
+                        <p className="text-[10px] text-gray-500">Originating Instruction</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 border border-gray-100 rounded-md hover:bg-gray-50 cursor-pointer">
+                      <div className="bg-green-50 p-1.5 rounded text-green-600">
+                        <MessageSquare className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-normal text-gray-900 truncate">RFI-105: Rebar Spec</p>
+                        <p className="text-[10px] text-gray-500">Technical Clarification</p>
+                      </div>
+                    </div>
                   </div>
                 </Card> */}
 
-                {/* Audit */}
-                <Card className="pt-4 bg-white shadow-none border-0">
-                  <h3 className="text-xs  text-[#6B7280] uppercase tracking-wide mb-3">
-                    Audit
-                  </h3>
-                  <div className="space-y-3">
-                    {(auditLogs || []).map((entry: any) => (
-                      <div
-                        key={entry.id}
-                        className="p-3 border border-[#E7E9EB] rounded-[10px] bg-white"
-                      >
-                        <p className="text-sm text-gray-900">
-                          {entry.description}
-                        </p>
-                        <p className="text-xs text-[#6B7280] mt-1">
-                          {entry.createdByName} &middot; {new Date(entry.createdAt).toLocaleDateString()}
-                        </p>
+                {/* Activity Timeline - Phase 1 & 4 improved audit */}
+                <div className="mt-8 border-t border-gray-100 pt-6">
+                  <h3 className="text-xs font-medium text-gray-900 mb-6 uppercase tracking-widest pl-2">Activity Timeline</h3>
+                  <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
+                    {auditLogs && auditLogs.length > 0 ? (
+                      auditLogs.slice(0, 10).map((log, i) => (
+                        <div key={i} className="relative pl-8">
+                          <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-blue-600 rounded-full z-10" />
+                          <div>
+                            <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              {new Date(log.created_at || log.createdAt).toLocaleDateString()} &middot; {log.createdByName || "System"}
+                            </p>
+                            {log.description && log.description !== log.action && (
+                              <p className="mt-1 text-[11px] text-gray-600 line-clamp-2">
+                                {log.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="relative pl-8">
+                        <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-gray-300 rounded-full z-10" />
+                        <p className="text-xs text-gray-400">No activity recorded yet</p>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </Card>
+                </div>
               </div>
             )}
           </div>
@@ -1289,6 +1740,7 @@ export default function TaskDetails() {
         onOpenChange={setIsAnalyzeModalOpen}
         isLoading={isAnalyzeLoading}
         analysisData={analysisData}
+        taskType={displayTask.type}
       />
 
       {/* Assign User Modal */}

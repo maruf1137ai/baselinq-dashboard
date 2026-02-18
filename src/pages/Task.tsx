@@ -83,6 +83,131 @@ const rolePermissions: Record<string, string[]> = {
   "Project Manager": ["SI", "DC", "CPI"],
 };
 
+// Timeline stages per task type — used to map board columns to entity status
+const taskTypeStages: Record<string, string[]> = {
+  VO: ["Draft", "Submitted", "Under Review", "Priced", "Approved"],
+  RFI: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
+  SI: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
+  DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+  CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
+  CRITICALPATHITEM: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
+  GI: ["Draft", "Issued", "Distributed", "Acknowledged"],
+};
+
+// Map board column to entity status based on task type
+const getEntityStatusForColumn = (column: string, taskType: string): string => {
+  const stages = taskTypeStages[taskType] || ["Pending", "In Review", "Approved", "Closed"];
+  if (column === "todo") return stages[0];
+  if (column === "done") return stages[stages.length - 1];
+  // inReview → second stage
+  return stages.length > 2 ? stages[1] : stages[0];
+};
+
+// Document type color mapping
+const TASK_COLORS: Record<string, string> = {
+  VO: '#3B82F6',   // Blue
+  DC: '#EF4444',   // Red
+  RFI: '#10B981',  // Green
+  SI: '#8B5CF6',   // Purple
+  CPI: '#F59E0B',  // Amber
+  GI: '#6B7280',   // Gray
+};
+
+// Helper to get assignee initials
+const getAssigneeInitials = (assignedTo: any[]) => {
+  if (!assignedTo || assignedTo.length === 0) return 'UA';
+  const name = assignedTo[0]?.name || '';
+  return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
+// Helper to get assignee display info
+const getAssigneeInfo = (assignedTo: any[]) => {
+  if (!assignedTo || assignedTo.length === 0) {
+    return { initials: 'UA', color: 'bg-orange-100 text-orange-600', name: 'Unassigned' };
+  }
+  const name = assignedTo[0]?.name || 'Assigned';
+  const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  return {
+    initials,
+    color: 'bg-blue-100 text-blue-600',
+    name: assignedTo.length > 1 ? `${name} +${assignedTo.length - 1}` : name
+  };
+};
+
+// Helper to calculate due date status
+const getDueDateInfo = (dueDate: string | null, createdAt: string | null) => {
+  if (dueDate) {
+    const due = new Date(dueDate);
+    const now = new Date();
+    const diffTime = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return {
+        text: `${Math.abs(diffDays)} days overdue`,
+        color: 'text-red-600',
+        isOverdue: true
+      };
+    } else if (diffDays === 0) {
+      return { text: 'Due today', color: 'text-red-600', isOverdue: false };
+    } else if (diffDays <= 2) {
+      return { text: `Due in ${diffDays} days`, color: 'text-red-600', isOverdue: false };
+    } else if (diffDays <= 7) {
+      return { text: `Due in ${diffDays} days`, color: 'text-orange-600', isOverdue: false };
+    } else {
+      return { text: `Due in ${diffDays} days`, color: 'text-gray-600', isOverdue: false };
+    }
+  }
+
+  // If no due date, show age
+  if (createdAt) {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffTime = now.getTime() - created.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return { text: 'Created today', color: 'text-gray-500', isOverdue: false };
+    if (diffDays === 1) return { text: 'Created yesterday', color: 'text-gray-500', isOverdue: false };
+    return { text: `Created ${diffDays} days ago`, color: 'text-gray-500', isOverdue: false };
+  }
+
+  return { text: 'No date', color: 'text-gray-400', isOverdue: false };
+};
+
+// Helper to get priority badge info
+const getPriorityInfo = (priority: string | null) => {
+  if (!priority) return null;
+
+  const priorityLower = priority.toLowerCase();
+  if (priorityLower === 'high' || priorityLower === 'urgent') {
+    return { label: 'High', color: 'bg-red-100 text-red-700 border-red-200' };
+  } else if (priorityLower === 'medium') {
+    return { label: 'Medium', color: 'bg-orange-100 text-orange-700 border-orange-200' };
+  }
+  return null; // Don't show low priority
+};
+
+// Helper to get construction-specific status display name
+const getStatusDisplayName = (status: string | null) => {
+  if (!status) return null;
+
+  const statusLower = status.toLowerCase();
+
+  // Map backend status values to construction-friendly names
+  if (statusLower === 'todo' || statusLower === 'open' || statusLower === 'draft') {
+    return 'Open';
+  } else if (statusLower === 'in review' || statusLower === 'inreview' || statusLower === 'pending' || statusLower === 'answered' || statusLower === 'in_review') {
+    return 'Under Review';
+  } else if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'approved') {
+    return 'Resolved';
+  } else if (statusLower === 'overdue') {
+    return 'Overdue';
+  }
+
+  // Fallback: capitalize first letter
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 function TaskCard({ task, isDragging }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
   const navigate = useNavigate();
@@ -93,34 +218,45 @@ function TaskCard({ task, isDragging }: any) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const formattedDate = task.due_date
-    ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : (task.created_at ? new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Date');
-
   const displayId = `#${task.task_code}`;
-  // const displayId = `#${task.type || 'TSK'}-${task.task_code || task.id}`;
+  const borderColor = TASK_COLORS[task.type] || '#6B7280';
+  const assigneeInfo = getAssigneeInfo(task.assignedTo);
+  const dueDateInfo = getDueDateInfo(task.due_date, task.created_at);
+  const priorityInfo = getPriorityInfo(task.priority);
+
+  // Calculate counts
+  const commentCount = task?.chat?.length || 0;
+  const attachmentCount = task?.chat?.map((chat: any) => chat?.files?.length || 0).reduce((a: number, b: number) => a + b, 0) || 0;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-3">
       <Card
         onClick={() => navigate(`/tasks/${task.id}`)}
-        className="p-[17px] bg-[#F3F2F0] rounded-[13px] shadow-none border-none hover:shadow-md transition-shadow cursor-move"
+        className={`p-[17px] bg-[#F3F2F0] rounded-[13px] shadow-none border-none hover:shadow-md transition-shadow cursor-move relative overflow-hidden ${dueDateInfo.isOverdue ? 'ring-2 ring-red-200' : ''}`}
+        style={{ borderLeft: `4px solid ${borderColor}` }}
       >
         <div className="space-y-4">
-          <h3 className="text-sm text-[#1A1A1A] leading-tight">
-            {displayId} · {task.title}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm text-[#1A1A1A] leading-tight flex-1">
+              {displayId} · {task.title}
+            </h3>
+            {priorityInfo && (
+              <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${priorityInfo.color} font-medium shrink-0`}>
+                {priorityInfo.label}
+              </Badge>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#717784]">{formattedDate}</span>
+            <span className={`text-xs font-medium ${dueDateInfo.color}`}>
+              {dueDateInfo.text}
+            </span>
             <span className="text-[#E6E8EB]">•</span>
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className={`text-xs bg-orange-100 text-orange-600`}>UA</AvatarFallback>
+            <Avatar className="h-6 w-6" title={assigneeInfo.name}>
+              <AvatarFallback className={`text-xs ${assigneeInfo.color}`}>
+                {assigneeInfo.initials}
+              </AvatarFallback>
             </Avatar>
-            {/* <span className="text-[#E6E8EB]">•</span>
-            <Badge variant="secondary" className="text-[11px] bg-orange-50 border border-[#FED7AA] text-orange-600 hover:bg-orange-50">
-              Unassigned
-            </Badge> */}
           </div>
 
           <div>
@@ -129,7 +265,9 @@ function TaskCard({ task, isDragging }: any) {
 
           {task.status && (
             <div>
-              <span className={`text-xs block ${task.status === 'Overdue' ? 'text-[#DC2626]' : 'text-[#717784] capitalize'}`}>{task.status}</span>
+              <span className={`text-xs block ${getStatusDisplayName(task.status) === 'Overdue' ? 'text-[#DC2626]' : 'text-[#717784]'}`}>
+                {getStatusDisplayName(task.status)}
+              </span>
             </div>
           )}
 
@@ -142,22 +280,19 @@ function TaskCard({ task, isDragging }: any) {
             )}
 
             <div className="flex pt-[15px] border-t border-[#E6E8EB] mt-3 items-center gap-4 text-[#9CA3AF] text-xs">
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>{task?.chat?.length || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Paperclip className="h-3.5 w-3.5" />
-                <span>{task?.chat?.map((chat) => chat?.files?.length || 0).reduce((a, b) => a + b, 0) || 0}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                <span>0</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Link2 className="h-3.5 w-3.5" />
-                <span>0</span>
-              </div>
+              {commentCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>{commentCount}</span>
+                </div>
+              )}
+              {attachmentCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>{attachmentCount}</span>
+                </div>
+              )}
+              {/* Hide views and links as they're always 0 for now */}
             </div>
           </div>
         </div>
@@ -204,7 +339,7 @@ export default function Task() {
   const { userRole } = useUserRoleStore();
 
   // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
-  const { data: taskResponse, isLoading } = useFetch<{ count: number; results: any[] }>(
+  const { data: taskResponse, isLoading, refetch } = useFetch<{ count: number; results: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
@@ -362,14 +497,22 @@ export default function Task() {
       if (overContainer === 'inReview') newStatus = 'in review';
       if (overContainer === 'done') newStatus = 'done';
 
-      const apiUrl = `tasks/tasks/${active.id}/`;
+      const activeTask = (tasks as any)[activeContainer]?.find((t: any) => t.id === active.id);
+      const entityStatus = getEntityStatusForColumn(overContainer, activeTask?.type || "");
 
       try {
-        await updateTask({
-          url: apiUrl,
-          data: { status: newStatus }
-        });
-        toast.success(`Task moved to ${newStatus}`);
+        await Promise.all([
+          updateTask({
+            url: `tasks/tasks/${active.id}/`,
+            data: { status: newStatus },
+          }),
+          updateTask({
+            url: `tasks/tasks/${active.id}/update-entity/`,
+            data: { status: entityStatus, taskStatus: newStatus },
+          }),
+        ]);
+        toast.success(`Task moved to ${getStatusDisplayName(newStatus) || newStatus}`);
+        await refetch();
       } catch (error) {
         toast.error("Failed to update status");
       }
@@ -404,9 +547,9 @@ export default function Task() {
               onDragEnd={handleDragEnd}
             >
               <div className="flex gap-6 min-w-min">
-                <Column id="todo" title="To Do" count={tasks.todo.length} tasks={tasks.todo} onAddClick={() => { setPreSelectedStatus("Todo"); setIsSelectionOpen(true); }} />
-                <Column id="inReview" title="In Review" count={tasks.inReview.length} tasks={tasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
-                <Column id="done" title="Done" count={tasks.done.length} tasks={tasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
+                <Column id="todo" title="Open" count={tasks.todo.length} tasks={tasks.todo} onAddClick={() => { setPreSelectedStatus("Todo"); setIsSelectionOpen(true); }} />
+                <Column id="inReview" title="Under Review" count={tasks.inReview.length} tasks={tasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
+                <Column id="done" title="Resolved" count={tasks.done.length} tasks={tasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
               </div>
 
               <DragOverlay>

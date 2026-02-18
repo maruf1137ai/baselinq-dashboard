@@ -16,6 +16,8 @@ import { TaskAttachments } from "./TaskAttachments";
 interface TaskSidebarProps {
   taskType: string;
   taskData: any;
+  canApprove?: boolean;
+  auditLogs?: any[];
   onApprove?: () => void;
   onReject?: () => void;
   onRequestInfo?: () => void;
@@ -58,6 +60,8 @@ const getStatusColor = (status: string) => {
 export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   taskType,
   taskData,
+  canApprove = true,
+  auditLogs,
   onApprove,
   onReject,
   onRequestInfo,
@@ -146,13 +150,13 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
       {/* Status & Actions */}
       <Card className="p-4 bg-white shadow-none border border-[#E7E9EB] rounded-[10px]">
         <h3 className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mb-4">
-          Status & Actions
+          Actions
         </h3>
         <div className="space-y-3">
-          <Badge
+          {/* <Badge
             className={`${getStatusColor(taskData?.status || "Under Review")} border px-3 py-1.5 text-xs font-medium w-full justify-center`}>
             {taskData?.status || "Under Review"}
-          </Badge>
+          </Badge> */}
 
           {/* {(taskData?.status === "Under Review" ||
             taskData?.status === "Pending") && (
@@ -161,18 +165,20 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               size="sm"
+              disabled={!canApprove}
               onClick={onApprove}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Approve
             </Button>
-            <Button
+            {/* <Button
               className="w-full"
               variant="outline"
               size="sm"
+              disabled={!canApprove}
               onClick={onReject}>
               <XCircle className="h-4 w-4 mr-2" />
               Reject
-            </Button>
+            </Button> */}
             {/* <Button
               className="w-full"
               variant="secondary"
@@ -259,8 +265,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <p className="text-xs text-[#6B7280] mb-1">Urgency</p>
             <Badge
               className={`${taskData?.formFields?.urgency === "high"
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-amber-50 text-amber-700 border-amber-200"
+                ? "bg-red-50 text-red-700 border-red-200"
+                : "bg-amber-50 text-amber-700 border-amber-200"
                 } border text-xs`}>
               {taskData?.formFields?.urgency}
             </Badge>
@@ -306,28 +312,35 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
       {/* Task-specific content */}
       {renderTaskSpecificContent()}
 
-      {/* Audit Section (Always shown) */}
-      <Card className="pt-4 bg-white shadow-none border-0">
-        <h3 className="text-xs text-[#6B7280] uppercase tracking-wide mb-3">
-          Audit
-        </h3>
-        <div className="space-y-3">
-          {taskData?.audit?.map((entry: any, i: number) => (
-            <div
-              key={i}
-              className={`p-3 border rounded-[10px] ${entry.isAI
-                  ? "bg-indigo-50 border-[#8081F6B0]"
-                  : "bg-white border-[#E7E9EB]"
-                }`}>
-              <p className="text-sm text-gray-900 flex items-center gap-2">
-                {entry.isAI && <Zap className="h-3.5 w-3.5 text-indigo-600" />}
-                {entry.action}
-              </p>
-              <p className="text-xs text-[#6B7280] mt-1">{entry.date}</p>
+      {/* Activity Timeline */}
+      <div className="mt-8 border-t border-gray-100 pt-6">
+        <h3 className="text-xs font-medium text-gray-900 mb-6 uppercase tracking-widest pl-2">Activity Timeline</h3>
+        <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
+          {auditLogs && auditLogs.length > 0 ? (
+            auditLogs.slice(0, 10).map((log: any, i: number) => (
+              <div key={i} className="relative pl-8">
+                <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-blue-600 rounded-full z-10" />
+                <div>
+                  <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {new Date(log.created_at || log.createdAt).toLocaleDateString()} &middot; {log.createdByName || "System"}
+                  </p>
+                  {log.description && log.description !== log.action && (
+                    <p className="mt-1 text-[11px] text-gray-600 line-clamp-2">
+                      {log.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="relative pl-8">
+              <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-gray-300 rounded-full z-10" />
+              <p className="text-xs text-gray-400">No activity recorded yet</p>
             </div>
-          ))}
+          )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

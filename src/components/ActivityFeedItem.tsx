@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface ActivityFeedItemProps {
   title: string;
@@ -13,27 +13,35 @@ export function ActivityFeedItem({
   author,
   timeAgo,
 }: ActivityFeedItemProps) {
-  const statusStyles = {
-    "In Progress": "bg-blue-50 text-blue-700 border-blue-200",
-    Pending: "bg-orange-50 text-orange-700 border-orange-200",
-    Completed: "bg-green-50 text-green-700 border-green-200",
+  const statusDot = {
+    "In Progress": "bg-blue-500",
+    Pending: "bg-orange-400",
+    Completed: "bg-emerald-500",
   };
 
+  const initials = author
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
-    <div className="flex items-start justify-between gap-3 py-3 border-b border-border last:border-0">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-3.5">
-          <h4 className="text-sm text-[#111827]">{title}</h4>
-          <Badge
-            variant="outline"
-            className={`${statusStyles[status]} text-xs font-medium`}>
-            {status}
-          </Badge>
-        </div>
-        <p className="text-xs text-[#9CA3AF]">
-          {author} • {timeAgo}
+    <div className="flex items-center gap-2.5 py-2 border-b border-border/50 last:border-0">
+      <Avatar className="h-6 w-6 shrink-0">
+        <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+          {initials || "U"}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[status]}`} />
+        <p className="text-xs text-[#111827] truncate flex-1">
+          <span className="font-medium">{author}</span>{" "}
+          <span className="text-[#6B7280]">{status.toLowerCase()}</span>{" "}
+          {title}
         </p>
       </div>
+      <span className="text-[10px] text-[#9CA3AF] shrink-0 whitespace-nowrap">{timeAgo}</span>
     </div>
   );
 }
