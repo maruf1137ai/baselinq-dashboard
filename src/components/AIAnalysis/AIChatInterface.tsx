@@ -3,6 +3,7 @@ import { Send, User, Bot, Sparkles, MessageSquare, Info, Shield, Clock, ChevronR
 import { cn } from "@/lib/utils";
 import { fetchData, postData } from "@/lib/Api";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface ChatSource {
   clause_number: string;
@@ -212,7 +213,24 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                   ? "bg-[#F3F4F6] text-[#374151] rounded-tl-none border border-[#E5E7EB]"
                   : "bg-primary text-white rounded-tr-none border border-primary"
               )}>
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      h1: ({ children }) => <h1 className="text-base font-bold mb-2">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-sm font-bold mb-1.5">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                )}
               </div>
 
               {msg.sources && msg.sources.length > 0 && (
