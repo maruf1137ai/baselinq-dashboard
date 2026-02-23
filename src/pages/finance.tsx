@@ -1,10 +1,9 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { variationOrders } from "@/components/finance/data";
 import {
   OrderStatus,
   VariationOrdersTable,
+  VariationOrder,
 } from "@/components/finance/VariationOrdersTable";
-import { ViewSummaryIcon } from "@/components/icons/icons";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
@@ -12,6 +11,19 @@ import { VOSummaryDrawer } from "@/components/finance/voSummaryDrwaer";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import Forecast from "@/components/finance/forecast";
+import useFetch from "@/hooks/useFetch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import VOForm from "@/components/header/forms/VOForm";
+import { deleteData } from "@/lib/Api";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const TABS = [
   "Variation Orders",
@@ -20,9 +32,52 @@ const TABS = [
   "Forecast",
 ];
 
+const mapStatus = (status: string): OrderStatus => {
+  const s = (status || "").toLowerCase();
+  if (s === "done" || s === "approved" || s === "completed") return OrderStatus.Approved;
+  if (s === "in review" || s === "inreview" || s === "in_review") return OrderStatus.InReview;
+  return OrderStatus.Open;
+};
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
+};
+
 const Finance = () => {
   const [activeTab, setActiveTab] = useState("Variation Orders");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isVOModalOpen, setIsVOModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
+
+  const projectId = localStorage.getItem("selectedProjectId") || "";
+
+  const { data: voResponse } = useFetch<{ count: number; results: any[] }>(
+    projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
+    { enabled: !!projectId }
+  );
+
+  const variationOrders = useMemo((): VariationOrder[] => {
+    const results = voResponse?.results || [];
+    return results
+      .map((item: any): VariationOrder => ({
+        id: item.task?.voNumber || `VO-${item.taskId}`,
+        taskId: String(item.taskId),
+        title: item.task?.title || "-",
+        value: item.task?.grandTotal || 0,
+        status: mapStatus(item.status),
+        requestedBy: {
+          name: item.assignedBy?.name || "Unknown",
+          avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.assignedBy?.name || "U")}&size=32&background=random`,
+        },
+        updated: formatDate(item.update_at),
+        impact: 0,
+        rawTask: item.task,
+      }));
+  }, [voResponse]);
 
   const summaryData = useMemo(() => {
     const totalApproved = variationOrders
@@ -33,10 +88,7 @@ const Finance = () => {
       .filter((order) => order.status === OrderStatus.InReview)
       .reduce((sum, order) => sum + order.value, 0);
 
-    const draftPipeline = variationOrders
-      .filter((order) => order.status === OrderStatus.Draft)
-      .reduce((sum, order) => sum + order.value, 0);
-
+    const draftPipeline = 0;
     const totalValue = totalApproved + inReview + draftPipeline;
 
     const approvedCount = variationOrders.filter(
@@ -45,9 +97,7 @@ const Finance = () => {
     const inReviewCount = variationOrders.filter(
       (o) => o.status === OrderStatus.InReview
     ).length;
-    const draftCount = variationOrders.filter(
-      (o) => o.status === OrderStatus.Draft
-    ).length;
+    const draftCount = 0;
 
     const contingencyTotal = 750000;
     const contingencyUsed = totalValue;
@@ -67,7 +117,33 @@ const Finance = () => {
       contingencyTotal,
       contingencyUsagePercentage,
     };
-  }, []);
+  }, [variationOrders]);
+
+  const handleEdit = (order: VariationOrder) => {
+    setSelectedOrder(order);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (order: VariationOrder) => {
+    setSelectedOrder(order);
+    setIsDeleteModalOpen(true);
+  };
+
+  const queryClient = useQueryClient();
+
+  const handleConfirmDelete = async () => {
+    if (!selectedOrder) return;
+    try {
+      await deleteData({ url: `tasks/tasks/${selectedOrder.taskId}/`, data: undefined });
+      toast.success("Variation order deleted successfully");
+      await queryClient.invalidateQueries({ queryKey: [`tasks/tasks/?taskType=VO&project=${projectId}`] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedOrder(null);
+    }
+  };
 
   return (
     <DashboardLayout padding="p-0">
@@ -80,11 +156,10 @@ const Finance = () => {
                   <li key={tab}>
                     <button
                       onClick={() => setActiveTab(tab)}
-                      className={`py-3 text-sm font-medium transition-colors duration-200 ease-in-out border-b-2 border-transparent ${
-                        activeTab === tab
+                      className={`py-3 text-sm font-medium transition-colors duration-200 ease-in-out border-b-2 border-transparent ${activeTab === tab
                           ? "text-[#0E1C2E] border-[#8081F6]"
                           : "text-[#6B7280] hover:text-[#0E1C2E]"
-                      }`}>
+                        }`}>
                       {tab}
                     </button>
                   </li>
@@ -98,24 +173,17 @@ const Finance = () => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                 <h1 className="text-base text-[#0E1C2E]">Variation Orders</h1>
                 <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-                  <button
-                    className="flex items-center justify-center px-5 py-2.5 border border-[#E5E7EB] rounded-[10px] text-base text-[#1A1F36] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    onClick={() => setIsDrawerOpen(true)}>
-                    <ViewSummaryIcon className="w-5 h-5 mr-2 text-gray-500" />
-                    View Summary
-                  </button>
-
-                  {/* <button className="flex items-center justify-center px-4 py-2 bg-[#6366F1] border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-[#4F46E5] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4F46E5]">
-                  <PlusIcon className="w-5 h-5 mr-2" />
-                  New Variation Order
-                </button> */}
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsVOModalOpen(true)}>
                     <PlusIcon className="w-5 h-5" />
                     New Variation Order
                   </Button>
                 </div>
               </div>
-              <VariationOrdersTable orders={variationOrders} />
+              <VariationOrdersTable
+                orders={variationOrders}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             </main>
           )}
           {activeTab === "Cost Ledger" && <CostLadger />}
@@ -123,11 +191,64 @@ const Finance = () => {
           {activeTab === "Forecast" && <Forecast />}
         </div>
       </div>
+
       <VOSummaryDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         data={summaryData}
       />
+
+      {/* Create VO modal */}
+      <Dialog open={isVOModalOpen} onOpenChange={setIsVOModalOpen}>
+        <DialogContent className="bg-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Variation Order</DialogTitle>
+          </DialogHeader>
+          <VOForm setOpen={setIsVOModalOpen} initialStatus="Draft" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit VO modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
+        <DialogContent className="bg-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Variation Order</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <VOForm
+              setOpen={setIsEditModalOpen}
+              initialStatus={selectedOrder.status}
+              taskId={selectedOrder.taskId}
+              initialData={{
+                title: selectedOrder.rawTask?.title,
+                discipline: selectedOrder.rawTask?.discipline,
+                description: selectedOrder.rawTask?.description,
+                lineItems: selectedOrder.rawTask?.lineItems,
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Variation Order</DialogTitle>
+            <DialogDescription className="text-sm text-[#6B7280] mt-1">
+              Are you sure you want to delete <span className="font-medium text-[#0E1C2E]">{selectedOrder?.id}</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => { setIsDeleteModalOpen(false); setSelectedOrder(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

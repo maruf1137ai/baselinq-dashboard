@@ -237,7 +237,7 @@ export default function SIForm({ setOpen, initialStatus }: any) {
         <Label>Instruction</Label>
         <Textarea
           className="mt-1"
-          rows={4}
+          rows={6}
           placeholder="Write instruction"
           value={formData.instruction}
           onChange={(e) => handleChange("instruction", e.target.value)}

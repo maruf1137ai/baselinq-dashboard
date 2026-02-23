@@ -237,7 +237,7 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
       <div>
         <Label>Description</Label>
         <Textarea
-          rows={3}
+          rows={6}
           placeholder="Additional details"
           className="mt-1"
           value={description}

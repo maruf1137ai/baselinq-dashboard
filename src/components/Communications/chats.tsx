@@ -51,7 +51,7 @@ function FileIcon({ mime, name }) {
   const ext = name.split(".").pop().toLowerCase();
   if (mime === "application/pdf" || ext === "pdf") {
     return (
-      <div className="w-8 h-8 rounded-sm flex items-center justify-center bg-red-50 text-red-600 text-xs font-semibold">
+      <div className="w-8 h-8 rounded-sm flex items-center justify-center bg-red-50 text-red-600 text-xs font-medium">
         PDF
       </div>
     );
@@ -130,7 +130,7 @@ export default function Chats() {
                 className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
                       {m.author
                         .split(" ")
                         .map((s) => s[0])

@@ -224,20 +224,33 @@ export default function DCForm({ setOpen, initialStatus }: any) {
 
       <div>
         <Label>Cost Impact</Label>
-        <Input
-          className="mt-1"
-          type="number"
-          placeholder="Estimated cost impact"
-          value={costImpact || ""}
-          onChange={(e) => setCostImpact(e.target.value)}
-        />
+        <div className="relative mt-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+          <Input
+            placeholder="0"
+            className="pl-7"
+            value={
+              costImpact === ""
+                ? ""
+                : !isNaN(Number(costImpact))
+                  ? Number(costImpact).toLocaleString()
+                  : costImpact
+            }
+            onChange={(e) => {
+              const val = e.target.value.replace(/,/g, "").replace(/R\s?/, "");
+              if (val === "" || !isNaN(Number(val))) {
+                setCostImpact(val);
+              }
+            }}
+          />
+        </div>
       </div>
 
       <div>
         <Label>Description</Label>
         <Textarea
           className="mt-1"
-          rows={4}
+          rows={6}
           placeholder="Write details"
           value={description}
           onChange={(e) => setDescription(e.target.value)}

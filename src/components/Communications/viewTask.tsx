@@ -131,7 +131,7 @@ export default function RightSideDrawer() {
       <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 bg-white text-[#1A1F36] shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
         {/* Drawer header */}
         {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
-          <DialogTitle className="text-lg font-semibold">
+          <DialogTitle className="text-lg font-medium">
             Drawer Title
           </DialogTitle>
         </DialogHeader> */}
@@ -238,7 +238,7 @@ export default function RightSideDrawer() {
 
                   <button
                     disabled={!isAllComplete}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-base font-semibold rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-base font-medium rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
                     <CircleCheck className="w-5 h-5" />
                     Mark Complete
                   </button>

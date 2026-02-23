@@ -387,7 +387,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               <ChevronRight className="w-3 h-3 text-gray-400" />
               <span>Communications</span>
               <ChevronRight className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-900 font-semibold">{displayId}</span>
+              <span className="text-gray-900 font-medium">{displayId}</span>
             </div>
           </div>
           {contextData && (
@@ -405,7 +405,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         {showContext && contextData && (
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-sm font-semibold text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
+              <h3 className="text-sm font-medium text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
                 {contextData.title}
               </h3>
               <div className="flex gap-2 shrink-0">
@@ -473,10 +473,10 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               data-name="chat">
               {/* Channel welcome banner */}
               <div className="flex flex-col items-center justify-center w-full py-8 self-center">
-                <div className="w-14 h-14 rounded-full bg-[#E8F5E9] flex items-center justify-center mb-3">
-                  <MessageSquare className="h-7 w-7 text-[#43A047]" />
+                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <MessageSquare className="h-7 w-7 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium text-[#101828]">
+                <p className="text-sm font-medium text-[#101828] text-center">
                   {channel.name || displayId}
                 </p>
                 <p className="text-xs text-[#9CA3AF] mt-1">

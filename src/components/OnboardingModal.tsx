@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useCreateProject, useUpdateProject } from "@/hooks/useProjects";
 import { toast } from "sonner";
@@ -544,7 +545,11 @@ export function OnboardingModal({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Input placeholder="Brief description..." {...field} />
+                        <Textarea
+                          placeholder="Brief description of the project, its goals, and key stakeholders..."
+                          className="min-h-[100px] resize-none"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

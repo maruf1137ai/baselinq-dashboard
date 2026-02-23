@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import BulletList from "@tiptap/extension-bullet-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
+import { AIChatInterface } from "@/components/AIAnalysis/AIChatInterface";
+import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,6 +76,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { postData, patchData } from "@/lib/Api";
+import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
@@ -104,6 +107,7 @@ export default function TaskDetails() {
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
   const { mutateAsync: updateTask } = useUpdateTask();
+  const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   // console.log(userRole)
@@ -163,6 +167,8 @@ export default function TaskDetails() {
   const [siAcknowledgeReceipt, setSiAcknowledgeReceipt] = useState<boolean>(false);
   const [siLeadsToVariationResponse, setSiLeadsToVariationResponse] = useState<boolean>(false);
   const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
+  const [showAiChat, setShowAiChat] = useState<boolean>(false);
+
 
   // Fetch project team members for assign modal
   const { data: projectTeamData } = useFetch<any>(
@@ -179,7 +185,7 @@ export default function TaskDetails() {
     // TODO: Re-enable API call when ready and remove setTimeout
     setTimeout(() => {
       setIsAnalyzeLoading(false);
-    }, 20000);
+    }, 1000);
 
     // try {
     //   const response = await postData({
@@ -398,6 +404,8 @@ export default function TaskDetails() {
         }
       }
 
+
+
       await updateTask(updateData);
       toast.success("Reply submitted successfully");
       editor.commands.setContent("");
@@ -418,6 +426,7 @@ export default function TaskDetails() {
       setSiLeadsToVariationResponse(false);
       setGiAcknowledgeReceipt(false);
 
+
       setCurrentTask((prev: any) => ({
         ...prev,
         ...updateData
@@ -428,24 +437,38 @@ export default function TaskDetails() {
     }
   };
 
+
   const handleApproveTask = async (status: string) => {
     if (!currentTask || !taskId) return;
 
+    const stages = displayTask?.timeline?.stages || [];
+    const firstStage = stages[0];
+    const lastStage = stages[stages.length - 1];
+    const taskStatus = status === firstStage ? "Todo" : status === lastStage ? "Done" : "In Review";
+
+    console.log({ status, firstStage, lastStage, taskStatus })
+
     try {
-      await patchData({
-        url: `tasks/tasks/${taskId}/update-entity/`,
-        data: {
-          status,
-          taskStatus: ["Completed", "Closed", "Approved"].includes(status) ? "Done" : "In Review",
-        },
-      });
+      const boardStatus = taskStatus === "Done" ? "done" : taskStatus === "Todo" ? "todo" : "in review";
+      await Promise.all([
+        patchData({
+          url: `tasks/tasks/${taskId}/update-entity/`,
+          data: { status, taskStatus },
+        }),
+        patchData({
+          url: `tasks/tasks/${taskId}/`,
+          data: { status: boardStatus },
+        }),
+      ]);
       toast.success("Task approved successfully");
       await refetchTask();
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve task");
     }
   };
+
   // console.log("selectedAssignUsers", taskDetailsResponse)
   const handleAssignUser = async () => {
     if (selectedAssignUsers.length === 0 || !taskId) return;
@@ -736,6 +759,8 @@ export default function TaskDetails() {
           },
         };
 
+
+
       case "GI":
         return {
           ...baseData,
@@ -890,6 +915,8 @@ export default function TaskDetails() {
     };
   }, [editor]);
 
+  console.log(displayTask?.timeline.stages)
+
   if (isLoading && !currentTask) {
     return (
       <DashboardLayout padding="p-0">
@@ -1043,9 +1070,11 @@ export default function TaskDetails() {
                           ? "Delay Reason & Impact"
                           : displayTask.type === "CPI"
                             ? "Critical Path Details"
-                            : displayTask.type === "GI"
-                              ? "General Instruction Details"
-                              : "Details"}
+                            : displayTask.type === "CPI"
+                              ? "Critical Path Details"
+                              : displayTask.type === "GI"
+                                ? "General Instruction Details"
+                                : "Details"}
                 </h2>
 
                 <TaskContentRenderer displayTask={displayTask} />
@@ -1116,9 +1145,11 @@ export default function TaskDetails() {
                           ? "Comments & Updates"
                           : displayTask.type === "CPI"
                             ? "Response"
-                            : displayTask.type === "GI"
+                            : displayTask.type === "CPI"
                               ? "Response"
-                              : "Response"}
+                              : displayTask.type === "GI"
+                                ? "Response"
+                                : "Response"}
                 </h2>
 
                 {/* Structured Pricing Response Fields - Only for VO */}
@@ -1358,6 +1389,7 @@ export default function TaskDetails() {
                     <p className="text-[11px] text-[#6B7280] italic">Receipt and potential cost impact must be declared as per contract protocols.</p>
                   </div>
                 )}
+
                 {/* Structured GI Response Fields */}
                 {displayTask.type === "GI" && (
                   <div className="space-y-4 mb-6 pb-6 border-b border-gray-200 bg-purple-50/30 p-4 rounded-lg border-purple-100">
@@ -1446,11 +1478,16 @@ export default function TaskDetails() {
                       Analyze with Ai
                     </Button> */}
                     <button
-                      onClick={handleAnalyzeWithAi}
+                      onClick={() => setShowAiChat(!showAiChat)}
                       disabled={isAnalyzeLoading}
-                      className="bg-gray-900 flex items-center gap-1 px-3 py-2.5 rounded-[8px] hover:bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Zap className="h-4 w-4" />
-                      {isAnalyzeLoading ? "Generating..." : "Analyze with AI"}
+                      className={cn(
+                        "flex items-center gap-1 px-3 py-2.5 rounded-[8px] transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                        showAiChat
+                          ? "bg-primary text-white hover:bg-primary/90"
+                          : "bg-gray-900 text-white hover:bg-gray-800"
+                      )}>
+                      <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
+                      {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
                     </button>
 
                     <Button className="font-normal" onClick={handleSubmitReply}>
@@ -1459,6 +1496,24 @@ export default function TaskDetails() {
                   </div>
                 </div>
               </Card>
+
+              {/* AI Chatbot Block */}
+              <AnimatePresence>
+                {showAiChat && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                    animate={{ height: "auto", opacity: 1, marginBottom: 16 }}
+                    exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <AIChatInterface
+                      taskType={displayTask.type}
+                      data={displayTask}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Action request */}
               <Card className="p-[25px] shadow-none pt-[22px] bg-white rounded-[14px] border-[#E7E9EB]">
@@ -1520,7 +1575,8 @@ export default function TaskDetails() {
             {displayTask.creator.badge === "DC" ? (
               <TaskSidebar
                 taskType={displayTask.creator.badge}
-                canApprove={canApprove}
+                canApprove={canApprove && currentStageIndex < displayTask.timeline.stages.length - 1}
+                currentStageIndex={currentStageIndex}
                 auditLogs={auditLogs}
                 taskData={{
                   ...displayTask,
@@ -1531,6 +1587,7 @@ export default function TaskDetails() {
                   createdBy: displayTask.creator.name,
                   status: displayTask.timeline.current,
                 }}
+                onStageClick={(stage) => handleApproveTask(stage)}
                 onApprove={() => {
                   const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
                   handleApproveTask(lastStage);
@@ -1735,13 +1792,14 @@ export default function TaskDetails() {
       </div>
 
       {/* Analyze with AI Modal */}
-      <AIAnalysisModal
+      {/* Analyze with AI Modal - Commented out as requested */}
+      {/* <AIAnalysisModal
         isOpen={isAnalyzeModalOpen}
         onOpenChange={setIsAnalyzeModalOpen}
         isLoading={isAnalyzeLoading}
         analysisData={analysisData}
         taskType={displayTask.type}
-      />
+      /> */}
 
       {/* Assign User Modal */}
       <Dialog open={showAssignModal} onOpenChange={(open) => {

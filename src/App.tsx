@@ -22,6 +22,7 @@ import TeamManagement from "./pages/settings/teamManagement";
 import Settings from "./pages/settings/settings";
 import ProjectDetails from "./pages/settings/projectDetails";
 import Audit from "./pages/settings/audit";
+import AuditPage from "./pages/AuditPage";
 import Billing from "./pages/settings/billing";
 import DataManagement from "./pages/settings/dataManagement";
 import Integrations from "./pages/settings/integrations";
@@ -106,6 +107,14 @@ const App = () => (
           <Route path="/tasks" element={<Task />} />
           <Route path="/tasks/:taskId" element={<TaskDetails />} />
           <Route path="/compliance" element={<Compliance />} />
+          <Route
+            path="/audit"
+            element={
+              <ProtectedRoute>
+                <AuditPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/documents" element={<Documents />} />
           {/* <Route path="/settings" element={<TeamManagement />} /> */}
           <Route path="/settings" element={<Settings />}>

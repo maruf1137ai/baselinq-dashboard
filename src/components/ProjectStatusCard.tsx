@@ -70,7 +70,7 @@ export function ProjectStatusCard({
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <div className="flex items-baseline gap-2">
               <h3 className={`text-[32px] mt-5 ${valueColor[badgeVariant]}`}>{value}</h3>
-              {trendIcon && <span className={`text-lg font-semibold ${trendColor}`}>{trendIcon}</span>}
+              {trendIcon && <span className={`text-lg font-medium ${trendColor}`}>{trendIcon}</span>}
             </div>
             {subtitle && <p className="text-xs text-gray2 bg-[#F3F2F0] py-1.5 px-5 rounded-[4px]">{subtitle}</p>}
           </div>

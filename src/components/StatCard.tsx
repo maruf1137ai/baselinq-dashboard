@@ -22,7 +22,7 @@ export function StatCard({ title, value, change, changeType, icon: Icon }: StatC
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <h3 className="text-3xl font-bold mt-2 text-foreground">{value}</h3>
+            <h3 className="text-3xl font-medium mt-2 text-foreground">{value}</h3>
             <p className={`text-sm mt-2 ${changeColor}`}>
               {change}
             </p>

@@ -103,7 +103,7 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="py-4 px-6 border-b border-[#DEDEDE]">
-        <h2 className="text-base font-semibold text-[#101828]">Task Context</h2>
+        <h2 className="text-base font-medium text-[#101828]">Task Context</h2>
         <div className="flex items-center gap-2 mt-2">
           <Badge variant="outline" className={`${getStatusColor(status)} border px-2.5 py-0.5 rounded-full text-xs font-medium`}>
             {status}
@@ -134,18 +134,18 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
 
         {/* Description */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Description</h3>
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
           <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
             {isLoading ? "Loading details..." : description}
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* <div className="grid grid-cols-3 gap-2">
           <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={handleViewTask}>Approve</Button>
           <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleViewTask}>Reject</Button>
           <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50" onClick={handleViewTask}>Escalate</Button>
-        </div>
+        </div> */}
 
         {/* Documents Section */}
         {documents.length > 0 && (

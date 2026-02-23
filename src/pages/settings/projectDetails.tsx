@@ -218,7 +218,7 @@ const ProjectDetails = () => {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500">
-              Are you sure you want to delete <span className="font-semibold text-gray-900">{docToDelete ? getDocName(docToDelete) : ""}</span>? This action cannot be undone.
+              Are you sure you want to delete <span className="font-medium text-gray-900">{docToDelete ? getDocName(docToDelete) : ""}</span>? This action cannot be undone.
             </p>
           </div>
           <div className="flex justify-end gap-3">

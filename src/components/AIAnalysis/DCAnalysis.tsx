@@ -65,7 +65,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   {data.extension_of_time.eot_entitlement.entitled.toUpperCase()}
                 </Badge>
                 <div className="mt-2 space-y-1">
-                  <p className="text-sm font-semibold text-blue-900">{data.extension_of_time.eot_entitlement.assessed_days} Days Assessed</p>
+                  <p className="text-sm font-medium text-blue-900">{data.extension_of_time.eot_entitlement.assessed_days} Days Assessed</p>
                   <p className="text-xs text-blue-600 font-medium">{data.extension_of_time.eot_entitlement.requested_days} Days Requested</p>
                   <p className="text-xs text-gray-500 italic">"{data.extension_of_time.eot_entitlement.grounds}"</p>
                   {data.extension_of_time.eot_entitlement.clause_reference && (
@@ -78,7 +78,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <Badge className={`${data.extension_of_time.notice_requirements.status === "COMPLIANT" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                   {data.extension_of_time.notice_requirements.status}
                 </Badge>
-                <p className="text-xs text-blue-600 mt-2 font-semibold">Deadline: {data.extension_of_time.notice_requirements.notice_deadline}</p>
+                <p className="text-xs text-blue-600 mt-2 font-medium">Deadline: {data.extension_of_time.notice_requirements.notice_deadline}</p>
                 <p className="text-[10px] text-gray-500 mt-1">{data.extension_of_time.notice_requirements.finding}</p>
                 {data.extension_of_time.notice_requirements.clause_reference && (
                   <p className="text-[10px] text-blue-500 mt-1">Ref: Clause {data.extension_of_time.notice_requirements.clause_reference}</p>
@@ -120,7 +120,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               </div>
               <div className="p-4 bg-sidebar rounded-lg border-l-2 border-destructive">
                 <p className="text-xs font-medium text-destructive uppercase mb-1">LD Exposure</p>
-                <p className="text-sm font-bold text-destructive">{data.cost_impact_assessment.liquidated_damages_exposure.daily_rate}/day</p>
+                <p className="text-sm font-medium text-destructive">{data.cost_impact_assessment.liquidated_damages_exposure.daily_rate}/day</p>
                 <p className="text-[10px] text-gray-500 mt-1">{data.cost_impact_assessment.liquidated_damages_exposure.assessment}</p>
                 <p className="text-[10px] text-gray-400 mt-1 italic">{data.cost_impact_assessment.liquidated_damages_exposure.finding}</p>
                 {data.cost_impact_assessment.liquidated_damages_exposure.clause_reference && (

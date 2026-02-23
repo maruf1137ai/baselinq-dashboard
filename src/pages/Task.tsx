@@ -1,11 +1,11 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Paperclip, Eye, GitBranch, Plus, Link2 } from 'lucide-react';
+import { MessageSquare, Paperclip, Plus } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Spark from '@/components/icons/Spark';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +20,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
+import TaskFilterBar, { TaskFilters, defaultFilters } from '@/components/task/TaskFilterBar';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const btns = [
   {
@@ -57,13 +65,6 @@ const btns = [
     time: "20 minutes ago",
     active: false,
   },
-  {
-    code: "GI",
-    title: "GI - General Instruction",
-    description: "General instruction for work or processes.",
-    time: "30 minutes ago",
-    active: false,
-  },
 ];
 
 // Role to document type mapping
@@ -91,7 +92,6 @@ const taskTypeStages: Record<string, string[]> = {
   DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
   CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
   CRITICALPATHITEM: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
-  GI: ["Draft", "Issued", "Distributed", "Acknowledged"],
 };
 
 // Map board column to entity status based on task type
@@ -104,29 +104,29 @@ const getEntityStatusForColumn = (column: string, taskType: string): string => {
 };
 
 // Document type color mapping
-const TASK_COLORS: Record<string, string> = {
-  VO: '#3B82F6',   // Blue
-  DC: '#EF4444',   // Red
-  RFI: '#10B981',  // Green
-  SI: '#8B5CF6',   // Purple
-  CPI: '#F59E0B',  // Amber
-  GI: '#6B7280',   // Gray
+// Role to approval permission mapping per document type
+const approvalPermissions: Record<string, string[]> = {
+  VO: ["Client", "Owner", "Client Project Manager", "Consultant Quantity Surveyor", "Architect"],
+  SI: ["Construction Manager", "Project Manager", "Architect", "Client Project Manager"],
+  RFI: ["Architect", "Construction Manager", "Project Manager", "Site Engineer"],
+  DC: ["Client", "Owner", "Client Project Manager", "Consultant Planning Engineer", "Contracts Manager"],
+  CPI: ["Planning Engineer", "Consultant Planning Engineer", "Project Manager", "Construction Manager"],
 };
 
 // Helper to get assignee initials
 const getAssigneeInitials = (assignedTo: any[]) => {
-  if (!assignedTo || assignedTo.length === 0) return 'UA';
+  if (!assignedTo || assignedTo.length === 0) return 'U';
   const name = assignedTo[0]?.name || '';
-  return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  return name.charAt(0).toUpperCase();
 };
 
 // Helper to get assignee display info
 const getAssigneeInfo = (assignedTo: any[]) => {
   if (!assignedTo || assignedTo.length === 0) {
-    return { initials: 'UA', color: 'bg-orange-100 text-orange-600', name: 'Unassigned' };
+    return { initials: 'U', color: 'bg-orange-100 text-orange-600', name: 'Unassigned' };
   }
   const name = assignedTo[0]?.name || 'Assigned';
-  const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  const initials = name.charAt(0).toUpperCase();
   return {
     initials,
     color: 'bg-blue-100 text-blue-600',
@@ -209,7 +209,18 @@ const getStatusDisplayName = (status: string | null) => {
 };
 
 function TaskCard({ task, isDragging }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
+  const { userRole } = useUserRoleStore();
+
+  // Check if the current user's role is authorized to drag/approve this task type
+  const normalizedTaskType = task.type === "CRITICALPATHITEM" ? "CPI" : task.type;
+  const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
+  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim()) : [];
+  const canDrag = userRoles.some((role) => allowedApprovers.includes(role));
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: task.id,
+    disabled: !canDrag
+  });
   const navigate = useNavigate();
 
   const style = {
@@ -219,57 +230,83 @@ function TaskCard({ task, isDragging }: any) {
   };
 
   const displayId = `#${task.task_code}`;
-  const borderColor = TASK_COLORS[task.type] || '#6B7280';
   const assigneeInfo = getAssigneeInfo(task.assignedTo);
   const dueDateInfo = getDueDateInfo(task.due_date, task.created_at);
   const priorityInfo = getPriorityInfo(task.priority);
 
   // Calculate counts
   const commentCount = task?.chat?.length || 0;
-  const attachmentCount = task?.chat?.map((chat: any) => chat?.files?.length || 0).reduce((a: number, b: number) => a + b, 0) || 0;
+  const attachmentCount = task?.attachments?.length || 0;
+  // console.log(task)
 
-  return (
+  const content = (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-3">
       <Card
         onClick={() => navigate(`/tasks/${task.id}`)}
-        className={`p-[17px] bg-[#F3F2F0] rounded-[13px] shadow-none border-none hover:shadow-md transition-shadow cursor-move relative overflow-hidden ${dueDateInfo.isOverdue ? 'ring-2 ring-red-200' : ''}`}
-        style={{ borderLeft: `4px solid ${borderColor}` }}
+        className={`p-[17px] bg-[#F3F2F0] rounded-[13px] shadow-none border-none hover:shadow-md transition-shadow relative overflow-hidden ${dueDateInfo.isOverdue ? 'ring-2 ring-red-200' : ''} ${canDrag ? 'cursor-move' : 'cursor-default opacity-90'}`}
+
       >
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm text-[#1A1A1A] leading-tight flex-1">
-              {displayId} · {task.title}
+              {displayId} · {task.title || task.taskActivityName}
             </h3>
             {priorityInfo && (
-              <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${priorityInfo.color} font-medium shrink-0`}>
+              <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${priorityInfo.color} shrink-0`}>
                 {priorityInfo.label}
               </Badge>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium ${dueDateInfo.color}`}>
+            <span className={`text-xs ${dueDateInfo.color}`}>
               {dueDateInfo.text}
             </span>
             <span className="text-[#E6E8EB]">•</span>
-            <Avatar className="h-6 w-6" title={assigneeInfo.name}>
-              <AvatarFallback className={`text-xs ${assigneeInfo.color}`}>
-                {assigneeInfo.initials}
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex -space-x-2">
+              <TooltipProvider delayDuration={300}>
+                {(task.assignedTo || []).slice(0, 3).map((assignee: any, idx: number) => {
+                  const name = assignee.name || 'Unknown';
+                  const initials = name.charAt(0).toUpperCase();
+                  return (
+                    <Tooltip key={`${assignee.userId}-${idx}`}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-6 w-6 border-2 border-[#F3F2F0] hover:z-20 transition-all cursor-default">
+                          <AvatarFallback className="text-[10px] bg-blue-100 text-blue-600">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-[#1B1C1F] text-white border-none py-1.5 px-3">
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-xs">{name}</p>
+                          {assignee.role && <p className="text-[10px] opacity-70">{assignee.role}</p>}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </TooltipProvider>
+
+              {task.assignedTo && task.assignedTo.length > 3 && (
+                <div className="h-6 w-6 rounded-full bg-gray-200 border-2 border-[#F3F2F0] flex items-center justify-center z-10">
+                  <span className="text-[9px] text-gray-600">+{task.assignedTo.length - 3}</span>
+                </div>
+              )}
+
+              {(!task.assignedTo || task.assignedTo.length === 0) && (
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-[10px] bg-orange-100 text-orange-600">
+                    U
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
           </div>
 
           <div>
             <span className="text-xs border-b border-dotted border-[#717784] text-[#717784]">{task.type}</span>
           </div>
-
-          {task.status && (
-            <div>
-              <span className={`text-xs block ${getStatusDisplayName(task.status) === 'Overdue' ? 'text-[#DC2626]' : 'text-[#717784]'}`}>
-                {getStatusDisplayName(task.status)}
-              </span>
-            </div>
-          )}
 
           <div>
             {task.warning && (
@@ -279,35 +316,53 @@ function TaskCard({ task, isDragging }: any) {
               </div>
             )}
 
-            <div className="flex pt-[15px] border-t border-[#E6E8EB] mt-3 items-center gap-4 text-[#9CA3AF] text-xs">
-              {commentCount > 0 && (
-                <div className="flex items-center gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  <span>{commentCount}</span>
-                </div>
-              )}
-              {attachmentCount > 0 && (
-                <div className="flex items-center gap-1">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span>{attachmentCount}</span>
-                </div>
-              )}
-              {/* Hide views and links as they're always 0 for now */}
-            </div>
+            {(commentCount > 0 || attachmentCount > 0) && (
+              <div className="flex pt-[15px] border-t border-[#E6E8EB] mt-3 items-center gap-4 text-[#9CA3AF] text-xs">
+                {commentCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span>{commentCount}</span>
+                  </div>
+                )}
+                {attachmentCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    <span>{attachmentCount}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Card>
     </div>
   );
+
+  if (!canDrag) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {content}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-[#1B1C1F] text-white border-none py-1.5 px-3">
+            <p className="text-xs">Only authorized roles can move this task type.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return content;
 }
 
 function Column({ id, title, count, tasks, onAddClick }: any) {
   const { setNodeRef } = useSortable({ id });
 
   return (
-    <div className="flex-1 min-w-[320px]">
-      <div className=" border border-dashed  border-[#0000001C] rounded-[21px] p-6 h-full">
-        <div className="flex items-center justify-between mb-6">
+    <div className="flex-1 min-w-[320px] h-full">
+      <div className=" border border-dashed  border-[#0000001C] rounded-[21px] p-5 h-full flex flex-col">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-sm text-[#1A1A1A]">{title}</h2>
             <Badge variant="secondary" className="bg-[#F2F3F5] text-[#717784] text-xs">
@@ -323,7 +378,11 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
         </div>
 
         <SortableContext items={tasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
-          <div ref={setNodeRef} className="space-y-3">
+          <div
+            ref={setNodeRef}
+            className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-gray-200"
+            style={{ minHeight: '100px' }}
+          >
             {tasks.map((task: any) => (
               <TaskCard key={task.id} task={task} />
             ))}
@@ -334,12 +393,71 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
   );
 }
 
+// Helper to check if a date falls within a range
+const isDateInRange = (dateStr: string | null, range: string): boolean => {
+  if (!dateStr) return range === 'all';
+  const date = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  switch (range) {
+    case 'overdue':
+      return date < now;
+    case 'today':
+      return date >= now && date <= endOfToday;
+    case 'this_week': {
+      const endOfWeek = new Date(now);
+      endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
+      endOfWeek.setHours(23, 59, 59, 999);
+      return date >= now && date <= endOfWeek;
+    }
+    case 'this_month': {
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      return date >= now && date <= endOfMonth;
+    }
+    default:
+      return true;
+  }
+};
+
+// Apply filters to a flat task array
+const applyFilters = (taskList: any[], filters: TaskFilters, currentUserName: string | null): any[] => {
+  return taskList.filter(task => {
+    // Document type filter
+    if (filters.docTypes.length > 0 && !filters.docTypes.includes(task.type)) return false;
+
+
+    // Assignee filter
+    if (filters.assignee !== 'all') {
+      const assigneeIds = (task.assignedTo || []).map((a: any) => String(a.userId || a.id || a.name));
+      if (!assigneeIds.includes(filters.assignee)) return false;
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      if (!isDateInRange(task.due_date, filters.dateRange)) return false;
+    }
+
+    // My Items filter
+    if (filters.myItems && currentUserName) {
+      const assigneeNames = (task.assignedTo || []).map((a: any) => (a.name || '').toLowerCase());
+      if (!assigneeNames.includes(currentUserName.toLowerCase())) return false;
+    }
+
+    return true;
+  });
+};
+
 export default function Task() {
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
   const { userRole } = useUserRoleStore();
+  const { data: currentUser } = useCurrentUser();
 
   // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
-  const { data: taskResponse, isLoading, refetch } = useFetch<{ count: number; results: any[] }>(
+  const { data: taskResponse, isLoading, refetch } = useFetch<{ count: number; results: any[]; tasks?: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
@@ -362,6 +480,29 @@ export default function Task() {
     inReview: [],
     done: [],
   });
+
+  const [filters, setFilters] = useState<TaskFilters>(defaultFilters);
+
+  // Extract unique assignees from all tasks for the filter dropdown
+  const assigneeOptions = useMemo(() => {
+    const allTasks = [...tasks.todo, ...tasks.inReview, ...tasks.done];
+    const seen = new Map<string, string>();
+    allTasks.forEach(task => {
+      (task.assignedTo || []).forEach((a: any) => {
+        const id = String(a.userId || a.id || a.name);
+        if (!seen.has(id)) seen.set(id, a.name || 'Unknown');
+      });
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [tasks]);
+
+  // Apply filters to each column
+  const currentUserName = currentUser?.name || null;
+  const filteredTasks = useMemo(() => ({
+    todo: applyFilters(tasks.todo, filters, currentUserName),
+    inReview: applyFilters(tasks.inReview, filters, currentUserName),
+    done: applyFilters(tasks.done, filters, currentUserName),
+  }), [tasks, filters, currentUserName]);
 
   const [activeId, setActiveId] = useState(null);
   const [activeStartContainer, setActiveStartContainer] = useState(null);
@@ -387,7 +528,7 @@ export default function Task() {
       const transformedTasks = serverTasks.map((item: any) => {
         return ({
           id: item.taskId || item.task?._id,
-          title: item.task?.subject || item.task?.title || '',
+          title: item.task?.subject || item.task?.title || item.task?.taskActivityName || '',
           type: item?.taskType,
           status: item.status || item.task?.status || 'todo',
           priority: item.task?.priority,
@@ -499,6 +640,7 @@ export default function Task() {
 
       const activeTask = (tasks as any)[activeContainer]?.find((t: any) => t.id === active.id);
       const entityStatus = getEntityStatusForColumn(overContainer, activeTask?.type || "");
+      const taskStatusMap: Record<string, string> = { 'todo': 'Todo', 'in review': 'In Review', 'done': 'Done' };
 
       try {
         await Promise.all([
@@ -508,7 +650,7 @@ export default function Task() {
           }),
           updateTask({
             url: `tasks/tasks/${active.id}/update-entity/`,
-            data: { status: entityStatus, taskStatus: newStatus },
+            data: { status: entityStatus, taskStatus: taskStatusMap[newStatus] || newStatus },
           }),
         ]);
         toast.success(`Task moved to ${getStatusDisplayName(newStatus) || newStatus}`);
@@ -538,26 +680,33 @@ export default function Task() {
         isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading tasks...</div>
         ) : (
-          <div className="w-full h-screen bg-white overflow-x-auto">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="flex gap-6 min-w-min">
-                <Column id="todo" title="Open" count={tasks.todo.length} tasks={tasks.todo} onAddClick={() => { setPreSelectedStatus("Todo"); setIsSelectionOpen(true); }} />
-                <Column id="inReview" title="Under Review" count={tasks.inReview.length} tasks={tasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
-                <Column id="done" title="Resolved" count={tasks.done.length} tasks={tasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
-              </div>
+          <div className="w-full h-[calc(100vh-120px)] bg-white flex flex-col overflow-hidden">
+            <TaskFilterBar
+              filters={filters}
+              onFiltersChange={setFilters}
+              assigneeOptions={assigneeOptions}
+            />
+            <div className="flex-1 overflow-x-auto overflow-y-hidden p-0 pt-2">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex gap-6 min-w-min h-full">
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={() => { setPreSelectedStatus("Todo"); setIsSelectionOpen(true); }} />
+                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
+                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
+                </div>
 
-              <DragOverlay>
-                {activeId ? (
-                  <TaskCard task={allListFlat.find((t: any) => t.id === activeId)} isDragging />
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+                <DragOverlay>
+                  {activeId ? (
+                    <TaskCard task={allListFlat.find((t: any) => t.id === activeId)} isDragging />
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            </div>
           </div>
         )
       ) : (

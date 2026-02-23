@@ -34,7 +34,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                   <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wide mb-1">
                     {key.replace(/_/g, " ")}
                   </p>
-                  <p className={`text-sm font-semibold ${value === 'HIGH' || value === 'On Critical Path' || value === 'None'
+                  <p className={`text-sm font-medium ${value === 'HIGH' || value === 'On Critical Path' || value === 'None'
                     ? 'text-destructive'
                     : 'text-[#1B1C1F]'
                     }`}>
@@ -97,7 +97,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
               </div>
               <div className="p-4 bg-white rounded-lg border border-indigo-100">
                 <p className="text-xs font-medium text-indigo-700 uppercase mb-2">Notice Requirements</p>
-                <p className="text-sm font-semibold text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
+                <p className="text-sm font-medium text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
                 {data.extension_of_time_analysis.notice_requirements.clause_reference && (
                   <p className="text-[10px] text-indigo-500">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference}</p>
                 )}

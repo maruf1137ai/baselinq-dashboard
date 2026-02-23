@@ -14,7 +14,10 @@ import { RFIAnalysis } from "./AIAnalysis/RFIAnalysis";
 import { SIAnalysis } from "./AIAnalysis/SIAnalysis";
 import { PriceBreakdown } from "./AIAnalysis/PriceBreakdown";
 import { CommonSections } from "./AIAnalysis/SharedComponents";
+import { AIChatInterface } from "./AIAnalysis/AIChatInterface";
 import { MOCK_ANALYSIS_DATA, CPI_MOCK_DATA, DC_MOCK_DATA, RFI_MOCK_DATA, SI_MOCK_DATA } from "./AIAnalysis/MockData";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageSquare, FileText } from "lucide-react";
 
 interface AIAnalysisModalProps {
   isOpen: boolean;
@@ -109,32 +112,49 @@ export function AIAnalysisModal({
               </div>
             </div>
           ) : (
-            <div className="pb-8">
-              {taskType === "VO" && <VOAnalysis data={data} visibleSections={visibleSections} />}
-              {taskType === "CPI" && <CPIAnalysis data={data} visibleSections={visibleSections} />}
-              {taskType === "DC" && <DCAnalysis data={data} visibleSections={visibleSections} />}
-              {taskType === "RFI" && <RFIAnalysis data={data} visibleSections={visibleSections} />}
-              {taskType === "SI" && <SIAnalysis data={data} visibleSections={visibleSections} />}
+            <Tabs defaultValue="analysis" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#F3F4F6] p-1 rounded-xl">
+                <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Contractual Analysis
+                </TabsTrigger>
+                <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  AI RAG Chat
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Fallback for other types */}
-              {!["VO", "CPI", "DC", "RFI", "SI"].includes(taskType) && (
-                <div className="p-6 bg-white border border-dashed border-gray-200 rounded-[14px] text-center text-gray-400">
-                  {taskType} Detailed Analysis Placeholder
-                </div>
-              )}
+              <TabsContent value="analysis" className="pb-8 m-0 border-none outline-none">
+                {taskType === "VO" && <VOAnalysis data={data} visibleSections={visibleSections} />}
+                {taskType === "CPI" && <CPIAnalysis data={data} visibleSections={visibleSections} />}
+                {taskType === "DC" && <DCAnalysis data={data} visibleSections={visibleSections} />}
+                {taskType === "RFI" && <RFIAnalysis data={data} visibleSections={visibleSections} />}
+                {taskType === "SI" && <SIAnalysis data={data} visibleSections={visibleSections} />}
 
-              {/* Price Breakdown Section if available (primarily for VO and SI) */}
-              {(data.price_breakdown || (taskType === "VO" && resolvedData.price_breakdown)) && (
-                <PriceBreakdown
-                  priceData={data.price_breakdown || resolvedData.price_breakdown}
-                  visibleSections={visibleSections}
-                  startSelector={6}
-                />
-              )}
+                {/* Fallback for other types */}
+                {!["VO", "CPI", "DC", "RFI", "SI"].includes(taskType) && (
+                  <div className="p-6 bg-white border border-dashed border-gray-200 rounded-[14px] text-center text-gray-400">
+                    {taskType} Detailed Analysis Placeholder
+                  </div>
+                )}
 
-              {/* Shared Recommendations & Risk Flags */}
-              <CommonSections data={data} visibleSections={visibleSections} startSelector={8} />
-            </div>
+                {/* Price Breakdown Section if available (primarily for VO and SI) */}
+                {(data.price_breakdown || (taskType === "VO" && resolvedData.price_breakdown)) && (
+                  <PriceBreakdown
+                    priceData={data.price_breakdown || resolvedData.price_breakdown}
+                    visibleSections={visibleSections}
+                    startSelector={6}
+                  />
+                )}
+
+                {/* Shared Recommendations & Risk Flags */}
+                <CommonSections data={data} visibleSections={visibleSections} startSelector={8} />
+              </TabsContent>
+
+              <TabsContent value="chat" className="m-0 border-none outline-none">
+                <AIChatInterface taskType={taskType} data={data} />
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </DialogContent>

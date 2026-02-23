@@ -206,7 +206,7 @@ const CostLadger = () => {
                 <FilterIcon className="w-4 h-4" />
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
-                  <span className="bg-indigo-600 text-white text-xs font-semibold ml-1 px-2 py-0.5 rounded-full">{activeFilterCount}</span>
+                  <span className="bg-indigo-600 text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">{activeFilterCount}</span>
                 )}
                 <ChevronDownIcon className="w-5 h-5 text-gray-400" />
               </button>

@@ -168,12 +168,12 @@ const Index = () => {
                   className="transition-all duration-700"
                 />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-[#0F172A]">
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-[#0F172A]">
                 {projectProgress}%
               </span>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-[#0F172A] leading-tight">
+              <h1 className="text-lg font-medium text-[#0F172A] leading-tight">
                 {project?.name || "Select a Project"}
               </h1>
               <p className="text-xs text-[#6B7280]">

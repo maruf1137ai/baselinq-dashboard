@@ -5,6 +5,7 @@ import ChatWindow from "@/components/Communications/chatWindow";
 import ChatSammary from "@/components/Communications/chatSammary";
 import useFetch from "@/hooks/useFetch";
 import { useQueryClient } from "@tanstack/react-query";
+import { postData } from "@/lib/Api";
 
 const Communications = () => {
   const [projectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
@@ -13,6 +14,25 @@ const Communications = () => {
   );
   const channels = Array.isArray(channelsData) ? channelsData : [];
   const [selectedChannel, setSelectedChannel] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  const handleSelectChannel = async (channel: any) => {
+    setSelectedChannel(channel);
+
+    // Call mark_read API if there are unread messages
+    if (channel?.id && channel.unread_count > 0) {
+      try {
+        await postData({
+          url: `channels/${channel.id}/mark_read/`,
+          data: {}
+        });
+        // Refetch channels to update unread counts in sidebar
+        queryClient.invalidateQueries({ queryKey: [projectId ? `channels/?projectId=${projectId}` : ""] });
+      } catch (err) {
+        console.error("Failed to mark channel as read", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (channels.length > 0 && !selectedChannel) {
@@ -35,7 +55,7 @@ const Communications = () => {
           <ChatSidebar
             tasks={channels}
             selectedTask={selectedChannel}
-            onSelectTask={setSelectedChannel}
+            onSelectTask={handleSelectChannel}
             onNewChat={() => { }} // Placeholder
           />
         </div>

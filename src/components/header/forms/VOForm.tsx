@@ -16,6 +16,7 @@ import { Trash2, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { patchData } from "@/lib/Api";
 
 const DISCIPLINE_OPTIONS = [
   "Architectural",
@@ -32,11 +33,19 @@ const DISCIPLINE_OPTIONS = [
   "HVAC",
 ];
 
-export default function VOForm({ setOpen, initialStatus }: any) {
-  const [title, setTitle] = useState("");
-  const [discipline, setDiscipline] = useState("");
-  const [description, setDescription] = useState("");
-  const [items, setItems] = useState([{ description: "", qty: 1, rate: 0 }]);
+export default function VOForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [discipline, setDiscipline] = useState(initialData?.discipline || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [items, setItems] = useState(
+    initialData?.lineItems?.length
+      ? initialData.lineItems.map((li: any) => ({
+          description: li.description || "",
+          qty: li.quantity ?? 1,
+          rate: li.unitRate ?? 0,
+        }))
+      : [{ description: "", qty: 1, rate: 0 }]
+  );
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -191,6 +200,7 @@ export default function VOForm({ setOpen, initialStatus }: any) {
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
       await queryClient.invalidateQueries({ queryKey: ["vos"] });
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
+      await queryClient.invalidateQueries({ queryKey: [`tasks/tasks/?taskType=VO&project=${projectId}`] });
 
       setOpen(false);
       setLoading(false);
@@ -204,11 +214,21 @@ export default function VOForm({ setOpen, initialStatus }: any) {
     };
 
     try {
-      const result = await postRequest({
-        url: "tasks/variation-orders/",
-        data: payload
-      });
-      await handleSuccess(result);
+      if (taskId) {
+        // Edit mode — PATCH to update-entity
+        await patchData({ url: `tasks/tasks/${taskId}/update-entity/`, data: payload });
+        toast.success("VO updated successfully");
+        await queryClient.invalidateQueries({ queryKey: [`tasks/tasks/?taskType=VO&project=${localStorage.getItem("selectedProjectId")}`] });
+        setOpen(false);
+        setLoading(false);
+      } else {
+        // Create mode
+        const result = await postRequest({
+          url: "tasks/variation-orders/",
+          data: payload
+        });
+        await handleSuccess(result);
+      }
     } catch (err: any) {
       handleError(err);
     }
@@ -246,7 +266,7 @@ export default function VOForm({ setOpen, initialStatus }: any) {
         <Label>Description</Label>
         <Textarea
           className="mt-1"
-          rows={4}
+          rows={6}
           placeholder="Details"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -254,66 +274,81 @@ export default function VOForm({ setOpen, initialStatus }: any) {
       </div>
 
       {/* Line Items */}
-      <div className="border p-4 rounded-md">
-        <h3 className="text-lg font-medium mb-4">Line Items</h3>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h3 className="text-sm text-[#1B1C1F] uppercase tracking-wider">Line Items</h3>
+          <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-8 border-dashed">
+            + Add Item
+          </Button>
+        </div>
 
         {items.map((item, index) => (
-          <div key={index} className="grid grid-cols-12 gap-3 mb-3 items-end">
-            <div className="col-span-5">
-              <Label>Description</Label>
-              <Input
-                value={item.description}
-                onChange={(e) =>
-                  updateField(index, "description", e.target.value)
-                }
-              />
+          <div key={index} className="p-4 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] space-y-4 relative group transition-all hover:border-primary/30 hover:shadow-sm">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                <Label className="text-[11px] text-[#6B7280] uppercase mb-1.5 block">Description</Label>
+                <Textarea
+                  rows={2}
+                  className="bg-white resize-none"
+                  placeholder="Enter work description..."
+                  value={item.description}
+                  onChange={(e) => updateField(index, "description", e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="mt-7 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                onClick={() => removeItem(index)}
+                title="Remove Item"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
 
-            <div className="col-span-2">
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                value={(item.qty as any) === 0 ? "" : item.qty}
-                onChange={(e) =>
-                  updateField(index, "qty", e.target.value === "" ? "" : Number(e.target.value))
-                }
-              />
-            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-[11px] text-[#6B7280] uppercase mb-1.5 block">Quantity</Label>
+                <Input
+                  type="number"
+                  className="bg-white"
+                  placeholder="0"
+                  value={(item.qty as any) === 0 ? "" : item.qty}
+                  onChange={(e) => updateField(index, "qty", e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
 
-            <div className="col-span-2">
-              <Label>Unit Rate</Label>
-              <Input
-                type="number"
-                value={(item.rate as any) === 0 ? "" : item.rate}
-                onChange={(e) =>
-                  updateField(index, "rate", e.target.value === "" ? "" : Number(e.target.value))
-                }
-              />
-            </div>
+              <div>
+                <Label className="text-[11px] text-[#6B7280] uppercase mb-1.5 block">Unit Rate</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
+                  <Input
+                    type="number"
+                    className="bg-white pl-7"
+                    placeholder="0.00"
+                    value={(item.rate as any) === 0 ? "" : item.rate}
+                    onChange={(e) => updateField(index, "rate", e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+              </div>
 
-            <div className="col-span-2">
-              <Label>Total</Label>
-              <Input
-                readOnly
-                value={"R " + getTotal(index).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              />
+              <div>
+                <Label className="text-[11px] text-[#6B7280] uppercase mb-1.5 block">Total</Label>
+                <div className="h-10 flex items-center px-4 rounded-md border border-[#E5E7EB] bg-white text-[#1B1C1F]">
+                  R {getTotal(index).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+              </div>
             </div>
-
-            <button
-              type="button"
-              className="col-span-1 text-red-500 pb-4"
-              onClick={() => removeItem(index)}>
-              <Trash2 size={18} />
-            </button>
           </div>
         ))}
 
-        <Button type="button" variant="outline" onClick={addItem}>
-          + Add Line Item
-        </Button>
+        {items.length === 0 && (
+          <div className="text-center py-8 border-2 border-dashed rounded-xl border-[#E5E7EB] bg-[#F9FAFB]">
+            <p className="text-sm text-gray-400">No items added yet. Click "+ Add Item" to begin.</p>
+          </div>
+        )}
       </div>
 
       {/* Upload Section */}
@@ -387,7 +422,7 @@ export default function VOForm({ setOpen, initialStatus }: any) {
           Cancel
         </Button>
         <Button type="submit" disabled={loading || uploading}>
-          {loading || uploading ? "Creating..." : "Create VO"}
+          {loading || uploading ? (taskId ? "Saving..." : "Creating...") : (taskId ? "Save Changes" : "Create VO")}
         </Button>
       </div>
     </form>

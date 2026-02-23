@@ -180,7 +180,7 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
       </div>
 
       {/* Financial Summary - Now Secondary Compact Row */}
-      <div className="grid grid-cols-3 gap-3 mt-4">
+      {/* <div className="grid grid-cols-3 gap-3 mt-4">
         <div className="bg-[#F3F2F0] rounded-lg p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CashIcon />
@@ -206,7 +206,7 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
           </div>
           <span className="text-base font-medium text-blue-900">{formatCurrency(grandTotal)}</span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

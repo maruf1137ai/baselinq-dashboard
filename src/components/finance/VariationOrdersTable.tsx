@@ -1,18 +1,28 @@
 import React from "react";
 import { MoreIcon } from "../icons/icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
-  onViewDetails: (orderId: string) => void;
+  onViewDetails?: (orderId: string) => void;
+  onEdit?: (order: VariationOrder) => void;
+  onDelete?: (order: VariationOrder) => void;
 }
 
 export enum OrderStatus {
-  Approved = "Approved",
+  Open = "Open",
   InReview = "In Review",
+  Approved = "Approved",
 }
 
 export interface VariationOrder {
   id: string;
+  taskId: string;
   title: string;
   value: number;
   status: OrderStatus;
@@ -22,6 +32,7 @@ export interface VariationOrder {
   };
   updated: string;
   impact: number;
+  rawTask?: any;
 }
 
 const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
@@ -30,6 +41,14 @@ const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
     return (
       <span
         className={`${baseClasses} bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]`}>
+        {status}
+      </span>
+    );
+  }
+  if (status === OrderStatus.Open) {
+    return (
+      <span
+        className={`${baseClasses} bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]`}>
         {status}
       </span>
     );
@@ -62,6 +81,8 @@ const ImpactBadge: React.FC<{ days: number }> = ({ days }) => {
 
 export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   orders,
+  onEdit,
+  onDelete,
 }) => {
   const formatCurrency = (value: number) => {
     return `+ R ${new Intl.NumberFormat("en-ZA").format(value)}`;
@@ -130,22 +151,41 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                 <StatusBadge status={order.status} />
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">
-                <img
-                  src={order.requestedBy.avatarUrl}
-                  alt={order.requestedBy.name}
-                  className="w-8 h-8 rounded-full"
-                />
+                <div className="flex items-center gap-2">
+                  <img
+                    src={order.requestedBy.avatarUrl}
+                    alt={order.requestedBy.name}
+                    className="w-7 h-7 rounded-full"
+                  />
+                  <span className="text-sm text-[#0E1C2E]">{order.requestedBy.name}</span>
+                </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0E1C2E]">
                 {order.updated}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-base">
                 <ImpactBadge days={order.impact} />
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">
-                <button className="text-gray-400 hover:text-gray-600">
-                  <MoreIcon className="w-5 h-5" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <MoreIcon className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white w-32">
+                    <DropdownMenuItem
+                      className="cursor-pointer text-sm"
+                      onClick={() => onEdit?.(order)}>
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-sm text-red-600 focus:text-red-600"
+                      onClick={() => onDelete?.(order)}>
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </td>
             </tr>
           ))}

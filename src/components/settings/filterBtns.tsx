@@ -59,7 +59,7 @@ const FilterBtns = () => {
             <span>Filter</span>
 
             {activeFilterCount > 0 && (
-              <span className="bg-indigo-600 text-white text-xs font-semibold ml-1 px-2 py-0.5 rounded-full">
+              <span className="bg-indigo-600 text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">
                 {activeFilterCount}
               </span>
             )}

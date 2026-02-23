@@ -13,19 +13,9 @@ interface ChatSidebarProps {
   onSelectTask: (task: any) => void;
 }
 
-const TASK_COLORS: Record<string, string> = {
-  VO: "#8B5CF6", // Violet
-  SI: "#3B82F6", // Blue
-  RFI: "#F97316", // Orange
-  DC: "#10B981", // Emerald
-  CPI: "#EF4444", // Red
-  GI: "#06B6D4", // Cyan
-  DEFAULT: "#9CA3AF" // Gray
-};
-
 export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: ChatSidebarProps) {
   const [open, setOpen] = useState(true);
-  const [filter, setFilter] = useState<'All' | 'My Actions' | 'Unread'>('All');
+  const [filter, setFilter] = useState<'All' | 'Unread'>('All');
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTasks = tasks.filter(task => {
@@ -39,14 +29,7 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
 
     // Tab filter
     if (filter === 'All') return true;
-    if (filter === 'Unread') return (task.message_count || 0) > 0;
-    if (filter === 'My Actions') {
-      // Assuming 'My Actions' implies tasks where action is needed or assigned to user.
-      // For MVP, we can treat 'pending' or specific statuses as 'My Actions' if user ID check isn't available yet.
-      // Or simply tasks with high priority or specific status. 
-      // Based on user prompt "purely frontend filtering on the existing tasks array", checks status.
-      return task.status === 'Pending' || task.status === 'In Progress';
-    }
+    if (filter === 'Unread') return (task.unread_count || 0) > 0;
     return true;
   });
 
@@ -71,13 +54,13 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
 
             {/* Filter Tabs */}
             <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
-              {['All', 'My Actions', 'Unread'].map((tab) => (
+              {['All', 'Unread'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setFilter(tab as any)}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filter === tab
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
                     }`}
                 >
                   {tab}
@@ -91,23 +74,21 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
                 const displayId = channel.taskId
                   ? `${taskType}-${String(channel.taskId).padStart(3, '0')}`
                   : `# ${channel.name}`;
-                const count = channel.message_count || 0;
+                const count = channel.unread_count || 0;
                 const isSelected = selectedTask?.id === channel.id;
                 const status = channel.status || "Open";
-                const borderColor = TASK_COLORS[taskType] || TASK_COLORS.DEFAULT;
 
                 return (
                   <div
                     key={channel.id}
                     onClick={() => onSelectTask(channel)}
                     className={`py-3 px-4 rounded-[8px] cursor-pointer border relative transition-colors group
-                      ${isSelected ? 'bg-[#F3F4F6] border-gray-200' : 'bg-white hover:bg-[#F9FAFB] border-transparent hover:border-gray-200'}
+                      ${isSelected ? 'bg-[#F3F4F6] border-gray-200' : 'bg-white hover:bg-[#F9FAFB] border-[#F0F0F0] hover:border-gray-200'}
                     `}
-                    style={{ borderLeft: `4px solid ${borderColor}` }}
                   >
                     {/* Header Row: ID and Date/Status */}
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-semibold text-gray-900">
+                      <span className="text-xs font-medium text-gray-900">
                         {displayId}
                       </span>
                       {/* Using status as a badge-like element */}
@@ -130,7 +111,7 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
                       </div>
 
                       {count > 0 && (
-                        <div className="flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-black rounded-full text-white text-[10px] font-bold">
+                        <div className="flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-black rounded-full text-white text-[10px] font-medium">
                           {count}
                         </div>
                       )}

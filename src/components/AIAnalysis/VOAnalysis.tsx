@@ -63,7 +63,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-sidebar rounded-lg">
                   <p className="text-xs font-medium text-[#6B7280] uppercase mb-2">Applicable Method</p>
-                  <p className="text-sm font-semibold">{data.valuation_assessment.applicable_method?.method}</p>
+                  <p className="text-sm font-medium">{data.valuation_assessment.applicable_method?.method}</p>
                   {data.valuation_assessment.applicable_method?.clause_reference && (
                     <p className="text-[10px] text-primary mb-1">Ref: {data.valuation_assessment.applicable_method.clause_reference}</p>
                   )}
@@ -119,7 +119,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               </div>
               <div className="p-4 bg-sidebar rounded-lg">
                 <p className="text-xs font-medium text-[#6B7280] uppercase mb-1">Days Claimed</p>
-                <p className="text-lg font-bold">{data.time_impact.days_claimed} Days</p>
+                <p className="text-lg font-medium">{data.time_impact.days_claimed} Days</p>
                 <p className="text-xs text-gray-500">{data.time_impact.days_assessment}</p>
               </div>
               <div className="p-4 bg-sidebar rounded-lg">

@@ -30,7 +30,7 @@ const ChartItem: React.FC<{ item: ChartRow }> = ({ item }) => (
         </div>
       ))}
     </div>
-    <div className="text-sm font-semibold text-gray-800 w-16 text-left whitespace-nowrap">{item.value}</div>
+    <div className="text-sm font-medium text-gray-800 w-16 text-left whitespace-nowrap">{item.value}</div>
   </div>
 );
 

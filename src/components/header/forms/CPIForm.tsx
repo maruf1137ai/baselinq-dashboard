@@ -197,7 +197,7 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
         <Label>Description</Label>
         <Textarea
           className="mt-1"
-          rows={3}
+          rows={6}
           placeholder="Brief description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -301,7 +301,7 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
         <Label>Resources</Label>
         <Textarea
           className="mt-1"
-          rows={3}
+          rows={6}
           placeholder="Who/what is needed (crew, equipment, materials)"
           value={resources}
           onChange={(e) => setResources(e.target.value)}

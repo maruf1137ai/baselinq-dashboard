@@ -49,7 +49,7 @@ export const StatusHeader = ({
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Overall Status {id && `(${id})`}</p>
-          <p className={`text-xl font-semibold ${status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE"
+          <p className={`text-xl font-medium ${status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE"
               ? "text-green_dark"
               : status === "AT_RISK" || status === "WARNING" || status === "PARTIALLY_ENTITLED" || status === "PENDING" || status === "REVIEW_REQUIRED"
                 ? "text-warning"
@@ -118,7 +118,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
               {data.risk_flags.map((flag: any, i: number) => (
                 <div key={i} className="p-4 bg-white rounded-[10px] border border-red-100">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold">{flag.title || flag}</span>
+                    <span className="text-sm font-medium">{flag.title || flag}</span>
                     {flag.severity && (
                       <Badge className={`${flag.severity === 'HIGH' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
                         {flag.severity}
