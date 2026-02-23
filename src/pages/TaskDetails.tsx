@@ -180,29 +180,36 @@ export default function TaskDetails() {
   const handleAnalyzeWithAi = async () => {
     setIsAnalyzeModalOpen(true);
     setIsAnalyzeLoading(true);
+    setAnalysisData(null);
 
-    // Simulate loading for 20 seconds then show content
-    // TODO: Re-enable API call when ready and remove setTimeout
-    setTimeout(() => {
+    const endpointMap: Record<string, string> = {
+      VO: "ai_analysis/vo/",
+      RFI: "ai_analysis/rfi/",
+      CPI: "ai_analysis/cpi/",
+      SI: "ai_analysis/si/",
+      DC: "ai_analysis/dc/",
+    };
+
+    const endpoint = endpointMap[displayTask?.type];
+    if (!endpoint) {
+      toast.error(`AI analysis not available for type: ${displayTask?.type}`);
       setIsAnalyzeLoading(false);
-    }, 1000);
+      return;
+    }
 
-    // try {
-    //   const response = await postData({
-    //     url: 'ai_analysis/vo/',
-    //     data: {
-    //       contract_document_id: 2,
-    //       task_id: taskId,
-    //     },
-    //   });
-    //   setAnalysisData(response);
-    // } catch (error) {
-    //   console.error('Error fetching AI analysis:', error);
-    //   toast.error('Failed to analyze. Please try again.');
-    //   setIsAnalyzeModalOpen(false);
-    // } finally {
-    //   setIsAnalyzeLoading(false);
-    // }
+    try {
+      const response = await postData({
+        url: endpoint,
+        data: { task_id: taskId },
+      });
+      setAnalysisData(response);
+    } catch (error) {
+      console.error("Error fetching AI analysis:", error);
+      toast.error("Failed to analyze. Please try again.");
+      setIsAnalyzeModalOpen(false);
+    } finally {
+      setIsAnalyzeLoading(false);
+    }
   };
 
   const fetchAIResponse = async () => {
@@ -1792,14 +1799,14 @@ export default function TaskDetails() {
       </div>
 
       {/* Analyze with AI Modal */}
-      {/* Analyze with AI Modal - Commented out as requested */}
-      {/* <AIAnalysisModal
+      <AIAnalysisModal
         isOpen={isAnalyzeModalOpen}
         onOpenChange={setIsAnalyzeModalOpen}
         isLoading={isAnalyzeLoading}
         analysisData={analysisData}
         taskType={displayTask.type}
-      /> */}
+        taskId={taskId}
+      />
 
       {/* Assign User Modal */}
       <Dialog open={showAssignModal} onOpenChange={(open) => {

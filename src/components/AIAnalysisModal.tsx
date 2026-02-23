@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap } from "lucide-react";
+import { Zap, MessageSquare, FileText } from "lucide-react";
 import { VOAnalysis } from "./AIAnalysis/VOAnalysis";
 import { CPIAnalysis } from "./AIAnalysis/CPIAnalysis";
 import { DCAnalysis } from "./AIAnalysis/DCAnalysis";
@@ -17,7 +17,6 @@ import { CommonSections } from "./AIAnalysis/SharedComponents";
 import { AIChatInterface } from "./AIAnalysis/AIChatInterface";
 import { MOCK_ANALYSIS_DATA, CPI_MOCK_DATA, DC_MOCK_DATA, RFI_MOCK_DATA, SI_MOCK_DATA } from "./AIAnalysis/MockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, FileText } from "lucide-react";
 
 interface AIAnalysisModalProps {
   isOpen: boolean;
@@ -25,6 +24,7 @@ interface AIAnalysisModalProps {
   isLoading: boolean;
   analysisData: any | null;
   taskType?: string;
+  taskId?: string;
 }
 
 export function AIAnalysisModal({
@@ -33,6 +33,7 @@ export function AIAnalysisModal({
   analysisData,
   taskType: propTaskType = "VO",
   isOpen: propIsOpen,
+  taskId,
 }: AIAnalysisModalProps) {
   const [visibleSections, setVisibleSections] = useState<number>(0);
   const totalSections = 15; // Sufficient for all types
@@ -85,7 +86,7 @@ export function AIAnalysisModal({
 
   if (!data && !isLoading) return null;
 
-  return (
+  return (<>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl bg-white max-h-[85vh] overflow-y-auto font-sans">
         <DialogHeader>
@@ -159,5 +160,6 @@ export function AIAnalysisModal({
         </div>
       </DialogContent>
     </Dialog>
+  </>
   );
 }

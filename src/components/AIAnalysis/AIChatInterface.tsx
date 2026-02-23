@@ -4,16 +4,19 @@ import { cn } from "@/lib/utils";
 import { fetchData, postData } from "@/lib/Api";
 import { toast } from "sonner";
 
+interface ChatSource {
+  clause_number: string;
+  clause_title: string;
+  page_number: string | number;
+  similarity: number;
+  excerpt: string;
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  sources?: Array<{
-    clause: string;
-    title: string;
-    page: number;
-    text: string;
-  }>;
+  sources?: ChatSource[];
 }
 
 interface AIChatInterfaceProps {
@@ -25,37 +28,64 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const taskTypeId = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
   const chatUrl = `ai_analysis/${taskTypeId.toLowerCase()}/${data.id}/chat/`;
 
   useEffect(() => {
+    if (historyLoaded || !data.id) return;
+
     const loadChatHistory = async () => {
       try {
-        const history = await fetchData(chatUrl);
-        if (history && Array.isArray(history)) {
-          const formattedMessages: Message[] = history.map((msg: any) => ({
+        const response = await fetchData(chatUrl);
+        // Backend returns { messages: [...] }
+        if (response?.messages && response.messages.length > 0) {
+          const formattedMessages: Message[] = response.messages.map((msg: any) => ({
             role: msg.role === 'user' ? 'user' : 'assistant',
-            content: msg.content || msg.message || "",
-            timestamp: new Date(msg.timestamp || msg.created_at),
-            sources: msg.sources || []
+            content: msg.content || "",
+            timestamp: new Date(msg.created_at),
+            sources: msg.sources || [],
           }));
           setMessages(formattedMessages);
+          setHistoryLoaded(true);
         } else {
-          // If no history, add greeting
-          setMessages([
-            {
-              role: 'assistant',
-              content: `Hello! I've analyzed the ${taskType} documentation. How can I help you with the contractual compliance or site implications today?`,
-              timestamp: new Date(),
+          // No existing session — request welcome summary via init action
+          setHistoryLoaded(true);
+          setIsInitializing(true);
+          try {
+            const initResponse = await postData({
+              url: chatUrl,
+              data: { action: "init" },
+            });
+            if (initResponse?.messages && initResponse.messages.length > 0) {
+              const loaded: Message[] = initResponse.messages.map((m: any) => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.content || "",
+                timestamp: new Date(m.created_at),
+                sources: m.sources || [],
+              }));
+              setMessages(loaded);
             }
-          ]);
+          } catch {
+            // Welcome generation failed — show default greeting
+            setMessages([
+              {
+                role: 'assistant',
+                content: `Hello! I've analyzed the ${taskType} documentation. How can I help you with the contractual compliance or site implications today?`,
+                timestamp: new Date(),
+              }
+            ]);
+          } finally {
+            setIsInitializing(false);
+          }
         }
       } catch (err) {
         console.error("Failed to load chat history:", err);
-        // Fallback to greeting on error
+        setHistoryLoaded(true);
         setMessages([
           {
             role: 'assistant',
@@ -66,10 +96,8 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       }
     };
 
-    if (data.id) {
-      loadChatHistory();
-    }
-  }, [chatUrl, data.id, taskType]);
+    loadChatHistory();
+  }, [chatUrl, data.id, taskType, historyLoaded]);
 
   const suggestions = [
     `What are the critical risks in this ${taskType}?`,
@@ -108,7 +136,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.response || response.message || response.content || "I'm sorry, I couldn't process that request.",
+        content: response.reply || response.content || "I'm sorry, I couldn't process that request.",
         timestamp: new Date(),
         sources: response.sources || []
       };
@@ -124,20 +152,6 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
     } finally {
       setIsTyping(false);
     }
-  };
-
-  const generateMockResponse = (query: string, type: string, data: any): string => {
-    const q = query.toLowerCase();
-    if (q.includes('risk')) {
-      return `Based on my analysis, the primary risk for this ${type} is ${data.risk_level === 'HIGH' ? 'High' : 'Moderate'}. ${data.summary} I recommend prioritizing the compliance items listed in your report.`;
-    }
-    if (q.includes('clause') || q.includes('contract')) {
-      return `Several clauses are relevant here. Specifically, Clause ${data.contract_citations?.[0]?.clause_number || '10.3'} regarding ${data.contract_citations?.[0]?.clause_title || 'Response Time'} is critical for ensuring this ${type} stays on track.`;
-    }
-    if (q.includes('cost') || q.includes('price')) {
-      return `Looking at the impact assessment, the cost implications are currently categorized as ${data.potential_implications?.cost_implications?.likely ? 'Likely' : 'Unlikely'}. You should monitor any variations that might be triggered by this request.`;
-    }
-    return `I've cross-referenced your query with the project's Contract Schedule and the ${type} details. This ${type} is currently ${data.overall_assessment || 'being processed'}. Is there anything specific about the ${data.rfi_id || 'item'} you'd like me to clarify?`;
   };
 
   return (
@@ -161,6 +175,19 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide">
+        {isInitializing && messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 gap-3 py-16">
+            <div className="ai-orb-loader">
+              <div className="ai-orb-wave" />
+              <div className="ai-orb-wave" />
+              <div className="ai-orb-wave" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Preparing your {taskType} summary...</p>
+              <p className="text-xs text-gray-400 mt-1">Analyzing form data and cross-referencing contract clauses</p>
+            </div>
+          </div>
+        )}
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -197,11 +224,11 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                     {msg.sources.map((source, si) => (
                       <div key={si} className="p-2.5 rounded-lg bg-white border border-[#E5E7EB] hover:border-primary/30 transition-colors cursor-help">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-bold text-primary">Clause {source.clause}</span>
-                          <span className="text-[10px] text-[#9CA3AF]">Page {source.page}</span>
+                          <span className="text-[11px] font-bold text-primary">Clause {source.clause_number}</span>
+                          <span className="text-[10px] text-[#9CA3AF]">Page {source.page_number}</span>
                         </div>
-                        <p className="text-[11px] text-[#4B5563] font-medium line-clamp-1">{source.title}</p>
-                        <p className="text-[10px] text-[#9CA3AF] mt-1 italic line-clamp-2">"{source.text}"</p>
+                        <p className="text-[11px] text-[#4B5563] font-medium line-clamp-1">{source.clause_title}</p>
+                        <p className="text-[10px] text-[#9CA3AF] mt-1 italic line-clamp-2">"{source.excerpt}"</p>
                       </div>
                     ))}
                   </div>
