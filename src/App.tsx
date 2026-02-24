@@ -62,6 +62,14 @@ const App = () => (
             }
           />
           <Route
+            path="/ai-workspace/:taskTypeSlug/:taskId"
+            element={
+              <ProtectedRoute>
+                <AiWorkSpace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/communications"
             element={
               <ProtectedRoute>
