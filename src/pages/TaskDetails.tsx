@@ -922,7 +922,7 @@ export default function TaskDetails() {
     };
   }, [editor]);
 
-  console.log(displayTask?.timeline.stages)
+  // console.log(displayTask?.timeline.stages)
 
   if (isLoading && !currentTask) {
     return (

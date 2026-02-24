@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Sidebar,
@@ -37,7 +37,6 @@ import Logo from "./icons/Logo";
 import { useProjects } from "@/hooks/useProjects"; // Django API hook
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
-import { OnboardingModal } from "./OnboardingModal";
 import { deleteProject, fetchData } from "@/lib/Api";
 import { toast } from "sonner";
 import {
@@ -87,8 +86,8 @@ export function DashboardSidebar() {
   const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
+  const navigate = useNavigate();
   const { setUserRole, clearUserRole } = useUserRoleStore();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
@@ -130,7 +129,7 @@ export function DashboardSidebar() {
         setSelectedProjectId("");
         clearUserRole();
       }
-      setShowOnboarding(true);
+      navigate("/create-project");
     } else if (projects.length > 0 && !selectedProjectId) {
       // Auto select first project if none selected
       const firstProject = projects[0];
@@ -301,7 +300,7 @@ export function DashboardSidebar() {
                 })}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => setShowOnboarding(true)}
+                  onClick={() => navigate("/create-project")}
                   className="cursor-pointer text-blue-600 gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>Create New Project</span>
@@ -444,11 +443,6 @@ export function DashboardSidebar() {
           )}
         </SidebarContent>
       </Sidebar>
-
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onOpenChange={setShowOnboarding}
-      />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">

@@ -30,6 +30,7 @@ import Notifications from "./pages/settings/notifications";
 import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import CreateProject from "./pages/CreateProject";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,14 @@ const App = () => (
             }
           />
           <Route path="/documents" element={<Documents />} />
+          <Route
+            path="/create-project"
+            element={
+              <ProtectedRoute>
+                <CreateProject />
+              </ProtectedRoute>
+            }
+          />
           {/* <Route path="/settings" element={<TeamManagement />} /> */}
           <Route path="/settings" element={<Settings />}>
             <Route index element={<TeamManagement />} /> {/* default page */}

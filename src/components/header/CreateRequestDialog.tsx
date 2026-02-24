@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import RFIForm from "./forms/RFIForm";
 import SIForm from "./forms/SIForm";
 import VOForm from "./forms/VOForm";
@@ -33,14 +33,19 @@ export default function CreateRequestDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[700px] bg-white p-0 max-h-[calc(100vh-50px)] overflow-y-auto">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Create New {selectedType}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white"
+      >
+        <SheetHeader className="px-6 py-4 border-b shrink-0">
+          <SheetTitle>Create New {selectedType}</SheetTitle>
+        </SheetHeader>
 
-        <div className="px-6 py-6">{renderForm()}</div>
-      </DialogContent>
-    </Dialog>
+        <div className="flex-1 flex flex-col overflow-hidden px-6">
+          {renderForm()}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

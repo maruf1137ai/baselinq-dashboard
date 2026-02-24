@@ -181,7 +181,8 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
   };
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="flex flex-col h-full" onSubmit={handleSubmit}>
+      <div className="flex-1 overflow-y-auto space-y-4 py-6">
       <div>
         <Label>Subject *</Label>
         <Input
@@ -305,7 +306,8 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
         )}
       </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      </div>
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
         <Button variant="outline" onClick={() => setOpen(false)} type="button">
           Cancel
         </Button>

@@ -20,6 +20,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import VOForm from "@/components/header/forms/VOForm";
 import { deleteData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -198,37 +205,41 @@ const Finance = () => {
         data={summaryData}
       />
 
-      {/* Create VO modal */}
-      <Dialog open={isVOModalOpen} onOpenChange={setIsVOModalOpen}>
-        <DialogContent className="bg-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Variation Order</DialogTitle>
-          </DialogHeader>
-          <VOForm setOpen={setIsVOModalOpen} initialStatus="Draft" />
-        </DialogContent>
-      </Dialog>
+      {/* Create VO drawer */}
+      <Sheet open={isVOModalOpen} onOpenChange={setIsVOModalOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
+          <SheetHeader className="px-6 py-4 border-b shrink-0">
+            <SheetTitle>New Variation Order</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 flex flex-col overflow-hidden px-6">
+            <VOForm setOpen={setIsVOModalOpen} initialStatus="Draft" />
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* Edit VO modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
-        <DialogContent className="bg-white sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Variation Order</DialogTitle>
-          </DialogHeader>
-          {selectedOrder && (
-            <VOForm
-              setOpen={setIsEditModalOpen}
-              initialStatus={selectedOrder.status}
-              taskId={selectedOrder.taskId}
-              initialData={{
-                title: selectedOrder.rawTask?.title,
-                discipline: selectedOrder.rawTask?.discipline,
-                description: selectedOrder.rawTask?.description,
-                lineItems: selectedOrder.rawTask?.lineItems,
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Edit VO drawer */}
+      <Sheet open={isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
+          <SheetHeader className="px-6 py-4 border-b shrink-0">
+            <SheetTitle>Edit Variation Order</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 flex flex-col overflow-hidden px-6">
+            {selectedOrder && (
+              <VOForm
+                setOpen={setIsEditModalOpen}
+                initialStatus={selectedOrder.status}
+                taskId={selectedOrder.taskId}
+                initialData={{
+                  title: selectedOrder.rawTask?.title,
+                  discipline: selectedOrder.rawTask?.discipline,
+                  description: selectedOrder.rawTask?.description,
+                  lineItems: selectedOrder.rawTask?.lineItems,
+                }}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Delete confirmation modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
