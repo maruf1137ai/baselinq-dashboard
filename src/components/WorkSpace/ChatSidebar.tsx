@@ -29,59 +29,70 @@ import Explorer from "../icons/Explorer";
 import NewDoc from "../icons/NewDoc";
 import InviteMember from "../icons/InviteMember";
 
-interface Conversation {
-  id: string;
-  title: string;
-  preview: string;
+import { useNavigate, useParams } from "react-router-dom";
+import useFetch from "@/hooks/useFetch";
+import { isToday, subDays, isAfter, parseISO } from "date-fns";
+
+interface ChatSession {
+  id: number;
+  taskId: number;
+  taskTypeSlug: string;
+  taskType: string;
+  label: string;
+  updatedAt: string;
 }
 
-const conversationsData: { period: string; items: Conversation[] }[] = [
-  {
-    period: "Today",
-    items: [
-      { id: "1", title: "Budget variance review", preview: "Foundatio..." },
-      { id: "2", title: "Schedule delay analysis", preview: "We..." },
-    ],
-  },
-  {
-    period: "Previous 7 Days",
-    items: [
-      { id: "3", title: "RFI response", preview: "Structural beam spe..." },
-      { id: "4", title: "Compliance check", preview: "Building regulat..." },
-      { id: "5", title: "Safety incident report", preview: "Minor injury..." },
-    ],
-  },
-  {
-    period: "Previous 30 Days",
-    items: [
-      { id: "6", title: "Material cost escalation", preview: "Steel pric..." },
-      { id: "7", title: "Progress milestone review", preview: "Phase..." },
-    ],
-  },
-];
+interface GroupedSessions {
+  period: string;
+  items: ChatSession[];
+}
 
 interface ChatSidebarProps {
   onNewChat: () => void;
 }
 
 export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
-  const [activeChat, setActiveChat] = useState("2");
+  const { taskId: currentTaskId } = useParams<{ taskId: string }>();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(true);
 
-  const handleChatAction = (action: string, chatId: string) => {
+  const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>("ai_analysis/chat-sessions/");
+
+  const sessions = sessionsData?.sessions || [];
+
+  const groupedSessions: GroupedSessions[] = [
+    {
+      period: "Today",
+      items: sessions.filter(s => isToday(parseISO(s.updatedAt))),
+    },
+    {
+      period: "Previous 7 Days",
+      items: sessions.filter(s => {
+        const date = parseISO(s.updatedAt);
+        return !isToday(date) && isAfter(date, subDays(new Date(), 7));
+      }),
+    },
+    {
+      period: "Previous 30 Days",
+      items: sessions.filter(s => {
+        const date = parseISO(s.updatedAt);
+        return !isToday(date) && !isAfter(date, subDays(new Date(), 7)) && isAfter(date, subDays(new Date(), 30));
+      }),
+    },
+  ].filter(group => group.items.length > 0);
+
+  const handleChatAction = (action: string, chatId: number) => {
     console.log(`${action} chat ${chatId}`);
   };
 
   return (
     <div
-      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all ${
-        open ? "w-64" : "w-16"
-      }`}>
+      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all ${open ? "w-64" : "w-16"
+        }`}>
       <div className=" p-3">
         <div
-          className={`flex items-center ${
-            open ? "justify-between" : "justify-center"
-          } gap-2`}>
+          className={`flex items-center ${open ? "justify-between" : "justify-center"
+            } gap-2`}>
           <button
             className="w-[50px] rounded-lg flex items-center justify-center h-10 bg-[#F9F9F9] shrink-0"
             onClick={setOpen.bind(null, !open)}>
@@ -127,29 +138,27 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
 
       <SidebarContent className="flex-1">
         {open && (
-          <ScrollArea className="flex-1">
+          <div className="flex-1 !block" style={{ display: "block !important" }}>
             <div className="space-y-6 p-3">
-              {conversationsData.map((group) => (
+              {groupedSessions.map((group) => (
                 <div key={group.period}>
                   <h3 className="mb-2 text-xs px-2 font-normal text-[#676767]">
                     {group.period}
                   </h3>
                   <div className="space-y-0.5">
-                    {group.items.map((conversation) => (
+                    {group.items.map((session) => (
                       <div
-                        key={conversation.id}
-                        className={`group relative flex items-center justify-between border border-transparent rounded-[8px] px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent ${
-                          activeChat === conversation.id
-                            ? "bg-[#F3F2F0] border-[#E8E8E8]"
-                            : ""
-                        }`}>
+                        key={session.id}
+                        className={`group relative flex items-center justify-between border border-transparent rounded-[8px] px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent ${currentTaskId === String(session.taskId)
+                          ? "bg-[#F3F2F0] border-[#E8E8E8]"
+                          : ""
+                          }`}>
                         <button
-                          onClick={() => setActiveChat(conversation.id)}
-                          className="flex-1 overflow-hidden text-left">
-                          <p className="truncate font-sm text-black">
-                            {conversation.title}
+                          onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}
+                          className="flex-1 min-w-0 overflow-hidden text-left">
+                          <p className="truncate text-[13px] font-normal text-black">
+                            {session.label}
                           </p>
-                          {/* <p className="truncate text-xs text-muted-foreground">{conversation.preview}</p> */}
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -166,19 +175,19 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={() =>
-                                handleChatAction("Rename", conversation.id)
+                                handleChatAction("Rename", session.id)
                               }>
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
-                                handleChatAction("Share", conversation.id)
+                                handleChatAction("Share", session.id)
                               }>
                               Share
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
-                                handleChatAction("Delete", conversation.id)
+                                handleChatAction("Delete", session.id)
                               }
                               className="text-destructive">
                               Delete
@@ -191,7 +200,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </SidebarContent>
 

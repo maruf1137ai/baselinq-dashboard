@@ -480,7 +480,7 @@ export default function CreateProject() {
             queryClient.invalidateQueries({
               queryKey: [`projects/?userId=${u.id}`],
             });
-        } catch {}
+        } catch { }
 
         if (pId) {
           localStorage.setItem("selectedProjectId", String(pId));
@@ -540,12 +540,10 @@ export default function CreateProject() {
         }
       `}</style>
 
-      <div
-        className="flex h-screen overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #f7f8fb 0%, #eef0f5 100%)" }}>
+      <div className="flex h-screen overflow-hidden bg-white">
 
         {/* ══════════════════════════════ LEFT SIDEBAR ══════════════════════ */}
-        <aside className="hidden lg:flex w-[280px] bg-white border-r border-[#ededed] flex-col h-full shrink-0">
+        <aside className="hidden lg:flex w-[280px] bg-sidebar border-r border-[#ededed] flex-col h-full shrink-0">
 
           {/* Logo */}
           <div className="px-6 pt-6 pb-5 border-b border-[#f3f4f6]">
@@ -593,10 +591,10 @@ export default function CreateProject() {
                       className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-normal shrink-0 mt-0.5 transition-colors",
                         done
-                          ? "bg-[#00b894] text-white"
-                          : active
                           ? "bg-[#6c5ce7] text-white"
-                          : "bg-[#f3f4f6] text-[#9ca3af]"
+                          : active
+                            ? "bg-[#6c5ce7] text-white"
+                            : "bg-[#f3f4f6] text-[#9ca3af]"
                       )}>
                       {done ? <Check className="w-4 h-4" /> : step.id}
                     </div>
@@ -625,7 +623,7 @@ export default function CreateProject() {
                       className="mx-auto my-0.5"
                       style={
                         done
-                          ? { width: "2px", height: "16px", background: "#00b894", marginLeft: "28px" }
+                          ? { width: "2px", height: "16px", background: "#6c5ce7", marginLeft: "28px" }
                           : { width: 0, height: "16px", borderLeft: "2px dashed #e5e7eb", marginLeft: "28px" }
                       }
                     />
@@ -713,10 +711,10 @@ export default function CreateProject() {
                   style={{
                     background:
                       s.id < currentStep
-                        ? "#00b894"
-                        : s.id === currentStep
                         ? "#6c5ce7"
-                        : "#e5e7eb",
+                        : s.id === currentStep
+                          ? "#6c5ce7"
+                          : "#e5e7eb",
                   }}
                 />
               ))}
@@ -761,7 +759,7 @@ export default function CreateProject() {
                 key={stepKey}
                 className={stepDir === "fwd" ? "anim-fwd" : "anim-back"}>
                 <div
-                  className="bg-white rounded-2xl"
+                  className="bg-sidebar rounded-2xl"
                   style={{
                     boxShadow:
                       "0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.04)",
@@ -806,7 +804,7 @@ export default function CreateProject() {
                                   ? "bg-[#f5f6f8] border border-[#e2e5ea] text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
                                   : "bg-[#f0edff] border border-[#d4ccff] text-[#6c5ce7] cursor-pointer",
                                 errors.project_number &&
-                                  "!border-red-400"
+                                "!border-red-400"
                               )}
                               value={form.project_number}
                               readOnly={!pnEditable}
@@ -919,8 +917,8 @@ export default function CreateProject() {
                           isDragging
                             ? "border-[#6c5ce7] bg-[#f8f7ff]"
                             : errors.attachments
-                            ? "border-red-400 bg-red-50"
-                            : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                              ? "border-red-400 bg-red-50"
+                              : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
                         )}>
                         <CloudUpload
                           className={cn(
@@ -1177,7 +1175,7 @@ export default function CreateProject() {
                                   "pl-10 pr-4 text-[18px] font-normal text-[#111827]",
                                   "h-[52px]",
                                   errors.total_budget &&
-                                    "!border-red-400 focus:ring-red-400/10"
+                                  "!border-red-400 focus:ring-red-400/10"
                                 )}
                                 placeholder="0"
                                 value={form.total_budget}
@@ -1316,13 +1314,13 @@ export default function CreateProject() {
                                 className={cn(
                                   "flex justify-between items-center",
                                   bold &&
-                                    "pt-2 mt-1 border-t border-[#d4ccff]"
+                                  "pt-2 mt-1 border-t border-[#d4ccff]"
                                 )}>
                                 <span
                                   className={cn(
                                     "text-[12px] text-[#6b7280]",
                                     bold &&
-                                      "font-normal text-[#374151]"
+                                    "font-normal text-[#374151]"
                                   )}>
                                   {label}
                                 </span>

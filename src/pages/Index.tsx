@@ -152,7 +152,7 @@ const Index = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-white">
+      <div className="space-y-6">
         {/* Project Context Bar */}
         <div className="flex items-center justify-between flex-wrap gap-4 bg-[#F3F2F0] rounded-xl p-4">
           <div className="flex items-center gap-4">
@@ -187,13 +187,12 @@ const Index = () => {
             {daysRemaining !== null && (
               <Badge
                 variant="outline"
-                className={`text-xs font-medium px-3 py-1 ${
-                  daysRemaining < 0
+                className={`text-xs font-medium px-3 py-1 ${daysRemaining < 0
                     ? 'bg-red-50 text-red-600 border-red-200'
                     : daysRemaining <= 30
-                    ? 'bg-orange-50 text-orange-600 border-orange-200'
-                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                }`}
+                      ? 'bg-orange-50 text-orange-600 border-orange-200'
+                      : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                  }`}
               >
                 {daysRemaining < 0
                   ? `${Math.abs(daysRemaining)} days overdue`

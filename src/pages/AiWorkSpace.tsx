@@ -63,6 +63,7 @@ const AiWorkSpace = () => {
       setIsLoading(true);
       try {
         const response = await fetchData(chatUrl);
+        console.log(response);
         if (response?.messages && response.messages.length > 0) {
           const formatted: Message[] = response.messages.map((msg: any, i: number) => ({
             id: msg.id?.toString() || `hist-${i}`,
@@ -187,10 +188,8 @@ const AiWorkSpace = () => {
 
   return (
     <DashboardLayout padding="p-0">
-      <div className="flex h-full">
-        <div className="w-64 border-border bg-white">
-          <ChatSidebar onNewChat={handleNewChat} />
-        </div>
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+        <ChatSidebar onNewChat={handleNewChat} />
         {hasMessages && (
           <div className="flex flex-1 flex-col">
             {/* Main Chat Area */}
