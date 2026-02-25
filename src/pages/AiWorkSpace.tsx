@@ -8,12 +8,6 @@ import { toast } from 'sonner';
 import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import BaseLinkAI from '@/components/icons/BaseLinkAI';
-import BarChart from '@/components/icons/BarChart';
-import Document from '@/components/icons/Document';
-import Upload from '@/components/icons/Upload';
-import Schedule from '@/components/icons/Schedule';
-import Draft from '@/components/icons/Draft';
-import Caution from '@/components/icons/Caution';
 import Clip from '@/components/icons/Clip';
 import { fetchData, postData } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
@@ -33,14 +27,6 @@ interface Message {
   sources?: ChatSource[];
 }
 
-const quickActions = [
-  { icon: BarChart, label: 'Analyse' },
-  { icon: Document, label: 'Documents' },
-  { icon: Upload, label: 'Finance' },
-  { icon: Schedule, label: 'Schedule' },
-  { icon: Draft, label: 'Draft RFI' },
-  { icon: Caution, label: 'Safety Report' },
-];
 
 const AiWorkSpace = () => {
   const { taskTypeSlug, taskId } = useParams<{ taskTypeSlug: string; taskId: string }>();
@@ -180,10 +166,6 @@ const AiWorkSpace = () => {
     setInput('');
   };
 
-  const handleQuickAction = (label: string) => {
-    toast.info(`Opening ${label}...`);
-  };
-
   const hasMessages = messages.length > 0 || isLoading;
 
   return (
@@ -194,7 +176,7 @@ const AiWorkSpace = () => {
           <div className="flex flex-1 flex-col">
             {/* Main Chat Area */}
             <ScrollArea className="flex-1" ref={scrollRef}>
-              <div className="mx-auto max-w-4xl px-6 py-8">
+              <div className="mx-auto max-w-4xl px-6 pt-4 pb-2">
                 {isLoading && messages.length === 0 && (
                   <div className="flex items-center justify-center py-20">
                     <div className="text-center text-sm text-muted-foreground">
@@ -266,27 +248,6 @@ const AiWorkSpace = () => {
               </div>
             </ScrollArea>
 
-            {/* Quick Actions */}
-            <div className="px-6">
-              <div className="mx-auto flex max-w-4xl items-center justify-center flex-wrap gap-2">
-                {quickActions.map(action => {
-                  const Icon = action.icon;
-                  return (
-                    <Button
-                      key={action.label}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleQuickAction(action.label)}
-                      className="gap-2 bg-transparent rounded-[8px] text-[#334155] text-sm"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {action.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Input Area */}
             <div className="px-6 py-4">
               <div className="mx-auto max-w-4xl">
@@ -325,27 +286,6 @@ const AiWorkSpace = () => {
             <div>
               <h2 className="text-[32px] text-center mb-14 text-black">What are you asking Base Ai Today?</h2>
               <div>
-                {/* Quick Actions */}
-                <div className="px-6">
-                  <div className="mx-auto flex max-w-4xl items-center justify-center flex-wrap gap-2">
-                    {quickActions.map(action => {
-                      const Icon = action.icon;
-                      return (
-                        <Button
-                          key={action.label}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuickAction(action.label)}
-                          className="gap-2 bg-transparent rounded-[8px] text-[#334155] text-sm"
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {action.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* Input Area */}
                 <div className="px-6 py-4">
                   <div className="mx-auto max-w-4xl">

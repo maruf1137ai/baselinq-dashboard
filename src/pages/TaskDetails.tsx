@@ -451,9 +451,9 @@ export default function TaskDetails() {
     const stages = displayTask?.timeline?.stages || [];
     const firstStage = stages[0];
     const lastStage = stages[stages.length - 1];
-    const taskStatus = status === firstStage ? "Todo" : status === lastStage ? "Done" : "In Review";
+    const taskStatus = status === firstStage ? "Todo" : status === lastStage || status == 'Completed' ? "Done" : "In Review";
 
-    console.log({ status, firstStage, lastStage, taskStatus })
+    // console.log({ status, firstStage, lastStage, taskStatus })
 
     try {
       const boardStatus = taskStatus === "Done" ? "done" : taskStatus === "Todo" ? "todo" : "in review";

@@ -54,7 +54,7 @@ const ActionsCell = ({
           <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
             View Details
           </DropdownMenuItem>
-          <DropdownMenuItem>Edit</DropdownMenuItem>
+          {/* <DropdownMenuItem>Edit</DropdownMenuItem> */}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => setShowDeleteDialog(true)}
@@ -65,7 +65,7 @@ const ActionsCell = ({
       </DropdownMenu>
 
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>Details for {entry.ref}</DialogTitle>
             <DialogDescription>
@@ -103,7 +103,7 @@ const ActionsCell = ({
       </Dialog>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
             <DialogTitle>Delete Entry</DialogTitle>
             <DialogDescription>
@@ -144,6 +144,7 @@ const categoryColors: Record<Category, string> = {
   [Category?.Plumbing]: "bg-green-100 text-green-800 border border-green-200",
   [Category?.Concrete]: "bg-gray-200 text-gray-800 border border-gray-300",
   [Category?.HVAC]: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  [Category?.Other]: "bg-purple-100 text-purple-800 border border-purple-200",
 };
 
 const CategoryBadge: React.FC<CategoryBadgeProps> = ({ category }) => {
@@ -183,7 +184,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                 <th
                   key={header}
                   scope="col"
-                  className={`px-6 py-4 text-left text-sm text-[#6B7280] font-normal uppercase ${header === "Actions" ? "text-center" : ""
+                  className={`px-6 py-4 text-left text-sm text-[#6B7280] font-normal capitalize ${header === "Actions" ? "text-center" : ""
                     }`}>
                   {header}
                 </th>
@@ -217,7 +218,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                   {formatCurrency(entry.total)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-base text-[#8081F6] hover:text-indigo-800 cursor-pointer">
-                  {entry.linkedVO}
+                  {entry.linkedVOOrPC || entry.linkedVO || '—'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-base">
                   <CategoryBadge category={entry.category} />

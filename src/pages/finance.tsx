@@ -36,7 +36,7 @@ const TABS = [
   "Variation Orders",
   "Cost Ledger",
   "Payment Certificates",
-  "Forecast",
+  // "Forecast",
 ];
 
 const mapStatus = (status: string): OrderStatus => {
@@ -164,8 +164,8 @@ const Finance = () => {
                     <button
                       onClick={() => setActiveTab(tab)}
                       className={`py-3 text-sm font-medium transition-colors duration-200 ease-in-out border-b-2 border-transparent ${activeTab === tab
-                          ? "text-[#0E1C2E] border-[#8081F6]"
-                          : "text-[#6B7280] hover:text-[#0E1C2E]"
+                        ? "text-[#0E1C2E] border-[#8081F6]"
+                        : "text-[#6B7280] hover:text-[#0E1C2E]"
                         }`}>
                       {tab}
                     </button>
@@ -195,7 +195,7 @@ const Finance = () => {
           )}
           {activeTab === "Cost Ledger" && <CostLadger />}
           {activeTab === "Payment Certificates" && <PaymentCertificate />}
-          {activeTab === "Forecast" && <Forecast />}
+          {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
       </div>
 

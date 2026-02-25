@@ -198,16 +198,16 @@ const Audit = () => {
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="bg-[#F3F2F0] p-1 rounded-[10px] h-auto">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
+        <TabsList className="bg-[#F3F2F0] p-1 rounded-[10px] h-auto w-full">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm w-full">
             <BarChart3 className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="audit-trail" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
+          <TabsTrigger value="audit-trail" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm w-full">
             <Activity className="w-4 h-4 mr-2" />
             Audit Trail
           </TabsTrigger>
-          <TabsTrigger value="deadlines" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
+          {/* <TabsTrigger value="deadlines" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
             <Clock className="w-4 h-4 mr-2" />
             Deadline Tracker
           </TabsTrigger>
@@ -218,7 +218,7 @@ const Audit = () => {
           <TabsTrigger value="export" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
             <Download className="w-4 h-4 mr-2" />
             Export
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         {/* ── Tab 1: Compliance Overview ── */}
@@ -364,13 +364,12 @@ const Audit = () => {
             <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
               {filteredAuditTrail.map((log, i) => (
                 <div key={i} className="relative pl-8">
-                  <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${
-                    (log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
-                      ? 'border-green-600'
-                      : (log.action || '').toLowerCase().includes('rejected') || (log.action || '').toLowerCase().includes('overdue')
-                        ? 'border-red-600'
-                        : 'border-blue-600'
-                  }`} />
+                  <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${(log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
+                    ? 'border-green-600'
+                    : (log.action || '').toLowerCase().includes('rejected') || (log.action || '').toLowerCase().includes('overdue')
+                      ? 'border-red-600'
+                      : 'border-blue-600'
+                    }`} />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-xs font-medium text-gray-900">{log.action}</p>
@@ -391,310 +390,7 @@ const Audit = () => {
           </div>
         </TabsContent>
 
-        {/* ── Tab 3: JBCC Deadline Tracker ── */}
-        <TabsContent value="deadlines" className="mt-6 space-y-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-[#6B7280]">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm">Filters:</span>
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
-                <SelectValue placeholder="All types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="VO">VO</SelectItem>
-                <SelectItem value="RFI">RFI</SelectItem>
-                <SelectItem value="SI">SI</SelectItem>
-                <SelectItem value="DC">DC</SelectItem>
-                <SelectItem value="CPI">CPI</SelectItem>
-                <SelectItem value="GI">GI</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={deadlineFilter} onValueChange={setDeadlineFilter}>
-              <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="at-risk">At Risk</SelectItem>
-                <SelectItem value="on-track">On Track</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="bg-red-50 border-red-200 shadow-none rounded-[10px]">
-              <CardContent className="p-4 flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-                <div>
-                  <p className="text-2xl font-medium text-red-900">
-                    {deadlineItems.filter((d) => d.daysRemaining < 0 && !d.isCompleted).length}
-                  </p>
-                  <p className="text-xs text-red-700">Overdue</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-amber-50 border-amber-200 shadow-none rounded-[10px]">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Clock className="w-5 h-5 text-amber-600" />
-                <div>
-                  <p className="text-2xl font-medium text-amber-900">
-                    {deadlineItems.filter((d) => d.daysRemaining >= 0 && d.daysRemaining <= 3 && !d.isCompleted).length}
-                  </p>
-                  <p className="text-xs text-amber-700">At Risk</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50 border-green-200 shadow-none rounded-[10px]">
-              <CardContent className="p-4 flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-medium text-green-900">
-                    {deadlineItems.filter((d) => d.daysRemaining > 3 && !d.isCompleted).length}
-                  </p>
-                  <p className="text-xs text-green-700">On Track</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Deadline Table */}
-          <div className="bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
-            <Table>
-              <TableHeader className="bg-[#FAFAFA]">
-                <TableRow className="hover:bg-[#FAFAFA]">
-                  <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Task #</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Type</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">JBCC Clause</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Requirement</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Deadline</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Days Remaining</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Assigned To</TableHead>
-                  <TableHead className="pr-6 text-right text-[#6B7280] font-normal">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDeadlines.length > 0 ? (
-                  filteredDeadlines.map((d, i) => {
-                    const status = getDeadlineStatus(d.daysRemaining);
-                    return (
-                      <TableRow key={i} className="hover:bg-gray-50 border-b border-[#E5E7EB] last:border-0">
-                        <TableCell className="pl-6 py-4 text-sm font-medium text-[#1A1A1A]">{d.taskNumber}</TableCell>
-                        <TableCell className="py-4">
-                          <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs">{d.taskType}</Badge>
-                        </TableCell>
-                        <TableCell className="py-4 text-sm text-[#6B7280]">{d.clause}</TableCell>
-                        <TableCell className="py-4 text-sm text-[#1A1A1A]">{d.label}</TableCell>
-                        <TableCell className="py-4 text-sm text-[#6B7280]">{d.deadline}</TableCell>
-                        <TableCell className="py-4">
-                          {d.isCompleted ? (
-                            <span className="text-sm text-green-600">Completed</span>
-                          ) : (
-                            <span className={`text-sm font-medium ${d.daysRemaining < 0 ? 'text-red-600' : d.daysRemaining <= 3 ? 'text-amber-600' : 'text-green-600'}`}>
-                              {d.daysRemaining < 0 ? `${Math.abs(d.daysRemaining)} days overdue` : d.daysRemaining === 0 ? 'Due today' : `${d.daysRemaining} days`}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4 text-sm text-[#1A1A1A]">{d.assignedTo}</TableCell>
-                        <TableCell className="pr-6 py-4 text-right">
-                          {d.isCompleted ? (
-                            <Badge className="bg-green-50 text-green-700 border-green-200 border text-xs">Completed</Badge>
-                          ) : (
-                            <Badge className={`${status.color} border text-xs`}>{status.label}</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-[#6B7280] text-sm">
-                      No deadlines match the current filter
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        {/* ── Tab 4: System Logs (original audit table) ── */}
-        <TabsContent value="logs" className="mt-6 space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-[10px] border border-[#E5E7EB]">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div className="flex items-center gap-2 text-[#6B7280]">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm">Filters:</span>
-              </div>
-              <Select value={logStatusFilter} onValueChange={setLogStatusFilter}>
-                <SelectTrigger className="w-[120px] bg-[#FAFAFA] border-[#E5E7EB]">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="bg-[#FAFAFA] border-[#E5E7EB] text-[#1A1A1A] font-normal">
-                <Calendar className="mr-2 h-4 w-4 text-[#6B7280]" />
-                Last 7 days
-              </Button>
-            </div>
-            <Button onClick={exportCSV}>
-              <Download className="mr-1 h-4 w-4" />
-              Export Logs
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((stat, index) => (
-              <Card key={index} className="bg-[#F3F2F0] !border-0 rounded-[13px] shadow-none">
-                <CardContent className="p-2.5">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    {stat.icon}
-                    <p className="text-sm text-gray2 mb-1">{stat.label}</p>
-                  </div>
-                  <div className="bg-white pt-[28px] pb-[9px] px-[14px] rounded-[6px]">
-                    <h3 className="text-2xl text-[#0F172A]">{stat.value}</h3>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Logs Table */}
-          <div className="bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
-            <Table>
-              <TableHeader className="bg-[#FAFAFA]">
-                <TableRow className="hover:bg-[#FAFAFA]">
-                  <TableHead className="w-[150px] pl-6 h-12 text-[#6B7280] font-normal">Date</TableHead>
-                  <TableHead className="w-[200px] text-[#6B7280] font-normal">User</TableHead>
-                  <TableHead className="text-[#6B7280] font-normal">Action</TableHead>
-                  <TableHead className="w-[150px] text-[#6B7280] font-normal">Module</TableHead>
-                  <TableHead className="w-[120px] text-right pr-6 text-[#6B7280] font-normal">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.map((log, index) => (
-                  <TableRow key={index} className="hover:bg-transparent border-b border-[#E5E7EB] last:border-0">
-                    <TableCell className="pl-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-[#6B7280] text-sm">{log.date}</span>
-                        <span className="text-[#6B7280] text-sm">{log.time}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <span className="text-[#1A1A1A] text-base">{log.user}</span>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <span className="text-[#1A1A1A] text-base">{log.action}</span>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-[#F3F4F6] text-[#6B7280]">{log.module}</span>
-                    </TableCell>
-                    <TableCell className="text-right pr-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm ${
-                        log.status === 'Success' ? 'bg-[#E9F7EC6B] text-[#00C97A] border border-[#16A34A57]' : 'bg-[#FEE2E2] text-[#F06161]'
-                      }`}>
-                        {log.status}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        {/* ── Tab 5: Export & Reports ── */}
-        <TabsContent value="export" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-[#1A1A1A]">Export CSV</h3>
-                    <p className="text-xs text-[#6B7280]">Download compliance data as CSV</p>
-                  </div>
-                </div>
-                <p className="text-xs text-[#6B7280] mb-4">
-                  Export all JBCC deadline data including task numbers, clauses, deadlines, and current status for all document types.
-                </p>
-                <Button className="w-full" variant="outline" onClick={exportCSV}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download CSV
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                    <Printer className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-[#1A1A1A]">Print Report</h3>
-                    <p className="text-xs text-[#6B7280]">Print compliance summary</p>
-                  </div>
-                </div>
-                <p className="text-xs text-[#6B7280] mb-4">
-                  Generate a printer-friendly compliance report with overview stats, deadline tracking, and audit trail summary.
-                </p>
-                <Button className="w-full" variant="outline" onClick={() => window.print()}>
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print Report
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-[#1A1A1A]">Report Summary</h3>
-                    <p className="text-xs text-[#6B7280]">Quick compliance overview</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[#6B7280]">Total Tasks</span>
-                    <span className="text-sm font-medium text-[#1A1A1A]">{totalTasks}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[#6B7280]">Compliant</span>
-                    <span className="text-sm font-medium text-green-600">{compliantTasks}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[#6B7280]">Overdue</span>
-                    <span className="text-sm font-medium text-red-600">{overdueItems}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-[#6B7280]">Compliance Score</span>
-                    <span className="text-sm font-medium text-[#1A1A1A]">{complianceScore}%</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-[#E5E7EB]">
-                    <span className="text-xs text-[#6B7280]">Risk Level</span>
-                    <Badge className={`${riskColors[riskLevel]} border text-xs`}>{riskLevel}</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   );

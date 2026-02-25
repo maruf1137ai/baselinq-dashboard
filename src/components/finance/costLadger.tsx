@@ -14,6 +14,7 @@ import {
 } from '../ui/dropdown-menu';
 import { ViewFeesDrawer } from './viewFessDrwaer';
 import CashIcon from '../icons/CashIcon';
+import useFetch from '@/hooks/useFetch';
 
 export enum Category {
   Electrical = 'Electrical',
@@ -21,6 +22,7 @@ export enum Category {
   Plumbing = 'Plumbing',
   Concrete = 'Concrete',
   HVAC = 'HVAC',
+  Other = 'Other',
 }
 
 export interface LedgerEntry {
@@ -33,71 +35,46 @@ export interface LedgerEntry {
   net: number;
   total: number;
   linkedVO: string;
+  linkedPC: string;
+  linkedVOOrPC: string;
+  linkedVOId: number | null;
+  linkedPCId: number | null;
+  entryType: string;
   category: Category;
 }
 
-const initialLedgerData: LedgerEntry[] = [
-  {
-    id: 1,
-    date: '01/09/25',
-    supplier: 'ElectroWorks',
-    supplierShort: 'Ltd',
-    ref: 'INV-9021',
-    period: 'Aug',
-    net: 176781,
-    total: 176781,
-    linkedVO: 'VO-005',
-    category: Category.Electrical,
-  },
-  {
-    id: 2,
-    date: '05/09/25',
-    supplier: 'Steel Dynamics',
-    supplierShort: 'SA',
-    ref: 'INV-9021',
-    period: 'Aug',
-    net: 176781,
-    total: 176781,
-    linkedVO: 'VO-005',
-    category: Category.Structure,
-  },
-  {
-    id: 3,
-    date: '12/09/25',
-    supplier: 'PlumbTech',
-    supplierShort: 'Solutions',
-    ref: 'INV-9021',
-    period: 'Sep',
-    net: 176781,
-    total: 176781,
-    linkedVO: 'VO-005',
-    category: Category.Plumbing,
-  },
-  {
-    id: 4,
-    date: '18/09/25',
-    supplier: 'Concrete',
-    supplierShort: 'Masters',
-    ref: 'INV-9021',
-    period: 'Sep',
-    net: 176781,
-    total: 176781,
-    linkedVO: 'VO-005',
-    category: Category.Concrete,
-  },
-  {
-    id: 5,
-    date: '25/09/25',
-    supplier: 'HVAC Specialists',
-    supplierShort: 'Inc',
-    ref: 'INV-9021',
-    period: 'Sep',
-    net: 176781,
-    total: 176781,
-    linkedVO: 'VO-005',
-    category: Category.HVAC,
-  },
-];
+interface LedgerApiEntry {
+  id: number;
+  date: string;
+  supplier: string;
+  ref: string;
+  period: string;
+  net: number;
+  total: number;
+  linkedVO: string;
+  linkedVOId: number | null;
+  linkedPC: string;
+  linkedPCId: number | null;
+  linkedVOOrPC: string;
+  category: string;
+  entryType: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface LedgerListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: LedgerApiEntry[];
+}
+
+interface LedgerSummary {
+  totalDebits: number;
+  totalCredits: number;
+  netPosition: number;
+  currency: string;
+}
 
 const feeData = {
   project: 'Baselinq Fees',
@@ -116,27 +93,46 @@ const feeData = {
 
 const allCategories = Object.values(Category);
 
+const formatSummary = (value: number) =>
+  `R ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
+
 const CostLadger = () => {
-  const [ledgerData, setLedgerData] = useState<LedgerEntry[]>(initialLedgerData);
+  const projectId = localStorage.getItem('selectedProjectId') || '';
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  const { data: listData, isLoading } = useFetch<LedgerListResponse>(
+    projectId ? `cost-ledger/?project_id=${projectId}` : '',
+  );
+
+  const { data: summaryData } = useFetch<LedgerSummary>(
+    projectId ? `cost-ledger/summary/?project_id=${projectId}` : '',
+  );
+
+  const ledgerData: LedgerEntry[] = useMemo(() => {
+    if (!listData?.results) return [];
+    return listData.results.map((entry) => ({
+      ...entry,
+      category: entry.category as Category,
+    }));
+  }, [listData]);
+
   const handleFilterChange = useCallback((category: Category) => {
-    setSelectedCategories(prev => (prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]));
+    setSelectedCategories(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category],
+    );
   }, []);
 
   const clearFilters = useCallback(() => {
     setSelectedCategories([]);
   }, []);
 
-  const handleDeleteEntry = useCallback((id: number) => {
-    setLedgerData(prevData => prevData.filter(entry => entry.id !== id));
+  const handleDeleteEntry = useCallback((_id: number) => {
+    // TODO: call DELETE /api/cost-ledger/{id}/ and refetch
   }, []);
 
   const filteredData = useMemo(() => {
-    if (selectedCategories.length === 0) {
-      return ledgerData;
-    }
+    if (selectedCategories.length === 0) return ledgerData;
     return ledgerData.filter(entry => selectedCategories.includes(entry.category));
   }, [selectedCategories, ledgerData]);
 
@@ -147,28 +143,26 @@ const CostLadger = () => {
       ...filteredData.map(row =>
         [
           `"${row.date}"`,
-          `"${row.supplier} ${row.supplierShort || ''}"`.trim(),
+          `"${row.supplier}"`,
           `"${row.ref}"`,
           `"${row.period}"`,
           row.net,
           row.total,
-          `"${row.linkedVO}"`,
+          `"${row.linkedVOOrPC}"`,
           `"${row.category}"`,
-        ].join(',')
+        ].join(','),
       ),
     ].join('\n');
 
     const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.href) {
-      URL.revokeObjectURL(link.href);
-    }
     const url = URL.createObjectURL(blob);
     link.href = url;
     link.setAttribute('download', 'cost_ledger.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }, [filteredData]);
 
   const activeFilterCount = selectedCategories.length;
@@ -176,9 +170,21 @@ const CostLadger = () => {
   return (
     <main className="p-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <ProjectStatusCard icon={<CashIcon />} title="Total Debits" value="R 1,453,971" />
-        <ProjectStatusCard icon={<CashIcon />} title="Total Credits" value="R 0" />
-        <ProjectStatusCard icon={<CashIcon />} title="Net Position" value="R 1,453,971" />
+        <ProjectStatusCard
+          icon={<CashIcon />}
+          title="Total Debits"
+          value={summaryData ? formatSummary(summaryData.totalDebits) : '—'}
+        />
+        <ProjectStatusCard
+          icon={<CashIcon />}
+          title="Total Credits"
+          value={summaryData ? formatSummary(summaryData.totalCredits) : '—'}
+        />
+        <ProjectStatusCard
+          icon={<CashIcon />}
+          title="Net Position"
+          value={summaryData ? formatSummary(summaryData.netPosition) : '—'}
+        />
       </div>
 
       <header className="flex flex-col sm:flex-row justify-between sm:items-center mt-10 mb-6">
@@ -206,7 +212,9 @@ const CostLadger = () => {
                 <FilterIcon className="w-4 h-4" />
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
-                  <span className="bg-indigo-600 text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">{activeFilterCount}</span>
+                  <span className="bg-indigo-600 text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">
+                    {activeFilterCount}
+                  </span>
                 )}
                 <ChevronDownIcon className="w-5 h-5 text-gray-400" />
               </button>
@@ -249,7 +257,13 @@ const CostLadger = () => {
       </header>
 
       <main>
-        <CostLedgerTable entries={filteredData} onDeleteEntry={handleDeleteEntry} />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+            Loading...
+          </div>
+        ) : (
+          <CostLedgerTable entries={filteredData} onDeleteEntry={handleDeleteEntry} />
+        )}
       </main>
 
       <ViewFeesDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} data={feeData} />

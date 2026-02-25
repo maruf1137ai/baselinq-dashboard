@@ -204,9 +204,8 @@ const CurrencyInput: React.FC<{
 
   return (
     <div
-      className={`flex items-center border border-gray-200 rounded-md overflow-hidden bg-white focus-within:ring-1 focus-within:ring-[#8081F6] focus-within:border-[#8081F6] ${
-        disabled ? "bg-gray-50" : ""
-      } ${className}`}
+      className={`flex items-center border border-gray-200 rounded-md overflow-hidden bg-white focus-within:ring-1 focus-within:ring-[#8081F6] focus-within:border-[#8081F6] ${disabled ? "bg-gray-50" : ""
+        } ${className}`}
     >
       <span className="px-2.5 py-1.5 text-sm text-[#6B7280] bg-gray-50 border-r border-gray-200 select-none">
         R
@@ -248,13 +247,12 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
   doubleBorder,
 }) => (
   <div
-    className={`flex justify-between items-center py-2 ${
-      doubleBorder
-        ? "border-t-2 border-[#0E1C2E] mt-3 pt-3"
-        : border
+    className={`flex justify-between items-center py-2 ${doubleBorder
+      ? "border-t-2 border-[#0E1C2E] mt-3 pt-3"
+      : border
         ? "border-t border-gray-200 mt-2 pt-3"
         : ""
-    } ${indent ? "pl-4" : ""}`}
+      } ${indent ? "pl-4" : ""}`}
   >
     <span
       className={`text-sm ${bold ? "text-[#0E1C2E]" : "text-[#6B7280]"}`}
@@ -262,9 +260,8 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
       {label}
     </span>
     <span
-      className={`text-sm ${
-        deduction ? "text-red-500" : addition ? "text-green-600" : "text-[#0E1C2E]"
-      }`}
+      className={`text-sm ${deduction ? "text-red-500" : addition ? "text-green-600" : "text-[#0E1C2E]"
+        }`}
     >
       {deduction ? `- ${fmt(value)}` : addition ? `+ ${fmt(value)}` : fmt(value)}
     </span>
@@ -407,6 +404,80 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
 
+  // const payload = {
+  //   "pcNumber": "PC-004",
+  //   "valuationPeriod": "2025-11",
+  //   "certificateDate": "2026-02-25",
+  //   "workItems": [
+  //     {
+  //       "id": "1",
+  //       "description": "Preliminaries",
+  //       "contractValue": 4500000,
+  //       "previouslyCertified": 3825000,
+  //       "thisPeriod": 225000
+  //     },
+  //     {
+  //       "id": "2",
+  //       "description": "Substructure",
+  //       "contractValue": 6800000,
+  //       "previouslyCertified": 6800000,
+  //       "thisPeriod": 0
+  //     },
+  //     {
+  //       "id": "3",
+  //       "description": "Superstructure",
+  //       "contractValue": 12000000,
+  //       "previouslyCertified": 9600000,
+  //       "thisPeriod": 600000
+  //     },
+  //     {
+  //       "id": "4",
+  //       "description": "Roof Works",
+  //       "contractValue": 3800000,
+  //       "previouslyCertified": 2660000,
+  //       "thisPeriod": 380000
+  //     },
+  //     {
+  //       "id": "5",
+  //       "description": "Internal Finishes",
+  //       "contractValue": 8500000,
+  //       "previouslyCertified": 2975000,
+  //       "thisPeriod": 850000
+  //     },
+  //     {
+  //       "id": "6",
+  //       "description": "Mechanical",
+  //       "contractValue": 4200000,
+  //       "previouslyCertified": 1260000,
+  //       "thisPeriod": 630000
+  //     },
+  //     {
+  //       "id": "7",
+  //       "description": "Electrical",
+  //       "contractValue": 3800000,
+  //       "previouslyCertified": 1140000,
+  //       "thisPeriod": 570000
+  //     },
+  //     {
+  //       "id": "8",
+  //       "description": "External Works",
+  //       "contractValue": 2100000,
+  //       "previouslyCertified": 0,
+  //       "thisPeriod": 210000
+  //     }
+  //   ],
+  //   "voItems": [],
+  //   "materialsOnSite": 0,
+  //   "penalties": 0,
+  //   "advanceRecovery": 0,
+  //   "retentionRelease": 0,
+  //   "notes": "",
+  //   "attachments": [],
+  //   "claim": 3465000,
+  //   "retention": 173250,
+  //   "net": 3785512.5
+  // }
+
   const handleSubmit = () => {
     const data: PCFormData = {
       pcNumber,
@@ -449,17 +520,15 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
         onClick={onClose}
       />
 
       {/* Drawer panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-white shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-white shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-pc-title"
@@ -652,13 +721,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           </td>
                           <td className="px-3 py-2 text-right whitespace-nowrap">
                             <span
-                              className={`text-sm ${
-                                pctComplete >= 100
-                                  ? "text-green-600"
-                                  : pctComplete >= 75
+                              className={`text-sm ${pctComplete >= 100
+                                ? "text-green-600"
+                                : pctComplete >= 75
                                   ? "text-[#0E1C2E]"
                                   : "text-[#6B7280]"
-                              }`}
+                                }`}
                             >
                               {pct(pctComplete)}
                             </span>
@@ -728,11 +796,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     {voItems.map((vo) => (
                       <tr
                         key={vo.voNumber}
-                        className={`transition-colors ${
-                          vo.included
-                            ? "bg-[#8081F6]/5"
-                            : "hover:bg-gray-50/60"
-                        }`}
+                        className={`transition-colors ${vo.included
+                          ? "bg-[#8081F6]/5"
+                          : "hover:bg-gray-50/60"
+                          }`}
                       >
                         <td className="px-3 py-3 text-center">
                           <input

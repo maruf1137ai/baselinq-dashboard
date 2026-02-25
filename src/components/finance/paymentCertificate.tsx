@@ -2,10 +2,17 @@ import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { PlusIcon } from "lucide-react";
 import { ViewSummaryIcon } from "../icons/icons";
-import { paymentCertificateData } from "./data";
-import { PaymentCertificateTable } from "./paymentCertificateTable";
+import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
 import { PaymentCertificateDrawer } from "./paymentCertificateDrawer";
 import { CreatePCDrawer } from "./createPCDrawer";
+import useFetch from "@/hooks/useFetch";
+
+interface PCListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PCEntry[];
+}
 
 const summaryData = {
   totalApproved: "R 3,657,500",
@@ -21,8 +28,15 @@ const summaryData = {
 };
 
 const PaymentCertificate = () => {
+  const projectId = localStorage.getItem("selectedProjectId") || "";
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const { data, isLoading } = useFetch<PCListResponse>(
+    projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
+  );
+
+  const certificates: PCEntry[] = data?.results ?? [];
 
   return (
     <main className="p-6">
@@ -44,7 +58,14 @@ const PaymentCertificate = () => {
           </Button>
         </div>
       </div>
-      <PaymentCertificateTable orders={paymentCertificateData} />
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+          Loading...
+        </div>
+      ) : (
+        <PaymentCertificateTable orders={certificates} />
+      )}
 
       <PaymentCertificateDrawer
         isOpen={isSummaryOpen}
