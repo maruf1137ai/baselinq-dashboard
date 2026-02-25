@@ -4,8 +4,9 @@ import { PlusIcon } from "lucide-react";
 import { ViewSummaryIcon } from "../icons/icons";
 import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
 import { PaymentCertificateDrawer } from "./paymentCertificateDrawer";
-import { CreatePCDrawer } from "./createPCDrawer";
+import { CreatePCDrawer, CreatePCApiPayload } from "./createPCDrawer";
 import useFetch from "@/hooks/useFetch";
+import { postData } from "@/lib/Api";
 
 interface PCListResponse {
   count: number;
@@ -32,7 +33,7 @@ const PaymentCertificate = () => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const { data, isLoading } = useFetch<PCListResponse>(
+  const { data, isLoading, refetch } = useFetch<PCListResponse>(
     projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
   );
 
@@ -76,9 +77,17 @@ const PaymentCertificate = () => {
       <CreatePCDrawer
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSubmit={(data) => {
-          console.log("New PC submitted:", data);
-          // TODO: POST to backend and refresh table
+        projectId={projectId}
+        onSubmit={async (payload: CreatePCApiPayload) => {
+          try {
+            await postData({
+              url: "tasks/payment-certificates/",
+              data: payload,
+            });
+            refetch();
+          } catch (err) {
+            console.error("Failed to create payment certificate:", err);
+          }
         }}
       />
     </main>

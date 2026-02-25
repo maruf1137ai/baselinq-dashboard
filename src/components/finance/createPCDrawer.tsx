@@ -46,10 +46,29 @@ export interface PCFormData {
   net: number; // Amount Due to Contractor
 }
 
+/** Payload for POST /api/tasks/payment-certificates/ — full form + projectId (backend stores all, auto-generates pcNumber) */
+export interface CreatePCApiPayload {
+  projectId: number;
+  valuationPeriod: string;
+  certificateDate: string;
+  workItems: WorkLineItem[];
+  voItems: VOLineItem[];
+  materialsOnSite: number;
+  penalties: number;
+  advanceRecovery: number;
+  retentionRelease: number;
+  notes: string;
+  claim: number;
+  retention: number;
+  net: number;
+  approvalStatus?: "pending" | "partial" | "approved";
+}
+
 interface CreatePCDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (data: PCFormData) => void;
+  projectId: string | null;
+  onSubmit?: (payload: CreatePCApiPayload) => void | Promise<void>;
 }
 
 // ─── Default seed data (from prior PCs) ──────────────────────────────────────
@@ -273,10 +292,11 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
 export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   isOpen,
   onClose,
+  projectId,
   onSubmit,
 }) => {
-  // Certificate Info
-  const pcNumber = "PC-004"; // auto-incremented — readonly
+  // Certificate Info (pcNumber is set by backend on create)
+  const pcNumber = "—"; // readonly; backend returns PC-001, PC-002, etc.
   const [valuationPeriod, setValuationPeriod] = useState<Date | undefined>(
     new Date(2025, 10, 1) // Nov 2025 — next after last PC
   );
@@ -477,25 +497,29 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   //   "retention": 173250,
   //   "net": 3785512.5
   // }
+  // API payload = above + projectId (see CreatePCApiPayload). Backend stores full structure.
 
   const handleSubmit = () => {
-    const data: PCFormData = {
-      pcNumber,
+    if (!projectId) {
+      return;
+    }
+    const payload: CreatePCApiPayload = {
+      projectId: Number(projectId),
       valuationPeriod: valuationPeriod ? format(valuationPeriod, "yyyy-MM") : "",
       certificateDate: certificateDate ? format(certificateDate, "yyyy-MM-dd") : "",
       workItems,
-      voItems: voItems.filter((v) => v.included),
+      voItems,
       materialsOnSite,
       penalties,
       advanceRecovery,
       retentionRelease,
       notes,
-      attachments,
       claim: calc.netValuationThisPeriod,
       retention: calc.retention,
       net: calc.amountDue,
+      approvalStatus: "pending",
     };
-    onSubmit?.(data);
+    onSubmit?.(payload);
     onClose();
   };
 
@@ -1103,7 +1127,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             </button>
             <button
               onClick={handleSubmit}
-              className="px-5 py-2 text-sm text-white bg-[#8081F6] rounded-md hover:bg-[#6366F1] transition-colors"
+              disabled={!projectId}
+              title={!projectId ? "Select a project first" : undefined}
+              className="px-5 py-2 text-sm text-white bg-[#8081F6] rounded-md hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit Certificate
             </button>
