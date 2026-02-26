@@ -15,6 +15,8 @@ import {
 import { ViewFeesDrawer } from './viewFessDrwaer';
 import CashIcon from '../icons/CashIcon';
 import useFetch from '@/hooks/useFetch';
+import { deleteData } from '@/lib/Api';
+import { toast } from 'sonner';
 
 export enum Category {
   Electrical = 'Electrical',
@@ -28,6 +30,7 @@ export enum Category {
 export interface LedgerEntry {
   id: number;
   date: string;
+  dateRaw?: string;
   supplier: string;
   supplierShort?: string;
   ref: string;
@@ -96,16 +99,33 @@ const allCategories = Object.values(Category);
 const formatSummary = (value: number) =>
   `R ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
 
+/** Format API date YYYY-MM-DD to DD/MM/YY for display */
+const formatLedgerDate = (dateStr: string): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(2);
+  return `${day}/${month}/${year}`;
+};
+
 const CostLadger = () => {
   const projectId = localStorage.getItem('selectedProjectId') || '';
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const { data: listData, isLoading } = useFetch<LedgerListResponse>(
-    projectId ? `cost-ledger/?project_id=${projectId}` : '',
-  );
+  const categoryParam =
+    selectedCategories.length > 0
+      ? `&category=${selectedCategories.map((c) => encodeURIComponent(c)).join(',')}`
+      : '';
+  const listUrl = projectId
+    ? `cost-ledger/?project_id=${projectId}${categoryParam}`
+    : '';
 
-  const { data: summaryData } = useFetch<LedgerSummary>(
+  const { data: listData, isLoading, refetch } = useFetch<LedgerListResponse>(listUrl);
+
+  const { data: summaryData, refetch: refetchSummary } = useFetch<LedgerSummary>(
     projectId ? `cost-ledger/summary/?project_id=${projectId}` : '',
   );
 
@@ -113,13 +133,15 @@ const CostLadger = () => {
     if (!listData?.results) return [];
     return listData.results.map((entry) => ({
       ...entry,
-      category: entry.category as Category,
+      date: formatLedgerDate(entry.date),
+      dateRaw: entry.date,
+      category: (entry.category || 'Other') as Category,
     }));
   }, [listData]);
 
   const handleFilterChange = useCallback((category: Category) => {
-    setSelectedCategories(prev =>
-      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category],
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
   }, []);
 
@@ -127,43 +149,49 @@ const CostLadger = () => {
     setSelectedCategories([]);
   }, []);
 
-  const handleDeleteEntry = useCallback((_id: number) => {
-    // TODO: call DELETE /api/cost-ledger/{id}/ and refetch
-  }, []);
+  const handleDeleteEntry = useCallback(
+    async (id: number) => {
+      if (!projectId) return;
+      try {
+        await deleteData({ url: `cost-ledger/${id}/` });
+        toast.success('Entry deleted');
+        refetch();
+        refetchSummary();
+      } catch (err) {
+        toast.error('Failed to delete entry');
+        console.error(err);
+      }
+    },
+    [projectId, refetch, refetchSummary],
+  );
 
-  const filteredData = useMemo(() => {
-    if (selectedCategories.length === 0) return ledgerData;
-    return ledgerData.filter(entry => selectedCategories.includes(entry.category));
-  }, [selectedCategories, ledgerData]);
-
-  const exportToCSV = useCallback(() => {
-    const headers = ['Date', 'Supplier', 'Ref', 'Period', 'Net', 'Total', 'Linked VO/PC', 'Category'];
-    const csvRows = [
-      headers.join(','),
-      ...filteredData.map(row =>
-        [
-          `"${row.date}"`,
-          `"${row.supplier}"`,
-          `"${row.ref}"`,
-          `"${row.period}"`,
-          row.net,
-          row.total,
-          `"${row.linkedVOOrPC}"`,
-          `"${row.category}"`,
-        ].join(','),
-      ),
-    ].join('\n');
-
-    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', 'cost_ledger.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [filteredData]);
+  const exportToCSV = useCallback(async () => {
+    if (!projectId) {
+      toast.error('Select a project first');
+      return;
+    }
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const url = `${baseUrl}/cost-ledger/export/?project_id=${projectId}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access') : null;
+    try {
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'cost_ledger.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      toast.success('Export downloaded');
+    } catch (e) {
+      toast.error('Failed to export CSV');
+      console.error(e);
+    }
+  }, [projectId]);
 
   const activeFilterCount = selectedCategories.length;
 
@@ -257,12 +285,25 @@ const CostLadger = () => {
       </header>
 
       <main>
-        {isLoading ? (
+        {!projectId ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500 text-sm">
+            <p>Select a project to view the cost ledger.</p>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
             Loading...
           </div>
+        ) : ledgerData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500 text-sm rounded-lg border border-gray-200 bg-gray-50/50">
+            <p className="font-medium text-[#0E1C2E]">No cost ledger entries</p>
+            <p className="mt-1">
+              {selectedCategories.length > 0
+                ? 'No entries match the current filter.'
+                : 'Entries appear when Variation Orders are approved or Payment Certificates are created.'}
+            </p>
+          </div>
         ) : (
-          <CostLedgerTable entries={filteredData} onDeleteEntry={handleDeleteEntry} />
+          <CostLedgerTable entries={ledgerData} onDeleteEntry={handleDeleteEntry} />
         )}
       </main>
 
