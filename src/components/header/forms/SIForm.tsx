@@ -142,7 +142,7 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       due_date: formData.dueDate ? format(formData.dueDate, "yyyy-MM-dd") : undefined,
       vo_reference: formData.voReference || undefined,
       expectedCostImpact: formData.costImpact || undefined,
-      status: initialStatus || "Open",
+      taskStatus: initialStatus || "Open",
     };
 
     const handleSuccess = async (result: any) => {

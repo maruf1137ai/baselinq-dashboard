@@ -34,7 +34,7 @@ const AiWorkSpace = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const chatUrl = taskTypeSlug && taskId
@@ -49,7 +49,7 @@ const AiWorkSpace = () => {
       setIsLoading(true);
       try {
         const response = await fetchData(chatUrl);
-        console.log(response);
+        // console.log(response);
         if (response?.messages && response.messages.length > 0) {
           const formatted: Message[] = response.messages.map((msg: any, i: number) => ({
             id: msg.id?.toString() || `hist-${i}`,
@@ -102,10 +102,8 @@ const AiWorkSpace = () => {
   }, [chatUrl]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
@@ -175,7 +173,7 @@ const AiWorkSpace = () => {
         {hasMessages && (
           <div className="flex flex-1 flex-col">
             {/* Main Chat Area */}
-            <ScrollArea className="flex-1" ref={scrollRef}>
+            <ScrollArea className="flex-1">
               <div className="mx-auto max-w-4xl px-6 pt-4 pb-2">
                 {isLoading && messages.length === 0 && (
                   <div className="flex items-center justify-center py-20">
@@ -245,6 +243,7 @@ const AiWorkSpace = () => {
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
@@ -273,9 +272,6 @@ const AiWorkSpace = () => {
                     <ArrowUp />
                   </Button>
                 </div>
-                <p className="mt-3 text-center text-xs text-[#B5B5B5]">
-                  Interaction Faction workspace chats aren't used to train our models. Baseline can make mistakes.
-                </p>
               </div>
             </div>
           </div>
@@ -311,9 +307,6 @@ const AiWorkSpace = () => {
                         <ArrowUp />
                       </Button>
                     </div>
-                    <p className="mt-3 text-center text-xs text-[#B5B5B5]">
-                      Interaction Faction workspace chats aren't used to train our models. Baseline can make mistakes.
-                    </p>
                   </div>
                 </div>
               </div>

@@ -15,6 +15,7 @@ import {
   CloudUpload,
   ChevronDown,
   DollarSign,
+  LogOut,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -725,13 +726,19 @@ export default function CreateProject() {
             </p>
           </div>
 
-          {/* Back to Dashboard */}
-          <div className="flex justify-end px-8 pt-5 pb-1 shrink-0">
+          {/* Back to Dashboard / Logout */}
+          <div className="flex justify-between px-8 pt-5 pb-1 shrink-0">
             <button
               onClick={() => navigate("/")}
               className="flex items-center gap-1.5 text-[13px] text-[#9ca3af] hover:text-[#374151] transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Dashboard
+            </button>
+            <button
+              onClick={() => { localStorage.clear(); navigate("/login"); }}
+              className="flex items-center gap-1.5 text-[13px] text-[#9ca3af] hover:text-red-500 border border-transparent hover:border-red-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
             </button>
           </div>
 

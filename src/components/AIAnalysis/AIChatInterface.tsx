@@ -179,17 +179,24 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth scrollbar-thin scrollbar-thumb-gray-200">
         {isInitializing && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-[#f8f7ff] flex items-center justify-center border border-[#6c5ce7]/10">
-                <Sparkles className="h-8 w-8 text-[#6c5ce7] animate-pulse" />
-              </div>
-            </div>
-            <div className="max-w-[280px]">
-              <p className="text-[15px] font-medium text-[#1a1a2e]">Initializing Briefing...</p>
-              <p className="text-[12px] text-[#94a3b8] mt-1 leading-relaxed font-normal">
-                Analyzing {taskType} documentation and synchronizing with standard contract protocols via RAG.
-              </p>
+          // <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
+          //   <div className="relative">
+          //     <div className="w-16 h-16 rounded-full bg-[#f8f7ff] flex items-center justify-center border border-[#6c5ce7]/10">
+          //       <Sparkles className="h-8 w-8 text-[#6c5ce7] animate-pulse" />
+          //     </div>
+          //   </div>
+          //   <div className="max-w-[280px]">
+          //     <p className="text-[15px] font-medium text-[#1a1a2e]">Initializing Briefing...</p>
+          //     <p className="text-[12px] text-[#94a3b8] mt-1 leading-relaxed font-normal">
+          //       Analyzing {taskType} documentation and synchronizing with standard contract protocols via RAG.
+          //     </p>
+          //   </div>
+          // </div>
+          <div className="flex items-center justify-center min-h-[300px]">
+            <div className="ai-orb-loader">
+              <div className="ai-orb-wave" />
+              <div className="ai-orb-wave" />
+              <div className="ai-orb-wave" />
             </div>
           </div>
         )}
@@ -285,17 +292,17 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
         ))}
 
         {isTyping && (
-          <div className="flex gap-3 animate-in fade-in duration-300">
-            <div className="w-8 h-8 rounded-lg bg-white border border-[#e2e8f0] flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
-              <Sparkles className="h-4 w-4 animate-spin duration-3000" />
+          <div className="flex gap-4 max-w-[90%] mr-auto animate-in fade-in duration-300">
+            <div className="h-8 w-8 rounded-full bg-white border border-[#E7E9EB] flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
+              <Bot className="h-4 w-4" />
             </div>
-            <div className="bg-[#f8f9fa] px-5 py-4 rounded-[20px] rounded-tl-none border border-[#eef0f2] flex items-center gap-3">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-[#6c5ce7] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 bg-[#6c5ce7] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 bg-[#6c5ce7] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-[#F3F4F6] p-4 rounded-[16px] rounded-tl-none border border-[#E5E7EB] flex flex-col items-center gap-2">
+              <div className="ai-orb-loader !w-6 !h-6 translate-y-0.5">
+                <div className="ai-orb-wave" />
+                <div className="ai-orb-wave" />
+                <div className="ai-orb-wave" />
               </div>
-              <span className="text-[11px] text-[#6c5ce7] font-medium uppercase tracking-wider">Analyzing Intelligence...</span>
+              <span className="text-[10px] text-primary/60 font-medium animate-pulse">Analyzing context...</span>
             </div>
           </div>
         )}

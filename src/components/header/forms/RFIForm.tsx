@@ -117,7 +117,7 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
       subject: subject,
       discipline: discipline || undefined,
       question: question,
-      status: initialStatus || "Open",
+      taskStatus: initialStatus || "Open",
       description: description,
     };
 

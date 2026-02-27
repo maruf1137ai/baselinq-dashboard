@@ -71,6 +71,8 @@ const btns = [
 const rolePermissions: Record<string, string[]> = {
   "Client": ["VO"],
   "Owner": ["VO"],
+  "CLIENT": ["VO"],
+  "OWNER": ["VO"],
   "Client Project Manager": ["VO"],
   "Architect": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
@@ -214,8 +216,10 @@ function TaskCard({ task, isDragging }: any) {
   // Check if the current user's role is authorized to drag/approve this task type
   const normalizedTaskType = task.type === "CRITICALPATHITEM" ? "CPI" : task.type;
   const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
-  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim()) : [];
-  const canDrag = userRoles.some((role) => allowedApprovers.includes(role));
+  const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
+
+  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
+  const canDrag = userRoles.some((role) => allowedApproversUpper.includes(role));
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: task.id,
@@ -468,10 +472,30 @@ export default function Task() {
   const filteredBtns = useMemo(() => {
     if (!userRole) return btns; // Show all if no role set
 
-    const allowedDocTypes = rolePermissions[userRole] || [];
-    if (allowedDocTypes.length === 0) return btns; // Show all if role not in mapping
+    // Support compound roles like "Client / Owner"
+    const currentRoles = userRole.split(/\s*\/\s*/).map(r => r.trim());
 
-    return btns.filter(btn => allowedDocTypes.includes(btn.code));
+    // Aggregate allowed document types from all user roles
+    const allowedDocTypes = new Set<string>();
+    currentRoles.forEach(role => {
+      // Direct match
+      const permissions = rolePermissions[role] || [];
+      permissions.forEach(type => allowedDocTypes.add(type));
+
+      // Case-insensitive match if direct match fails
+      if (permissions.length === 0) {
+        const foundKey = Object.keys(rolePermissions).find(
+          key => key.toLowerCase() === role.toLowerCase()
+        );
+        if (foundKey) {
+          rolePermissions[foundKey].forEach(type => allowedDocTypes.add(type));
+        }
+      }
+    });
+
+    if (allowedDocTypes.size === 0) return btns; // Show all if no roles identified in mapping
+
+    return btns.filter(btn => allowedDocTypes.has(btn.code));
   }, [userRole]);
 
   /* State */
@@ -509,7 +533,7 @@ export default function Task() {
   const [isSelectionOpen, setIsSelectionOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState("");
-  const [preSelectedStatus, setPreSelectedStatus] = useState("Todo");
+  const [preSelectedStatus, setPreSelectedStatus] = useState("todo");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -640,7 +664,7 @@ export default function Task() {
 
       const activeTask = (tasks as any)[activeContainer]?.find((t: any) => t.id === active.id);
       const entityStatus = getEntityStatusForColumn(overContainer, activeTask?.type || "");
-      const taskStatusMap: Record<string, string> = { 'todo': 'Todo', 'in review': 'In Review', 'done': 'Done' };
+      const taskStatusMap: Record<string, string> = { 'todo': 'todo', 'in review': 'in review', 'done': 'done' };
 
       try {
         await Promise.all([
@@ -695,7 +719,7 @@ export default function Task() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex gap-6 min-w-min h-full">
-                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={() => { setPreSelectedStatus("Todo"); setIsSelectionOpen(true); }} />
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={() => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); }} />
                   <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
                   <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
                 </div>

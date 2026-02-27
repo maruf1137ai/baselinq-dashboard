@@ -96,9 +96,12 @@ const auditAccessRoles = {
 };
 
 const getAccessLevel = (userRole: string): "full" | "view" | "restricted" => {
-  const roles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim()) : [];
-  if (roles.some((r) => auditAccessRoles.fullAccess.includes(r))) return "full";
-  if (roles.some((r) => auditAccessRoles.viewOnly.includes(r))) return "view";
+  const roles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
+  const fullAccessUpper = auditAccessRoles.fullAccess.map(r => r.toUpperCase());
+  const viewOnlyUpper = auditAccessRoles.viewOnly.map(r => r.toUpperCase());
+
+  if (roles.some((r) => fullAccessUpper.includes(r))) return "full";
+  if (roles.some((r) => viewOnlyUpper.includes(r))) return "view";
   return "restricted";
 };
 
@@ -550,13 +553,12 @@ export default function AuditPage() {
                   {auditTrail.length > 0 ? (
                     auditTrail.slice(0, 50).map((log: any, i: number) => (
                       <div key={i} className="relative pl-8">
-                        <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${
-                          (log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
+                        <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
                             ? "border-green-600"
                             : (log.action || "").toLowerCase().includes("overdue") || (log.action || "").toLowerCase().includes("rejected")
                               ? "border-red-600"
                               : "border-blue-600"
-                        }`} />
+                          }`} />
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>

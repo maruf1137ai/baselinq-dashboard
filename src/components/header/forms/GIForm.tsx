@@ -125,7 +125,7 @@ export default function GIForm({ setOpen, initialStatus }: any) {
         project_id: projectId,
         title: formData.title,
         type: "GI",
-        status: initialStatus || "Todo",
+        taskStatus: initialStatus || "todo",
         priority: "Medium",
         Discipline: formData.discipline,
         Instruction: formData.instruction,

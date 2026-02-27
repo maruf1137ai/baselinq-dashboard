@@ -149,18 +149,18 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
                     {group.items.map((session) => (
                       <div
                         key={session.id}
-                        className={`group relative flex items-center justify-between border border-transparent rounded-[8px] px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent ${currentTaskId === String(session.taskId)
+                        className={`group relative flex items-center justify-between border border-transparent rounded-[8px] px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${currentTaskId === String(session.taskId)
                           ? "bg-[#F3F2F0] border-[#E8E8E8]"
                           : ""
-                          }`}>
+                          }`} onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}>
                         <button
-                          onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}
+
                           className="flex-1 min-w-0 overflow-hidden text-left">
                           <p className="truncate text-[13px] font-normal text-black">
                             {session.label}
                           </p>
                         </button>
-                        <DropdownMenu>
+                        {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
@@ -193,7 +193,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DropdownMenu> */}
                       </div>
                     ))}
                   </div>

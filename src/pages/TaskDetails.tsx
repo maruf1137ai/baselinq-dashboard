@@ -451,7 +451,7 @@ export default function TaskDetails() {
     const stages = displayTask?.timeline?.stages || [];
     const firstStage = stages[0];
     const lastStage = stages[stages.length - 1];
-    const taskStatus = status === firstStage ? "Todo" : status === lastStage || status == 'Completed' ? "Done" : "In Review";
+    const taskStatus = status === firstStage ? "Todo" : status === lastStage || status == 'Completed' || status == 'Approved' ? "Done" : "In Review";
 
     // console.log({ status, firstStage, lastStage, taskStatus })
 
@@ -460,7 +460,7 @@ export default function TaskDetails() {
       await Promise.all([
         patchData({
           url: `tasks/tasks/${taskId}/update-entity/`,
-          data: { status, taskStatus },
+          data: { status, taskStatus, project: Number(projectId) },
         }),
         patchData({
           url: `tasks/tasks/${taskId}/`,
@@ -470,6 +470,7 @@ export default function TaskDetails() {
       toast.success("Task approved successfully");
       await refetchTask();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].includes('cost-ledger') });
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve task");
@@ -850,9 +851,10 @@ export default function TaskDetails() {
   const taskType = displayTask?.type || currentTask?.taskType || "";
   const normalizedTaskType = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
   const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
+  const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
   // Support compound roles like "Client / Owner" by splitting on " / "
-  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim()) : [];
-  const canApprove = userRoles.some((role) => allowedApprovers.includes(role));
+  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
+  const canApprove = userRoles.some((role) => allowedApproversUpper.includes(role));
 
   const editor = useEditor({
     extensions: [
@@ -1683,7 +1685,7 @@ export default function TaskDetails() {
 
                 <Button
                   className="w-full mt-4 font-normal"
-                  onClick={() => handleApproveTask('Completed')}
+                  onClick={() => handleApproveTask('Approved')}
                   disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
                   {["Approved", "Completed"].includes(displayTask.timeline.current)
                     ? "Approved"

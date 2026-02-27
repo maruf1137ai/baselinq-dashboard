@@ -121,7 +121,7 @@ export default function DCForm({ setOpen, initialStatus }: any) {
       estimated_cost_impact: costImpact || undefined,
       estimated_cost_currency: "ZAR",
       requested_extension_days: requestedExtension ? parseInt(requestedExtension) : undefined,
-      status: initialStatus || "Draft",
+      taskStatus: initialStatus || "Draft",
       submitted_by: parsedUser?.id || undefined,
     };
 

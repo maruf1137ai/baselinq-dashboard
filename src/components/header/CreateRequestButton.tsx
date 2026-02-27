@@ -57,10 +57,12 @@ const btns = [
   },
 ];
 
-// Role to document type mapping
+// Role to document type mapping - keys are normalized to Title Case for simpler lookup
 const rolePermissions: Record<string, string[]> = {
   "Client": ["VO"],
   "Owner": ["VO"],
+  "CLIENT": ["VO"],
+  "OWNER": ["VO"],
   "Client Project Manager": ["VO"],
   "Architect": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
@@ -87,10 +89,30 @@ export default function CreateRequestButton() {
   const filteredBtns = useMemo(() => {
     if (!userRole) return btns; // Show all if no role set
 
-    const allowedDocTypes = rolePermissions[userRole] || [];
-    if (allowedDocTypes.length === 0) return btns; // Show all if role not in mapping
+    // Support compound roles like "Client / Owner"
+    const currentRoles = userRole.split(/\s*\/\s*/).map(r => r.trim());
 
-    return btns.filter(btn => allowedDocTypes.includes(btn.code));
+    // Aggregate allowed document types from all user roles
+    const allowedDocTypes = new Set<string>();
+    currentRoles.forEach(role => {
+      // Direct match
+      const permissions = rolePermissions[role] || [];
+      permissions.forEach(type => allowedDocTypes.add(type));
+
+      // Case-insensitive match if direct match fails
+      if (permissions.length === 0) {
+        const foundKey = Object.keys(rolePermissions).find(
+          key => key.toLowerCase() === role.toLowerCase()
+        );
+        if (foundKey) {
+          rolePermissions[foundKey].forEach(type => allowedDocTypes.add(type));
+        }
+      }
+    });
+
+    if (allowedDocTypes.size === 0) return btns; // Show all if no document types identified for these roles
+
+    return btns.filter(btn => allowedDocTypes.has(btn.code));
   }, [userRole]);
 
   const handleClick = (btn) => {

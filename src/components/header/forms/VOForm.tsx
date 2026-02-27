@@ -149,7 +149,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       title: title,
       discipline: discipline || undefined,
       description: description,
-      status: initialStatus || "Draft",
+      taskStatus: initialStatus || "Draft",
       line_items: items.map(item => ({
         description: item.description,
         quantity: item.qty,
