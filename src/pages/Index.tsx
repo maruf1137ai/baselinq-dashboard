@@ -188,10 +188,10 @@ const Index = () => {
               <Badge
                 variant="outline"
                 className={`text-xs font-medium px-3 py-1 ${daysRemaining < 0
-                    ? 'bg-red-50 text-red-600 border-red-200'
-                    : daysRemaining <= 30
-                      ? 'bg-orange-50 text-orange-600 border-orange-200'
-                      : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                  ? 'bg-red-50 text-red-600 border-red-200'
+                  : daysRemaining <= 30
+                    ? 'bg-orange-50 text-orange-600 border-orange-200'
+                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                   }`}
               >
                 {daysRemaining < 0
@@ -336,7 +336,7 @@ const Index = () => {
         </Card>
 
         {/* Health Score Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <ProjectStatusCard
             icon={<CashIcon />}
             title="Budget Health"
@@ -376,7 +376,7 @@ const Index = () => {
             actionText="View risk dashboard"
             trendArrow="up"
           />
-        </div>
+        </div> */}
 
       </div>
     </DashboardLayout>
