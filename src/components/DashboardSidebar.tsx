@@ -109,7 +109,10 @@ export function DashboardSidebar() {
     try {
       const response = await fetchData(`projects/${projectId}/user-role/?userId=${userId}`);
       if (response?.roleName) {
-        setUserRole(response.roleName);
+        // Normalize Client/Owner variants → CLIENT so all role checks are consistent
+        const raw = response.roleName as string;
+        const normalized = /^(client.?owner|owner)$/i.test(raw.trim()) ? "CLIENT" : raw;
+        setUserRole(normalized);
       }
     } catch (error) {
       console.error("Error fetching user role:", error);

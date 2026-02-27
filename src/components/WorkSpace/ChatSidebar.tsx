@@ -98,25 +98,25 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
             onClick={setOpen.bind(null, !open)}>
             <SideBar />
           </button>
-          {open && (
+          {/* {open && (
             <button
               className="w-[50px] rounded-lg flex items-center justify-center h-10 bg-[#F9F9F9] shrink-0"
               onClick={onNewChat}>
               <NewChat />
             </button>
-          )}
+          )} */}
         </div>
         {open && (
           <>
-            <div className="mt-5 flex px-2 items-center gap-2 text-sm">
+            {/* <div className="mt-5 flex px-2 items-center gap-2 text-sm">
               <Explorer />
               <span className="font-medium text-sm">Explore Base</span>
-            </div>
+            </div> */}
             <button
               onClick={onNewChat}
               className="mt-3 w-full flex items-center justify-center  border border-[#CBD5E1] text-sm gap-2 bg-[#8081F6] text-primary-foreground rounded-[8px] py-2.5 hover:bg-primary/90">
               <NewDoc />
-              Create New Document
+              Create New Chat
             </button>
           </>
         )}
@@ -204,7 +204,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
         )}
       </SidebarContent>
 
-      <SidebarFooter className=" p-3">
+      {/* <SidebarFooter className=" p-3">
         {open ? (
           <button className="flex items-center gap-2 text-sm text-[#0D0D0D] hover:text-foreground">
             <InviteMember />
@@ -215,7 +215,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
             <InviteMember />
           </Button>
         )}
-      </SidebarFooter>
+      </SidebarFooter> */}
     </div>
   );
 }

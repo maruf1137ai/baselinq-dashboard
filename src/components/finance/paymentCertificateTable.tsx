@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
-import { MoreHorizontal, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 export interface PCEntry {
   id: number;
@@ -31,6 +31,7 @@ export interface PCEntry {
 
 interface PaymentCertificateTableProps {
   orders: PCEntry[];
+  onNew?: () => void;
 }
 
 const PAGE_SIZE = 10;
@@ -138,7 +139,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
   );
 };
 
-export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({ orders }) => {
+export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({ orders, onNew }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -164,16 +165,27 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
 
   return (
     <div>
-      {/* Search */}
-      <div className="mb-4 relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={handleSearch}
-          placeholder="Search by PC #, period, status..."
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#8081F6]/30 focus:border-[#8081F6]"
-        />
+      {/* Search + New button */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearch}
+            placeholder="Search by PC #, period, status..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#8081F6]/30 focus:border-[#8081F6]"
+          />
+        </div>
+        {onNew && (
+          <button
+            onClick={onNew}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-[#8081F6] hover:bg-[#6366F1] transition-all shadow-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            New Certificate
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">

@@ -61,11 +61,11 @@ import {
   Check,
   ChevronsUpDown,
   FileText,
-  MessageSquare,
   Printer,
   CheckCircle2,
   Circle,
   Clock,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -91,6 +91,82 @@ const approvalPermissions: Record<string, string[]> = {
   DC: ["Client", "Owner", "Client Project Manager", "Consultant Planning Engineer", "Contracts Manager"],
   CPI: ["Planning Engineer", "Consultant Planning Engineer", "Project Manager", "Construction Manager"],
   GI: ["Project Manager", "Construction Manager", "Architect"],
+};
+
+const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+
+const getRelativeTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+};
+
+const groupLogsByDate = (logs: any[]) => {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const groups: { label: string; logs: any[] }[] = [];
+  const seen: Record<string, number> = {};
+  logs.forEach((log) => {
+    const d = new Date(log.created_at || log.createdAt); d.setHours(0, 0, 0, 0);
+    let label: string;
+    if (d.getTime() === today.getTime()) label = 'Today';
+    else if (d.getTime() === yesterday.getTime()) label = 'Yesterday';
+    else label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (seen[label] === undefined) { seen[label] = groups.length; groups.push({ label, logs: [] }); }
+    groups[seen[label]].logs.push(log);
+  });
+  return groups;
+};
+
+const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
+  const a = (log.action || '').toLowerCase();
+  if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+  if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+  if (a === 'status_updated') {
+    const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
+    if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
+      return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+    if (raw.includes('rejected') || raw.includes('declined'))
+      return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+    return { icon: <Clock className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
+  }
+  return { icon: <Circle className="w-3 h-3 text-[#6B7280]" />, bg: '#F3F4F6' };
+};
+
+const getStatusBadgeColor = (status: string) => {
+  const s = (status || '').toLowerCase().replace(/_/g, ' ');
+  if (s === 'done' || s === 'approved' || s === 'completed') return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
+  if (s === 'in progress' || s === 'in review' || s === 'review') return 'bg-[#EEF2FF] text-[#8081F6] border border-[#C7D2FE]';
+  if (s === 'rejected' || s === 'declined') return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
+  return 'bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]';
+};
+
+const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string } => {
+  const action = (log.action || '').toLowerCase();
+  if (action === 'status_updated') {
+    const raw = log.newValue || log.new_value || log.to || log.value || log.description || '';
+    const match = typeof raw === 'string' ? raw.match(/to\s+(.+)$/i) : null;
+    const newStatus = capitalize(match ? match[1] : typeof raw === 'string' ? raw : '');
+    const oldRaw = log.oldValue || log.old_value || log.from || '';
+    const oldStatus = capitalize(typeof oldRaw === 'string' ? oldRaw : '');
+    return { text: 'updated the status', oldStatus: oldStatus || undefined, newStatus: newStatus || undefined };
+  }
+  if (action === 'created') return { text: 'created this task' };
+  if (action === 'assigned') return { text: 'assigned this task' };
+  if (action === 'approved') return { text: 'approved this task' };
+  if (action === 'rejected') return { text: 'rejected this task' };
+  if (action === 'comment_added' || action === 'response_added') return { text: 'added a response' };
+  const humanized = action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  return { text: humanized };
 };
 
 export default function TaskDetails() {
@@ -462,13 +538,14 @@ export default function TaskDetails() {
           url: `tasks/tasks/${taskId}/update-entity/`,
           data: { status, taskStatus, project: Number(projectId) },
         }),
-        patchData({
-          url: `tasks/tasks/${taskId}/`,
-          data: { status: boardStatus },
-        }),
+        // patchData({
+        //   url: `tasks/tasks/${taskId}/`,
+        //   data: { status: boardStatus },
+        // }),
       ]);
       toast.success("Task approved successfully");
       await refetchTask();
+      await refetchAuditLogs();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
       await queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].includes('cost-ledger') });
     } catch (err) {
@@ -1765,34 +1842,60 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                {/* Activity Timeline - Phase 1 & 4 improved audit */}
+                {/* Activity Timeline */}
                 <div className="mt-8 border-t border-gray-100 pt-6">
-                  <h3 className="text-xs font-medium text-gray-900 mb-6 uppercase tracking-widest pl-2">Activity Timeline</h3>
-                  <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
-                    {auditLogs && auditLogs.length > 0 ? (
-                      auditLogs.slice(0, 10).map((log, i) => (
-                        <div key={i} className="relative pl-8">
-                          <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-blue-600 rounded-full z-10" />
-                          <div>
-                            <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>
-                            <p className="text-[10px] text-gray-500 mt-1">
-                              {new Date(log.created_at || log.createdAt).toLocaleDateString()} &middot; {log.createdByName || "System"}
-                            </p>
-                            {log.description && log.description !== log.action && (
-                              <p className="mt-1 text-[11px] text-gray-600 line-clamp-2">
-                                {log.description}
-                              </p>
-                            )}
-                          </div>
+                  <h3 className="text-xs font-normal text-gray-900 mb-5 uppercase tracking-widest pl-2">Audit Trail</h3>
+                  {auditLogs && auditLogs.length > 0 ? (
+                    groupLogsByDate(auditLogs.slice(0, 30)).map((group) => (
+                      <div key={group.label} className="mb-5">
+                        <p className="text-[10px] font-normal text-gray-400 uppercase tracking-widest mb-3 pl-2">{group.label}</p>
+                        <div>
+                          {group.logs.map((log: any, i: number) => {
+                            const { bg, icon } = getLogIconConfig(log);
+                            const { text, oldStatus, newStatus } = getActionLabel(log);
+                            const relTime = getRelativeTime(log.created_at || log.createdAt);
+                            const isLast = i === group.logs.length - 1;
+                            return (
+                              <div key={i} className="flex gap-3">
+                                <div className="flex flex-col items-center">
+                                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
+                                    {icon}
+                                  </div>
+                                  {!isLast && <div className="w-0.5 flex-1 bg-[#e9ecef] mt-1 mb-1" />}
+                                </div>
+                                <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-[13px] font-normal text-gray-900 leading-tight">{log.createdByName || 'System'}</p>
+                                    <span className="text-[11px] text-gray-400 shrink-0 whitespace-nowrap">{relTime}</span>
+                                  </div>
+                                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[13px] text-gray-600">{text}</span>
+                                    {oldStatus && newStatus && (
+                                      <>
+                                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(oldStatus)}`}>{oldStatus}</span>
+                                        <span className="text-gray-400 text-xs">→</span>
+                                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(newStatus)}`}>{newStatus}</span>
+                                      </>
+                                    )}
+                                    {!oldStatus && newStatus && (
+                                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(newStatus)}`}>{newStatus}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))
-                    ) : (
-                      <div className="relative pl-8">
-                        <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-gray-300 rounded-full z-10" />
-                        <p className="text-xs text-gray-400">No activity recorded yet</p>
                       </div>
-                    )}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="flex gap-3 items-start pl-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                        <Circle className="w-3 h-3 text-gray-400" />
+                      </div>
+                      <p className="text-[13px] text-gray-400 pt-1">No activity recorded yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

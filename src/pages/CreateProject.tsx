@@ -456,6 +456,7 @@ export default function CreateProject() {
     createProject(data, {
       onSuccess: async (result: any) => {
         const projectData = result?.project || result;
+        navigate("/");
         if (!projectData) {
           toast.error("Failed to retrieve project details after save");
           setIsSubmitting(false);
@@ -467,21 +468,20 @@ export default function CreateProject() {
           try {
             await uploadFiles(pId);
             toast.success("Project created with attachments!");
+            navigate("/");
           } catch {
             toast.error("Project saved but some attachments failed to upload");
           }
         } else {
           toast.success("Project created successfully!");
+          navigate("/");
         }
 
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
-        try {
-          const u = JSON.parse(localStorage.getItem("user") || "null");
-          if (u?.id)
-            queryClient.invalidateQueries({
-              queryKey: [`projects/?userId=${u.id}`],
-            });
-        } catch { }
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            typeof query.queryKey[0] === 'string' &&
+            (query.queryKey[0] as string).startsWith('projects'),
+        });
 
         if (pId) {
           localStorage.setItem("selectedProjectId", String(pId));
@@ -490,7 +490,7 @@ export default function CreateProject() {
         }
 
         setIsSubmitting(false);
-        navigate("/");
+
       },
       onError: (error: any) => {
         setIsSubmitting(false);

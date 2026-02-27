@@ -67,13 +67,18 @@ const btns = [
   },
 ];
 
-// Role to document type mapping
+const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
+
+// Role to document type mapping - keys are normalized to Title Case for simpler lookup
 const rolePermissions: Record<string, string[]> = {
-  "Client": ["VO"],
-  "Owner": ["VO"],
-  "CLIENT": ["VO"],
-  "OWNER": ["VO"],
-  "Client Project Manager": ["VO"],
+  "Client": ALL_TASK_TYPES,
+  "Owner": ALL_TASK_TYPES,
+  "CLIENT": ALL_TASK_TYPES,
+  "OWNER": ALL_TASK_TYPES,
+  "CLIENT/OWNER": ALL_TASK_TYPES,
+  "Client/Owner": ALL_TASK_TYPES,
+  "Client / Owner": ALL_TASK_TYPES,
+  "Client Project Manager": ALL_TASK_TYPES,
   "Architect": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
   "Consultant Planning Engineer": ["CPI", "DC"],
@@ -373,12 +378,14 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
               {count}
             </Badge>
           </div>
-          <button
-            onClick={onAddClick}
-            className="text-[#717784] hover:text-gray-600"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+          {onAddClick && (
+            <button
+              onClick={onAddClick}
+              className="text-[#717784] hover:text-gray-600"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <SortableContext items={tasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
@@ -467,6 +474,18 @@ export default function Task() {
   );
 
   const { mutateAsync: updateTask } = usePatch();
+
+  // Check if user has permission to create any task type
+  const canCreateTask = useMemo(() => {
+    if (!userRole) return true;
+    const currentRoles = userRole.split(/\s*\/\s*/).map((r: string) => r.trim());
+    return currentRoles.some((role: string) => {
+      const direct = rolePermissions[role];
+      if (direct && direct.length > 0) return true;
+      const foundKey = Object.keys(rolePermissions).find(k => k.toLowerCase() === role.toLowerCase());
+      return foundKey ? rolePermissions[foundKey].length > 0 : false;
+    });
+  }, [userRole]);
 
   // Filter buttons based on user role
   const filteredBtns = useMemo(() => {
@@ -668,10 +687,10 @@ export default function Task() {
 
       try {
         await Promise.all([
-          updateTask({
-            url: `tasks/tasks/${active.id}/`,
-            data: { status: newStatus },
-          }),
+          // updateTask({
+          //   url: `tasks/tasks/${active.id}/`,
+          //   data: { status: newStatus },
+          // }),
           updateTask({
             url: `tasks/tasks/${active.id}/update-entity/`,
             data: { status: entityStatus, taskStatus: taskStatusMap[newStatus] || newStatus },
@@ -719,9 +738,9 @@ export default function Task() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex gap-6 min-w-min h-full">
-                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={() => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); }} />
-                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={() => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); }} />
-                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={() => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); }} />
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
                 </div>
 
                 <DragOverlay>

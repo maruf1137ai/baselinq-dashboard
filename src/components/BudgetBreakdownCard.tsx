@@ -3,14 +3,16 @@ import { DollarSign } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import SaveMoney from './icons/SaveMoney';
-import { useProjects } from '@/supabse/hook/useProject';
+import { useProjects } from '@/hooks/useProjects';
 import { format, differenceInDays, isAfter, parseISO } from 'date-fns';
 
 
 export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDaysStatus }) {
   const { data: projects = [], isLoading } = useProjects();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const selectedProject = projects.find((project: any) => (project._id || project.id) === selectedProjectId);
+  const selectedProject = (projects as any[]).find((project: any) =>
+    String(project._id || project.id) === String(selectedProjectId)
+  );
 
   const dynamicTimelineData = useMemo(() => {
     if (!selectedProject) {

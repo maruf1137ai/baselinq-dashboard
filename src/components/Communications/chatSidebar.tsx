@@ -129,7 +129,7 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
         )}
       </div>
 
-      <SidebarFooter className="p-3">
+      {/* <SidebarFooter className="p-3">
         {open ? (
           <button className="flex items-center gap-2 text-sm text-[#0D0D0D] hover:text-foreground w-full justify-center py-2">
             <InviteMember />
@@ -140,7 +140,7 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
             <InviteMember />
           </Button>
         )}
-      </SidebarFooter>
+      </SidebarFooter> */}
     </div>
   );
 }

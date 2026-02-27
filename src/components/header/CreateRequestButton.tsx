@@ -57,13 +57,18 @@ const btns = [
   },
 ];
 
+const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
+
 // Role to document type mapping - keys are normalized to Title Case for simpler lookup
 const rolePermissions: Record<string, string[]> = {
-  "Client": ["VO"],
-  "Owner": ["VO"],
-  "CLIENT": ["VO"],
-  "OWNER": ["VO"],
-  "Client Project Manager": ["VO"],
+  "Client": ALL_TASK_TYPES,
+  "Owner": ALL_TASK_TYPES,
+  "CLIENT": ALL_TASK_TYPES,
+  "OWNER": ALL_TASK_TYPES,
+  "CLIENT/OWNER": ALL_TASK_TYPES,
+  "Client/Owner": ALL_TASK_TYPES,
+  "Client / Owner": ALL_TASK_TYPES,
+  "Client Project Manager": ALL_TASK_TYPES,
   "Architect": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
   "Consultant Planning Engineer": ["CPI", "DC"],

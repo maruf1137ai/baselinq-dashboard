@@ -259,7 +259,7 @@ const AiWorkSpace = () => {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask Base AI anything..."
+                    placeholder="Ask BaselinQ AI anything..."
                     className="min-h-[24px] max-h-[200px] resize-none border-0 px-0 py-1.5 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     rows={1}
                   />
@@ -280,7 +280,7 @@ const AiWorkSpace = () => {
         {!hasMessages && (
           <div className="h-full w-full flex items-center justify-center">
             <div>
-              <h2 className="text-[32px] text-center mb-14 text-black">What are you asking Base Ai Today?</h2>
+              <h2 className="text-[32px] text-center mb-14 text-black">Ask BaselinQ AI anything...</h2>
               <div>
                 {/* Input Area */}
                 <div className="px-6 py-4">
@@ -294,7 +294,7 @@ const AiWorkSpace = () => {
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask Base AI anything..."
+                        placeholder="Ask BaselinQ AI anything..."
                         className="min-h-[24px] max-h-[200px] resize-none border-0 px-0 py-1.5 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         rows={1}
                       />

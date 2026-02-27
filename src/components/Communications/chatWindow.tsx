@@ -472,7 +472,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               className="box-border content-stretch flex flex-col gap-2 items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
               data-name="chat">
               {/* Channel welcome banner */}
-              <div className="flex flex-col items-center justify-center w-full py-8 self-center">
+              <div className="flex flex-col items-center justify-center w-full py-8 self-center hidden">
                 <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                   <MessageSquare className="h-7 w-7 text-gray-400" />
                 </div>

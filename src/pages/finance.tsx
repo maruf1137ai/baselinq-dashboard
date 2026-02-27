@@ -5,7 +5,6 @@ import {
   VariationOrder,
 } from "@/components/finance/VariationOrdersTable";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { VOSummaryDrawer } from "@/components/finance/voSummaryDrwaer";
 import CostLadger from "@/components/finance/costLadger";
@@ -33,9 +32,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const TABS = [
-  "Variation Orders",
   "Cost Ledger",
   "Payment Certificates",
+  "Variation Orders",
   // "Forecast",
 ];
 
@@ -53,7 +52,7 @@ const formatDate = (dateStr: string): string => {
 };
 
 const Finance = () => {
-  const [activeTab, setActiveTab] = useState("Variation Orders");
+  const [activeTab, setActiveTab] = useState("Cost Ledger");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isVOModalOpen, setIsVOModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -177,19 +176,11 @@ const Finance = () => {
 
           {activeTab === "Variation Orders" && (
             <main className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-                <h1 className="text-base text-[#0E1C2E]">Variation Orders</h1>
-                <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsVOModalOpen(true)}>
-                    <PlusIcon className="w-5 h-5" />
-                    New Variation Order
-                  </Button>
-                </div>
-              </div>
               <VariationOrdersTable
                 orders={variationOrders}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onNew={() => setIsVOModalOpen(true)}
               />
             </main>
           )}

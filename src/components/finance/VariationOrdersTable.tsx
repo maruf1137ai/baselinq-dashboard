@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { MoreIcon } from "../icons/icons";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ interface VariationOrdersTableProps {
   onViewDetails?: (orderId: string) => void;
   onEdit?: (order: VariationOrder) => void;
   onDelete?: (order: VariationOrder) => void;
+  onNew?: () => void;
 }
 
 export enum OrderStatus {
@@ -81,6 +82,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   orders,
   onEdit,
   onDelete,
+  onNew,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -111,16 +113,27 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
 
   return (
     <div>
-      {/* Search */}
-      <div className="mb-4 relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={handleSearch}
-          placeholder="Search by VO #, title, requested by..."
-          className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#8081F6]/30 focus:border-[#8081F6]"
-        />
+      {/* Search + New button */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearch}
+            placeholder="Search by VO #, title, requested by..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#8081F6]/30 focus:border-[#8081F6]"
+          />
+        </div>
+        {onNew && (
+          <button
+            onClick={onNew}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-[#8081F6] hover:bg-[#6366F1] transition-all shadow-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            New Variation Order
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
@@ -231,11 +244,10 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                 <button
                   key={p}
                   onClick={() => setPage(p as number)}
-                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p
-                      ? "bg-[#8081F6] text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}>
+                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${safePage === p
+                    ? "bg-[#8081F6] text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                    }`}>
                   {p}
                 </button>
               )
