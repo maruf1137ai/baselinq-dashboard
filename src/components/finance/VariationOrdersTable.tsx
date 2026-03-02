@@ -174,11 +174,20 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">
                     <div className="flex items-center gap-2">
-                      <img
-                        src={order.requestedBy.avatarUrl}
-                        alt={order.requestedBy.name}
-                        className="w-7 h-7 rounded-full"
-                      />
+                      {order.requestedBy.avatarUrl ? (
+                        <img
+                          src={order.requestedBy.avatarUrl}
+                          alt={order.requestedBy.name}
+                          className="w-7 h-7 rounded-full object-cover text-white"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; }}
+                        />
+                      ) : null}
+                      <div
+                        className="w-7 h-7 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-xs font-medium shrink-0"
+                        style={{ display: order.requestedBy.avatarUrl ? 'none' : 'flex' }}
+                      >
+                        {order.requestedBy.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
                       <span className="text-sm text-[#0E1C2E]">{order.requestedBy.name}</span>
                     </div>
                   </td>

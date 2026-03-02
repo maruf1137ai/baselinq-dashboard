@@ -121,7 +121,7 @@ export function DashboardSidebar() {
 
   useEffect(() => {
     // console.log(selectedProjectId)
-    const isTrulyEmpty = !isLoading && projects.length === 0;
+    const isTrulyEmpty = !isLoading && user && projectsData && projects.length === 0;
     // console.log(!isLoading, user, projectsData, projects.length === 0)
 
     if (isTrulyEmpty) {
@@ -321,7 +321,9 @@ export function DashboardSidebar() {
               <SidebarGroupContent className="">
                 <SidebarMenu>
                   {navItems.map((item) => {
-                    const isActive = location.pathname === item.url;
+                    const isActive = item.url === "/"
+                      ? location.pathname === "/"
+                      : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
@@ -361,7 +363,7 @@ export function DashboardSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {settingsItems.map((item) => {
-                    const isActive = location.pathname === item.url;
+                    const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
