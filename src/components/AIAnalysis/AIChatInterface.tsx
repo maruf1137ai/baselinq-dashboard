@@ -161,8 +161,8 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       <div className="px-6 py-4 bg-white/80 backdrop-blur-md border-b border-[#f0f1f3] flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6c5ce7] to-[#a29bfe] flex items-center justify-center shadow-lg shadow-purple-100">
-              <Bot className="h-5 w-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center shadow-lg p-1">
+              <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain scale-110" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#00b894] border-2 border-white rounded-full" />
           </div>

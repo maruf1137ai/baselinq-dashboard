@@ -258,7 +258,7 @@ export function DashboardSidebar() {
               <DropdownMenuTrigger asChild>
                 <div className="p-3 border border-[#EDEDED] rounded-[16px] flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors">
                   <div className="h-9 w-9 bg-[#121212] rounded-[10px] flex items-center justify-center">
-                    <Logo />
+                    <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <h1 className="text-sm font-regular text-[#121212] aeonik truncate">

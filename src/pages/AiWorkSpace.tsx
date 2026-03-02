@@ -196,7 +196,9 @@ const AiWorkSpace = () => {
                       </div>
                     ) : (
                       <div className="flex gap-3">
-                        <BaseLinkAI />
+                        <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center shrink-0 p-1">
+                          <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+                        </div>
                         <div className="flex-1">
                           <div className="prose prose-sm max-w-none">
                             <ReactMarkdown
@@ -324,7 +326,7 @@ const AiWorkSpace = () => {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask BaselinQ AI anything..."
+                    placeholder="How can Link AI assist you today?"
                     className="min-h-[24px] max-h-[200px] resize-none border-0 px-0 py-1.5 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     rows={1}
                   />
@@ -359,7 +361,7 @@ const AiWorkSpace = () => {
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask BaselinQ AI anything..."
+                        placeholder="How can Link AI assist you today?"
                         className="min-h-[24px] max-h-[200px] resize-none border-0 px-0 py-1.5 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         rows={1}
                       />
