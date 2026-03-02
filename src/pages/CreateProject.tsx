@@ -38,6 +38,7 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import Logo from "@/components/icons/Logo";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -263,6 +264,7 @@ export default function CreateProject() {
   const vatAmount = budget * (vatRate / 100);
   const totalWithVat = budget + vatAmount;
   const retentionAmount = budget * (retentionRate / 100);
+  const { data: user } = useCurrentUser();
 
   const getDuration = useCallback(() => {
     if (!form.start_date || !form.end_date) return null;
@@ -461,40 +463,33 @@ export default function CreateProject() {
           setIsSubmitting(false);
           return;
         }
+
         const pId = projectData._id || projectData.id;
+
+        // Set selected project in localStorage BEFORE navigating
+        if (pId) {
+          localStorage.setItem("selectedProjectId", String(pId));
+          if (projectData.location)
+            localStorage.setItem("projectLocation", projectData.location);
+          window.dispatchEvent(new Event("project-change"));
+        }
 
         if (files.length > 0 && pId) {
           try {
             await uploadFiles(pId);
-            if (pId) {
-              localStorage.setItem("selectedProjectId", String(pId));
-              if (projectData.location)
-                localStorage.setItem("projectLocation", projectData.location);
-            }
             toast.success("Project created with attachments!");
-            navigate("/");
           } catch {
             toast.error("Project saved but some attachments failed to upload");
           }
         } else {
           toast.success("Project created successfully!");
-          navigate("/");
         }
 
-        queryClient.invalidateQueries({
-          predicate: (query) =>
-            typeof query.queryKey[0] === 'string' &&
-            (query.queryKey[0] as string).startsWith('projects'),
-        });
-
-        if (pId) {
-          localStorage.setItem("selectedProjectId", String(pId));
-          if (projectData.location)
-            localStorage.setItem("projectLocation", projectData.location);
-        }
+        // Refetch project list so dashboard has fresh data immediately
+        await queryClient.refetchQueries({ queryKey: [`projects/?userId=${user?.id}`] });
 
         setIsSubmitting(false);
-
+        navigate("/");
       },
       onError: (error: any) => {
         setIsSubmitting(false);

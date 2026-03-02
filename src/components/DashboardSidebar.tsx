@@ -121,7 +121,8 @@ export function DashboardSidebar() {
 
   useEffect(() => {
     // console.log(selectedProjectId)
-    const isTrulyEmpty = !isLoading && user && projectsData && projects.length === 0;
+    const isTrulyEmpty = !isLoading && projects.length === 0;
+    // console.log(!isLoading, user, projectsData, projects.length === 0)
 
     if (isTrulyEmpty) {
       if (selectedProjectId) {
