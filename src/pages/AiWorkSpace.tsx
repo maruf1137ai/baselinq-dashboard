@@ -198,14 +198,14 @@ const AiWorkSpace = () => {
                       <div className="flex gap-3">
                         <BaseLinkAI />
                         <div className="flex-1">
-                          <div className="prose prose-sm max-w-none">
+                          <div className="prose prose-sm max-w-none text-justify">
                             <ReactMarkdown
                               components={{
-                                p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground mb-2 last:mb-0">{children}</p>,
+                                p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground mb-2 last:mb-0 text-justify">{children}</p>,
                                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                                 ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2 text-sm text-foreground">{children}</ul>,
                                 ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2 text-sm text-foreground">{children}</ol>,
-                                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                                li: ({ children }) => <li className="leading-relaxed text-justify">{children}</li>,
                                 h1: ({ children }) => <h1 className="text-base font-bold mb-2 text-foreground">{children}</h1>,
                                 h2: ({ children }) => <h2 className="text-sm font-bold mb-1.5 text-foreground">{children}</h2>,
                                 h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 text-foreground">{children}</h3>,
