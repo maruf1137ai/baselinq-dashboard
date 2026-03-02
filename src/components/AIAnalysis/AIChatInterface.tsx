@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, User, Bot, Sparkles, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal } from "lucide-react";
+import { Send, User, Bot, Sparkles, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchData, postData } from "@/lib/Api";
 import { toast } from "sonner";
@@ -254,32 +254,24 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                 )}
               </div>
 
-              {/* Sources */}
+              {/* Citations (inline pills with hover popover) */}
               {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-4 w-full">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#e2e8f0] to-transparent" />
-                    <span className="text-[10px] font-medium text-[#94a3b8] uppercase tracking-widest whitespace-nowrap">Evidence & References</span>
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#e2e8f0] to-transparent" />
-                  </div>
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {msg.sources.map((source, si) => (
-                      <div key={si} className="group/src p-3 rounded-xl bg-[#f8fafc] border border-[#eef2f6] hover:border-[#6c5ce7]/30 hover:bg-white hover:shadow-md transition-all duration-300">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="bg-[#6c5ce7]/10 text-[#6c5ce7] text-[10px] font-medium px-2 py-0.5 rounded-full border border-[#6c5ce7]/10">
-                              Clause {source.clause_number}
-                            </span>
-                            <span className="text-[11px] font-medium text-[#1a1a2e] line-clamp-1">{source.clause_title}</span>
-                          </div>
-                          <span className="text-[10px] font-medium text-[#94a3b8]">P. {source.page_number}</span>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {msg.sources.map((source, si) => (
+                    <div key={si} className="relative group/cite">
+                      <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors cursor-default">
+                        <FileText className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[11px] text-muted-foreground font-medium">Clause {source.clause_number}</span>
+                      </button>
+                      <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover/cite:opacity-100 group-hover/cite:visible transition-all duration-150 z-50">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <p className="text-xs font-semibold text-foreground truncate">{source.clause_title} — Page {source.page_number}</p>
                         </div>
-                        <p className="text-[11px] text-[#64748b] leading-relaxed line-clamp-2 italic border-l-2 border-[#6c5ce7]/20 pl-3 py-0.5">
-                          "{source.excerpt}"
-                        </p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{source.excerpt}</p>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

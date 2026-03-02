@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, FileText, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,6 +11,7 @@ import BaseLinkAI from '@/components/icons/BaseLinkAI';
 import Clip from '@/components/icons/Clip';
 import { fetchData, postData } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
+import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 
 interface ChatSource {
   clause_number: string;
@@ -25,6 +26,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: ChatSource[];
+  price_breakdown?: any;
 }
 
 
@@ -56,6 +58,7 @@ const AiWorkSpace = () => {
             role: msg.role === 'user' ? 'user' : 'assistant',
             content: msg.content || '',
             sources: msg.sources || [],
+            price_breakdown: msg.price_breakdown || null,
           }));
           setMessages(formatted);
         } else {
@@ -71,6 +74,7 @@ const AiWorkSpace = () => {
                 role: m.role === 'user' ? 'user' : 'assistant',
                 content: m.content || '',
                 sources: m.sources || [],
+                price_breakdown: m.price_breakdown || null,
               }));
               setMessages(loaded);
             }
@@ -210,24 +214,85 @@ const AiWorkSpace = () => {
                               {message.content}
                             </ReactMarkdown>
                           </div>
-                          {/* Sources */}
-                          {message.sources && message.sources.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources cited:</p>
-                              <div className="grid gap-2">
-                                {message.sources.map((source, si) => (
-                                  <div key={si} className="p-2.5 rounded-lg bg-muted border border-border">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-[11px] font-bold text-primary">Clause {source.clause_number}</span>
-                                      <span className="text-[10px] text-muted-foreground">Page {source.page_number}</span>
+                          {/* Price Breakdown (VO only) */}
+                          {message.price_breakdown?.items_analysis?.length > 0 && (
+                            <div className="mt-4">
+                              <PriceBreakdown
+                                priceData={message.price_breakdown}
+                                visibleSections={999}
+                                startSelector={0}
+                              />
+                            </div>
+                          )}
+                          {/* Citations (ChatGPT style) */}
+                          {(() => {
+                            const hasClauseSources = message.sources && message.sources.length > 0;
+                            const hasPriceSources = message.price_breakdown?.items_analysis?.some(
+                              (item: any) => item.market_verification?.web_search_result || item.market_verification?.sources?.length
+                            );
+                            if (!hasClauseSources && !hasPriceSources) return null;
+
+                            // Build combined citation list
+                            const citations: { type: 'clause' | 'market'; label: string; detail: string; subtext: string }[] = [];
+
+                            // Contract clause citations
+                            message.sources?.forEach((source) => {
+                              citations.push({
+                                type: 'clause',
+                                label: `Clause ${source.clause_number}`,
+                                detail: `${source.clause_title} — Page ${source.page_number}`,
+                                subtext: source.excerpt,
+                              });
+                            });
+
+                            // Market price citations from price_breakdown
+                            message.price_breakdown?.items_analysis?.forEach((item: any) => {
+                              const mv = item.market_verification;
+                              if (mv?.sources?.length) {
+                                mv.sources.forEach((src: string) => {
+                                  if (src && src !== 'Internal estimation model - web search recommended') {
+                                    citations.push({
+                                      type: 'market',
+                                      label: item.description?.slice(0, 25) + (item.description?.length > 25 ? '...' : ''),
+                                      detail: `${src} — ${item.description}`,
+                                      subtext: mv.assessment || '',
+                                    });
+                                  }
+                                });
+                              }
+                            });
+
+                            if (citations.length === 0) return null;
+
+                            return (
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {citations.map((cite, ci) => (
+                                  <div key={ci} className="relative group">
+                                    <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors cursor-default">
+                                      {cite.type === 'clause' ? (
+                                        <FileText className="h-3 w-3 text-muted-foreground" />
+                                      ) : (
+                                        <Globe className="h-3 w-3 text-muted-foreground" />
+                                      )}
+                                      <span className="text-[11px] text-muted-foreground font-medium">{cite.label}</span>
+                                    </button>
+                                    {/* Hover popover */}
+                                    <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        {cite.type === 'clause' ? (
+                                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                                        ) : (
+                                          <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+                                        )}
+                                        <p className="text-xs font-semibold text-foreground truncate">{cite.detail}</p>
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{cite.subtext}</p>
                                     </div>
-                                    <p className="text-[11px] text-foreground font-medium truncate">{source.clause_title}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1 italic line-clamp-2">"{source.excerpt}"</p>
                                   </div>
                                 ))}
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
