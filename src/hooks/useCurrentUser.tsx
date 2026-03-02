@@ -17,10 +17,20 @@ interface User {
 const getCurrentUser = (): User | null => {
   try {
     const userStr = localStorage.getItem("user");
-    if (!userStr) return null;
+    if (!userStr) {
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+      return null
+    }
+
     return JSON.parse(userStr) as User;
   } catch (error) {
-    console.error("Error parsing user from localStorage:", error);
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
     return null;
   }
 };

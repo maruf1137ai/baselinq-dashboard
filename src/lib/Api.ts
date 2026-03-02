@@ -346,6 +346,12 @@ api.interceptors.response.use(
         const res = await api.post("auth/token/refresh/", { refresh });
         const newAccess = res.data.access;
 
+        if (!newAccess) {
+          localStorage.removeItem("access");
+          localStorage.removeItem("refresh");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
         // Save new access token
         localStorage.setItem("access", newAccess);
 
