@@ -456,7 +456,6 @@ export default function CreateProject() {
     createProject(data, {
       onSuccess: async (result: any) => {
         const projectData = result?.project || result;
-        navigate("/");
         if (!projectData) {
           toast.error("Failed to retrieve project details after save");
           setIsSubmitting(false);
@@ -467,6 +466,11 @@ export default function CreateProject() {
         if (files.length > 0 && pId) {
           try {
             await uploadFiles(pId);
+            if (pId) {
+              localStorage.setItem("selectedProjectId", String(pId));
+              if (projectData.location)
+                localStorage.setItem("projectLocation", projectData.location);
+            }
             toast.success("Project created with attachments!");
             navigate("/");
           } catch {
@@ -582,7 +586,7 @@ export default function CreateProject() {
                         ? "bg-[#f0edff]"
                         : "bg-transparent"
                     )}
->
+                  >
                     {/* Circle */}
                     <div
                       className={cn(
