@@ -268,7 +268,7 @@ const AiWorkSpace = () => {
                               <div className="mt-3 flex flex-wrap gap-1.5">
                                 {citations.map((cite, ci) => (
                                   <div key={ci} className="relative group">
-                                    <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors cursor-default">
+                                    <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
                                       {cite.type === 'clause' ? (
                                         <FileText className="h-3 w-3 text-muted-foreground" />
                                       ) : (

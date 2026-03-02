@@ -205,7 +205,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
           <div
             key={i}
             className={cn(
-              "flex group animate-in fade-in slide-in-from-bottom-3 duration-500",
+              "flex animate-in fade-in slide-in-from-bottom-3 duration-500",
               msg.role === 'user' ? "flex-row-reverse" : "flex-row"
             )}
           >
@@ -258,12 +258,12 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
               {msg.sources && msg.sources.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {msg.sources.map((source, si) => (
-                    <div key={si} className="relative group/cite">
-                      <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors cursor-default">
+                    <div key={si} className="relative group">
+                      <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
                         <FileText className="h-3 w-3 text-muted-foreground" />
                         <span className="text-[11px] text-muted-foreground font-medium">Clause {source.clause_number}</span>
                       </button>
-                      <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover/cite:opacity-100 group-hover/cite:visible transition-all duration-150 z-50">
+                      <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
                         <div className="flex items-center gap-1.5 mb-1">
                           <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                           <p className="text-xs font-semibold text-foreground truncate">{source.clause_title} — Page {source.page_number}</p>
@@ -276,7 +276,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
               )}
 
               {/* Timestamp */}
-              <span className="text-[10px] font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 group-hover:text-[#94a3b8] transition-colors">
+              <span className="text-[10px] font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
