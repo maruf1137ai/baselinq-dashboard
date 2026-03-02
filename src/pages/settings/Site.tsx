@@ -22,14 +22,21 @@ const Site = () => {
   });
 
   useEffect(() => {
+    const handleProjectChange = () => {
+      setSelectedProjectId(localStorage.getItem("selectedProjectId") || "");
+    };
+    window.addEventListener("project-change", handleProjectChange);
+    return () => window.removeEventListener("project-change", handleProjectChange);
+  }, []);
+
+  useEffect(() => {
     if (isLoading) return;
-    const project = projects.find((p: any) => p.id === selectedProjectId);
+    const project = projects.find((p: any) => p._id === selectedProjectId);
     setCurrentProject(project);
 
     if (project) {
       setSiteAddress(project.location || "");
       if (project.coordinates) {
-        // Assuming location is stored as {lat, lng} or similar format
         setCoordinates(project.coordinates);
       }
     }
@@ -43,18 +50,6 @@ const Site = () => {
     window.location.reload();
   };
 
-  // Handle coordinate input change
-  const handleCoordinateChange = (value: string) => {
-    const parts = value.split(",").map(s => s.trim());
-    if (parts.length === 2) {
-      const lat = parseFloat(parts[0]);
-      const lng = parseFloat(parts[1]);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        setCoordinates({ lat, lng });
-      }
-    }
-  };
-
   // Save location updates
   const handleSaveLocation = (newCoordinates?: { lat: number; lng: number }) => {
     if (!currentProject) {
@@ -65,7 +60,7 @@ const Site = () => {
     const coordsToSave = newCoordinates || coordinates;
 
     const updatedData = {
-      id: currentProject.id,
+      id: currentProject._id,
       location: siteAddress,
       coordinates: coordsToSave,
     };
@@ -144,12 +139,12 @@ const Site = () => {
             Coordinates (Lat, Long)
           </label>
           <Input
-            value={`${coordinates.lat}, ${coordinates.lng}`}
-            onChange={(e) => handleCoordinateChange(e.target.value)}
-            onBlur={() => handleSaveLocation()}
-            placeholder="-33.9249, 18.4241"
-            className="w-full bg-[#F9FAFB]"
+            value={coordinates.lat && coordinates.lng ? `${coordinates.lat}, ${coordinates.lng}` : ""}
+            readOnly
+            placeholder="Set via map"
+            className="w-full bg-[#F9FAFB] cursor-default text-[#6B7280]"
           />
+          <p className="text-xs text-[#9CA3AF] mt-1">Updated automatically when you move the map marker.</p>
         </div>
 
         {/* Weather Feed Toggle */}

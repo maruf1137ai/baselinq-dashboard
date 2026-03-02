@@ -582,11 +582,7 @@ export default function CreateProject() {
                         ? "bg-[#f0edff]"
                         : "bg-transparent"
                     )}
-                    style={
-                      active
-                        ? { borderLeft: "3px solid #6c5ce7", paddingLeft: "9px" }
-                        : { borderLeft: "3px solid transparent", paddingLeft: "9px" }
-                    }>
+>
                     {/* Circle */}
                     <div
                       className={cn(

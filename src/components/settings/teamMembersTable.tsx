@@ -695,7 +695,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   className="hover:bg-gray-50/50 transition-colors duration-150 text-[#1A1A1A]">
                   <td className="px-6 py-4 whitespace-nowrap text-base text-[#1A1A1A] h">
                     <div className="my-auto flex items-center gap-5 capitalize">
-                      {member.user.profile ? (
+                      {/* {member.user.profile ? (
                         <img
                           src={member.user.profile}
                           alt=""
@@ -705,7 +705,10 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                         <div className="h-[37px] w-[37px] rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium uppercase">
                           {member.user.name?.charAt(0) || "?"}
                         </div>
-                      )}
+                      )} */}
+                      <div className="h-[37px] w-[37px] rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium uppercase">
+                        {member.user.name?.charAt(0) || "?"}
+                      </div>
                       {member.user.name}
                     </div>
                   </td>

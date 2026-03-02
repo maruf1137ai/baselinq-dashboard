@@ -8,6 +8,7 @@ import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileText, ArrowRight } from 'lucide-react';
+import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import MyAction from '@/components/icons/MyAction';
 import Caution2 from '@/components/icons/Caution2';
 import Asterisk from '@/components/icons/Asterisk';
@@ -21,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 const Index = () => {
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
+  const [selectedDoc, setSelectedDoc] = useState<any>(null);
 
   const { data: tasksResponse, isLoading: loadingTasks } = useFetch<{ tasks: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
@@ -306,12 +308,10 @@ const Index = () => {
                 {recentDocuments.map((doc: any, i: number) => {
                   const fileName = doc.file_name || doc.fileName || doc.name || "Document";
                   return (
-                    <a
+                    <button
                       key={doc.id || doc._id || i}
-                      href={doc.file_url || doc.fileUrl || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-[#F3F2F0] transition-colors"
+                      onClick={() => setSelectedDoc(doc)}
+                      className="w-full flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-[#F3F2F0] transition-colors text-left"
                     >
                       <span className="text-base">{getFileIcon(fileName)}</span>
                       <div className="flex-1 min-w-0">
@@ -323,7 +323,7 @@ const Index = () => {
                         </p>
                       </div>
                       <ArrowRight className="h-3 w-3 text-[#9CA3AF] shrink-0" />
-                    </a>
+                    </button>
                   );
                 })}
               </div>
@@ -379,6 +379,15 @@ const Index = () => {
         </div> */}
 
       </div>
+      {/* Document Preview Modal */}
+      <FilePreviewModal
+        isOpen={!!selectedDoc}
+        onOpenChange={(open) => { if (!open) setSelectedDoc(null); }}
+        file={selectedDoc ? {
+          name: selectedDoc.file_name || selectedDoc.fileName || selectedDoc.name || "Document",
+          url: selectedDoc.file_url || selectedDoc.fileUrl || "",
+        } : null}
+      />
     </DashboardLayout>
   );
 };
