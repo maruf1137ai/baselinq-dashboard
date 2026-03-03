@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowUp, FileText, Globe } from 'lucide-react';
+import { ArrowUp, FileText, Globe, PanelLeft } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,10 +33,13 @@ interface Message {
 
 const AiWorkSpace = () => {
   const { taskTypeSlug, taskId } = useParams<{ taskTypeSlug: string; taskId: string }>();
+  const { data: user } = useCurrentUser();
+  const firstName = user?.name?.split(' ')[0] || '';
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -173,12 +177,18 @@ const AiWorkSpace = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="flex h-[calc(100vh-64px)] overflow-hidden">
-        <ChatSidebar onNewChat={handleNewChat} />
+        <ChatSidebar onNewChat={handleNewChat} open={sidebarOpen} onToggle={() => setSidebarOpen(p => !p)} />
         {hasMessages && (
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col min-w-0">
+            {/* Mobile sidebar toggle */}
+            <div className="flex md:hidden items-center px-3 pt-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(p => !p)}>
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </div>
             {/* Main Chat Area */}
             <ScrollArea className="flex-1">
-              <div className="mx-auto max-w-4xl px-6 pt-4 pb-2">
+              <div className="mx-auto max-w-4xl px-3 sm:px-6 pt-4 pb-2">
                 {isLoading && messages.length === 0 && (
                   <div className="flex items-center justify-center py-20">
                     <div className="text-center text-sm text-muted-foreground">
@@ -315,7 +325,7 @@ const AiWorkSpace = () => {
             </ScrollArea>
 
             {/* Input Area */}
-            <div className="px-6 py-4">
+            <div className="px-3 sm:px-6 py-4">
               <div className="mx-auto max-w-4xl">
                 <div className="relative flex items-end gap-2 rounded-[7px] bg-[#F9F9F9] px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -345,37 +355,84 @@ const AiWorkSpace = () => {
         )}
         {/* New chat interface (no task context) */}
         {!hasMessages && (
-          <div className="h-full w-full flex items-center justify-center">
-            <div>
-              <h2 className="text-[32px] text-center mb-14 text-black">Ask BaselinQ AI anything...</h2>
-              <div>
-                {/* Input Area */}
-                <div className="px-6 py-4">
-                  <div className="mx-auto w-[680px]">
-                    <div className="relative flex items-end gap-2 rounded-[7px] bg-[#F9F9F9] px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                        <Clip />
-                      </Button>
-                      <Textarea
-                        ref={textareaRef}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="How can Link AI assist you today?"
-                        className="min-h-[24px] max-h-[200px] resize-none border-0 px-0 py-1.5 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        rows={1}
-                      />
+          <div className="h-full w-full flex flex-col bg-gradient-to-b from-white via-white to-[#F4F4FF]">
+            {/* Mobile sidebar toggle for empty state */}
+            <div className="flex md:hidden items-center px-3 pt-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(p => !p)}>
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-full max-w-[680px] mx-auto px-4">
+
+                {/* Brand badge */}
+                {/* <div className="flex justify-center mb-8">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1A1A] text-white text-xs font-medium">
+                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                      <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
+                    </div>
+                    <span>Linq AI</span>
+                  </div>
+                </div> */}
+
+                {/* Greeting heading with inline logo */}
+                <h2 className="text-[32px] sm:text-[42px] font-normal tracking-tight text-center text-[#1A1A1A] mb-8 flex items-center justify-center gap-3 flex-wrap">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#1A1A1A] flex items-center justify-center p-1.5 shrink-0">
+                    <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
+                  </div>
+                  {firstName ? `What's on your mind, ${firstName}?` : 'What\'s on your mind?'}
+                </h2>
+
+                {/* Input with bottom toolbar */}
+                <div className="rounded-2xl bg-white border border-[#E5E7EB] shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#8081F6]/30 focus-within:border-[#8081F6] transition-all">
+                  <Textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="How can I help you today?"
+                    className="min-h-[90px] max-h-[200px] resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    rows={3}
+                  />
+                  {/* Bottom toolbar */}
+                  <div className="flex items-center justify-between px-3 pb-3 pt-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#6B7280] hover:text-[#1A1A1A]">
+                      <Clip />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#9CA3AF] font-medium select-none">Linq AI</span>
                       <Button
                         onClick={handleSend}
                         size="icon"
                         className="h-8 w-8 disabled:bg-[#E0E0E0] shrink-0 rounded-full"
                         disabled={!input.trim() || isTyping}
                       >
-                        <ArrowUp />
+                        <ArrowUp className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </div>
+
+                {/* Suggested prompt chips */}
+                {/* <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  {[
+                    "Summarise latest RFIs",
+                    "Flag overdue variations",
+                    "Check JBCC clause 26",
+                    "What are my delay claim obligations?",
+                    "Review VO pricing",
+                  ].map((prompt) => (
+                    <button
+                      key={prompt}
+                      onClick={() => { setInput(prompt); textareaRef.current?.focus(); }}
+                      className="text-xs text-[#4b5563] bg-white hover:bg-[#8081F6] hover:text-white px-3 py-1.5 rounded-full border border-[#E5E7EB] hover:border-[#8081F6] transition-all duration-200 shadow-sm active:scale-95"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div> */}
+
               </div>
             </div>
           </div>

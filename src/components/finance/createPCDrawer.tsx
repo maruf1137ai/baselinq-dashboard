@@ -671,7 +671,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 </button>
               </div>
 
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto no-scrollbar rounded-lg border border-gray-200">
                 <table className="w-full text-sm min-w-[780px]">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">

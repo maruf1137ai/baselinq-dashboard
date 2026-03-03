@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Plus,
   PenSquare,
@@ -49,12 +48,13 @@ interface GroupedSessions {
 
 interface ChatSidebarProps {
   onNewChat: () => void;
+  open: boolean;
+  onToggle: () => void;
 }
 
-export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
+export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
   const { taskId: currentTaskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(true);
 
   const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>("ai_analysis/chat-sessions/");
 
@@ -87,7 +87,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
 
   return (
     <div
-      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all ${open ? "w-64" : "w-16"
+      className={`border-r h-full flex flex-col border-[#DEDEDE] transition-all duration-300 ${open ? "w-64" : "w-0 overflow-hidden md:w-16 md:overflow-visible border-r-0 md:border-r"
         }`}>
       <div className=" p-3">
         <div
@@ -95,7 +95,7 @@ export function ChatSidebar({ onNewChat }: ChatSidebarProps) {
             } gap-2`}>
           <button
             className="w-[50px] rounded-lg flex items-center justify-center h-10 bg-[#F9F9F9] shrink-0"
-            onClick={setOpen.bind(null, !open)}>
+            onClick={onToggle}>
             <SideBar />
           </button>
           {/* {open && (

@@ -257,9 +257,16 @@ function TaskCard({ task, isDragging }: any) {
       >
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm text-[#1A1A1A] leading-tight flex-1">
-              {displayId} · {task.title || task.taskActivityName}
-            </h3>
+            <div className="">
+              <h3 className="text-xs text-[#1A1A1A] leading-tight flex-1">
+                {displayId}
+              </h3>
+              <h3 className="text-sm text-[#1A1A1A] leading-tight flex-1 mt-2 font-normal">
+                {task.title || task.taskActivityName}
+                {/* Lorem ipsum dolor, sit amet consectetur adipisicing elit. Ipsa, excepturi. */}
+              </h3>
+
+            </div>
             {priorityInfo && (
               <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${priorityInfo.color} shrink-0`}>
                 {priorityInfo.label}
@@ -313,35 +320,36 @@ function TaskCard({ task, isDragging }: any) {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <span className="text-xs border-b border-dotted border-[#717784] text-[#717784]">{task.type}</span>
-          </div>
+          </div> */}
 
-          <div>
-            {task.warning && (
-              <div className="bg-orange-50 border border-[#FED7AA] rounded-[28px] py-[5px] px-[9px] flex items-center gap-2">
-                <Spark />
-                <span className="text-[11px] text-[#D97706]">{task.warning}</span>
-              </div>
-            )}
+          {(task?.warning || (commentCount > 0 || attachmentCount > 0)) && (
+            <div className="mt-3">
+              {task.warning && (
+                <div className="bg-orange-50 border border-[#FED7AA] rounded-[28px] py-[5px] px-[9px] flex items-center gap-2">
+                  <Spark />
+                  <span className="text-[11px] text-[#D97706]">{task.warning}</span>
+                </div>
+              )}
 
-            {(commentCount > 0 || attachmentCount > 0) && (
-              <div className="flex pt-[15px] border-t border-[#E6E8EB] mt-3 items-center gap-4 text-[#9CA3AF] text-xs">
-                {commentCount > 0 && (
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    <span>{commentCount}</span>
-                  </div>
-                )}
-                {attachmentCount > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Paperclip className="h-3.5 w-3.5" />
-                    <span>{attachmentCount}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              {(commentCount > 0 || attachmentCount > 0) && (
+                <div className="flex pt-[15px] border-t border-[#E6E8EB] mt-3 items-center gap-4 text-[#9CA3AF] text-xs">
+                  {commentCount > 0 && (
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span>{commentCount}</span>
+                    </div>
+                  )}
+                  {attachmentCount > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Paperclip className="h-3.5 w-3.5" />
+                      <span>{attachmentCount}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>)}
         </div>
       </Card>
     </div>

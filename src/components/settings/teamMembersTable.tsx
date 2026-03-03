@@ -666,7 +666,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
       </Dialog>
 
       <div className="rounded-lg border border-gray-200">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto no-scrollbar">
           <table className="divide-y divide-gray-200 w-full">
             <thead className="bg-gray-50/70">
               <tr>

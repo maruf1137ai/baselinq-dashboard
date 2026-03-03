@@ -274,8 +274,8 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
         />
       </div>
 
-      {/* Line Items */}
-      <div className="space-y-4">
+      {/* Line Items — temporarily hidden */}
+      {/* <div className="space-y-4">
         <div className="flex items-center justify-between border-b pb-2">
           <h3 className="text-sm text-[#1B1C1F] uppercase tracking-wider">Line Items</h3>
           <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-8 border-dashed">
@@ -350,7 +350,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
             <p className="text-sm text-gray-400">No items added yet. Click "+ Add Item" to begin.</p>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Upload Section */}
       <div>

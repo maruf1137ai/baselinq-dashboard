@@ -112,9 +112,9 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   };
 
   return (
-    <div>
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
       {/* Search + New button */}
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -136,7 +136,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -226,7 +226,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-4 px-1">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <p className="text-sm text-gray-500">
           {filtered.length === 0
             ? "No results"

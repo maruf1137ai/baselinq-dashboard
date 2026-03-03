@@ -1556,13 +1556,13 @@ export default function TaskDetails() {
                     <span>Powered by Baseline Intelligence</span>
                   </div> */}
                   <div className="flex items-center gap-3">
-                    {/* <Button
-                      variant="outline"
-                      className="text-sm"
-                      onClick={handleAnalyzeWithAi}
-                    >
-                      Analyze with Ai
-                    </Button> */}
+                    <Button
+                      className="font-normal"
+                      onClick={() => handleApproveTask('Approved')}
+                      disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
+                      {["Approved", "Completed"].includes(displayTask.timeline.current) ? "Approved" : "Approve"}
+                    </Button>
+
                     <button
                       onClick={() => setShowAiChat(!showAiChat)}
                       disabled={isAnalyzeLoading}
@@ -1760,14 +1760,6 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                <Button
-                  className="w-full mt-4 font-normal"
-                  onClick={() => handleApproveTask('Approved')}
-                  disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
-                  {["Approved", "Completed"].includes(displayTask.timeline.current)
-                    ? "Approved"
-                    : "Approve"}
-                </Button>
 
                 {/* Impact */}
                 {/* <Card className="p-[17px] rounded-[10px] text-[#6B7280] bg-white shadow-none border-[#E7E9EB]">
