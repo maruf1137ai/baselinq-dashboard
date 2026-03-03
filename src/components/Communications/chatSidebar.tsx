@@ -9,11 +9,12 @@ import InviteMember from "../icons/InviteMember";
 interface ChatSidebarProps {
   onNewChat: () => void;
   tasks: any[];
+  isLoading?: boolean;
   selectedTask: any;
   onSelectTask: (task: any) => void;
 }
 
-export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: ChatSidebarProps) {
+export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelectTask }: ChatSidebarProps) {
   const [open, setOpen] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Unread'>('All');
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,7 +70,20 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
             </div>
 
             <div className="flex flex-col gap-2">
-              {filteredTasks.map((channel) => {
+              {isLoading ? (
+                <div className="flex flex-col gap-2 mt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="py-3 px-4 rounded-[8px] border border-[#F0F0F0] animate-pulse">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="h-3 w-16 bg-gray-200 rounded" />
+                        <div className="h-3 w-10 bg-gray-200 rounded-full" />
+                      </div>
+                      <div className="h-3.5 w-3/4 bg-gray-200 rounded mb-2" />
+                      <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                    </div>
+                  ))}
+                </div>
+              ) : filteredTasks.map((channel) => {
                 const taskType = channel.taskType || "TSK";
                 const displayId = channel.taskId
                   ? `${taskType}-${String(channel.taskId).padStart(3, '0')}`
@@ -119,7 +133,7 @@ export function ChatSidebar({ onNewChat, tasks, selectedTask, onSelectTask }: Ch
                   </div>
                 );
               })}
-              {filteredTasks.length === 0 && (
+              {!isLoading && filteredTasks.length === 0 && (
                 <div className="text-center py-8 text-gray-500 text-sm">
                   No channels found
                 </div>

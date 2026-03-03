@@ -21,10 +21,10 @@ export interface TaskFilters {
 }
 
 export const defaultFilters: TaskFilters = {
-  docTypes: [],
+  docTypes: [...DOC_TYPES],
   assignee: 'all',
   dateRange: 'all',
-  myItems: true,
+  myItems: false,
 };
 
 interface TaskFilterBarProps {
@@ -43,7 +43,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
   };
 
   const hasActiveFilters =
-    filters.docTypes.length > 0 ||
+    filters.docTypes.length !== DOC_TYPES.length ||
     filters.assignee !== 'all' ||
     filters.dateRange !== 'all' ||
     filters.myItems;

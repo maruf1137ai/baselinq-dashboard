@@ -880,7 +880,7 @@ export default function TaskDetails() {
       const current = displayTask.timeline.current;
       const mapped = statusToStageMap[current] || current;
       const idx = displayTask.timeline.stages.indexOf(mapped);
-      return idx !== -1 ? idx : displayTask.timeline.stages.length - 1;
+      return idx !== -1 ? idx : 0;
     })()
     : 0;
 

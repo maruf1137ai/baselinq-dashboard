@@ -54,6 +54,7 @@ const Communications = () => {
         <div className="border-border bg-white flex-shrink-0">
           <ChatSidebar
             tasks={channels}
+            isLoading={isLoading}
             selectedTask={selectedChannel}
             onSelectTask={handleSelectChannel}
             onNewChat={() => { }} // Placeholder

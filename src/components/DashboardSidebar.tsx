@@ -134,8 +134,8 @@ export function DashboardSidebar() {
         clearUserRole();
       }
       navigate("/create-project");
-    } else if (projects.length > 0 && !selectedProjectId) {
-      // Auto select first project if none selected
+    } else if (projects.length > 0 && (!selectedProjectId || !projects.some((p: any) => String(p._id || p.id) === selectedProjectId))) {
+      // Auto select first project if none selected or stored ID doesn't match any project
       const firstProject = projects[0];
       const firstId = firstProject._id || firstProject.id;
       if (firstId) {
