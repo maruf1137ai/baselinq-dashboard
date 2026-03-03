@@ -327,6 +327,17 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // If the refresh endpoint itself returned 401 → token is dead, logout immediately
+    if (
+      error.response?.status === 401 &&
+      originalRequest.url?.includes("auth/token/refresh/")
+    ) {
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
     // If 401 and not retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

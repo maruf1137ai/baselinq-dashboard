@@ -3,7 +3,7 @@ import { Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import ProjectTimeline from './icons/ProjectTimeline';
-import { useProjects } from '@/supabse/hook/useProject';
+import { useProjects } from '@/hooks/useProjects';
 import { format, differenceInDays, isBefore, isAfter, parseISO } from 'date-fns';
 
 interface ProjectTimelineCardProps {

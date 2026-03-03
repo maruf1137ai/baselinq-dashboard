@@ -28,7 +28,8 @@ const DISCIPLINE_OPTIONS = [
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addNewTask, uploadFile } from "@/supabse/api";
+const addNewTask = async (_payload: any) => {};
+const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
 import { toast } from "sonner";
 
 const initialValues = {

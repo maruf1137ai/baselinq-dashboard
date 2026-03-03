@@ -465,7 +465,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const { data: projectUsersData, isLoading, refetch } = useFetch<ProjectUsersResponse>(
     `projects/${projectId}/team-members/`
   );
-  const { data: allUsersData, refetch: refetchAllUsers } = useFetch<UsersResponse>("auth/users/");
+  const { data: allUsersData, refetch: refetchAllUsers } = useFetch<UsersResponse>("auth/users/?page_size=500");
   const { data: rolesData, refetch: refetchRoles } = useFetch<RolesResponse>("auth/roles/");
 
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -580,46 +580,48 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     <CommandList>
                       <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
-                        {availableUsers.map((user) => {
-                          const isSelected = selectedUser?.id === user.id;
-                          return (
-                            <CommandItem
-                              key={user.id}
-                              value={user.name || user.email}
-                              onSelect={() => {
-                                setSelectedUser(user);
-                                setUserPopoverOpen(false);
-                              }}
-                              className="cursor-pointer">
-                              <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
-                                    {(user.name || user.email).charAt(0).toUpperCase()}
+                        <div className="">
+                          {availableUsers.map((user) => {
+                            const isSelected = selectedUser?.id === user.id;
+                            return (
+                              <CommandItem
+                                key={user.id}
+                                value={user.name || user.email}
+                                onSelect={() => {
+                                  setSelectedUser(user);
+                                  setUserPopoverOpen(false);
+                                }}
+                                className="cursor-pointer">
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                                      {(user.name || user.email).charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium">
+                                        {user.name || user.email}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {user.email}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">
-                                      {user.name || user.email}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {user.email}
-                                    </span>
+                                  <div
+                                    className={cn(
+                                      "h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                                      isSelected
+                                        ? "border-primary bg-primary"
+                                        : "border-gray-300 bg-white"
+                                    )}>
+                                    {isSelected && (
+                                      <Check className="h-3 w-3 text-white" />
+                                    )}
                                   </div>
                                 </div>
-                                <div
-                                  className={cn(
-                                    "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                    isSelected
-                                      ? "border-primary bg-primary"
-                                      : "border-gray-300 bg-white"
-                                  )}>
-                                  {isSelected && (
-                                    <Check className="h-3 w-3 text-white" />
-                                  )}
-                                </div>
-                              </div>
-                            </CommandItem>
-                          );
-                        })}
+                              </CommandItem>
+                            );
+                          })}
+                        </div>
                       </CommandGroup>
                     </CommandList>
                   </Command>

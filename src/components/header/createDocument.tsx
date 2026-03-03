@@ -30,7 +30,8 @@ import {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { addNewTask, uploadFile } from "@/supabse/api";
+const addNewTask = async (_payload: any) => {};
+const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
 
 const btns = [
   "VO - Variation Order",

@@ -71,7 +71,6 @@ import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
-import { useUpdateTask } from "@/supabse/hook/useTask";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
@@ -94,6 +93,13 @@ const approvalPermissions: Record<string, string[]> = {
 };
 
 const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+
+const displayStatus = (status: string): string => {
+  const s = (status || '').toLowerCase().replace(/_/g, ' ').trim();
+  if (s === 'done') return 'Approved';
+  if (s === 'in review' || s === 'review') return 'Review';
+  return capitalize(status.replace(/_/g, ' '));
+};
 
 const getRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -153,12 +159,34 @@ const getStatusBadgeColor = (status: string) => {
 const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string } => {
   const action = (log.action || '').toLowerCase();
   if (action === 'status_updated') {
-    const raw = log.newValue || log.new_value || log.to || log.value || log.description || '';
-    const match = typeof raw === 'string' ? raw.match(/to\s+(.+)$/i) : null;
-    const newStatus = capitalize(match ? match[1] : typeof raw === 'string' ? raw : '');
+    // Parse "Status changed from X to Y" — X/Y can be multi-word (e.g. "in review")
+    const desc = (log.description || '') as string;
+    const descLower = desc.toLowerCase();
+    const fromIdx = descLower.indexOf('from ');
+    const toIdx = descLower.lastIndexOf(' to ');
+    if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 4) {
+      const oldStatus = desc.slice(fromIdx + 5, toIdx).trim();
+      const newStatus = desc.slice(toIdx + 4).trim();
+      if (oldStatus && newStatus) {
+        return {
+          text: 'changed the status from',
+          oldStatus: displayStatus(oldStatus),
+          newStatus: displayStatus(newStatus),
+        };
+      }
+    }
+    // Fallback: try explicit old/new value fields
+    const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
-    const oldStatus = capitalize(typeof oldRaw === 'string' ? oldRaw : '');
-    return { text: 'updated the status', oldStatus: oldStatus || undefined, newStatus: newStatus || undefined };
+    if (raw || oldRaw) {
+      return {
+        text: 'changed the status from',
+        oldStatus: oldRaw ? displayStatus(oldRaw) : undefined,
+        newStatus: raw ? displayStatus(raw) : undefined,
+      };
+    }
+    // No parseable status info — show generic text without dangling "from"
+    return { text: 'updated the status' };
   }
   if (action === 'created') return { text: 'created this task' };
   if (action === 'assigned') return { text: 'assigned this task' };
@@ -182,7 +210,7 @@ export default function TaskDetails() {
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
-  const { mutateAsync: updateTask } = useUpdateTask();
+  const updateTask = async (_data?: any) => {};
   const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
@@ -300,80 +328,12 @@ export default function TaskDetails() {
     }
 
     try {
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a construction principal agent, now draft a response from this action item. Do not make it as an email reposone from ai. Remove any placeholder. reply as a plan text, do not add any title, subtitle, or any other formatting, response as ZAR (R)",
-              },
-              {
-                role: "user",
-                content: `Title: ${currentTask.title}\nDiscipline: ${currentTask.Discipline}\nDescription: ${currentTask.description || currentTask.Question || currentTask.Instruction || "No description provided"} ${currentTask?.impact}`,
-              },
-            ],
-            temperature: 0.7,
-            max_tokens: 1000,
-            stream: true,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+      const dummyResponse = "AI response generation is currently unavailable.";
+      setIsLoadingAI(false);
+      setAiResponse(dummyResponse);
+      if (editor) {
+        editor.commands.setContent(dummyResponse);
       }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let accumulatedResponse = "";
-      let hasStartedStreaming = false;
-
-      if (!reader) throw new Error("No reader available");
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            if (dataStr === "[DONE]") break;
-
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data.choices[0].delta?.content || "";
-
-              if (content && !hasStartedStreaming) {
-                setIsLoadingAI(false);
-                hasStartedStreaming = true;
-              }
-
-              accumulatedResponse += content;
-              if (editor && content) {
-                editor.commands.setContent(accumulatedResponse);
-              }
-            } catch (e) {
-              // Ignore parse errors for incomplete chunks
-            }
-          }
-        }
-      }
-
-      // Final state sync
-      setAiResponse(accumulatedResponse);
-      // toast.success("AI response generated successfully");
     } catch (error) {
       console.error("Error fetching AI response:", error);
       toast.error("Failed to generate AI response");
@@ -1857,21 +1817,20 @@ export default function TaskDetails() {
                                 </div>
                                 <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
                                   <div className="flex items-start justify-between gap-2">
-                                    <p className="text-[13px] font-normal text-gray-900 leading-tight">{log.createdByName || 'System'}</p>
-                                    <span className="text-[11px] text-gray-400 shrink-0 whitespace-nowrap">{relTime}</span>
-                                  </div>
-                                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[13px] text-gray-600">{text}</span>
-                                    {oldStatus && newStatus && (
-                                      <>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[13px] font-medium text-gray-900">{log.createdByName || 'System'}</span>
+                                      <span className="text-[13px] text-gray-600">{text}</span>
+                                      {oldStatus && (
                                         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(oldStatus)}`}>{oldStatus}</span>
-                                        <span className="text-gray-400 text-xs">→</span>
+                                      )}
+                                      {oldStatus && newStatus && (
+                                        <span className="text-[13px] text-gray-600">to</span>
+                                      )}
+                                      {newStatus && (
                                         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(newStatus)}`}>{newStatus}</span>
-                                      </>
-                                    )}
-                                    {!oldStatus && newStatus && (
-                                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(newStatus)}`}>{newStatus}</span>
-                                    )}
+                                      )}
+                                    </div>
+                                    <span className="text-[11px] text-gray-400 shrink-0 whitespace-nowrap">{relTime}</span>
                                   </div>
                                 </div>
                               </div>

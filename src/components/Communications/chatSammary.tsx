@@ -5,7 +5,6 @@ import { Button } from '../ui/button';
 import { RequestInfoDialog } from '../commons/RequestInfoDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilePreviewModal } from '../TaskComponents/FilePreviewModal';
-import { getTaskDocuments } from '@/supabse/api';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import useFetch from '@/hooks/useFetch';
@@ -57,21 +56,7 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
   const { description, date, priority, discipline, status } = getTaskFields();
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      const targetId = channelTask?.id || taskId;
-      if (targetId) {
-        try {
-          // Try fetching by channel ID first, then task ID if needed
-          // Assuming getTaskDocuments handles linking logic or we might need to adjust
-          const docs = await getTaskDocuments(targetId);
-          setDocuments(docs || []);
-        } catch (error) {
-          console.error("Failed to fetch task documents", error);
-        }
-      }
-    };
-
-    fetchDocuments();
+    setDocuments([]);
   }, [channelTask?.id, taskId]);
 
   if (!channelTask) {

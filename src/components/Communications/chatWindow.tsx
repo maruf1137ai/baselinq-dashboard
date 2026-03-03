@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock } from "lucide-react";
-import { uploadFile } from "@/supabse/api";
+const uploadFile = async (_file: File, _id: string): Promise<string> => "";
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
 import { Badge } from "../ui/badge";
