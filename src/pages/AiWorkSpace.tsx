@@ -381,7 +381,8 @@ const AiWorkSpace = () => {
                   <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#1A1A1A] flex items-center justify-center p-1.5 shrink-0">
                     <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
                   </div>
-                  {firstName ? `What's on your mind, ${firstName}?` : 'What\'s on your mind?'}
+                  {/* {firstName ? `What's on your mind, ${firstName}?` : 'What\'s on your mind?'} */}
+                  Ask me anything.
                 </h2>
 
                 {/* Input with bottom toolbar */}
@@ -391,7 +392,7 @@ const AiWorkSpace = () => {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="How can I help you today?"
+                    placeholder="Drop your question here..."
                     className="min-h-[90px] max-h-[200px] resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     rows={3}
                   />
