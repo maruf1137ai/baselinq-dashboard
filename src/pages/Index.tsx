@@ -23,12 +23,14 @@ const Index = () => {
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<any>(true);
 
   const { data: tasksResponse, isLoading: loadingTasks } = useFetch<{ tasks: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
   const { data: project, isLoading: loadingProject } = useProject(projectId);
+  // console.log(project)
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -151,6 +153,12 @@ const Index = () => {
     if (['xlsx', 'xls'].includes(ext || '')) return '📊';
     return '📎';
   };
+
+  useEffect(() => {
+    setTimeout(() => {
+      setProjectId(localStorage.getItem("selectedProjectId") || undefined);
+    }, 1000);
+  }, []);
 
   return (
     <DashboardLayout>
