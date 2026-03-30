@@ -36,6 +36,7 @@ import DocumentDetail from "./pages/DocumentDetail";
 import AcceptInvitation from "./pages/AcceptInvitation";
 
 const queryClient = new QueryClient();
+// fghfjhjf
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
