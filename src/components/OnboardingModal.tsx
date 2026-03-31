@@ -14,9 +14,9 @@ import {
   Briefcase,
   ScrollText,
   Plus,
+  CreditCard,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import AiIcon from "@/components/icons/AiIcon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -62,13 +62,26 @@ interface PersonnelState {
   phone: string;
 }
 
+interface AddressState {
+  street: string;
+  city: string;
+  province: string;
+  postal_code: string;
+}
+
+interface BankingState {
+  bank_name: string;
+  account_number: string;
+  branch_code: string;
+}
+
 interface ClientFormState {
   company_name: string;
   company_registration: string;
   vat_number: string;
-  physical_address: string;
-  postal_address: string;
-  banking_details: string;
+  physical_address: AddressState;
+  postal_address: AddressState;
+  banking_details: BankingState;
   office_number: string;
   client: PersonnelState;
   client_representative: PersonnelState;
@@ -78,9 +91,9 @@ interface AppointedFormState {
   company_name: string;
   company_registration: string;
   vat_number: string;
-  physical_address: string;
-  postal_address: string;
-  banking_details: string;
+  physical_address: AddressState;
+  postal_address: AddressState;
+  banking_details: BankingState;
   office_number: string;
   role_as_per_appointment: string;
   principal: PersonnelState;
@@ -89,15 +102,18 @@ interface AppointedFormState {
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
 
+const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
+const DEFAULT_BANKING: BankingState = { bank_name: "", account_number: "", branch_code: "" };
+
 const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", phone: "" };
 
 const DEFAULT_CLIENT: ClientFormState = {
   company_name: "",
   company_registration: "",
   vat_number: "",
-  physical_address: "",
-  postal_address: "",
-  banking_details: "",
+  physical_address: { ...DEFAULT_ADDRESS },
+  postal_address: { ...DEFAULT_ADDRESS },
+  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   client: { ...DEFAULT_PERSONNEL },
   client_representative: { ...DEFAULT_PERSONNEL },
@@ -107,9 +123,9 @@ const DEFAULT_APPOINTED: AppointedFormState = {
   company_name: "",
   company_registration: "",
   vat_number: "",
-  physical_address: "",
-  postal_address: "",
-  banking_details: "",
+  physical_address: { ...DEFAULT_ADDRESS },
+  postal_address: { ...DEFAULT_ADDRESS },
+  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   role_as_per_appointment: "",
   principal: { ...DEFAULT_PERSONNEL },
@@ -153,7 +169,75 @@ const STEP_FIELDS: Record<number, (keyof z.infer<typeof projectSchema>)[]> = {
   6: ["start_date", "end_date", "total_budget", "fx_rate", "contract_type", "retention_rate", "vat_rate"],
 };
 
-// ── PersonnelCard ────────────────────────────────────────────────────────────
+// ── Helper Components ───────────────────────────────────────────────────────
+
+const ensureAddress = (val: any): AddressState => {
+  if (val && typeof val === "object" && "street" in val) return val as AddressState;
+  return { street: String(val || ""), city: "", province: "", postal_code: "" };
+};
+
+const ensureBanking = (val: any): BankingState => {
+  if (val && typeof val === "object" && "bank_name" in val) return val as BankingState;
+  return { bank_name: String(val || ""), account_number: "", branch_code: "" };
+};
+
+function StepAddressFields({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: AddressState;
+  onChange: (v: AddressState) => void;
+}) {
+  const fieldCls = cn(
+    "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
+    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
+  );
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-muted-foreground block">{label}</label>
+      <div className="grid grid-cols-2 gap-2">
+        <input className={fieldCls} placeholder="Street" value={value.street} onChange={(e) => onChange({ ...value, street: e.target.value })} />
+        <input className={fieldCls} placeholder="City" value={value.city} onChange={(e) => onChange({ ...value, city: e.target.value })} />
+        <input className={fieldCls} placeholder="Province" value={value.province} onChange={(e) => onChange({ ...value, province: e.target.value })} />
+        <input className={fieldCls} placeholder="Code" value={value.postal_code} onChange={(e) => onChange({ ...value, postal_code: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
+function StepBankingFields({
+  value,
+  onChange,
+}: {
+  value: BankingState;
+  onChange: (v: BankingState) => void;
+}) {
+  const fieldCls = cn(
+    "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
+    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
+  );
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-muted-foreground block">Banking Details</label>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="relative">
+          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <input className={cn(fieldCls, "pl-9")} placeholder="Bank" value={value.bank_name} onChange={(e) => onChange({ ...value, bank_name: e.target.value })} />
+        </div>
+        <div className="relative">
+          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <input className={cn(fieldCls, "pl-9")} placeholder="Account" value={value.account_number} onChange={(e) => onChange({ ...value, account_number: e.target.value })} />
+        </div>
+        <div className="relative">
+          <ScrollText className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <input className={cn(fieldCls, "pl-9")} placeholder="Branch" value={value.branch_code} onChange={(e) => onChange({ ...value, branch_code: e.target.value })} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StepPersonnelCard({
   label,
@@ -232,7 +316,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
   const [taskOrderBrief, setTaskOrderBrief] = useState("");
   const [showClientPersonnel, setShowClientPersonnel] = useState(false);
   const [showAppointedPersonnel, setShowAppointedPersonnel] = useState(false);
-  const [showTaskOrderBrief, setShowTaskOrderBrief] = useState(false);
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
@@ -253,7 +336,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       const getDate = (d: string) => (d ? d.split("T")[0] : "");
       form.reset({
         name: project.name || "",
-        description: project.description || "",
+        description: project.description || project.task_order_brief || project.taskOrderBrief || "",
         project_number: project.projectNumber || project.project_number || "",
         start_date: getDate(project.startDate || project.start_date),
         end_date: getDate(project.endDate || project.end_date),
@@ -271,9 +354,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         company_name: cd.company_name || "",
         company_registration: cd.company_registration || "",
         vat_number: cd.vat_number || "",
-        physical_address: cd.physical_address || "",
-        postal_address: cd.postal_address || "",
-        banking_details: cd.banking_details || "",
+        physical_address: ensureAddress(cd.physical_address),
+        postal_address: ensureAddress(cd.postal_address),
+        banking_details: ensureBanking(cd.banking_details),
         office_number: cd.office_number || "",
         client: cd.client || { ...DEFAULT_PERSONNEL },
         client_representative: cd.client_representative || { ...DEFAULT_PERSONNEL },
@@ -284,27 +367,22 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         company_name: ac.company_name || "",
         company_registration: ac.company_registration || "",
         vat_number: ac.vat_number || "",
-        physical_address: ac.physical_address || "",
-        postal_address: ac.postal_address || "",
-        banking_details: ac.banking_details || "",
+        physical_address: ensureAddress(ac.physical_address),
+        postal_address: ensureAddress(ac.postal_address),
+        banking_details: ensureBanking(ac.banking_details),
         office_number: ac.office_number || "",
         role_as_per_appointment: ac.role_as_per_appointment || "",
         principal: ac.principal || { ...DEFAULT_PERSONNEL },
         technical_representative: ac.technical_representative || { ...DEFAULT_PERSONNEL },
       } : { ...DEFAULT_APPOINTED });
 
-      const tb = project.taskOrderBrief || project.task_order_brief || "";
-      setTaskOrderBrief(tb);
+      setTaskOrderBrief(project.description || project.task_order_brief || project.taskOrderBrief || "");
 
-      // Show personnel sections if data exists
       if (cd && (cd.client?.name || cd.client?.email || cd.client_representative?.name || cd.client_representative?.email)) {
         setShowClientPersonnel(true);
       }
       if (ac && (ac.principal?.name || ac.principal?.email || ac.technical_representative?.name || ac.technical_representative?.email)) {
         setShowAppointedPersonnel(true);
-      }
-      if (tb) {
-        setShowTaskOrderBrief(true);
       }
     } else {
       form.reset({
@@ -318,7 +396,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       setTaskOrderBrief("");
       setShowClientPersonnel(false);
       setShowAppointedPersonnel(false);
-      setShowTaskOrderBrief(false);
     }
 
     setSelectedFiles([]);
@@ -423,9 +500,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       const valid = await form.trigger(fields);
       if (!valid) return;
     }
-    if (currentStep === 5 && !project && selectedFiles.length === 0) {
-      form.setError("attachments", { type: "manual", message: "At least one project document is required" });
-      return;
+    if (currentStep === 4 && !project && selectedFiles.length === 0) {
+      // We allow proceeding without documents if explicitly needed, but typically required
+      // toast.warn("Consider uploading at least one project document.");
     }
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
   };
@@ -639,17 +716,10 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <label className="text-xs font-medium text-muted-foreground block mb-1">Office Number</label>
                     <input className={fieldCls} placeholder="+1 555 000 0000" value={clientForm.office_number} onChange={(e) => setClientForm(p => ({ ...p, office_number: e.target.value }))} />
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Physical Address</label>
-                    <input className={fieldCls} placeholder="123 Main St" value={clientForm.physical_address} onChange={(e) => setClientForm(p => ({ ...p, physical_address: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Postal Address</label>
-                    <input className={fieldCls} placeholder="PO Box 1" value={clientForm.postal_address} onChange={(e) => setClientForm(p => ({ ...p, postal_address: e.target.value }))} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Banking Details</label>
-                    <input className={fieldCls} placeholder="Bank name, account number, branch" value={clientForm.banking_details} onChange={(e) => setClientForm(p => ({ ...p, banking_details: e.target.value }))} />
+                  <div className="col-span-2 space-y-4">
+                    <StepAddressFields label="Physical Address" value={clientForm.physical_address} onChange={(v) => setClientForm(p => ({ ...p, physical_address: v }))} />
+                    <StepAddressFields label="Postal Address" value={clientForm.postal_address} onChange={(v) => setClientForm(p => ({ ...p, postal_address: v }))} />
+                    <StepBankingFields value={clientForm.banking_details} onChange={(v) => setClientForm(p => ({ ...p, banking_details: v }))} />
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
@@ -704,17 +774,10 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <label className="text-xs font-medium text-muted-foreground block mb-1">Office Number</label>
                     <input className={fieldCls} placeholder="+1 555 000 0001" value={appointedForm.office_number} onChange={(e) => setAppointedForm(p => ({ ...p, office_number: e.target.value }))} />
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Physical Address</label>
-                    <input className={fieldCls} placeholder="456 Office Park" value={appointedForm.physical_address} onChange={(e) => setAppointedForm(p => ({ ...p, physical_address: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Postal Address</label>
-                    <input className={fieldCls} placeholder="PO Box 2" value={appointedForm.postal_address} onChange={(e) => setAppointedForm(p => ({ ...p, postal_address: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Banking Details</label>
-                    <input className={fieldCls} placeholder="Bank name, account number, branch" value={appointedForm.banking_details} onChange={(e) => setAppointedForm(p => ({ ...p, banking_details: e.target.value }))} />
+                  <div className="col-span-2 space-y-4">
+                    <StepAddressFields label="Physical Address" value={appointedForm.physical_address} onChange={(v) => setAppointedForm(p => ({ ...p, physical_address: v }))} />
+                    <StepAddressFields label="Postal Address" value={appointedForm.postal_address} onChange={(v) => setAppointedForm(p => ({ ...p, postal_address: v }))} />
+                    <StepBankingFields value={appointedForm.banking_details} onChange={(v) => setAppointedForm(p => ({ ...p, banking_details: v }))} />
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
@@ -812,28 +875,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                       onChange={(e) => {
                         const val = e.target.value;
                         setTaskOrderBrief(val);
-                        form.setValue("description", val); // Sync with description
+                        form.setValue("description", val);
                       }}
                     />
-                    <div className="absolute right-3 bottom-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          toast.info("Analyzing uploaded documents to extract scope...");
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-border text-xs font-medium text-[#8081F6] shadow-sm hover:border-[#8081F6] hover:bg-primary/10 transition-all"
-                      >
-                        <AiIcon size={14} />
-                        Extract from Contract
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
-                    <span className="text-sm shrink-0">✨</span>
-                    <p className="text-xs text-blue-700 leading-relaxed">
-                      AI Extraction: If you uploaded a contract JBCC or GCC document in Step 4, you can automatically extract the scope.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -956,15 +1000,15 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
             )}
 
             {/* Navigation */}
-            <div className="flex items-center justify-between pt-6">
-              <div>
-                {currentStep > 1 && (
-                  <Button type="button" variant="outline" onClick={handleBack}>Back</Button>
-                )}
-              </div>
-              <div>
+            <div className="flex items-center justify-between pt-6 border-t border-border mt-8">
+              <Button type="button" variant="ghost" onClick={handleBack} disabled={currentStep === 1}>
+                Back
+              </Button>
+              <div className="flex items-center gap-2">
                 {currentStep < STEPS.length ? (
-                  <Button type="button" onClick={handleNext}>Continue</Button>
+                  <Button type="button" onClick={handleNext}>
+                    Continue
+                  </Button>
                 ) : (
                   <Button
                     type="button"
@@ -976,7 +1020,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         if (!valid) return;
                       }
                       form.handleSubmit(onSubmit)();
-                    }}>
+                    }}
+                  >
                     {isPending || isUploading
                       ? project ? "Updating..." : "Creating..."
                       : project ? "Update Project" : "Create Project"}

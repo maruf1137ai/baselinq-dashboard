@@ -86,6 +86,22 @@ function SectionCard({ title, badge, children }: {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const formatAddress = (addr: any) => {
+  if (!addr) return "—";
+  if (typeof addr === "string") return addr;
+  const parts = [addr.street, addr.city, addr.province, addr.postal_code].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "—";
+};
+
+const formatBanking = (bank: any) => {
+  if (!bank) return "—";
+  if (typeof bank === "string") return bank;
+  const parts = [bank.bank_name, bank.account_number, bank.branch_code].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "—";
+};
+
 const ProjectDetails = () => {
   const [selectedDocument, setSelectedDocument] = useState<ProjectDocument | null>(null);
   const [docToDelete, setDocToDelete] = useState<ProjectDocument | null>(null);
@@ -240,9 +256,9 @@ const ProjectDetails = () => {
               <InfoField label="Company Registration / ID" value={clientDetails.company_registration} />
               <InfoField label="VAT Number" value={clientDetails.vat_number} />
               <InfoField label="Office Number" value={clientDetails.office_number} />
-              <InfoField label="Physical Address" value={clientDetails.physical_address} />
-              <InfoField label="Postal Address" value={clientDetails.postal_address} />
-              <InfoField label="Banking Details" value={clientDetails.banking_details} colSpan />
+              <InfoField label="Physical Address" value={formatAddress(clientDetails.physical_address)} />
+              <InfoField label="Postal Address" value={formatAddress(clientDetails.postal_address)} />
+              <InfoField label="Banking Details" value={formatBanking(clientDetails.banking_details)} colSpan />
             </div>
 
             <div className="border-t border-border pt-5">
@@ -280,9 +296,9 @@ const ProjectDetails = () => {
               <InfoField label="Company Registration" value={appointedCompany.company_registration} />
               <InfoField label="VAT Number" value={appointedCompany.vat_number} />
               <InfoField label="Office Number" value={appointedCompany.office_number} />
-              <InfoField label="Physical Address" value={appointedCompany.physical_address} />
-              <InfoField label="Postal Address" value={appointedCompany.postal_address} />
-              <InfoField label="Banking Details" value={appointedCompany.banking_details} />
+              <InfoField label="Physical Address" value={formatAddress(appointedCompany.physical_address)} />
+              <InfoField label="Postal Address" value={formatAddress(appointedCompany.postal_address)} />
+              <InfoField label="Banking Details" value={formatBanking(appointedCompany.banking_details)} />
             </div>
 
             <div className="border-t border-border pt-5">

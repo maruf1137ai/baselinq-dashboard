@@ -42,7 +42,6 @@ import {
   differenceInMonths,
 } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
-import Logo from "@/components/icons/Logo";
 import AiIcon from "@/components/icons/AiIcon";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -78,13 +77,26 @@ interface PersonnelState {
   phone: string;
 }
 
+interface AddressState {
+  street: string;
+  city: string;
+  province: string;
+  postal_code: string;
+}
+
+interface BankingState {
+  bank_name: string;
+  account_number: string;
+  branch_code: string;
+}
+
 interface ClientFormState {
   company_name: string;
   company_registration: string;
   vat_number: string;
-  physical_address: string;
-  postal_address: string;
-  banking_details: string;
+  physical_address: AddressState;
+  postal_address: AddressState;
+  banking_details: BankingState;
   office_number: string;
   client: PersonnelState;
   client_representative: PersonnelState;
@@ -98,9 +110,9 @@ interface AppointedFormState {
   company_name: string;
   company_registration: string;
   vat_number: string;
-  physical_address: string;
-  postal_address: string;
-  banking_details: string;
+  physical_address: AddressState;
+  postal_address: AddressState;
+  banking_details: BankingState;
   office_number: string;
   role_as_per_appointment: string;
   principal: PersonnelState;
@@ -135,6 +147,9 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
 };
 
+const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
+const DEFAULT_BANKING: BankingState = { bank_name: "", account_number: "", branch_code: "" };
+
 const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", phone: "" };
 
 const DEFAULT_FORM: FormState = {
@@ -156,9 +171,9 @@ const DEFAULT_CLIENT_FORM: ClientFormState = {
   company_name: "",
   company_registration: "",
   vat_number: "",
-  physical_address: "",
-  postal_address: "",
-  banking_details: "",
+  physical_address: { ...DEFAULT_ADDRESS },
+  postal_address: { ...DEFAULT_ADDRESS },
+  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   client: { ...DEFAULT_PERSONNEL },
   client_representative: { ...DEFAULT_PERSONNEL },
@@ -168,9 +183,9 @@ const DEFAULT_APPOINTED_FORM: AppointedFormState = {
   company_name: "",
   company_registration: "",
   vat_number: "",
-  physical_address: "",
-  postal_address: "",
-  banking_details: "",
+  physical_address: { ...DEFAULT_ADDRESS },
+  postal_address: { ...DEFAULT_ADDRESS },
+  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   role_as_per_appointment: "",
   principal: { ...DEFAULT_PERSONNEL },
@@ -178,6 +193,104 @@ const DEFAULT_APPOINTED_FORM: AppointedFormState = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+const ensureAddress = (val: any): AddressState => {
+  if (val && typeof val === "object" && "street" in val) return val as AddressState;
+  return { street: String(val || ""), city: "", province: "", postal_code: "" };
+};
+
+const ensureBanking = (val: any): BankingState => {
+  if (val && typeof val === "object" && "bank_name" in val) return val as BankingState;
+  return { bank_name: String(val || ""), account_number: "", branch_code: "" };
+};
+
+function AddressFields({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: AddressState;
+  onChange: (v: AddressState) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <label className="block text-[13px] font-normal text-[#374151]">{label}</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          className={inputCls()}
+          placeholder="Street address"
+          value={value.street}
+          onChange={(e) => onChange({ ...value, street: e.target.value })}
+        />
+        <input
+          className={inputCls()}
+          placeholder="City"
+          value={value.city}
+          onChange={(e) => onChange({ ...value, city: e.target.value })}
+        />
+        <input
+          className={inputCls()}
+          placeholder="State / Province"
+          value={value.province}
+          onChange={(e) => onChange({ ...value, province: e.target.value })}
+        />
+        <input
+          className={inputCls()}
+          placeholder="Postal Code"
+          value={value.postal_code}
+          onChange={(e) => onChange({ ...value, postal_code: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BankingFields({
+  value,
+  onChange,
+}: {
+  value: BankingState;
+  onChange: (v: BankingState) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5">
+        <label className="text-[13px] font-normal text-[#374151]">Banking Details</label>
+        <Tooltip text="Bank name, account number, and branch code" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="relative">
+          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <input
+            className={inputCls(false, "pl-9")}
+            placeholder="Bank Name"
+            value={value.bank_name}
+            onChange={(e) => onChange({ ...value, bank_name: e.target.value })}
+          />
+        </div>
+        <div className="relative">
+          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <input
+            className={inputCls(false, "pl-9")}
+            placeholder="Account Number"
+            value={value.account_number}
+            onChange={(e) => onChange({ ...value, account_number: e.target.value })}
+          />
+        </div>
+        <div className="relative">
+          <ScrollText className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <input
+            className={inputCls(false, "pl-9")}
+            placeholder="Branch Code"
+            value={value.branch_code}
+            onChange={(e) => onChange({ ...value, branch_code: e.target.value })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function parseBudget(value: string): number {
   return parseFloat(value.replace(/[^0-9.]/g, "")) || 0;
@@ -465,9 +578,9 @@ export default function EditProject() {
       company_name: cd.company_name || "",
       company_registration: cd.company_registration || "",
       vat_number: cd.vat_number || "",
-      physical_address: cd.physical_address || "",
-      postal_address: cd.postal_address || "",
-      banking_details: cd.banking_details || "",
+      physical_address: ensureAddress(cd.physical_address),
+      postal_address: ensureAddress(cd.postal_address),
+      banking_details: ensureBanking(cd.banking_details),
       office_number: cd.office_number || "",
       client: cd.client || { ...DEFAULT_PERSONNEL },
       client_representative: cd.client_representative || { ...DEFAULT_PERSONNEL },
@@ -477,9 +590,9 @@ export default function EditProject() {
       company_name: ac.company_name || "",
       company_registration: ac.company_registration || "",
       vat_number: ac.vat_number || "",
-      physical_address: ac.physical_address || "",
-      postal_address: ac.postal_address || "",
-      banking_details: ac.banking_details || "",
+      physical_address: ensureAddress(ac.physical_address),
+      postal_address: ensureAddress(ac.postal_address),
+      banking_details: ensureBanking(ac.banking_details),
       office_number: ac.office_number || "",
       role_as_per_appointment: ac.role_as_per_appointment || "",
       principal: ac.principal || { ...DEFAULT_PERSONNEL },
@@ -806,8 +919,8 @@ export default function EditProject() {
           {/* Logo */}
           <div className="px-6 pt-6 pb-5 border-b border-[#f3f4f6]">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
-                <Logo />
+              <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0">
+                <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
               </div>
               <span className="text-[14px] font-normal text-[#121212] tracking-tight">
                 Baselinq
@@ -1192,66 +1305,31 @@ export default function EditProject() {
                           </div>
 
                           {/* Physical + Postal Address */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Physical Address
-                              </label>
-                              <textarea
-                                className={cn(
-                                  "w-full px-4 py-3 rounded-[10px] text-sm text-[#111827] outline-none transition-all resize-none",
-                                  "bg-[#f5f6f8] border border-[#e2e5ea]",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                )}
-                                placeholder="Street address, city, province"
-                                rows={2}
-                                value={clientForm.physical_address}
-                                onChange={(e) =>
-                                  setClientForm((p) => ({ ...p, physical_address: e.target.value }))
-                                }
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Postal Address
-                              </label>
-                              <textarea
-                                className={cn(
-                                  "w-full px-4 py-3 rounded-[10px] text-sm text-[#111827] outline-none transition-all resize-none",
-                                  "bg-[#f5f6f8] border border-[#e2e5ea]",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                )}
-                                placeholder="P.O. Box or postal address"
-                                rows={2}
-                                value={clientForm.postal_address}
-                                onChange={(e) =>
-                                  setClientForm((p) => ({ ...p, postal_address: e.target.value }))
-                                }
-                              />
-                            </div>
+                          <div className="space-y-5">
+                            <AddressFields
+                              label="Physical Address"
+                              value={clientForm.physical_address}
+                              onChange={(v) =>
+                                setClientForm((p) => ({ ...p, physical_address: v }))
+                              }
+                            />
+                            <AddressFields
+                              label="Postal Address"
+                              value={clientForm.postal_address}
+                              onChange={(v) =>
+                                setClientForm((p) => ({ ...p, postal_address: v }))
+                              }
+                            />
                           </div>
 
                           {/* Banking + Office */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-[13px] font-normal text-[#374151]">
-                                  Banking Details
-                                </label>
-                                <Tooltip text="Bank name, account number, branch code" />
-                              </div>
-                              <div className="relative">
-                                <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                                <input
-                                  className={inputCls(false, "pl-10")}
-                                  placeholder="Bank · Account No · Branch code"
-                                  value={clientForm.banking_details}
-                                  onChange={(e) =>
-                                    setClientForm((p) => ({ ...p, banking_details: e.target.value }))
-                                  }
-                                />
-                              </div>
-                            </div>
+                          <div className="space-y-5">
+                            <BankingFields
+                              value={clientForm.banking_details}
+                              onChange={(v) =>
+                                setClientForm((p) => ({ ...p, banking_details: v }))
+                              }
+                            />
                             <div>
                               <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
                                 Office Number
@@ -1408,66 +1486,31 @@ export default function EditProject() {
                           </div>
 
                           {/* Physical + Postal Address */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Physical Address
-                              </label>
-                              <textarea
-                                className={cn(
-                                  "w-full px-4 py-3 rounded-[10px] text-sm text-[#111827] outline-none transition-all resize-none",
-                                  "bg-[#f5f6f8] border border-[#e2e5ea]",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                )}
-                                placeholder="Street address, city, province"
-                                rows={2}
-                                value={appointedForm.physical_address}
-                                onChange={(e) =>
-                                  setAppointedForm((p) => ({ ...p, physical_address: e.target.value }))
-                                }
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Postal Address
-                              </label>
-                              <textarea
-                                className={cn(
-                                  "w-full px-4 py-3 rounded-[10px] text-sm text-[#111827] outline-none transition-all resize-none",
-                                  "bg-[#f5f6f8] border border-[#e2e5ea]",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                )}
-                                placeholder="P.O. Box or postal address"
-                                rows={2}
-                                value={appointedForm.postal_address}
-                                onChange={(e) =>
-                                  setAppointedForm((p) => ({ ...p, postal_address: e.target.value }))
-                                }
-                              />
-                            </div>
+                          <div className="space-y-5">
+                            <AddressFields
+                              label="Physical Address"
+                              value={appointedForm.physical_address}
+                              onChange={(v) =>
+                                setAppointedForm((p) => ({ ...p, physical_address: v }))
+                              }
+                            />
+                            <AddressFields
+                              label="Postal Address"
+                              value={appointedForm.postal_address}
+                              onChange={(v) =>
+                                setAppointedForm((p) => ({ ...p, postal_address: v }))
+                              }
+                            />
                           </div>
 
                           {/* Banking + Office */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-[13px] font-normal text-[#374151]">
-                                  Banking Details
-                                </label>
-                                <Tooltip text="Bank name, account number, branch code" />
-                              </div>
-                              <div className="relative">
-                                <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                                <input
-                                  className={inputCls(false, "pl-10")}
-                                  placeholder="Bank · Account No · Branch code"
-                                  value={appointedForm.banking_details}
-                                  onChange={(e) =>
-                                    setAppointedForm((p) => ({ ...p, banking_details: e.target.value }))
-                                  }
-                                />
-                              </div>
-                            </div>
+                          <div className="space-y-5">
+                            <BankingFields
+                              value={appointedForm.banking_details}
+                              onChange={(v) =>
+                                setAppointedForm((p) => ({ ...p, banking_details: v }))
+                              }
+                            />
                             <div>
                               <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
                                 Office Number
@@ -1744,32 +1787,11 @@ export default function EditProject() {
                               setField("description", val); // Sync with description
                             }}
                           />
-
-                          <div className="absolute right-3 bottom-3">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                toast.info("Analyzing uploaded documents to extract scope...");
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#e2e5ea] text-[12px] font-medium text-[#6c5ce7] shadow-sm hover:border-[#6c5ce7] hover:bg-[#f8f7ff] transition-all"
-                            >
-                              <AiIcon size={14} />
-                              Extract from Contract
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                          <span className="text-[15px] shrink-0 mt-px">✨</span>
-                          <p className="text-[12px] text-blue-700 leading-relaxed">
-                            <span className="font-semibold text-blue-800">AI Tip:</span> You can paste the raw contract scope here, or use the button above to extract it from your uploaded JBCC document.
-                          </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* ──────────── STEP 6: FINANCIALS & TIMELINE ──────────── */}
                   {currentStep === 6 && (
                     <div className="p-8 space-y-7">
 

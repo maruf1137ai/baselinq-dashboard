@@ -33,7 +33,6 @@ import Document from "./icons/Document";
 import Settings from "./icons/Settings";
 import Help from "./icons/Help";
 import Document2 from "./icons/Document2";
-import Logo from "./icons/Logo";
 import { useProjects } from "@/hooks/useProjects"; // Django API hook
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
@@ -401,14 +400,14 @@ export function DashboardSidebar() {
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-white text-sm font-medium uppercase">
-                    {(user?.user_metadata?.full_name ||
+                    {(user?.name ||
                       user?.email?.split("@")[0] ||
                       "U")[0]}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm capitalize font-medium text-sidebar-foreground truncate">
-                    {user?.user_metadata?.full_name ||
+                    {user?.name ||
                       user?.email?.split("@")[0] ||
                       "User"}
                   </p>

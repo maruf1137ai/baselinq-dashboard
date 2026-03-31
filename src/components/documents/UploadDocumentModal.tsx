@@ -48,10 +48,10 @@ const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certi
 const DISCIPLINES = ['Architectural', 'Structural', 'MEP', 'Civil', 'Environmental'] as const;
 
 export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [showLinking, setShowLinking] = useState(false);
 
-  // Step 2 fields
+  // Form fields
   const [name, setName] = useState('');
   const [docType, setDocType] = useState<string>('');
   const [discipline, setDiscipline] = useState<string>('');
@@ -80,7 +80,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
 
   const { data: taskResponse, isLoading: tasksLoading } = useFetch<{ tasks: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : '',
-    { enabled: !!projectId && step === 3 },
+    { enabled: !!projectId && showLinking },
   );
 
   // console.log({ taskResponse })
@@ -209,7 +209,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
   };
 
   const handleClose = () => {
-    setStep(1);
+    setShowLinking(false);
     setName('');
     setDocType('');
     setDiscipline('');
@@ -233,114 +233,106 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             <div>
               <DialogTitle className="text-xl font-normal text-[#1A1F36]">Upload Documents</DialogTitle>
               <p className="text-sm text-gray-500 mt-1">
-                Step {step} of 3: {step === 1 ? 'Select Files' : step === 2 ? 'Details & AI' : 'Linking'}
+                Fill in the details below to add your project documents.
               </p>
-            </div>
-            <div className="flex gap-1.5">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={cn('h-1.5 w-8 rounded-full transition-all', step >= s ? 'bg-primary' : 'bg-gray-200')}
-                />
-              ))}
             </div>
           </div>
         </DialogHeader>
 
-        <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar">
-          {/* Step 1 — File selection */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <div
-                className="border-2 border-dashed border-gray-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-gray-50/30 hover:bg-gray-50/50 hover:border-primary/20 transition-all cursor-pointer group"
-                onClick={() => document.getElementById('file-upload')?.click()}
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-              >
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  multiple
-                  accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
-                  onChange={handleFileChange}
-                />
-                <div className="h-16 w-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Upload className="h-8 w-8 text-primary" />
-                </div>
-                <h4 className="text-lg font-normal text-gray-900">Drop your documents here</h4>
-                <p className="text-sm text-gray-400 mt-1">Support PDF, XLSX, DOCX, DWG up to 20MB</p>
-                <Button variant="outline" className="mt-6 font-normal h-10 border-gray-200" type="button">
-                  Browse Files
-                </Button>
+        <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-8">
+          {/* Section 1 — File selection */}
+          <div className="space-y-6">
+            <div
+              className="border border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center bg-gray-50/30 hover:bg-gray-50/50 hover:border-primary/20 transition-all cursor-pointer group"
+              onClick={() => document.getElementById('file-upload')?.click()}
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+            >
+              <input
+                id="file-upload"
+                type="file"
+                className="hidden"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
+                onChange={handleFileChange}
+              />
+              <div className="h-10 w-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <Upload className="h-5 w-5 text-primary" />
               </div>
-
-              {s3Upload.entries.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-normal text-gray-400 uppercase">
-                    Selected Files ({s3Upload.entries.length})
-                  </h4>
-                  {s3Upload.entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm flex flex-col gap-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                            {entry.status === 'error' ? (
-                              <AlertCircle className="h-5 w-5 text-red-500" />
-                            ) : (
-                              <FileText className="h-5 w-5 text-purple-600" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-normal text-gray-900 truncate max-w-[300px]">
-                              {entry.file.name}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {(entry.file.size / (1024 * 1024)).toFixed(2)} MB
-                              {entry.status === 'error' && (
-                                <span className="text-red-500 ml-2">{entry.error}</span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => s3Upload.removeEntry(entry.id)}
-                          className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Progress value={entry.progress} className="h-1 flex-1" />
-                        <span className="text-xs font-normal text-gray-400 min-w-[30px]">
-                          {entry.status === 'done' ? '✓' : `${Math.round(entry.progress)}%`}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <h4 className="text-base font-normal text-gray-900">Drop your documents here</h4>
+              <p className="text-xs text-gray-400 mt-0.5">PDF, XLSX, DOCX, DWG up to 20MB</p>
+              <Button variant="outline" className="mt-3 font-normal h-8 text-xs border-gray-100 bg-white shadow-sm" type="button">
+                Browse Files
+              </Button>
             </div>
-          )}
 
-          {/* Step 2 — Details & AI */}
-          {step === 2 && (
-            <div className="space-y-6 text-left">
-              <div>
-                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
-                  Document Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  placeholder="e.g. Main Contract Agreement"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
-                />
+            {s3Upload.entries.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-normal text-gray-400 uppercase">
+                  Selected Files ({s3Upload.entries.length})
+                </h4>
+                {s3Upload.entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                          {entry.status === 'error' ? (
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                          ) : (
+                            <FileText className="h-5 w-5 text-purple-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-normal text-gray-900 truncate max-w-[300px]">
+                            {entry.file.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {(entry.file.size / (1024 * 1024)).toFixed(2)} MB
+                            {entry.status === 'error' && (
+                              <span className="text-red-500 ml-2">{entry.error}</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => s3Upload.removeEntry(entry.id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Progress value={entry.progress} className="h-1 flex-1" />
+                      <span className="text-xs font-normal text-gray-400 min-w-[30px]">
+                        {entry.status === 'done' ? '✓' : `${Math.round(entry.progress)}%`}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+          </div>
 
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* Section 2 — Details & AI */}
+          <div className="space-y-6 text-left">
+            <div>
+              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+                Document Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="e.g. Main Contract Agreement"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
                   Document Type <span className="text-red-500">*</span>
@@ -356,77 +348,86 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Discipline</Label>
-                  <Select value={discipline} onValueChange={setDiscipline}>
-                    <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
-                      <SelectValue placeholder="Select discipline" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DISCIPLINES.map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
-                    Reference Number
-                  </Label>
-                  <Input
-                    placeholder="Auto-generated from name"
-                    value={reference}
-                    onChange={(e) => { setReferenceEdited(true); setReference(e.target.value); }}
-                    className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
               <div>
-                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
-                  Description (Optional)
-                </Label>
-                <Textarea
-                  placeholder="Brief summary of the document contents..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="min-h-[100px] border-gray-200 rounded-xl focus:ring-primary/20 p-4"
-                />
-              </div>
-
-              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary">
-                    <AiIcon size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-normal text-gray-900">Run AI Analysis</p>
-                    <p className="text-xs text-gray-500 max-w-[280px]">
-                      Automatically extract obligations, flags, and JBCC clause references.
-                    </p>
-                  </div>
-                </div>
-                <Switch checked={runAiAnalysis} onCheckedChange={setRunAiAnalysis} />
+                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Discipline</Label>
+                <Select value={discipline} onValueChange={setDiscipline}>
+                  <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
+                    <SelectValue placeholder="Select discipline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISCIPLINES.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
 
-          {/* Step 3 — Linking (optional) */}
-          {step === 3 && (
-            <div className="space-y-6 text-left">
-              <div className="space-y-4">
-                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
-                  Link to Existing Documents (Optional)
-                </Label>
+            <div>
+              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+                Reference Number
+              </Label>
+              <Input
+                placeholder="Auto-generated from name"
+                value={reference}
+                onChange={(e) => { setReferenceEdited(true); setReference(e.target.value); }}
+                className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+                Description (Optional)
+              </Label>
+              <Textarea
+                placeholder="Brief summary of the document contents..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="min-h-[100px] border-gray-200 rounded-xl focus:ring-primary/20 p-4"
+              />
+            </div>
+
+            <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary">
+                  <AiIcon size={24} />
+                </div>
+                <div>
+                  <p className="text-sm font-normal text-gray-900">Run AI Analysis</p>
+                  <p className="text-xs text-gray-500 max-w-[280px]">
+                    Automatically extract obligations, flags, and clause references.
+                  </p>
+                </div>
+              </div>
+              <Switch checked={runAiAnalysis} onCheckedChange={setRunAiAnalysis} />
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* Section 3 — Linking (Collapsible) */}
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowLinking(!showLinking)}
+              className="flex items-center justify-between w-full p-2 hover:bg-gray-50 rounded-lg transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-gray-900">Link to Existing Documents (Optional)</span>
+              </div>
+              <ChevronRight className={cn("w-4 h-4 text-gray-400 transition-transform", showLinking && "rotate-90")} />
+            </button>
+
+            {showLinking && (
+              <div className="bg-gray-50/50 rounded-2xl p-6 space-y-6">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Search VOs, RFIs, or other documents..."
                     value={linkSearch}
                     onChange={(e) => setLinkSearch(e.target.value)}
-                    className="pl-12 h-14 border-gray-200 rounded-xl shadow-sm focus:ring-primary/20 font-normal"
+                    className="pl-12 h-12 bg-white border-gray-200 rounded-xl shadow-sm focus:ring-primary/20 font-normal"
                   />
                 </div>
 
@@ -436,7 +437,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                       key={filter}
                       onClick={() => setActiveFilter(filter)}
                       className={cn(
-                        'px-4 py-1.5 rounded-full text-xs transition-all border font-normal',
+                        'px-4 py-1.5 rounded-full text-[11px] uppercase tracking-wider transition-all border font-medium',
                         activeFilter === filter
                           ? 'bg-primary text-white border-primary'
                           : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
@@ -447,8 +448,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                   ))}
                 </div>
 
-                <div className="grid gap-3 pt-2">
-                  <p className="text-xs font-normal text-gray-400 uppercase">Recommended Links</p>
+                <div className="grid gap-3">
                   {tasksLoading ? (
                     <div className="flex items-center justify-center py-8 text-gray-400 gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -462,7 +462,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                   ) : (
                     filteredTasks.map((task: any) => {
                       const isSelected = selectedLinkIds.includes(task.id);
-                      // console.log(task)
                       return (
                         <div
                           key={task.id}
@@ -493,66 +492,34 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <DialogFooter className="px-8 py-6 border-t bg-gray-50/50 flex gap-3 sm:justify-between items-center shrink-0">
-          <div>
-            {step > 1 && (
-              <Button
-                variant="ghost"
-                onClick={() => setStep((p) => p - 1)}
-                className="font-normal h-9 text-gray-500 gap-2"
-                disabled={submitting}
-              >
-                <ChevronLeft className="h-4 w-4" /> Back
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="font-normal h-9 border-gray-200 px-4"
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            {step < 3 ? (
-              <Button
-                onClick={() => setStep((p) => p + 1)}
-                className="font-normal h-9 px-4 gap-2"
-                disabled={step === 1 && !canProceedStep1}
-              >
-                {step === 1 && s3Upload.hasUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
-                  </>
-                ) : (
-                  <>
-                    Next <ChevronRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
+        <DialogFooter className="px-8 py-6 border-t bg-gray-50/50 flex gap-3 sm:justify-end items-center shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="font-normal h-10 border-gray-200 px-6"
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            className="font-normal h-10 px-6 gap-2"
+            disabled={submitting || s3Upload.entries.length === 0 || s3Upload.hasUploading}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
+              </>
             ) : (
-              <Button
-                onClick={handleSubmit}
-                className="font-normal h-9 px-4 gap-2"
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" /> Upload Document
-                  </>
-                )}
-              </Button>
+              <>
+                <CheckCircle2 className="h-4 w-4" /> Finish Upload
+              </>
             )}
-          </div>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
