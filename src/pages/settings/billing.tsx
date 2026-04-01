@@ -14,7 +14,7 @@ const Billing = () => {
         </div>
         <div>
           <h3 className="text-sm font-medium text-foreground mb-1">Billing & Subscription</h3>
-          <p className="text-xs text-muted-foreground max-w-md">View invoices, manage payment methods, and update your subscription plan — coming soon.</p>
+          <p className="text-xs text-muted-foreground max-w-md">View invoices, manage payment methods, and update your subscription plan, coming soon.</p>
         </div>
       </div>
     </div>

@@ -143,7 +143,7 @@ const Compliance = () => {
             {complianceScore}% Score
           </span>
           <span className="text-xs text-muted-foreground">
-            {complianceScore < 50 ? `— Low · ${overdueCount} items overdue` : complianceScore < 80 ? '— Needs attention' : '— On track'}
+            {complianceScore < 50 ? `Low · ${overdueCount} items overdue` : complianceScore < 80 ? 'Needs attention' : 'On track'}
           </span>
         </div>
 

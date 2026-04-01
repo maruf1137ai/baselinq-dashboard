@@ -274,7 +274,7 @@ const DocumentDetail = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-xs font-normal text-gray-700">{doc.currentVersion} — current</span>
+                <span className="text-xs font-normal text-gray-700">{doc.currentVersion}, current</span>
               </div>
               {doc.uploadedBy && (
                 <span className="text-xs text-gray-500 flex items-center gap-1.5">

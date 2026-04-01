@@ -241,7 +241,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                                     {cite.docName} ({cite.version})
                                   </p>
                                   <p className="text-xs text-gray-500 font-normal">
-                                    {cite.clause} — Page {cite.page} {cite.snippet && `· (${cite.snippet})`}
+                                    {cite.clause}, Page {cite.page} {cite.snippet && `· (${cite.snippet})`}
                                   </p>
                                 </div>
                               </div>

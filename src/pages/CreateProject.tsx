@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -20,9 +20,10 @@ import {
   Phone,
   Mail,
   CreditCard,
-  Briefcase,
   ScrollText,
   Plus,
+  Search,
+  Loader2,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -30,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
 import { toast } from "sonner";
@@ -41,7 +42,6 @@ import {
   differenceInMonths,
 } from "date-fns";
 import { cn } from "@/lib/utils";
-import AiIcon from "@/components/icons/AiIcon";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ interface FormErrors {
 interface PersonnelState {
   name: string;
   email: string;
-  phone: string;
+  position: string;
 }
 
 interface AddressState {
@@ -84,11 +84,6 @@ interface AddressState {
   postal_code: string;
 }
 
-interface BankingState {
-  bank_name: string;
-  account_number: string;
-  branch_code: string;
-}
 
 interface ClientFormState {
   company_name: string;
@@ -96,7 +91,6 @@ interface ClientFormState {
   vat_number: string;
   physical_address: AddressState;
   postal_address: AddressState;
-  banking_details: BankingState;
   office_number: string;
   client: PersonnelState;
   client_representative: PersonnelState;
@@ -112,15 +106,10 @@ interface AppointedFormState {
   vat_number: string;
   physical_address: AddressState;
   postal_address: AddressState;
-  banking_details: BankingState;
   office_number: string;
   role_as_per_appointment: string;
   principal: PersonnelState;
   technical_representative: PersonnelState;
-}
-
-interface AppointedErrors {
-  company_name?: string;
 }
 
 interface TaskOrderState {
@@ -148,9 +137,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
-const DEFAULT_BANKING: BankingState = { bank_name: "", account_number: "", branch_code: "" };
 
-const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", phone: "" };
+const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", position: "" };
 
 const DEFAULT_FORM: FormState = {
   name: "",
@@ -173,7 +161,6 @@ const DEFAULT_CLIENT_FORM: ClientFormState = {
   vat_number: "",
   physical_address: { ...DEFAULT_ADDRESS },
   postal_address: { ...DEFAULT_ADDRESS },
-  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   client: { ...DEFAULT_PERSONNEL },
   client_representative: { ...DEFAULT_PERSONNEL },
@@ -185,12 +172,13 @@ const DEFAULT_APPOINTED_FORM: AppointedFormState = {
   vat_number: "",
   physical_address: { ...DEFAULT_ADDRESS },
   postal_address: { ...DEFAULT_ADDRESS },
-  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   role_as_per_appointment: "",
   principal: { ...DEFAULT_PERSONNEL },
   technical_representative: { ...DEFAULT_PERSONNEL },
 };
+
+
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -319,39 +307,71 @@ function SelectField({
   );
 }
 
-// ── PersonnelCard ──────────────────────────────────────────────────────────────
+// ── PersonnelEntryCard ─────────────────────────────────────────────────────────
 
-function PersonnelCard({
-  label,
-  role,
-  roleColor,
-  iconColor,
-  value,
+interface AssignedPersonnel {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  position: string;
+}
+
+function PersonnelEntryCard({
+  entry,
+  roleOptions,
+  takenRoles,
   onChange,
+  onRemove,
+  canRemove,
 }: {
-  label: string;
-  role: "Super User" | "Tech User";
-  roleColor: string;
-  iconColor: string;
-  value: PersonnelState;
-  onChange: (v: PersonnelState) => void;
+  entry: AssignedPersonnel;
+  roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
+  takenRoles: string[];
+  onChange: (v: AssignedPersonnel) => void;
+  onRemove: () => void;
+  canRemove: boolean;
 }) {
+  const selectedRole = roleOptions.find((r) => r.value === entry.role);
   return (
     <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1">
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: iconColor + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: iconColor }} />
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
+            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
           </div>
-          <span className="text-[13px] font-normal text-[#374151]">{label}</span>
+          <select
+            value={entry.role}
+            onChange={(e) => onChange({ ...entry, role: e.target.value })}
+            className="flex-1 text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
+          >
+            <option value="">Select role...</option>
+            {roleOptions.map((r) => (
+              <option key={r.value} value={r.value} disabled={takenRoles.includes(r.value) && r.value !== entry.role}>
+                {r.value}
+              </option>
+            ))}
+          </select>
         </div>
-        <span
-          className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
-          style={{ background: roleColor }}>
-          {role}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedRole && (
+            <span
+              className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
+              style={{ background: selectedRole.badgeColor }}>
+              {selectedRole.badge}
+            </span>
+          )}
+          {canRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="relative">
@@ -359,8 +379,8 @@ function PersonnelCard({
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Full name"
-            value={value.name}
-            onChange={(e) => onChange({ ...value, name: e.target.value })}
+            value={entry.name}
+            onChange={(e) => onChange({ ...entry, name: e.target.value })}
           />
         </div>
         <div className="relative">
@@ -369,19 +389,27 @@ function PersonnelCard({
             className={inputCls(false, "pl-9")}
             placeholder="Email address"
             type="email"
-            value={value.email}
-            onChange={(e) => onChange({ ...value, email: e.target.value })}
+            value={entry.email}
+            onChange={(e) => onChange({ ...entry, email: e.target.value })}
           />
         </div>
         <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-          <input
-            className={inputCls(false, "pl-9")}
-            placeholder="Phone number"
-            type="tel"
-            value={value.phone}
-            onChange={(e) => onChange({ ...value, phone: e.target.value })}
-          />
+          <select
+            value={entry.position}
+            onChange={(e) => onChange({ ...entry, position: e.target.value })}
+            className={inputCls(false)}
+          >
+            <option value="">Select position...</option>
+            <option value="Director">Director</option>
+            <option value="Project Manager">Project Manager</option>
+            <option value="Architect">Architect</option>
+            <option value="Engineer">Engineer</option>
+            <option value="Quantity Surveyor">Quantity Surveyor</option>
+            <option value="Site Manager">Site Manager</option>
+            <option value="Contract Administrator">Contract Administrator</option>
+            <option value="Clerk of Works">Clerk of Works</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
       </div>
     </div>
@@ -432,53 +460,6 @@ function AddressFields({
   );
 }
 
-// ── BankingFields ─────────────────────────────────────────────────────────────
-
-function BankingFields({
-  value,
-  onChange,
-}: {
-  value: BankingState;
-  onChange: (v: BankingState) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-1.5">
-        <label className="text-[13px] font-normal text-[#374151]">Banking Details</label>
-        <Tooltip text="Bank name, account number, and branch code" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="relative">
-          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-          <input
-            className={inputCls(false, "pl-9")}
-            placeholder="Bank Name"
-            value={value.bank_name}
-            onChange={(e) => onChange({ ...value, bank_name: e.target.value })}
-          />
-        </div>
-        <div className="relative">
-          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-          <input
-            className={inputCls(false, "pl-9")}
-            placeholder="Account Number"
-            value={value.account_number}
-            onChange={(e) => onChange({ ...value, account_number: e.target.value })}
-          />
-        </div>
-        <div className="relative">
-          <ScrollText className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-          <input
-            className={inputCls(false, "pl-9")}
-            placeholder="Branch Code"
-            value={value.branch_code}
-            onChange={(e) => onChange({ ...value, branch_code: e.target.value })}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── SectionHeader ──────────────────────────────────────────────────────────────
 
@@ -508,6 +489,10 @@ function SectionHeader({
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function CreateProject() {
+  const [isInvitingClient, setIsInvitingClient] = useState(false);
+  const [inviteClientData, setInviteClientData] = useState({ name: "", email: "" });
+  const [isInvited, setIsInvited] = useState(false);
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { mutate: createProject, isPending } = useCreateProject();
@@ -530,11 +515,175 @@ export default function CreateProject() {
   const [clientForm, setClientForm] = useState<ClientFormState>(DEFAULT_CLIENT_FORM);
   const [clientErrors, setClientErrors] = useState<ClientErrors>({});
   const [appointedForm, setAppointedForm] = useState<AppointedFormState>(DEFAULT_APPOINTED_FORM);
-  const [appointedErrors, setAppointedErrors] = useState<AppointedErrors>({});
   const [taskOrder, setTaskOrder] = useState<TaskOrderState>({ brief: "" });
-  const [showClientPersonnel, setShowClientPersonnel] = useState(false);
-  const [showAppointedPersonnel, setShowAppointedPersonnel] = useState(false);
+  const [clientPersonnelList, setClientPersonnelList] = useState<AssignedPersonnel[]>([]);
+  const [appointedPersonnelList, setAppointedPersonnelList] = useState<AssignedPersonnel[]>([]);
+
+  interface AppointedInviteEntry {
+    id: string;
+    company_name: string;
+    contact_name: string;
+    email: string;
+    position: string; // professional role key e.g. 'architect','contractor','qs','pm'
+  }
+  const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([
+    { id: crypto.randomUUID(), company_name: '', contact_name: '', email: '', position: 'architect' }
+  ]);
+
+  const CLIENT_ROLE_OPTIONS = [
+    { value: "Client", badge: "Super User", badgeColor: "#6c5ce7", iconColor: "#6c5ce7" },
+    { value: "Client Representative", badge: "Tech User", badgeColor: "#00b894", iconColor: "#00b894" },
+  ];
+  const APPOINTED_ROLE_OPTIONS = [
+    { value: "Principal Architect", badge: "Principal", badgeColor: "#3A6FF7", iconColor: "#3A6FF7" },
+    { value: "Technical Representative", badge: "Tech Rep", badgeColor: "#00b894", iconColor: "#00b894" },
+  ];
   const [showTaskOrderBrief, setShowTaskOrderBrief] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [userProfileLoaded, setUserProfileLoaded] = useState(false);
+
+  const handleCompanyLookup = async (target: "client" | "appointed") => {
+    const reg = (target === "client" ? clientForm.company_registration : appointedForm.company_registration).trim();
+    if (!reg) {
+      toast.error("Please enter a registration number to look up.");
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const data = await lookupCompany(reg);
+      if (data) {
+        if (target === "client") {
+          setClientForm((prev) => ({
+            ...prev,
+            company_name: data.company_name || prev.company_name,
+            vat_number: data.vat_number || prev.vat_number,
+            office_number: data.office_number || prev.office_number,
+            physical_address: data.physical_address ? {
+              ...prev.physical_address,
+              ...data.physical_address,
+            } : prev.physical_address,
+          }));
+        } else {
+          setAppointedForm((prev) => ({
+            ...prev,
+            company_name: data.company_name || prev.company_name,
+            vat_number: data.vat_number || prev.vat_number,
+            office_number: data.office_number || prev.office_number,
+            physical_address: data.physical_address ? {
+              ...prev.physical_address,
+              ...data.physical_address,
+            } : prev.physical_address,
+          }));
+        }
+        toast.success("Company details retrieved successfully!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Company not found or lookup failed. Please enter details manually.");
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  // Invite is sent automatically after project creation — see onSuccess handler
+  const handleInviteClient = async (projectId: number | string) => {
+    if (!inviteClientData.email.trim()) return;
+    try {
+      await inviteClient({
+        client_name: inviteClientData.name,
+        client_email: inviteClientData.email,
+        project_id: projectId,
+      });
+      setIsInvited(true);
+      toast.success(`Client invitation sent to ${inviteClientData.email}`);
+    } catch (err: any) {
+      toast.warning(`Project created, but client invite failed: ${err?.response?.data?.error || err.message}`);
+    }
+  };
+
+  const handleInviteAppointedCompanies = async (projectId: number | string) => {
+    const toInvite = appointedInvites.filter(e => e.email.trim());
+    if (toInvite.length === 0) return;
+    await Promise.all(toInvite.map(async (entry) => {
+      try {
+        await inviteAppointedCompany({
+          company_name: entry.company_name,
+          contact_name: entry.contact_name,
+          contact_email: entry.email,
+          project_id: projectId,
+          position: entry.position || 'architect',
+        });
+      } catch (err: any) {
+        toast.warning(`Failed to invite ${entry.email}: ${err?.response?.data?.error || err.message}`);
+      }
+    }));
+    if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
+  };
+
+  const { data: user } = useCurrentUser();
+  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
+  const isClientOrContractor = CLIENT_ROLE_CODES.includes(user?.role?.code ?? '');
+
+  // ── Pre-populate from User Organization ───────────────────────────────────
+
+  useEffect(() => {
+    if (user) {
+      // 1. Pre-populate Client details if user is CLIENT/OWNER/CONTRACTOR — from organization
+      if (CLIENT_ROLE_CODES.includes(user.role?.code ?? '') && !clientForm.company_name) {
+        const org = user.organization;
+        const profile = user.profile;
+
+        if (org) {
+          setClientForm((prev) => ({
+            ...prev,
+            company_name: org.name || "",
+            company_registration: org.company_reg_number || "",
+            vat_number: org.vat_number || "",
+            office_number: profile?.phone_number || "",
+            physical_address: {
+              street: profile?.address || "",
+              city: profile?.city || "",
+              province: profile?.state || "",
+              postal_code: profile?.postal_code || "",
+            },
+            client: {
+              name: user.name || prev.client.name,
+              email: user.email || prev.client.email,
+              position: prev.client.position,
+            }
+          }));
+        }
+      }
+
+      // 2. Pre-populate Appointed details — only if user has an organization
+      if (!appointedForm.company_name) {
+        const org = user.organization;
+        const profile = user.profile;
+
+        if (org) {
+          setAppointedForm((prev) => ({
+            ...prev,
+            company_name: org.name || "",
+            company_registration: org.company_reg_number || "",
+            vat_number: org.vat_number || "",
+            office_number: profile?.phone_number || "",
+            physical_address: {
+              street: profile?.address || "",
+              city: profile?.city || "",
+              province: profile?.state || "",
+              postal_code: profile?.postal_code || "",
+            },
+            principal: {
+              ...prev.principal,
+              name: user.name || prev.principal.name,
+              email: user.email || prev.principal.email,
+            }
+          }));
+        }
+      }
+    }
+  }, [user, appointedForm.company_name, clientForm.company_name]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
@@ -544,7 +693,6 @@ export default function CreateProject() {
   const vatAmount = budget * (vatRate / 100);
   const totalWithVat = budget + vatAmount;
   const retentionAmount = budget * (retentionRate / 100);
-  const { data: user } = useCurrentUser();
 
   const getDuration = useCallback(() => {
     if (!form.start_date || !form.end_date) return null;
@@ -648,6 +796,10 @@ export default function CreateProject() {
       return Object.keys(next).length === 0;
     }
     if (step === 2) {
+      // Close the invite form if it's still open
+      if (isInvitingClient) setIsInvitingClient(false);
+      // If invite email is set, client will fill details later — allow proceed
+      if (isInvited || inviteClientData.email.trim()) return true;
       const next: ClientErrors = {};
       if (!clientForm.company_name.trim())
         next.company_name = "Client name or company is required";
@@ -655,11 +807,7 @@ export default function CreateProject() {
       return Object.keys(next).length === 0;
     }
     if (step === 3) {
-      const next: AppointedErrors = {};
-      if (!appointedForm.company_name.trim())
-        next.company_name = "Company name is required";
-      setAppointedErrors(next);
-      return Object.keys(next).length === 0;
+      return true; // All fields optional — invites are sent after project creation
     }
     if (step === 4) {
       const next: FormErrors = {};
@@ -674,8 +822,6 @@ export default function CreateProject() {
     }
     if (step === 6) {
       const next: FormErrors = {};
-      if (!form.start_date) next.start_date = "Start date is required";
-      if (!form.end_date) next.end_date = "End date is required";
       if (form.start_date && form.end_date && form.end_date <= form.start_date)
         next.date_range = "End date must be after start date";
       if (parseBudget(form.total_budget) <= 0)
@@ -695,10 +841,13 @@ export default function CreateProject() {
   };
 
   const handleNext = () => {
-    if (validateStep(currentStep)) goToStep(currentStep + 1);
+    if (!validateStep(currentStep)) return;
+    goToStep(currentStep + 1);
   };
 
-  const handleBack = () => goToStep(currentStep - 1);
+  const handleBack = () => {
+    goToStep(currentStep - 1);
+  };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
@@ -716,10 +865,10 @@ export default function CreateProject() {
       description: form.description,
       project_number: form.project_number,
       projectNumber: form.project_number,
-      start_date: form.start_date,
-      startDate: form.start_date,
-      end_date: form.end_date,
-      endDate: form.end_date,
+      start_date: form.start_date || null,
+      startDate: form.start_date || null,
+      end_date: form.end_date || null,
+      endDate: form.end_date || null,
       fx_rate: fx,
       fxRate: fx,
       retention_rate: ret,
@@ -740,10 +889,9 @@ export default function CreateProject() {
         vat_number: clientForm.vat_number,
         physical_address: clientForm.physical_address,
         postal_address: clientForm.postal_address,
-        banking_details: clientForm.banking_details,
         office_number: clientForm.office_number,
-        client: clientForm.client,
-        client_representative: clientForm.client_representative,
+        client: (() => { const e = clientPersonnelList.find(x => x.role === "Client"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        client_representative: (() => { const e = clientPersonnelList.find(x => x.role === "Client Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
       },
       appointed_company: {
         company_name: appointedForm.company_name,
@@ -751,11 +899,10 @@ export default function CreateProject() {
         vat_number: appointedForm.vat_number,
         physical_address: appointedForm.physical_address,
         postal_address: appointedForm.postal_address,
-        banking_details: appointedForm.banking_details,
         office_number: appointedForm.office_number,
         role_as_per_appointment: appointedForm.role_as_per_appointment,
-        principal: appointedForm.principal,
-        technical_representative: appointedForm.technical_representative,
+        principal: (() => { const e = appointedPersonnelList.find(x => x.role === "Principal Architect"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        technical_representative: (() => { const e = appointedPersonnelList.find(x => x.role === "Technical Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
       },
       task_order_brief: taskOrder.brief,
     };
@@ -806,6 +953,12 @@ export default function CreateProject() {
 
         await queryClient.refetchQueries({ queryKey: [`projects/?userId=${user?.id}`] });
         if (pId) queryClient.invalidateQueries({ queryKey: ["project", pId] });
+
+        // Send client invite if email was provided — linked to this project
+        if (inviteClientData.email.trim() && pId) {
+          await handleInviteClient(pId);
+        }
+        if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
 
         setIsSubmitting(false);
         navigate("/");
@@ -945,88 +1098,10 @@ export default function CreateProject() {
               );
             })}
           </nav>
-
-          {/* ── Live Project Preview Card ── */}
-          <div className="px-4 pb-5 mt-auto">
-            <div className="rounded-2xl p-4" style={{ background: "#1a1a2e" }}>
-              <div className="flex items-center gap-1.5 mb-3">
-                <AiIcon size={14} />
-                <span className="text-[10px] font-normal text-[#a78bfa] uppercase tracking-widest">
-                  Project Preview
-                </span>
-              </div>
-
-              {!form.name && !budget && !files.length && !clientForm.company_name ? (
-                <p className="text-[12px] text-white leading-relaxed">
-                  Your project details will appear here as you fill them in.
-                </p>
-              ) : (
-                <div className="space-y-2.5">
-                  {form.name && (
-                    <div>
-                      <p className="text-[15px] font-normal text-white leading-tight truncate">
-                        {form.name}
-                      </p>
-                      {form.project_number && (
-                        <p className="text-[11px] text-[#a78bfa] mt-0.5 font-normal">
-                          {form.project_number}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {clientForm.company_name && (
-                    <div className="flex items-center gap-1.5">
-                      <Building2 className="w-3 h-3 text-[#6b7280] shrink-0" />
-                      <p className="text-[11px] text-[#9ca3af] truncate">
-                        {clientForm.company_name}
-                      </p>
-                    </div>
-                  )}
-                  {appointedForm.company_name && (
-                    <div className="flex items-center gap-1.5">
-                      <Briefcase className="w-3 h-3 text-[#6b7280] shrink-0" />
-                      <p className="text-[11px] text-[#9ca3af] truncate">
-                        {appointedForm.company_name}
-                      </p>
-                    </div>
-                  )}
-                  {form.location && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3 text-[#6b7280] shrink-0" />
-                      <p className="text-[11px] text-[#9ca3af] truncate">
-                        {form.location}
-                      </p>
-                    </div>
-                  )}
-                  {files.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-3 h-3 text-[#6b7280] shrink-0" />
-                      <p className="text-[11px] text-[#9ca3af]">
-                        {files.length} document{files.length !== 1 ? "s" : ""} ready
-                      </p>
-                    </div>
-                  )}
-                  {budget > 0 && (
-                    <div className="pt-2.5 border-t border-[#2d2d4e]">
-                      <p className="text-[16px] font-normal text-white">
-                        {formatCurrency(budget, form.currency)}
-                      </p>
-                      {getDurationLabel() && (
-                        <p className="text-[11px] text-[#9ca3af] mt-0.5">
-                          {getDurationLabel()} · {form.contract_type}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
         </aside>
 
         {/* ══════════════════════════════ RIGHT PANEL ═══════════════════════ */}
         <div className="flex-1 flex flex-col overflow-hidden">
-
           {/* Mobile progress bar */}
           <div className="lg:hidden bg-white border-b border-[#ededed] px-5 py-3">
             <div className="flex gap-1.5 mb-2">
@@ -1066,7 +1141,6 @@ export default function CreateProject() {
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-6 pb-10">
             <div className="max-w-[720px] mx-auto pt-4">
-
               {/* Step heading */}
               <div className="mb-6">
                 <h1 className="text-[24px] font-normal text-[#101828] leading-tight">
@@ -1188,159 +1262,250 @@ export default function CreateProject() {
                   {currentStep === 2 && (
                     <div className="p-8 space-y-6">
 
-                      {/* ── Company Info ── */}
-                      <div>
-                        <SectionHeader
-                          icon={<Building2 className="w-3.5 h-3.5" />}
-                          label="Client Company Information"
-                          iconBg="#eef2ff"
-                          iconColor="#6c5ce7"
-                        />
-                        <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                          Fill in once — this will auto-populate into all contracts and appointment letters.
-                        </p>
-
-                        <div className="space-y-4">
-                          {/* Client Name or Company */}
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              Client Name or Company <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              className={inputCls(!!clientErrors.company_name)}
-                              placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
-                              value={clientForm.company_name}
-                              onChange={(e) => {
-                                setClientForm((p) => ({ ...p, company_name: e.target.value }));
-                                setClientErrors((p) => ({ ...p, company_name: undefined }));
-                              }}
-                            />
-                            {clientErrors.company_name && (
-                              <p className="text-[12px] text-red-500 mt-1">
-                                {clientErrors.company_name}
-                              </p>
+                      {/* ── Invite Client (if not CLIENT/OWNER/CONTRACTOR) ── */}
+                      {!CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
+                        <div className={cn(
+                          "p-5 rounded-2xl border transition-all duration-300 mb-2",
+                          isInvited || (inviteClientData.email.trim() && !isInvitingClient) ? "bg-emerald-50 border-emerald-200" : "bg-[#f8f9fb] border-[#e2e5ea] border-dashed"
+                        )}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-white text-[#6c5ce7] shadow-sm"
+                              )}>
+                                {isInvited || inviteClientData.email.trim() ? <Check className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <h3 className="text-[14px] font-normal text-[#101828]">
+                                  {isInvited ? "Client Invited Successfully" : inviteClientData.email.trim() ? "Client invite confirmed" : "Invite Client to fill details"}
+                                </h3>
+                                <p className="text-[12px] text-[#6b7280] mt-0.5">
+                                  {isInvited
+                                    ? `Invitation sent to ${inviteClientData.email}`
+                                    : inviteClientData.email.trim()
+                                      ? `${inviteClientData.name || "—"} · ${inviteClientData.email}`
+                                      : "We'll send an email with a link for them to complete this section."}
+                                </p>
+                              </div>
+                            </div>
+                            {!isInvited && (
+                              <button
+                                type="button"
+                                onClick={() => setIsInvitingClient(!isInvitingClient)}
+                                className="text-[13px] text-[#6c5ce7] font-normal hover:text-[#5a4bd1] px-3 py-1.5 rounded-lg hover:bg-[#6c5ce7]/5 transition-colors"
+                              >
+                                {isInvitingClient ? "Cancel" : inviteClientData.email.trim() ? "Edit" : "Invite Client"}
+                              </button>
                             )}
                           </div>
 
-                          {/* Registration + VAT */}
-                          <div className="grid grid-cols-2 gap-4">
+                          {isInvitingClient && !isInvited && (
+                            <div className="mt-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider font-normal mb-1.5 ml-1">Client Name</label>
+                                  <div className="relative">
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <input
+                                      className={cn(inputCls(), "pl-10 h-11")}
+                                      placeholder="e.g. John Smith"
+                                      value={inviteClientData.name}
+                                      onChange={(e) => setInviteClientData({ ...inviteClientData, name: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider font-normal mb-1.5 ml-1">Client Email</label>
+                                  <div className="relative">
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <input
+                                      className={cn(inputCls(), "pl-10 h-11")}
+                                      placeholder="email@example.com"
+                                      type="email"
+                                      value={inviteClientData.email}
+                                      onChange={(e) => setInviteClientData({ ...inviteClientData, email: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setIsInvitingClient(false)}
+                                disabled={!inviteClientData.email}
+                                className="w-full h-11 bg-[#6c5ce7] text-white rounded-xl text-[13px] font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              >
+                                <Check className="w-4 h-4" />
+                                Confirm, Invite will be sent after project is created
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── Company Info (Only for Clients) ── */}
+                      {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
+                        <div>
+                          <SectionHeader
+                            icon={<Building2 className="w-3.5 h-3.5" />}
+                            label="Client Company Information"
+                            iconBg="#eef2ff"
+                            iconColor="#6c5ce7"
+                          />
+                          <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            Fill in once, this will auto-populate into all contracts and appointment letters.
+                          </p>
+
+                          <div className="space-y-4">
+                            {/* Client Name or Company */}
                             <div>
                               <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Company Registration / ID
+                                Client Name or Company <span className="text-red-500">*</span>
                               </label>
                               <input
-                                className={inputCls()}
-                                placeholder="e.g. 2012/123456/07"
-                                value={clientForm.company_registration}
-                                onChange={(e) =>
-                                  setClientForm((p) => ({ ...p, company_registration: e.target.value }))
-                                }
+                                className={inputCls(!!clientErrors.company_name)}
+                                placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
+                                value={clientForm.company_name}
+                                onChange={(e) => {
+                                  setClientForm((p) => ({ ...p, company_name: e.target.value }));
+                                  setClientErrors((p) => ({ ...p, company_name: undefined }));
+                                }}
                               />
+                              {clientErrors.company_name && (
+                                <p className="text-[12px] text-red-500 mt-1">
+                                  {clientErrors.company_name}
+                                </p>
+                              )}
                             </div>
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                VAT Number
-                              </label>
-                              <input
-                                className={inputCls()}
-                                placeholder="e.g. 4123456789"
-                                value={clientForm.vat_number}
-                                onChange={(e) =>
-                                  setClientForm((p) => ({ ...p, vat_number: e.target.value }))
-                                }
-                              />
-                            </div>
-                          </div>
 
-                          {/* Physical + Postal Address */}
-                          <div className="space-y-5">
-                            <AddressFields
-                              label="Physical Address"
-                              value={clientForm.physical_address}
-                              onChange={(v) =>
-                                setClientForm((p) => ({ ...p, physical_address: v }))
-                              }
-                            />
-                            <AddressFields
-                              label="Postal Address"
-                              value={clientForm.postal_address}
-                              onChange={(v) =>
-                                setClientForm((p) => ({ ...p, postal_address: v }))
-                              }
-                            />
-                          </div>
-
-                          {/* Banking + Office */}
-                          <div className="space-y-5">
-                            <BankingFields
-                              value={clientForm.banking_details}
-                              onChange={(v) =>
-                                setClientForm((p) => ({ ...p, banking_details: v }))
-                              }
-                            />
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Office Number
-                              </label>
-                              <div className="relative">
-                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                            {/* Registration + VAT */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                  Company Registration / ID
+                                </label>
+                                <div className="relative group">
+                                  <input
+                                    className={cn(inputCls(), "pr-10")}
+                                    placeholder="e.g. 1970/014526/07"
+                                    value={clientForm.company_registration}
+                                    onChange={(e) =>
+                                      setClientForm((p) => ({
+                                        ...p,
+                                        company_registration: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCompanyLookup("client")}
+                                    disabled={isLookingUp}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    title="Auto-fill from registration"
+                                  >
+                                    {isLookingUp ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                    ) : (
+                                      <Search className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                  VAT Number
+                                </label>
                                 <input
-                                  className={inputCls(false, "pl-10")}
-                                  placeholder="e.g. +27 11 123 4567"
-                                  type="tel"
-                                  value={clientForm.office_number}
+                                  className={inputCls()}
+                                  placeholder="e.g. 4123456789"
+                                  value={clientForm.vat_number}
                                   onChange={(e) =>
-                                    setClientForm((p) => ({ ...p, office_number: e.target.value }))
+                                    setClientForm((p) => ({ ...p, vat_number: e.target.value }))
                                   }
                                 />
                               </div>
                             </div>
+
+                            {/* Physical + Postal Address */}
+                            <div className="space-y-5">
+                              <AddressFields
+                                label="Physical Address"
+                                value={clientForm.physical_address}
+                                onChange={(v) =>
+                                  setClientForm((p) => ({ ...p, physical_address: v }))
+                                }
+                              />
+                              <AddressFields
+                                label="Postal Address"
+                                value={clientForm.postal_address}
+                                onChange={(v) =>
+                                  setClientForm((p) => ({ ...p, postal_address: v }))
+                                }
+                              />
+                            </div>
+
+                            {/* Office */}
+                            <div className="space-y-5">
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                  Office Number
+                                </label>
+                                <div className="relative">
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <input
+                                    className={inputCls(false, "pl-10")}
+                                    placeholder="e.g. +27 11 123 4567"
+                                    type="tel"
+                                    value={clientForm.office_number}
+                                    onChange={(e) =>
+                                      setClientForm((p) => ({ ...p, office_number: e.target.value }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
-                      {/* ── Assigned Personnel ── */}
-                      <div>
-                        <SectionHeader
-                          icon={<User className="w-3.5 h-3.5" />}
-                          label="Assigned Personnel"
-                          iconBg="#f0fdf4"
-                          iconColor="#00b894"
-                        />
-                        <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                          These members will be given predetermined access rights to the project.
-                        </p>
-                        {!showClientPersonnel ? (
-                          <button
-                            type="button"
-                            onClick={() => setShowClientPersonnel(true)}
-                            className="w-full py-6 border-2 border-dashed border-[#e2e5ea] rounded-xl flex flex-col items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                            <div className="w-8 h-8 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                              <Plus className="w-4 h-4" />
-                            </div>
-                            <span className="font-normal">Add Assigned Personnel</span>
-                          </button>
-                        ) : (
+                      {/* ── Assigned Personnel (Only for Clients) ── */}
+                      {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
+                        <div>
+                          <SectionHeader
+                            icon={<User className="w-3.5 h-3.5" />}
+                            label="Assigned Personnel"
+                            iconBg="#f0fdf4"
+                            iconColor="#00b894"
+                          />
+                          <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            These members will be given predetermined access rights to the project.
+                          </p>
                           <div className="space-y-3">
-                            <PersonnelCard
-                              label="Client"
-                              role="Super User"
-                              roleColor="#6c5ce7"
-                              iconColor="#6c5ce7"
-                              value={clientForm.client}
-                              onChange={(v) => setClientForm((p) => ({ ...p, client: v }))}
-                            />
-                            <PersonnelCard
-                              label="Client Representative"
-                              role="Tech User"
-                              roleColor="#00b894"
-                              iconColor="#00b894"
-                              value={clientForm.client_representative}
-                              onChange={(v) => setClientForm((p) => ({ ...p, client_representative: v }))}
-                            />
+                            {clientPersonnelList.map((entry) => (
+                              <PersonnelEntryCard
+                                key={entry.id}
+                                entry={entry}
+                                roleOptions={CLIENT_ROLE_OPTIONS}
+                                takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                canRemove={true}
+                              />
+                            ))}
+                            {clientPersonnelList.length < CLIENT_ROLE_OPTIONS.length && (
+                              <button
+                                type="button"
+                                onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
+                                <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="font-normal">Add User</span>
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1348,182 +1513,242 @@ export default function CreateProject() {
                   {currentStep === 3 && (
                     <div className="p-8 space-y-6">
 
-                      {/* ── Company Info ── */}
-                      <div>
-                        <SectionHeader
-                          icon={<Building2 className="w-3.5 h-3.5" />}
-                          label="Appointed Company Information"
-                          iconBg="#eff6ff"
-                          iconColor="#3A6FF7"
-                        />
-                        <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                          Fill in once — this will auto-populate into PROCSA and JBCC agreements.
-                        </p>
+                      {/* CLIENT/OWNER/CONTRACTOR: simplified invite form */}
+                      {isClientOrContractor && (
+                        <>
+                          <div>
+                            <SectionHeader
+                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              label="Invite Appointed Companies"
+                              iconBg="#eff6ff"
+                              iconColor="#3A6FF7"
+                            />
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                              Invite the professional firms appointed to this project. They'll receive an email to fill in their company details.
+                            </p>
+                          </div>
+                          <div className="space-y-4">
+                            {appointedInvites.map((entry) => (
+                              <div key={entry.id} className="bg-[#f8f9fb] rounded-xl p-4 space-y-3 border border-[#e2e5ea]">
+                                <div className="flex items-center justify-end">
+                                  {appointedInvites.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))}
+                                      className="text-[#9ca3af] hover:text-red-500 transition-colors"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Name</label>
+                                  <input
+                                    className={inputCls()}
+                                    placeholder="e.g. Base Architects and Associates"
+                                    value={entry.company_name}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
+                                  <select
+                                    className={inputCls()}
+                                    value={entry.position}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}
+                                  >
+                                    <option value="architect">Architect</option>
+                                    <option value="pm">Project Manager</option>
+                                    <option value="qs">Quantity Surveyor</option>
+                                    <option value="civil">Civil Engineer</option>
+                                    <option value="structural">Structural Engineer</option>
+                                    <option value="mep">MEP Engineer</option>
+                                    <option value="electrical">Electrical Engineer</option>
+                                    <option value="mechanical">Mechanical Engineer</option>
+                                    <option value="contractor">Contractor</option>
+                                    <option value="site_manager">Site Manager</option>
+                                    <option value="safety_officer">Safety Officer</option>
+                                    <option value="document_controller">Document Controller</option>
+                                    <option value="other">Other</option>
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Contact Person Name</label>
+                                    <input
+                                      className={inputCls()}
+                                      placeholder="e.g. John Smith"
+                                      value={entry.contact_name}
+                                      onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Email Address</label>
+                                    <input
+                                      className={inputCls()}
+                                      placeholder="e.g. john@firm.co.za"
+                                      type="email"
+                                      value={entry.email}
+                                      onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, email: e.target.value } : x))}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', contact_name: '', email: '', position: 'architect' }])}
+                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
+                            >
+                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                <Plus className="w-3.5 h-3.5" />
+                              </div>
+                              <span className="font-normal">Add Another Company</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
 
-                        <div className="space-y-4">
-                          {/* Company Name + Role */}
-                          <div className="grid grid-cols-2 gap-4">
+                      {/* Other roles: full appointed company details form */}
+                      {!isClientOrContractor && (
+                        <>
+                          <div>
+                            <SectionHeader
+                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              label="Appointed Company Information"
+                              iconBg="#eff6ff"
+                              iconColor="#3A6FF7"
+                            />
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                              Fill in once, this will auto-populate into all contracts and appointment letters.
+                            </p>
+                          </div>
+
+                          <div className="space-y-4">
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Company Name <span className="text-red-500">*</span>
-                              </label>
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name</label>
                               <input
-                                className={inputCls(!!appointedErrors.company_name)}
+                                className={inputCls()}
                                 placeholder="e.g. Base Architects and Associates"
                                 value={appointedForm.company_name}
-                                onChange={(e) => {
-                                  setAppointedForm((p) => ({ ...p, company_name: e.target.value }));
-                                  setAppointedErrors((p) => ({ ...p, company_name: undefined }));
-                                }}
+                                onChange={(e) => setAppointedForm((p) => ({ ...p, company_name: e.target.value }))}
                               />
-                              {appointedErrors.company_name && (
-                                <p className="text-[12px] text-red-500 mt-1">
-                                  {appointedErrors.company_name}
-                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Registration / ID</label>
+                                <div className="relative group">
+                                  <input
+                                    className={cn(inputCls(), "pr-10")}
+                                    placeholder="e.g. 1970/014526/07"
+                                    value={appointedForm.company_registration}
+                                    onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCompanyLookup("appointed")}
+                                    disabled={isLookingUp}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    title="Auto-fill from registration"
+                                  >
+                                    {isLookingUp ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                    ) : (
+                                      <Search className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">VAT Number</label>
+                                <input
+                                  className={inputCls()}
+                                  placeholder="e.g. 4123456789"
+                                  value={appointedForm.vat_number}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, vat_number: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Office Number</label>
+                                <div className="relative">
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <input
+                                    className={inputCls(false, "pl-10")}
+                                    placeholder="e.g. +27 11 123 4567"
+                                    type="tel"
+                                    value={appointedForm.office_number}
+                                    onChange={(e) => setAppointedForm((p) => ({ ...p, office_number: e.target.value }))}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Role / Responsibility</label>
+                                <input
+                                  className={inputCls()}
+                                  placeholder="e.g. Principal Architect"
+                                  value={appointedForm.role_as_per_appointment}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-5">
+                              <AddressFields
+                                label="Physical Address"
+                                value={appointedForm.physical_address}
+                                onChange={(v) => setAppointedForm((p) => ({ ...p, physical_address: v }))}
+                              />
+                              <AddressFields
+                                label="Postal Address"
+                                value={appointedForm.postal_address}
+                                onChange={(v) => setAppointedForm((p) => ({ ...p, postal_address: v }))}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <SectionHeader
+                              icon={<User className="w-3.5 h-3.5" />}
+                              label="Key Personnel"
+                              iconBg="#f0fdf4"
+                              iconColor="#00b894"
+                            />
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                              These members will be given predetermined access rights to the project.
+                            </p>
+                            <div className="space-y-3">
+                              {appointedPersonnelList.map((entry) => (
+                                <PersonnelEntryCard
+                                  key={entry.id}
+                                  entry={entry}
+                                  roleOptions={APPOINTED_ROLE_OPTIONS}
+                                  takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                  onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                  onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                  canRemove={true}
+                                />
+                              ))}
+                              {appointedPersonnelList.length < APPOINTED_ROLE_OPTIONS.length && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                  className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
+                                >
+                                  <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="font-normal">Add Personnel</span>
+                                </button>
                               )}
                             </div>
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-[13px] font-normal text-[#374151]">
-                                  Responsibility / Role
-                                </label>
-                                <Tooltip text="Role as per the appointment (e.g. Principal Agent, Architect, QS)" />
-                              </div>
-                              <div className="relative">
-                                <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                                <input
-                                  className={inputCls(false, "pl-10")}
-                                  placeholder="e.g. Principal Agent / Architect"
-                                  value={appointedForm.role_as_per_appointment}
-                                  onChange={(e) =>
-                                    setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))
-                                  }
-                                />
-                              </div>
-                            </div>
                           </div>
+                        </>
+                      )}
 
-                          {/* Registration + VAT */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Company Registration
-                              </label>
-                              <input
-                                className={inputCls()}
-                                placeholder="e.g. 2012/123456/07"
-                                value={appointedForm.company_registration}
-                                onChange={(e) =>
-                                  setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))
-                                }
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                VAT Number
-                              </label>
-                              <input
-                                className={inputCls()}
-                                placeholder="e.g. 4123456789"
-                                value={appointedForm.vat_number}
-                                onChange={(e) =>
-                                  setAppointedForm((p) => ({ ...p, vat_number: e.target.value }))
-                                }
-                              />
-                            </div>
-                          </div>
-
-                          {/* Physical + Postal Address */}
-                          <div className="space-y-5">
-                            <AddressFields
-                              label="Physical Address"
-                              value={appointedForm.physical_address}
-                              onChange={(v) =>
-                                setAppointedForm((p) => ({ ...p, physical_address: v }))
-                              }
-                            />
-                            <AddressFields
-                              label="Postal Address"
-                              value={appointedForm.postal_address}
-                              onChange={(v) =>
-                                setAppointedForm((p) => ({ ...p, postal_address: v }))
-                              }
-                            />
-                          </div>
-
-                          {/* Banking + Office */}
-                          <div className="space-y-5">
-                            <BankingFields
-                              value={appointedForm.banking_details}
-                              onChange={(v) =>
-                                setAppointedForm((p) => ({ ...p, banking_details: v }))
-                              }
-                            />
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                                Office Number
-                              </label>
-                              <div className="relative">
-                                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                                <input
-                                  className={inputCls(false, "pl-10")}
-                                  placeholder="e.g. +27 11 123 4567"
-                                  type="tel"
-                                  value={appointedForm.office_number}
-                                  onChange={(e) =>
-                                    setAppointedForm((p) => ({ ...p, office_number: e.target.value }))
-                                  }
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── Assigned Personnel ── */}
-                      <div>
-                        <SectionHeader
-                          icon={<User className="w-3.5 h-3.5" />}
-                          label="Assigned Personnel"
-                          iconBg="#f0fdf4"
-                          iconColor="#00b894"
-                        />
-                        <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                          These members will be given predetermined access rights to the project.
-                        </p>
-                        {!showAppointedPersonnel ? (
-                          <button
-                            type="button"
-                            onClick={() => setShowAppointedPersonnel(true)}
-                            className="w-full py-6 border-2 border-dashed border-[#e2e5ea] rounded-xl flex flex-col items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                            <div className="w-8 h-8 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                              <Plus className="w-4 h-4" />
-                            </div>
-                            <span className="font-normal">Add Assigned Personnel</span>
-                          </button>
-                        ) : (
-                          <div className="space-y-3">
-                            <PersonnelCard
-                              label="Principal Architect"
-                              role="Super User"
-                              roleColor="#6c5ce7"
-                              iconColor="#6c5ce7"
-                              value={appointedForm.principal}
-                              onChange={(v) => setAppointedForm((p) => ({ ...p, principal: v }))}
-                            />
-                            <PersonnelCard
-                              label="Technical Representative"
-                              role="Tech User"
-                              roleColor="#00b894"
-                              iconColor="#00b894"
-                              value={appointedForm.technical_representative}
-                              onChange={(v) =>
-                                setAppointedForm((p) => ({ ...p, technical_representative: v }))
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
                     </div>
                   )}
 
@@ -1710,7 +1935,7 @@ export default function CreateProject() {
                           {/* Start date */}
                           <div>
                             <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              Start Date <span className="text-red-500">*</span>
+                              Start Date <span className="text-gray-400 text-[12px]">(optional)</span>
                             </label>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -1745,7 +1970,7 @@ export default function CreateProject() {
                           {/* End date */}
                           <div>
                             <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              End Date <span className="text-red-500">*</span>
+                              End Date <span className="text-gray-400 text-[12px]">(optional)</span>
                             </label>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2002,9 +2227,9 @@ export default function CreateProject() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </div >
+        </div >
+      </div >
     </>
   );
 }

@@ -65,7 +65,7 @@ const Timeline = () => {
 
       {/* Note */}
       <p className="text-xs text-muted-foreground text-center">
-        Interactive Gantt chart with drag-and-drop, dependencies, and critical path highlighting — coming soon.
+        Interactive Gantt chart with drag-and-drop, dependencies, and critical path highlighting, coming soon.
       </p>
     </div>
   );

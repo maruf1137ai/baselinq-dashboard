@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { uploadProjectDocument, validateFile, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
+import { uploadProjectDocument, validateFile, ALLOWED_FILE_EXTENSIONS, lookupCompany } from "@/lib/Api";
 import {
   X,
   FileText,
@@ -14,7 +14,8 @@ import {
   Briefcase,
   ScrollText,
   Plus,
-  CreditCard,
+  Loader2,
+  Search,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,6 +34,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Select,
   SelectContent,
@@ -69,11 +71,6 @@ interface AddressState {
   postal_code: string;
 }
 
-interface BankingState {
-  bank_name: string;
-  account_number: string;
-  branch_code: string;
-}
 
 interface ClientFormState {
   company_name: string;
@@ -81,7 +78,6 @@ interface ClientFormState {
   vat_number: string;
   physical_address: AddressState;
   postal_address: AddressState;
-  banking_details: BankingState;
   office_number: string;
   client: PersonnelState;
   client_representative: PersonnelState;
@@ -93,7 +89,6 @@ interface AppointedFormState {
   vat_number: string;
   physical_address: AddressState;
   postal_address: AddressState;
-  banking_details: BankingState;
   office_number: string;
   role_as_per_appointment: string;
   principal: PersonnelState;
@@ -103,7 +98,6 @@ interface AppointedFormState {
 // ── Defaults ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
-const DEFAULT_BANKING: BankingState = { bank_name: "", account_number: "", branch_code: "" };
 
 const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", phone: "" };
 
@@ -113,7 +107,6 @@ const DEFAULT_CLIENT: ClientFormState = {
   vat_number: "",
   physical_address: { ...DEFAULT_ADDRESS },
   postal_address: { ...DEFAULT_ADDRESS },
-  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   client: { ...DEFAULT_PERSONNEL },
   client_representative: { ...DEFAULT_PERSONNEL },
@@ -125,7 +118,6 @@ const DEFAULT_APPOINTED: AppointedFormState = {
   vat_number: "",
   physical_address: { ...DEFAULT_ADDRESS },
   postal_address: { ...DEFAULT_ADDRESS },
-  banking_details: { ...DEFAULT_BANKING },
   office_number: "",
   role_as_per_appointment: "",
   principal: { ...DEFAULT_PERSONNEL },
@@ -176,9 +168,8 @@ const ensureAddress = (val: any): AddressState => {
   return { street: String(val || ""), city: "", province: "", postal_code: "" };
 };
 
-const ensureBanking = (val: any): BankingState => {
-  if (val && typeof val === "object" && "bank_name" in val) return val as BankingState;
-  return { bank_name: String(val || ""), account_number: "", branch_code: "" };
+const ensureBanking = (val: any): any => {
+  return {};
 };
 
 function StepAddressFields({
@@ -207,37 +198,6 @@ function StepAddressFields({
   );
 }
 
-function StepBankingFields({
-  value,
-  onChange,
-}: {
-  value: BankingState;
-  onChange: (v: BankingState) => void;
-}) {
-  const fieldCls = cn(
-    "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
-  );
-  return (
-    <div className="space-y-2">
-      <label className="text-xs font-medium text-muted-foreground block">Banking Details</label>
-      <div className="grid grid-cols-3 gap-2">
-        <div className="relative">
-          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
-          <input className={cn(fieldCls, "pl-9")} placeholder="Bank" value={value.bank_name} onChange={(e) => onChange({ ...value, bank_name: e.target.value })} />
-        </div>
-        <div className="relative">
-          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
-          <input className={cn(fieldCls, "pl-9")} placeholder="Account" value={value.account_number} onChange={(e) => onChange({ ...value, account_number: e.target.value })} />
-        </div>
-        <div className="relative">
-          <ScrollText className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
-          <input className={cn(fieldCls, "pl-9")} placeholder="Branch" value={value.branch_code} onChange={(e) => onChange({ ...value, branch_code: e.target.value })} />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function StepPersonnelCard({
   label,
@@ -300,8 +260,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
   const { mutate: createProject, isPending: isCreating } = useCreateProject();
   const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
   const isPending = isCreating || isUpdatingProject;
-  const user = localStorage.getItem("user");
-  const userObj = user ? JSON.parse(user) : null;
+  const { data: userObj } = useCurrentUser();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -316,6 +275,52 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
   const [taskOrderBrief, setTaskOrderBrief] = useState("");
   const [showClientPersonnel, setShowClientPersonnel] = useState(false);
   const [showAppointedPersonnel, setShowAppointedPersonnel] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [userProfileLoaded, setUserProfileLoaded] = useState(false);
+
+  const handleCompanyLookup = async (target: "client" | "appointed") => {
+    const reg = (target === "client" ? clientForm.company_registration : appointedForm.company_registration).trim();
+    if (!reg) {
+      toast.error("Please enter a registration number to look up.");
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const data = await lookupCompany(reg);
+      if (data) {
+        if (target === "client") {
+          setClientForm((prev) => ({
+            ...prev,
+            company_name: data.company_name || prev.company_name,
+            vat_number: data.vat_number || prev.vat_number,
+            office_number: data.office_number || prev.office_number,
+            physical_address: data.physical_address ? {
+              ...prev.physical_address,
+              ...data.physical_address,
+            } : prev.physical_address,
+          }));
+        } else {
+          setAppointedForm((prev) => ({
+            ...prev,
+            company_name: data.company_name || prev.company_name,
+            vat_number: data.vat_number || prev.vat_number,
+            office_number: data.office_number || prev.office_number,
+            physical_address: data.physical_address ? {
+              ...prev.physical_address,
+              ...data.physical_address,
+            } : prev.physical_address,
+          }));
+        }
+        toast.success("Company details retrieved successfully!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Company not found or lookup failed. Please enter details manually.");
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
@@ -356,7 +361,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         vat_number: cd.vat_number || "",
         physical_address: ensureAddress(cd.physical_address),
         postal_address: ensureAddress(cd.postal_address),
-        banking_details: ensureBanking(cd.banking_details),
         office_number: cd.office_number || "",
         client: cd.client || { ...DEFAULT_PERSONNEL },
         client_representative: cd.client_representative || { ...DEFAULT_PERSONNEL },
@@ -369,7 +373,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         vat_number: ac.vat_number || "",
         physical_address: ensureAddress(ac.physical_address),
         postal_address: ensureAddress(ac.postal_address),
-        banking_details: ensureBanking(ac.banking_details),
         office_number: ac.office_number || "",
         role_as_per_appointment: ac.role_as_per_appointment || "",
         principal: ac.principal || { ...DEFAULT_PERSONNEL },
@@ -386,16 +389,50 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       }
     } else {
       form.reset({
-        name: "", description: "", project_number: "",
-        start_date: "", end_date: "",
-        fx_rate: 1, retention_rate: 5, vat_rate: 15,
-        contract_type: "JBCC", total_budget: 0, location: "", attachments: [],
+        name: "",
+        description: "",
+        project_number: "",
+        start_date: "",
+        end_date: "",
+        fx_rate: 1,
+        retention_rate: 5,
+        vat_rate: 15,
+        contract_type: "JBCC",
+        total_budget: 0,
+        location: "",
+        attachments: [],
       });
       setClientForm({ ...DEFAULT_CLIENT });
-      setAppointedForm({ ...DEFAULT_APPOINTED });
       setTaskOrderBrief("");
       setShowClientPersonnel(false);
       setShowAppointedPersonnel(false);
+
+      if (!appointedForm.company_name && userObj) {
+        const org = userObj.organization;
+        const profile = userObj.profile;
+
+        if (org || profile) {
+          setAppointedForm({
+            ...DEFAULT_APPOINTED,
+            company_name: org?.name || DEFAULT_APPOINTED.company_name,
+            company_registration: org?.company_reg_number || DEFAULT_APPOINTED.company_registration,
+            vat_number: org?.vat_number || DEFAULT_APPOINTED.vat_number,
+            office_number: profile?.phone_number || DEFAULT_APPOINTED.office_number,
+            physical_address: {
+              ...DEFAULT_APPOINTED.physical_address,
+              street: profile?.address || DEFAULT_APPOINTED.physical_address.street,
+              city: profile?.city || DEFAULT_APPOINTED.physical_address.city,
+              province: profile?.state || DEFAULT_APPOINTED.physical_address.province,
+              postal_code: profile?.postal_code || DEFAULT_APPOINTED.physical_address.postal_code,
+            },
+            principal: {
+              ...DEFAULT_APPOINTED.principal,
+              name: userObj.name || DEFAULT_APPOINTED.principal.name,
+              email: userObj.email || DEFAULT_APPOINTED.principal.email,
+            },
+          });
+        }
+      }
     }
 
     setSelectedFiles([]);
@@ -539,7 +576,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         vat_number: clientForm.vat_number,
         physical_address: clientForm.physical_address,
         postal_address: clientForm.postal_address,
-        banking_details: clientForm.banking_details,
         office_number: clientForm.office_number,
         client: clientForm.client,
         client_representative: clientForm.client_representative,
@@ -550,7 +586,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         vat_number: appointedForm.vat_number,
         physical_address: appointedForm.physical_address,
         postal_address: appointedForm.postal_address,
-        banking_details: appointedForm.banking_details,
         office_number: appointedForm.office_number,
         role_as_per_appointment: appointedForm.role_as_per_appointment,
         principal: appointedForm.principal,
@@ -705,8 +740,33 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     {clientError && <p className="text-xs text-red-500 mt-1">{clientError}</p>}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Company Registration / ID</label>
-                    <input className={fieldCls} placeholder="REG-001" value={clientForm.company_registration} onChange={(e) => setClientForm(p => ({ ...p, company_registration: e.target.value }))} />
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Company Registration</label>
+                    <div className="relative group">
+                      <input
+                        className={cn(fieldCls, "pr-10")}
+                        placeholder="e.g. 1970/014526/07"
+                        value={clientForm.company_registration}
+                        onChange={(e) =>
+                          setClientForm((p) => ({
+                            ...p,
+                            company_registration: e.target.value,
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCompanyLookup("client")}
+                        disabled={isLookingUp}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#8081F6] hover:bg-[#8081F6]/5 transition-all"
+                        title="Auto-fill from registration"
+                      >
+                        {isLookingUp ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8081F6]" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1">VAT Number</label>
@@ -719,7 +779,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   <div className="col-span-2 space-y-4">
                     <StepAddressFields label="Physical Address" value={clientForm.physical_address} onChange={(v) => setClientForm(p => ({ ...p, physical_address: v }))} />
                     <StepAddressFields label="Postal Address" value={clientForm.postal_address} onChange={(v) => setClientForm(p => ({ ...p, postal_address: v }))} />
-                    <StepBankingFields value={clientForm.banking_details} onChange={(v) => setClientForm(p => ({ ...p, banking_details: v }))} />
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
@@ -764,7 +823,32 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1">Company Registration</label>
-                    <input className={fieldCls} placeholder="REG-002" value={appointedForm.company_registration} onChange={(e) => setAppointedForm(p => ({ ...p, company_registration: e.target.value }))} />
+                    <div className="relative group">
+                      <input
+                        className={cn(fieldCls, "pr-10")}
+                        placeholder="e.g. 2012/123456/07"
+                        value={appointedForm.company_registration}
+                        onChange={(e) =>
+                          setAppointedForm((p) => ({
+                            ...p,
+                            company_registration: e.target.value,
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCompanyLookup("appointed")}
+                        disabled={isLookingUp}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#8081F6] hover:bg-[#8081F6]/5 transition-all"
+                        title="Auto-fill from registration"
+                      >
+                        {isLookingUp ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8081F6]" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground block mb-1">VAT Number</label>
@@ -777,7 +861,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   <div className="col-span-2 space-y-4">
                     <StepAddressFields label="Physical Address" value={appointedForm.physical_address} onChange={(v) => setAppointedForm(p => ({ ...p, physical_address: v }))} />
                     <StepAddressFields label="Postal Address" value={appointedForm.postal_address} onChange={(v) => setAppointedForm(p => ({ ...p, postal_address: v }))} />
-                    <StepBankingFields value={appointedForm.banking_details} onChange={(v) => setAppointedForm(p => ({ ...p, banking_details: v }))} />
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">

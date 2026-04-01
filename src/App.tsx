@@ -34,6 +34,7 @@ import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
 import DocumentDetail from "./pages/DocumentDetail";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import AcceptAppointedInvitation from "./pages/AcceptAppointedInvitation";
 
 const queryClient = new QueryClient();
 // fghfjhjf
@@ -117,6 +118,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
+          <Route path="/accept-appointed-invitation/:token" element={<AcceptAppointedInvitation />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/tasks" element={<Task />} />
           <Route path="/tasks/:taskId" element={<TaskDetails />} />

@@ -452,7 +452,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                   <div key={i} className="flex items-center gap-2 p-2.5 rounded-[8px] border border-[#e9ecef] hover:bg-[#f8f9fa] transition-colors">
                     <FileText className="h-3.5 w-3.5 text-[#0984e3] shrink-0" />
                     <span className="text-[12px] text-[#1a1a1a] font-medium">
-                      Clause {cite.clause_number} — {cite.clause_title}
+                      Clause {cite.clause_number}, {cite.clause_title}
                     </span>
                     <span className="text-[10px] text-[#9CA3AF]">Page {cite.page_number}</span>
                   </div>

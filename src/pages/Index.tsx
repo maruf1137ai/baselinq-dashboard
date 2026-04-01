@@ -7,7 +7,7 @@ import { ActivityFeedItem } from '@/components/ActivityFeedItem';
 import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileText, ArrowRight, ChevronDown } from 'lucide-react';
+import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen } from 'lucide-react';
 import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import MyAction from '@/components/icons/MyAction';
@@ -171,9 +171,31 @@ const Index = () => {
     }, 1000);
   }, []);
 
+  const allProjects = projectListData?.results || [];
+  const hasNoProjects = !projectId && allProjects.length === 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* No Projects Banner */}
+        {hasNoProjects && (
+          <div className="w-full bg-white rounded-2xl border border-[#e2e5ea] p-8 text-center shadow-sm flex flex-col items-center">
+            <div className="w-14 h-14 bg-[#f0edff] rounded-2xl flex items-center justify-center mb-4">
+              <FolderOpen className="w-7 h-7 text-[#6c5ce7]" />
+            </div>
+            <h2 className="text-lg font-medium text-[#111827] mb-1">No projects yet</h2>
+            <p className="text-sm text-[#6b7280] mb-5 max-w-md leading-relaxed">
+              Create your first project to get started. You can manage tasks, documents, budgets, and team members all in one place.
+            </p>
+            <button
+              onClick={() => navigate("/create-project")}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#6c5ce7] text-white text-sm font-normal rounded-xl hover:bg-[#5a4bd1] transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" />
+              Create your first project
+            </button>
+          </div>
+        )}
         {/* Project Context Bar */}
         <div className="flex items-center justify-between flex-wrap gap-4 bg-sidebar rounded-xl p-4">
           <div className="flex items-center gap-4">

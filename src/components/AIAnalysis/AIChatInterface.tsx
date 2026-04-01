@@ -267,7 +267,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                       <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
                         <div className="flex items-center gap-1.5 mb-1">
                           <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <p className="text-xs font-semibold text-foreground truncate">{source.clause_title} — Page {source.page_number}</p>
+                          <p className="text-xs font-semibold text-foreground truncate">{source.clause_title}, Page {source.page_number}</p>
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{source.excerpt}</p>
                       </div>

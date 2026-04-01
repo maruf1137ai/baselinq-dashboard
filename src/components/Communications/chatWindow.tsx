@@ -493,7 +493,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
                   <MessageSquare className="h-8 w-8 stroke-[1.5]" />
-                  <p className="text-xs">No messages yet — start the conversation below</p>
+                  <p className="text-xs">No messages yet, start the conversation below</p>
                 </div>
               )}
               {messages.map((msg) => {

@@ -186,7 +186,7 @@ const Documents = () => {
                   <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                   <span className="text-xs font-normal">
                     {stats.gated.length} finance gated
-                    {stats.gated[0] ? ` — ${stats.gated[0].reference}` : ''}
+                    {stats.gated[0] ? `, ${stats.gated[0].reference}` : ''}
                   </span>
                 </button>
               )}

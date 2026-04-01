@@ -249,7 +249,7 @@ const AiWorkSpace = () => {
                               citations.push({
                                 type: 'clause',
                                 label: `Clause ${source.clause_number}`,
-                                detail: `${source.clause_title} — Page ${source.page_number}`,
+                                detail: `${source.clause_title}, Page ${source.page_number}`,
                                 subtext: source.excerpt,
                               });
                             });
@@ -263,7 +263,7 @@ const AiWorkSpace = () => {
                                     citations.push({
                                       type: 'market',
                                       label: item.description?.slice(0, 25) + (item.description?.length > 25 ? '...' : ''),
-                                      detail: `${src} — ${item.description}`,
+                                      detail: `${src}, ${item.description}`,
                                       subtext: mv.assessment || '',
                                     });
                                   }

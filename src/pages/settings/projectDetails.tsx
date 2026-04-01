@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
-import { useProjects } from "@/hooks/useProjects";
+import { useProjects, useProject } from "@/hooks/useProjects";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteProjectDocument, ProjectDocument } from "@/lib/Api";
@@ -110,12 +110,14 @@ const ProjectDetails = () => {
   const navigate = useNavigate();
 
   const queryClient = useQueryClient();
-  const { data: projects = [], isLoading } = useProjects();
+  const { data: projects = [] } = useProjects();
 
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const selectedProject = projects.find((project: any) =>
-    (project._id || project.id) == selectedProjectId
-  );
+  const { data: fetchedProject, isLoading } = useProject(selectedProjectId ?? undefined);
+
+  // Prefer freshly fetched individual project (has client_details); fall back to list
+  const selectedProject = fetchedProject ||
+    projects.find((project: any) => (project._id || project.id) == selectedProjectId);
 
   if (isLoading) {
     return (

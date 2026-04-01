@@ -77,7 +77,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-white flex flex-col max-h-[90vh]">
         <DialogHeader className="px-8 py-6 border-b bg-gray-50/50">
           <div className="flex flex-col gap-1">
-            <DialogTitle className="text-xl font-normal text-foreground">Version History — {document.reference}</DialogTitle>
+            <DialogTitle className="text-xl font-normal text-foreground">Version History, {document.reference}</DialogTitle>
             <p className="text-sm text-gray-500 font-normal">{document.name}</p>
           </div>
         </DialogHeader>

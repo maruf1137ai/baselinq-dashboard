@@ -135,7 +135,7 @@ export const DocumentSummaryCards: React.FC = () => {
         title="Finance Gated"
         value={String(gatedDocs.length)}
         subtitle={`${gatedDocs.length} document${gatedDocs.length !== 1 ? 's' : ''} blocked`}
-        breakdown={gatedDoc ? `${gatedDoc.reference} — awaiting TCC` : undefined}
+        breakdown={gatedDoc ? `${gatedDoc.reference}, awaiting TCC` : undefined}
         icon={<Lock className="w-4 h-4 text-amber-500" />}
         className="border-l-4 border-amber-400"
       />

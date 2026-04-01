@@ -1,17 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Eye,
   EyeOff,
   Check,
-  Upload,
-  FileText,
-  X,
-  CalendarIcon,
 } from "lucide-react";
-import { format } from "date-fns";
-import AiIcon from "@/components/icons/AiIcon";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchInvitation, acceptInvitation } from "@/lib/Api";
@@ -19,10 +11,15 @@ import { cn } from "@/lib/utils";
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
-const STEPS = [
+const STEPS_BASE = [
   { id: 1, label: "Account Setup", description: "Name & password" },
   { id: 2, label: "Professional", description: "Identity & registration" },
-  { id: 3, label: "Insurance", description: "Certificate & expiry" },
+];
+
+const STEPS_CLIENT = [
+  { id: 1, label: "Account Setup", description: "Name & password" },
+  { id: 2, label: "Company Details", description: "Legal & tax info" },
+  { id: 3, label: "Professional", description: "Identity & registration" },
 ];
 
 const INPUT_CLS =
@@ -51,7 +48,6 @@ const Field = ({
 export default function AcceptInvitation() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
 
@@ -67,12 +63,17 @@ export default function AcceptInvitation() {
   const [professionalBody, setProfessionalBody] = useState("");
   const [professionalRegNumber, setProfessionalRegNumber] = useState("");
 
-  // Step 3 — Insurance
-  const [insuranceCertificate, setInsuranceCertificate] = useState<File | null>(null);
-  const [insuranceExpiry, setInsuranceExpiry] = useState<Date | undefined>(undefined);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  // Step 2 — Company (Client Only)
+  const [companyName, setCompanyName] = useState("");
+  const [companyRegNumber, setCompanyRegNumber] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
 
   const [error, setError] = useState("");
+
 
   const { data: invite, isLoading, isError } = useQuery({
     queryKey: ["invitation", token],
@@ -80,6 +81,10 @@ export default function AcceptInvitation() {
     enabled: !!token,
     retry: false,
   });
+
+  const isClient = invite?.position === "client";
+  const steps = isClient ? STEPS_CLIENT : STEPS_BASE;
+  const totalSteps = steps.length;
 
   useEffect(() => {
     if (!invite?.position || professionalBody) return;
@@ -135,7 +140,17 @@ export default function AcceptInvitation() {
       id_number: idNumber || undefined,
       professional_body: professionalBody || undefined,
       professional_reg_number: professionalRegNumber || undefined,
-      insurance_expiry: insuranceExpiry ? format(insuranceExpiry, "yyyy-MM-dd") : undefined,
+      // Client fields
+      ...(isClient ? {
+        company_name: companyName,
+        company_reg_number: companyRegNumber,
+        vat_number: vatNumber,
+        address,
+        city,
+        state,
+        postal_code: postalCode,
+        account_type: 'organisation',
+      } : {})
     });
   };
 
@@ -186,13 +201,13 @@ export default function AcceptInvitation() {
 
         {/* Heading */}
         <div className="px-6 pt-5 pb-2">
-          <p className="text-[18px] text-[#101828] leading-tight">Accept Invitation</p>
+          <p className="text-[18px] text-[#101828] leading-tight font-normal">Accept Invitation</p>
           <p className="text-[12px] text-[#9ca3af] mt-1">Set up your profile to join</p>
         </div>
 
         {/* Stepper */}
         <nav className="px-4 pt-3 flex-1 overflow-y-auto">
-          {STEPS.map((s, i) => {
+          {steps.map((s, i) => {
             const done = step > s.id;
             const active = step === s.id;
             return (
@@ -222,7 +237,7 @@ export default function AcceptInvitation() {
                     </p>
                   </div>
                 </div>
-                {i < STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <div
                     className="my-0.5"
                     style={
@@ -237,32 +252,6 @@ export default function AcceptInvitation() {
           })}
         </nav>
 
-        {/* Invitation preview card */}
-        {/* <div className="px-4 pb-5 mt-auto">
-          <div className="rounded-2xl p-4" style={{ background: "#1a1a2e" }}>
-            <div className="flex items-center gap-1.5 mb-3">
-              <AiIcon size={14} />
-              <span className="text-[10px] text-[#a78bfa] uppercase tracking-widest">Your Invitation</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-3.5 h-3.5 text-[#6b7280] shrink-0" />
-                <p className="text-[12px] text-white truncate">{invite.organization ?? "Baselinq"}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#6b7280] shrink-0" />
-                <p className="text-[12px] text-[#9ca3af]">{positionLabel}</p>
-              </div>
-              <div className="pt-2 border-t border-[#2d2d4e]">
-                <p className="text-[11px] text-[#6b7280]">Invited by</p>
-                <p className="text-[13px] text-white mt-0.5">{invite.invited_by}</p>
-                <p className="text-[11px] text-[#6b7280] mt-1">{invite.email}</p>
-              </div>
-            </div>
-          </div>
-        </div> */}
-
-
       </aside>
 
       {/* ══════════════════════════════ RIGHT PANEL ═══════════════════════ */}
@@ -271,7 +260,7 @@ export default function AcceptInvitation() {
         {/* Mobile progress bar */}
         <div className="lg:hidden bg-white border-b border-[#ededed] px-5 py-3">
           <div className="flex gap-1.5 mb-2">
-            {STEPS.map((s) => (
+            {steps.map((s) => (
               <div
                 key={s.id}
                 className="h-1 flex-1 rounded-full transition-all duration-300"
@@ -280,7 +269,7 @@ export default function AcceptInvitation() {
             ))}
           </div>
           <p className="text-[13px] text-[#374151]">
-            Step {step} of {STEPS.length}: {STEPS[step - 1]?.label}
+            Step {step} of {totalSteps}: {steps[step - 1]?.label}
           </p>
         </div>
 
@@ -300,7 +289,7 @@ export default function AcceptInvitation() {
               {step === 1 && (
                 <div className="animate-in fade-in duration-200">
                   <div className="text-center mb-6">
-                    <h2 className="text-xl text-[#1A1A1A]">Create your account</h2>
+                    <h2 className="text-xl text-[#1A1A1A] font-normal">Create your account</h2>
                     <p className="text-sm text-gray-500 mt-1">
                       Signing up as <span className="text-[#8081F6]">{invite.email}</span>
                     </p>
@@ -344,11 +333,60 @@ export default function AcceptInvitation() {
                 </div>
               )}
 
-              {/* ── STEP 2: Professional ── */}
-              {step === 2 && (
+              {/* ── STEP 2 (Client): Company Details ── */}
+              {isClient && step === 2 && (
                 <div className="animate-in fade-in duration-200">
                   <div className="text-center mb-6">
-                    <h2 className="text-xl text-[#1A1A1A]">Identity & Professional</h2>
+                    <h2 className="text-xl text-[#1A1A1A] font-normal">Company Details</h2>
+                    <p className="text-sm text-gray-500 mt-1">Legal and registration information</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Field label="Company Name">
+                      <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="e.g. Acme Corp" className={INPUT_CLS} />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Registration No.">
+                        <input type="text" value={companyRegNumber} onChange={e => setCompanyRegNumber(e.target.value)} placeholder="2024/..." className={INPUT_CLS} />
+                      </Field>
+                      <Field label="VAT No." optional>
+                        <input type="text" value={vatNumber} onChange={e => setVatNumber(e.target.value)} placeholder="41234567" className={INPUT_CLS} />
+                      </Field>
+                    </div>
+                    <Field label="Physical Address">
+                      <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Street address" className={INPUT_CLS} />
+                    </Field>
+                    <div className="grid grid-cols-3 gap-3">
+                      <Field label="City">
+                        <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="City" className={INPUT_CLS} />
+                      </Field>
+                      <Field label="State">
+                        <input type="text" value={state} onChange={e => setState(e.target.value)} placeholder="State" className={INPUT_CLS} />
+                      </Field>
+                      <Field label="Postal Code">
+                        <input type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} placeholder="Code" className={INPUT_CLS} />
+                      </Field>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button type="button" onClick={() => setStep(1)}
+                      className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+                      Back
+                    </button>
+                    <button type="button" onClick={() => setStep(3)}
+                      className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all">
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 2 (Base) / 3 (Client): Professional ── */}
+              {step === (isClient ? 3 : 2) && (
+                <div className="animate-in fade-in duration-200">
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl text-[#1A1A1A] font-normal">Identity & Professional</h2>
                     <p className="text-sm text-gray-500 mt-1">Used for compliance and registration tracking</p>
                   </div>
 
@@ -377,83 +415,7 @@ export default function AcceptInvitation() {
                   </div>
 
                   <div className="flex gap-3 mt-6">
-                    <button type="button" onClick={() => setStep(1)}
-                      className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
-                      Back
-                    </button>
-                    <button type="button" onClick={() => setStep(3)}
-                      className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all">
-                      Continue
-                    </button>
-                  </div>
-
-                  <button type="button" onClick={() => setStep(3)}
-                    className="mt-3 w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors">
-                    Skip for now
-                  </button>
-                </div>
-              )}
-
-              {/* ── STEP 3: Insurance ── */}
-              {step === 3 && (
-                <div className="animate-in fade-in duration-200">
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl text-[#1A1A1A]">Insurance Certificate</h2>
-                    <p className="text-sm text-gray-500 mt-1">Professional indemnity or liability insurance</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={(e) => setInsuranceCertificate(e.target.files?.[0] ?? null)}
-                    />
-
-                    {insuranceCertificate ? (
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50">
-                        <FileText className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-sm text-[#1A1A1A] flex-1 truncate">{insuranceCertificate.name}</span>
-                        <button type="button" onClick={() => setInsuranceCertificate(null)}
-                          className="text-gray-400 hover:text-gray-600 shrink-0">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-300 text-sm text-gray-500 hover:border-[#8081F6]/50 hover:text-[#8081F6] transition-all"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload certificate (PDF or image) — optional
-                      </button>
-                    )}
-
-                    <Field label="Insurance Expiry Date" optional>
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <button type="button"
-                            className={cn(INPUT_CLS, "flex items-center justify-between text-left", !insuranceExpiry && "text-gray-400")}>
-                            <span>{insuranceExpiry ? format(insuranceExpiry, "dd MMM yyyy") : "Pick a date"}</span>
-                            <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={insuranceExpiry}
-                            onSelect={(date) => { setInsuranceExpiry(date); setCalendarOpen(false); }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </Field>
-                  </div>
-
-                  <div className="flex gap-3 mt-6">
-                    <button type="button" onClick={() => setStep(2)}
+                    <button type="button" onClick={() => setStep(isClient ? 2 : 1)}
                       className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
                       Back
                     </button>

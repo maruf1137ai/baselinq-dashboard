@@ -1,44 +1,66 @@
-// Custom hook for Django authentication
 import { useQuery } from "@tanstack/react-query";
+import { getProfile } from "@/lib/Api";
 
-interface User {
+interface Organization {
+  id: number;
+  name: string;
+  company_reg_number: string | null;
+  ck_number: string | null;
+  vat_number: string | null;
+  company_size: string | null;
+}
+
+interface Profile {
+  id: number;
+  phone_number: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  professional_reg_number: string | null;
+  professional_body: string | null;
+  id_number: string | null;
+}
+
+export interface User {
   id: number;
   email: string;
   name: string;
-  organization: string | null;
-  role: string | null;
-  profile: string | null;
+  organization: Organization | null;
+  role: { id: number; name: string; code: string } | null;
+  profile: Profile | null;
   is_email_verified: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-const getCurrentUser = (): User | null => {
+const getCurrentUser = async (): Promise<User | null> => {
+  const userStr = localStorage.getItem("user");
+  const localUser = userStr ? (JSON.parse(userStr) as User) : null;
+
   try {
-    const userStr = localStorage.getItem("user");
-    if (!userStr) {
+    // Attempt to fetch fresh profile from API to ensure we have latest organization meta
+    const data = await getProfile();
+    if (data) {
+      // Merge: keeping local for speed and refreshing on success
+      localStorage.setItem("user", JSON.stringify(data));
+      return data;
+    }
+  } catch (error) {
+    if (!localUser) {
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");
-      localStorage.removeItem("user");
       window.location.href = "/login";
-      return null
     }
-
-    return JSON.parse(userStr) as User;
-  } catch (error) {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-    return null;
   }
+  return localUser;
 };
 
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: ["currentUser"],
     queryFn: getCurrentUser,
-    staleTime: Infinity, // User data doesn't change unless they re-login
+    staleTime: 1000 * 60 * 5, // Cache for 5 mins
   });
 };

@@ -172,12 +172,39 @@ export interface RegisterPayload {
   professional_body?: string;
   professional_reg_number?: string;
   insurance_expiry?: string;
+  // address info
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  phone_number?: string;
   // team invites (organisations only)
   team_invites?: { email: string; position: string }[];
 }
 
 export const registerUser = async (payload: RegisterPayload) => {
   const res = await api.post("auth/register/", payload);
+  return res.data;
+};
+
+export const inviteClient = async (payload: { client_name: string; client_email: string; project_id?: number | string }) => {
+  const res = await api.post("auth/invite-client/", payload);
+  return res.data;
+};
+
+export const inviteAppointedCompany = async (data: {
+  company_name: string;
+  contact_name: string;
+  contact_email: string;
+  project_id: number | string;
+  position?: string;
+}) => {
+  const res = await api.post("/auth/invite-appointed-company/", data);
+  return res.data;
+};
+
+export const getProfile = async () => {
+  const res = await api.get("auth/profile/");
   return res.data;
 };
 
@@ -303,6 +330,12 @@ export const deleteProject = async (projectId: string | number) => {
   } catch (error) {
     handleError(error);
   }
+};
+
+export const lookupCompany = async (regNumber: string) => {
+  if (!regNumber) throw new Error("Registration number is required");
+  const response = await api.get(`projects/company-lookup/?reg_number=${encodeURIComponent(regNumber)}`);
+  return response.data;
 };
 
 // Document Upload Constants

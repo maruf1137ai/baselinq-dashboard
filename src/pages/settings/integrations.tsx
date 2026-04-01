@@ -14,7 +14,7 @@ const Integrations = () => {
         </div>
         <div>
           <h3 className="text-sm font-medium text-foreground mb-1">Integrations</h3>
-          <p className="text-xs text-muted-foreground max-w-md">Connect to Slack, Procore, Autodesk, Microsoft 365, and more — coming soon.</p>
+          <p className="text-xs text-muted-foreground max-w-md">Connect to Slack, Procore, Autodesk, Microsoft 365, and more, coming soon.</p>
         </div>
       </div>
     </div>
