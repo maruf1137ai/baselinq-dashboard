@@ -114,6 +114,7 @@ interface DocumentTableProps {
   isLoading?: boolean;
   onRowClick: (id: string | number) => void;
   onVersionUpload?: (doc: ApiDocument) => void;
+  onDelete?: (doc: ApiDocument) => void;
   customDisciplines?: string[];
 }
 
@@ -134,6 +135,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   isLoading = false,
   onRowClick,
   onVersionUpload,
+  onDelete,
   customDisciplines = [],
 }) => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -247,10 +249,35 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                       {formatDistanceToNow(new Date(doc.updatedAt), { addSuffix: true }).replace('about ', '')}
                     </span>
 
-                    <div className="w-10 shrink-0 flex justify-end">
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg">
-                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                      </button>
+                    <div className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg">
+                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={() => onRowClick(doc._id)} className="gap-2 text-sm font-normal">
+                            <Eye className="w-4 h-4" /> View Details
+                          </DropdownMenuItem>
+                          {doc.downloadUrl && (
+                            <DropdownMenuItem onClick={() => window.open(doc.downloadUrl, '_blank')} className="gap-2 text-sm font-normal">
+                              <Download className="w-4 h-4" /> Download
+                            </DropdownMenuItem>
+                          )}
+                          {onVersionUpload && (
+                            <DropdownMenuItem onClick={() => onVersionUpload(doc)} className="gap-2 text-sm font-normal">
+                              <Upload className="w-4 h-4" /> Upload Version
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          {onDelete && (
+                            <DropdownMenuItem onClick={() => onDelete(doc)} className="gap-2 text-sm font-normal text-red-600 focus:text-red-600">
+                              <Trash2 className="w-4 h-4" /> Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}

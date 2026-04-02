@@ -164,14 +164,46 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
       const ids = s3Upload.entries.map((e) => e.id);
       const s3Keys = await s3Upload.waitForAll(ids);
 
-      for (const entry of s3Upload.entries) {
+      const linkIds = allTasks
+        .filter((t: any) => selectedLinkIds.includes(t.id))
+        .map((t: any) => ({ type: t.type, id: t.id }));
+
+      // Use batch upload endpoint when multiple files
+      if (s3Upload.entries.length > 1) {
+        const files = s3Upload.entries
+          .map((entry) => {
+            const s3Key = s3Keys.get(entry.id);
+            if (!s3Key) return null;
+            return { s3Key, fileName: entry.file.name, fileSize: entry.file.size };
+          })
+          .filter(Boolean);
+
+        if (files.length === 0) {
+          toast.error('All file uploads failed');
+          return;
+        }
+
+        await postData({
+          url: 'documents/new-upload/',
+          data: {
+            projectId: parseInt(projectId),
+            files,
+            type: docType,
+            discipline: discipline || '',
+            reference: reference || '',
+            description: description || '',
+            runAiAnalysis: runAiAnalysis,
+            linkIds,
+          },
+        });
+      } else {
+        // Single file — use original endpoint
+        const entry = s3Upload.entries[0];
         const s3Key = s3Keys.get(entry.id);
         if (!s3Key) {
           toast.error(`Failed to upload ${entry.file.name}`);
-          continue;
+          return;
         }
-
-        // console.log(selectedLinkIds)
 
         await postData({
           url: 'documents/',
@@ -186,9 +218,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             file_name: entry.file.name,
             file_size: entry.file.size,
             run_ai_analysis: runAiAnalysis,
-            link_ids: allTasks
-              .filter((t: any) => selectedLinkIds.includes(t.id))
-              .map((t: any) => ({ type: t.type, id: t.id })),
+            link_ids: linkIds,
           },
         });
       }
@@ -399,7 +429,13 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                   </p>
                 </div>
               </div>
-              <Switch checked={runAiAnalysis} onCheckedChange={setRunAiAnalysis} />
+              <Switch
+                checked={runAiAnalysis}
+                onCheckedChange={(checked) => {
+                  setRunAiAnalysis(checked);
+                  postData({ url: 'documents/run-ai/', data: { runAiAnalysis: checked } }).catch(() => {});
+                }}
+              />
             </div>
           </div>
 

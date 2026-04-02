@@ -16,6 +16,10 @@ import {
   FileText,
   Trash2,
   Eye,
+  Pencil,
+  Plus,
+  Calendar,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import AiIcon from '@/components/icons/AiIcon';
@@ -33,6 +37,7 @@ import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { LinkDocumentModal } from '@/components/documents/LinkDocumentModal';
 import { VersionHistoryModal } from '@/components/documents/VersionHistoryModal';
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
+import { EditDocumentModal } from '@/components/documents/EditDocumentModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData, patchData, deleteData } from '@/lib/Api';
 import type { LinkItem } from '@/components/documents/LinkDocumentModal';
@@ -46,8 +51,17 @@ const DocumentDetail = () => {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isVersionUploadOpen, setIsVersionUploadOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; ref: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);
+
+  // Obligation state
+  const [showObligationForm, setShowObligationForm] = useState(false);
+  const [obligationTitle, setObligationTitle] = useState('');
+  const [obligationDueDate, setObligationDueDate] = useState('');
+  const [obligationRole, setObligationRole] = useState('');
+  const [editingObligation, setEditingObligation] = useState<any>(null);
 
   const queryClient = useQueryClient();
 
@@ -90,16 +104,15 @@ const DocumentDetail = () => {
 
   const links = Array.isArray(linksData) ? linksData : linksData?.results ?? [];
 
-  useQuery({
+  const { data: obligationsData, isLoading: obligationsLoading } = useQuery({
     queryKey: ['obligations', docId, projectId],
-    queryFn: async () => {
-      const res = await fetchData(`documents/${docId}/obligations/?project_id=${projectId}`);
-      console.log('obligations response:', res);
-      return res;
-    },
+    queryFn: () => fetchData(`documents/${docId}/obligations/?project_id=${projectId}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
+    select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
   });
+
+  const obligations = obligationsData ?? [];
 
   const { mutate: runAnalysis, isPending: isAnalysisRunning } = useMutation({
     mutationFn: () => postData({ url: `documents/${docId}/analyze/?project_id=${projectId}`, data: {} }),
@@ -140,6 +153,42 @@ const DocumentDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['findings', docId] });
       queryClient.invalidateQueries({ queryKey: ['document', docId] });
     },
+  });
+
+  const { mutate: deleteDocument, isPending: isDeletingDoc } = useMutation({
+    mutationFn: () =>
+      deleteData({ url: `documents/${docId}/?project_id=${projectId}`, data: undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
+      toast.success('Document deleted.');
+      navigate('/documents');
+    },
+    onError: () => toast.error('Failed to delete document.'),
+  });
+
+  const { mutate: createObligation, isPending: isCreatingObligation } = useMutation({
+    mutationFn: (data: { title: string; due_date?: string; responsible_role?: string }) =>
+      postData({ url: `documents/${docId}/obligations/?project_id=${projectId}`, data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['obligations', docId] });
+      toast.success('Obligation created.');
+      setShowObligationForm(false);
+      setObligationTitle('');
+      setObligationDueDate('');
+      setObligationRole('');
+    },
+    onError: () => toast.error('Failed to create obligation.'),
+  });
+
+  const { mutate: updateObligation } = useMutation({
+    mutationFn: ({ obligationId, data }: { obligationId: string; data: Record<string, any> }) =>
+      patchData({ url: `documents/${docId}/obligations/${obligationId}/?project_id=${projectId}`, data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['obligations', docId] });
+      toast.success('Obligation updated.');
+      setEditingObligation(null);
+    },
+    onError: () => toast.error('Failed to update obligation.'),
   });
 
   const DetailItem = ({
@@ -256,6 +305,13 @@ const DocumentDetail = () => {
               <Button
                 variant="outline"
                 className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                <Pencil className="w-4 h-4" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
                 onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
                 disabled={!doc.downloadUrl}
               >
@@ -263,6 +319,13 @@ const DocumentDetail = () => {
               </Button>
               <Button variant="outline" className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2">
                 <Share2 className="w-4 h-4" /> Share
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white border-red-200 text-red-600 hover:bg-red-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 className="w-4 h-4" /> Delete
               </Button>
               <Button
                 className="bg-primary text-white hover:opacity-90 h-9 px-4 rounded-lg transition-all font-normal"
@@ -511,15 +574,176 @@ const DocumentDetail = () => {
             {/* Obligations */}
             <TabsContent value="obligations" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">Extracted Obligations</h3>
-                <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 font-normal border-0 text-xs">
-                  Auto-synced to Programme
-                </Badge>
+                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">
+                  Obligations ({obligations.length})
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 font-normal border-0 text-xs">
+                    Auto-synced to Programme
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-lg"
+                    onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Obligation
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-                <AlertCircle className="w-8 h-8" />
-                <p className="text-sm">No obligations extracted yet.</p>
-              </div>
+
+              {showObligationForm && (
+                <div className="p-5 rounded-xl border border-primary/20 bg-primary/[0.02] space-y-4">
+                  <div>
+                    <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Title <span className="text-red-500">*</span></label>
+                    <input
+                      value={obligationTitle}
+                      onChange={(e) => setObligationTitle(e.target.value)}
+                      placeholder="e.g. Submit monthly progress report"
+                      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Due Date</label>
+                      <input
+                        type="date"
+                        value={obligationDueDate}
+                        onChange={(e) => setObligationDueDate(e.target.value)}
+                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Responsible Role</label>
+                      <input
+                        value={obligationRole}
+                        onChange={(e) => setObligationRole(e.target.value)}
+                        placeholder="e.g. Contractor"
+                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setShowObligationForm(false)} className="h-8 text-xs font-normal">Cancel</Button>
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs font-normal gap-1.5"
+                      disabled={!obligationTitle.trim() || isCreatingObligation}
+                      onClick={() => {
+                        const data: any = { title: obligationTitle.trim() };
+                        if (obligationDueDate) data.due_date = obligationDueDate;
+                        if (obligationRole.trim()) data.responsible_role = obligationRole.trim();
+                        createObligation(data);
+                      }}
+                    >
+                      {isCreatingObligation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Create
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {obligationsLoading ? (
+                <AwesomeLoader message="Loading Obligations" />
+              ) : obligations.length === 0 && !showObligationForm ? (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+                  <AlertCircle className="w-8 h-8" />
+                  <p className="text-sm">No obligations extracted yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {obligations.map((ob: any) => (
+                    <div key={ob._id} className="p-5 rounded-xl border border-gray-100 bg-white hover:shadow-sm transition-all">
+                      {editingObligation?._id === ob._id ? (
+                        <div className="space-y-3">
+                          <input
+                            value={editingObligation.title}
+                            onChange={(e) => setEditingObligation({ ...editingObligation, title: e.target.value })}
+                            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                          />
+                          <div className="grid grid-cols-3 gap-3">
+                            <input
+                              type="date"
+                              value={editingObligation.due_date || ''}
+                              onChange={(e) => setEditingObligation({ ...editingObligation, due_date: e.target.value })}
+                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                            />
+                            <input
+                              value={editingObligation.responsible_role || ''}
+                              onChange={(e) => setEditingObligation({ ...editingObligation, responsible_role: e.target.value })}
+                              placeholder="Responsible role"
+                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                            />
+                            <select
+                              value={editingObligation.status || 'pending'}
+                              onChange={(e) => setEditingObligation({ ...editingObligation, status: e.target.value })}
+                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="overdue">Overdue</option>
+                            </select>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => setEditingObligation(null)} className="h-7 text-xs">Cancel</Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => updateObligation({
+                                obligationId: ob._id,
+                                data: {
+                                  title: editingObligation.title,
+                                  due_date: editingObligation.due_date || undefined,
+                                  responsible_role: editingObligation.responsible_role || undefined,
+                                  status: editingObligation.status,
+                                },
+                              })}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-1.5">
+                            <p className="text-sm font-normal text-[#1A1A1A]">{ob.title}</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              {ob.due_date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" /> Due: {ob.due_date}
+                                </span>
+                              )}
+                              {ob.responsible_role && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" /> {ob.responsible_role}
+                                </span>
+                              )}
+                              <Badge className={cn(
+                                "text-xs font-normal border-0 px-2 py-0.5",
+                                ob.status === 'completed' ? "bg-emerald-50 text-emerald-700" :
+                                ob.status === 'overdue' ? "bg-red-50 text-red-600" :
+                                ob.status === 'in_progress' ? "bg-blue-50 text-blue-600" :
+                                "bg-gray-100 text-gray-500"
+                              )}>
+                                {ob.status || 'pending'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs font-normal border-gray-200 rounded-lg shrink-0"
+                            onClick={() => setEditingObligation({ ...ob })}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* Versions */}
@@ -651,7 +875,39 @@ const DocumentDetail = () => {
         isOpen={isVersionUploadOpen}
         onClose={() => setIsVersionUploadOpen(false)}
         document={doc}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['versions', docId] });
+          queryClient.invalidateQueries({ queryKey: ['document', docId] });
+          setIsVersionUploadOpen(false);
+        }}
       />
+
+      <EditDocumentModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        document={doc}
+      />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-medium text-[#1A1A1A]">{doc.name}</span> and all its versions, findings, and obligations. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingDoc}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={isDeletingDoc}
+              onClick={() => deleteDocument()}
+            >
+              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FilePreviewModal
         isOpen={!!previewFile}
