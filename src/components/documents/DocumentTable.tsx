@@ -4,7 +4,6 @@ import {
   MoreVertical,
   ChevronDown,
   Plus,
-  Loader2,
   Download,
   Upload,
   Eye,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
 import AiIcon from '@/components/icons/AiIcon';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -154,12 +154,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   const disciplines = Object.keys(groupedDocs);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-gray-400 gap-2">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Loading documents...</span>
-      </div>
-    );
+    return <AwesomeLoader message="Loading Documents" />;
   }
 
   if (!isLoading && documents.length === 0) {
