@@ -31,7 +31,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
-import { useRoles } from "@/hooks/useRoles";
 import type { RegisterPayload } from "@/lib/Api";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +129,6 @@ const SectionDivider = ({ label }: { label: string }) => (
 const SignupPage = () => {
   const navigate = useNavigate();
   const signupMutation = useSignup();
-  const { roles: apiRoles } = useRoles();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
@@ -982,9 +980,11 @@ const SignupPage = () => {
                               className={INPUT_CLS}
                             >
                               <option value="">Position...</option>
-                              {apiRoles.map((r) => (
-                                <option key={r.code} value={r.code}>{r.name}</option>
+                              {ROLES.map((r) => (
+                                <option key={r.id} value={r.id}>{r.label}</option>
                               ))}
+                              <option value="admin">Administrator</option>
+                              <option value="other">Other</option>
                             </select>
                           </div>
                           {teamMembers.length > 1 && (
