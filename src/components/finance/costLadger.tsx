@@ -21,13 +21,14 @@ import { deleteData } from '@/lib/Api';
 import { toast } from 'sonner';
 import { useUserRoleStore } from '@/store/useUserRoleStore';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
+import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from '@/lib/roleUtils';
 
 // Roles allowed to update/edit cost ledger entries (mirrors backend COST_LEDGER_UPDATE_ALLOWED_ROLES)
 const COST_LEDGER_EDIT_ROLES = new Set(["CQS", "CONTRACTS_MGR", "CPM", "CLIENT"]);
 
 // Maps common display names / legacy strings → role code, mirroring backend get_user_project_role_code
 const ROLE_NAME_TO_CODE: Record<string, string> = {
-  // Codes pass through
+  // Backbone codes pass through
   "CQS": "CQS",
   "CONTRACTS_MGR": "CONTRACTS_MGR",
   "CPM": "CPM",
@@ -36,7 +37,7 @@ const ROLE_NAME_TO_CODE: Record<string, string> = {
   "PM": "PM",
   "CM": "CM",
   "ARCH": "ARCH",
-  // Display names → codes
+  // Legacy display names → backbone codes
   "Consultant Quantity Surveyor": "CQS",
   "Contracts Manager": "CONTRACTS_MGR",
   "Client Project Manager": "CPM",
@@ -48,21 +49,39 @@ const ROLE_NAME_TO_CODE: Record<string, string> = {
   "Project Manager": "PM",
   "Construction Manager": "CM",
   "Architect": "ARCH",
+  // New role codes → backbone
+  "ADMIN": "CLIENT",
+  "PROJECT_ADMIN": "CPM",
+  "SUPER_USER": "CPM",
+  "QS": "CQS",
+  "LEGAL": "CONTRACTS_MGR",
+  // New display names → backbone
+  "Administrator": "CLIENT",
+  "Project Administrator": "CPM",
+  "Super User": "CPM",
+  "Quantity Surveyor": "CQS",
+  "Legal": "CONTRACTS_MGR",
 };
 
 /**
  * Resolve a raw roleName string (which may be a display name, code, or compound
  * like "Client / Owner") to a set of uppercase role codes for comparison.
- * Mirrors backend get_user_project_role_code logic.
+ * Also applies backbone resolution for new role codes.
  */
 function resolveRoleCodes(roleName: string): string[] {
   if (!roleName) return [];
-  // Split compound roles like "Client / Owner"
   const parts = roleName.split(/\s*\/\s*/);
   const codes: string[] = [];
   for (const part of parts) {
     const trimmed = part.trim();
-    const code = ROLE_NAME_TO_CODE[trimmed] || ROLE_NAME_TO_CODE[trimmed.toUpperCase()] || trimmed.toUpperCase();
+    // Direct ROLE_NAME_TO_CODE lookup
+    let code = ROLE_NAME_TO_CODE[trimmed] || ROLE_NAME_TO_CODE[trimmed.toUpperCase()] || trimmed.toUpperCase();
+    // Display name → new code → backbone
+    if (!ROLE_NAME_TO_CODE[trimmed]) {
+      const newCode = NEW_ROLE_DISPLAY_TO_CODE[trimmed];
+      if (newCode) code = resolvePermissionCode(newCode);
+      else code = resolvePermissionCode(code);
+    }
     codes.push(code);
   }
   return codes;

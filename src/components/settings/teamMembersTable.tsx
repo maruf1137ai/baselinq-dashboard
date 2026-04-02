@@ -74,20 +74,13 @@ interface UsersResponse {
 }
 
 interface Role {
-  id: number;
+  id?: number;
   name: string;
   code: string;
   description: string;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface RolesResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Role[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface TeamMember {
@@ -175,7 +168,6 @@ const ActionsCell = ({
         url: `projects/${projectId}/team-members/${member._id}/`,
         data: {
           roleName: selectedRole.name,
-          roleId: selectedRole.id,
         },
       });
       toast.success("Role updated successfully");
@@ -265,9 +257,9 @@ const ActionsCell = ({
             <div className="space-y-2">
               <Label htmlFor="role">Select Role</Label>
               <Select
-                value={selectedRole?.id?.toString()}
+                value={selectedRole?.code}
                 onValueChange={(value) => {
-                  const role = roles.find((r) => r.id.toString() === value);
+                  const role = roles.find((r) => r.code === value);
                   setSelectedRole(role || null);
                 }}>
                 <SelectTrigger>
@@ -275,7 +267,7 @@ const ActionsCell = ({
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
+                    <SelectItem key={role.code} value={role.code}>
                       {role.name}
                     </SelectItem>
                   ))}
@@ -467,7 +459,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
     `projects/${projectId}/team-members/`
   );
   const { data: allUsersData, refetch: refetchAllUsers } = useFetch<UsersResponse>("auth/users/?page_size=500");
-  const { data: rolesData, refetch: refetchRoles } = useFetch<RolesResponse>("auth/roles/");
+  const { data: rolesData, refetch: refetchRoles } = useFetch<Role[]>("auth/roles/");
 
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -495,7 +487,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         data: {
           userId: selectedUser.id,
           roleName: selectedRole.name,
-          roleId: selectedRole.id,
         },
       });
 
@@ -634,9 +625,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select
-                value={selectedRole?.id.toString()}
+                value={selectedRole?.code}
                 onValueChange={(value) => {
-                  const role = roles.find((r) => r.id.toString() === value);
+                  const role = roles.find((r) => r.code === value);
                   setSelectedRole(role || null);
                 }}>
                 <SelectTrigger>
@@ -644,7 +635,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
+                    <SelectItem key={role.code} value={role.code}>
                       {role.name}
                     </SelectItem>
                   ))}

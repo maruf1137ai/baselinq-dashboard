@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRoles } from "@/hooks/useRoles";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
@@ -16,19 +17,6 @@ interface PersonnelEntry {
   position: string;
 }
 
-const POSITIONS = [
-  { label: "Architect", value: "architect" },
-  { label: "Project Manager", value: "pm" },
-  { label: "Quantity Surveyor", value: "qs" },
-  { label: "Civil Engineer", value: "civil" },
-  { label: "Structural Engineer", value: "structural" },
-  { label: "Electrical Engineer", value: "electrical" },
-  { label: "Mechanical Engineer", value: "mechanical" },
-  { label: "Site Manager", value: "site_manager" },
-  { label: "Safety Officer", value: "safety_officer" },
-  { label: "Document Controller", value: "document_controller" },
-  { label: "Other", value: "other" },
-];
 
 const ORG_STEPS = [
   { id: 1, label: "Account Setup", description: "Name & password" },
@@ -69,6 +57,7 @@ const ACCOUNT_TYPES = [
 export default function AcceptAppointedInvitation() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { roles } = useRoles();
 
   const [info, setInfo] = useState<{
     project_name: string;
@@ -578,7 +567,7 @@ export default function AcceptAppointedInvitation() {
                             <label className="block text-xs text-gray-500 mb-1.5">Position</label>
                             <select className={INPUT_CLS} value={p.position} onChange={e => setPersonnel(prev => prev.map(x => x.id === p.id ? { ...x, position: e.target.value } : x))}>
                               <option value="">Select</option>
-                              {POSITIONS.map(pos => <option key={pos.value} value={pos.value}>{pos.label}</option>)}
+                              {roles.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
                             </select>
                           </div>
                         </div>

@@ -34,6 +34,7 @@ import {
 import { validateFile, registerS3Document, deleteProjectDocument, ALLOWED_FILE_EXTENSIONS, ProjectDocument, lookupCompany, inviteAppointedCompany, inviteClient } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useUpdateProject } from "@/hooks/useProjects";
+import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -388,6 +389,7 @@ function PersonnelEntryCard({
   canRemove: boolean;
 }) {
   const selectedRole = roleOptions.find((r) => r.value === entry.role);
+  const { roles: appRoles } = useRoles();
   return (
     <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -455,15 +457,9 @@ function PersonnelEntryCard({
             className={inputCls(false)}
           >
             <option value="">Select position...</option>
-            <option value="Director">Director</option>
-            <option value="Project Manager">Project Manager</option>
-            <option value="Architect">Architect</option>
-            <option value="Engineer">Engineer</option>
-            <option value="Quantity Surveyor">Quantity Surveyor</option>
-            <option value="Site Manager">Site Manager</option>
-            <option value="Contract Administrator">Contract Administrator</option>
-            <option value="Clerk of Works">Clerk of Works</option>
-            <option value="Other">Other</option>
+            {appRoles.map(r => (
+              <option key={r.code} value={r.name}>{r.name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -504,6 +500,7 @@ export default function EditProject() {
   const { mutate: updateProject, isPending } = useUpdateProject();
   const s3Upload = useS3Upload("project-documents/pending");
   const { data: projects = [] } = useProjects();
+  const { roles: appRoles } = useRoles();
 
   // Load the selected project
   const selectedProjectId = localStorage.getItem("selectedProjectId");
@@ -1574,19 +1571,10 @@ export default function EditProject() {
                                 <div>
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
                                   <select className={inputCls()} value={entry.position} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}>
-                                    <option value="architect">Architect</option>
-                                    <option value="pm">Project Manager</option>
-                                    <option value="qs">Quantity Surveyor</option>
-                                    <option value="civil">Civil Engineer</option>
-                                    <option value="structural">Structural Engineer</option>
-                                    <option value="mep">MEP Engineer</option>
-                                    <option value="electrical">Electrical Engineer</option>
-                                    <option value="mechanical">Mechanical Engineer</option>
-                                    <option value="contractor">Contractor</option>
-                                    <option value="site_manager">Site Manager</option>
-                                    <option value="safety_officer">Safety Officer</option>
-                                    <option value="document_controller">Document Controller</option>
-                                    <option value="other">Other</option>
+                                    <option value="">Select role...</option>
+                                    {appRoles.map(r => (
+                                      <option key={r.code} value={r.code}>{r.name}</option>
+                                    ))}
                                   </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from "@/lib/roleUtils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,12 +60,25 @@ const btns = [
 
 const ALL_TASK_TYPES = ["SI", "VO", "RFI", "CPI", "GI", "DC"];
 
-// Role to document type mapping - keys are normalized to Title Case for simpler lookup
+// Role to document type mapping (backbone codes + display names + new role codes)
 const rolePermissions: Record<string, string[]> = {
-  "Client": ALL_TASK_TYPES,
-  "Owner": ALL_TASK_TYPES,
+  // Backbone codes
   "CLIENT": ALL_TASK_TYPES,
   "OWNER": ALL_TASK_TYPES,
+  "CPM": ALL_TASK_TYPES,
+  "PM": ["SI", "DC", "CPI"],
+  "CM": ["RFI", "SI", "DC", "CPI"],
+  "ARCH": ["VO", "SI"],
+  "CQS": ["VO"],
+  "CONS_PLANNER": ["CPI", "DC"],
+  "CONTRACTS_MGR": ["VO", "DC"],
+  "PLANNER": ["CPI", "DC"],
+  "SE": ["RFI"],
+  "SS": ["RFI", "SI"],
+  "FOREMAN": ["RFI"],
+  // Legacy display names
+  "Client": ALL_TASK_TYPES,
+  "Owner": ALL_TASK_TYPES,
   "CLIENT/OWNER": ALL_TASK_TYPES,
   "Client/Owner": ALL_TASK_TYPES,
   "Client / Owner": ALL_TASK_TYPES,
@@ -79,7 +93,49 @@ const rolePermissions: Record<string, string[]> = {
   "Site Supervisor": ["RFI", "SI"],
   "Foreman": ["RFI"],
   "Project Manager": ["SI", "DC", "CPI"],
+  // New role codes
+  "ADMIN": ALL_TASK_TYPES,
+  "PROJECT_ADMIN": ALL_TASK_TYPES,
+  "PRINCIPAL_PM": ["SI", "DC", "CPI"],
+  "SUPER_USER": ALL_TASK_TYPES,
+  "QS": ["VO"],
+  "STANDARD": ["RFI"],
+  "STRUCT_ENG": ["RFI"],
+  "MECH_ENG": ["RFI"],
+  "ELEC_ENG": ["RFI"],
+  "SPECIAL_USER": ["SI", "DC", "CPI"],
+  "LIMITED": ["RFI"],
+  "VIEWER": ["RFI"],
+  "LIMITED_VIEWER": ["RFI"],
+  "LEGAL": ["VO", "DC"],
+  // New role display names
+  "Administrator": ALL_TASK_TYPES,
+  "Project Administrator": ALL_TASK_TYPES,
+  "Principal / PM": ["SI", "DC", "CPI"],
+  "Super User": ALL_TASK_TYPES,
+  "Quantity Surveyor": ["VO"],
+  "Standard User": ["RFI"],
+  "Structural Engineer": ["RFI"],
+  "Mechanical Engineer": ["RFI"],
+  "Electrical Engineer": ["RFI"],
+  "Special User": ["SI", "DC", "CPI"],
+  "Limited User": ["RFI"],
+  "Limited Viewer": ["RFI"],
+  "Legal": ["VO", "DC"],
 };
+
+function getPermittedTypes(role: string): string[] | null {
+  if (!role) return null;
+  if (rolePermissions[role]) return rolePermissions[role];
+  const upper = role.trim().toUpperCase();
+  const ciKey = Object.keys(rolePermissions).find(k => k.toUpperCase() === upper);
+  if (ciKey) return rolePermissions[ciKey];
+  const code = NEW_ROLE_DISPLAY_TO_CODE[role.trim()];
+  if (code && rolePermissions[code]) return rolePermissions[code];
+  const backbone = resolvePermissionCode(role);
+  if (backbone && backbone !== upper && rolePermissions[backbone]) return rolePermissions[backbone];
+  return null;
+}
 
 
 export default function CreateRequestButton() {
@@ -92,31 +148,17 @@ export default function CreateRequestButton() {
 
   // Filter buttons based on user role
   const filteredBtns = useMemo(() => {
-    if (!userRole) return btns; // Show all if no role set
+    if (!userRole) return btns;
 
-    // Support compound roles like "Client / Owner"
     const currentRoles = userRole.split(/\s*\/\s*/).map(r => r.trim());
-
-    // Aggregate allowed document types from all user roles
     const allowedDocTypes = new Set<string>();
-    currentRoles.forEach(role => {
-      // Direct match
-      const permissions = rolePermissions[role] || [];
-      permissions.forEach(type => allowedDocTypes.add(type));
 
-      // Case-insensitive match if direct match fails
-      if (permissions.length === 0) {
-        const foundKey = Object.keys(rolePermissions).find(
-          key => key.toLowerCase() === role.toLowerCase()
-        );
-        if (foundKey) {
-          rolePermissions[foundKey].forEach(type => allowedDocTypes.add(type));
-        }
-      }
+    currentRoles.forEach(role => {
+      const permitted = getPermittedTypes(role);
+      if (permitted) permitted.forEach(type => allowedDocTypes.add(type));
     });
 
-    if (allowedDocTypes.size === 0) return btns; // Show all if no document types identified for these roles
-
+    if (allowedDocTypes.size === 0) return btns;
     return btns.filter(btn => allowedDocTypes.has(btn.code));
   }, [userRole]);
 

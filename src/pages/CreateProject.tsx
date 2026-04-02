@@ -24,6 +24,7 @@ import {
   Plus,
   Search,
   Loader2,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -31,9 +32,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, postData } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
+import { useRoles } from "@/hooks/useRoles";
 import { toast } from "sonner";
 import {
   format,
@@ -43,6 +45,15 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import useFetch from "@/hooks/useFetch";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -120,10 +131,10 @@ interface TaskOrderState {
 
 const STEPS = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
-  { id: 2, label: "Client Details", description: "Client company & contacts" },
-  { id: 3, label: "Appointed Company", description: "Professional firm & contacts" },
-  { id: 4, label: "Documents", description: "Upload project files" },
-  { id: 5, label: "Scope of Works", description: "Description & requirements" },
+  { id: 2, label: "Scope of Works", description: "Description & requirements" },
+  { id: 3, label: "Client Details", description: "Client company & contacts" },
+  { id: 4, label: "Appointed Company", description: "Professional firm & contacts" },
+  { id: 5, label: "Documents", description: "Upload project files" },
   { id: 6, label: "Financials & Timeline", description: "Budget, dates, and rates" },
 ];
 
@@ -315,6 +326,7 @@ interface AssignedPersonnel {
   name: string;
   email: string;
   position: string;
+  userId?: number;
 }
 
 function PersonnelEntryCard({
@@ -333,6 +345,7 @@ function PersonnelEntryCard({
   canRemove: boolean;
 }) {
   const selectedRole = roleOptions.find((r) => r.value === entry.role);
+  const { roles: appRoles } = useRoles();
   return (
     <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -400,18 +413,149 @@ function PersonnelEntryCard({
             className={inputCls(false)}
           >
             <option value="">Select position...</option>
-            <option value="Director">Director</option>
-            <option value="Project Manager">Project Manager</option>
-            <option value="Architect">Architect</option>
-            <option value="Engineer">Engineer</option>
-            <option value="Quantity Surveyor">Quantity Surveyor</option>
-            <option value="Site Manager">Site Manager</option>
-            <option value="Contract Administrator">Contract Administrator</option>
-            <option value="Clerk of Works">Clerk of Works</option>
-            <option value="Other">Other</option>
+            {appRoles.map(r => (
+              <option key={r.code} value={r.name}>{r.name}</option>
+            ))}
           </select>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── OrgPersonnelSelectCard ────────────────────────────────────────────────────
+
+interface OrgUser {
+  id: number;
+  name: string;
+  email: string;
+  role: { name: string; code: string } | null;
+}
+
+function OrgPersonnelSelectCard({
+  entry,
+  roleOptions,
+  takenRoles,
+  orgUsers,
+  onChange,
+  onRemove,
+  canRemove,
+}: {
+  entry: AssignedPersonnel;
+  roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
+  takenRoles: string[];
+  orgUsers: OrgUser[];
+  onChange: (v: AssignedPersonnel) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const selectedRole = roleOptions.find((r) => r.value === entry.role);
+  const selectedOrgUser = orgUsers.find((u) => u.email === entry.email);
+
+  return (
+    <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
+      {/* Role selector row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
+            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+          </div>
+          <select
+            value={entry.role}
+            onChange={(e) => onChange({ ...entry, role: e.target.value })}
+            className="flex-1 text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none">
+            <option value="">Select role...</option>
+            {roleOptions.map((r) => (
+              <option
+                key={r.value}
+                value={r.value}
+                disabled={takenRoles.includes(r.value) && r.value !== entry.role}>
+                {r.value}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedRole && (
+            <span
+              className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
+              style={{ background: selectedRole.badgeColor }}>
+              {selectedRole.badge}
+            </span>
+          )}
+          {canRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* User combobox */}
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+            {selectedOrgUser ? (
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                  {(selectedOrgUser.name || selectedOrgUser.email).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-[13px] text-[#374151]">{selectedOrgUser.name}</p>
+                  <p className="text-[11px] text-[#9ca3af]">{selectedOrgUser.email}</p>
+                </div>
+              </div>
+            ) : (
+              <span className="text-[13px] text-[#9ca3af]">Select team member...</span>
+            )}
+            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+          <Command>
+            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+            <CommandList>
+              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No team members found.</CommandEmpty>
+              <CommandGroup>
+                {orgUsers.map((u) => {
+                  const isSelected = entry.email === u.email;
+                  return (
+                    <CommandItem
+                      key={u.id}
+                      value={u.name || u.email}
+                      onSelect={() => {
+                        onChange({ ...entry, name: u.name, email: u.email, position: u.role?.name || "", userId: u.id });
+                        setPopoverOpen(false);
+                      }}
+                      className="cursor-pointer px-3 py-2.5">
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                            {(u.name || u.email).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
+                            <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0" />}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -497,6 +641,7 @@ export default function CreateProject() {
   const queryClient = useQueryClient();
   const { mutate: createProject, isPending } = useCreateProject();
   const s3Upload = useS3Upload("project-documents/pending");
+  const { roles: appRoles } = useRoles();
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -621,7 +766,25 @@ export default function CreateProject() {
     if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
   };
 
+  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
+    const toAdd = personnel.filter(e => e.userId);
+    if (toAdd.length === 0) return;
+    await Promise.all(toAdd.map(async (entry) => {
+      try {
+        await postData({
+          url: `projects/${projectId}/team-members/`,
+          data: { userId: entry.userId, roleName: entry.role || "Member" },
+        });
+      } catch (err: any) {
+        const msg = err?.response?.data?.error || err?.message || "Unknown error";
+        toast.error(`Could not add ${entry.name || entry.email} to project: ${msg}`);
+      }
+    }));
+  };
+
   const { data: user } = useCurrentUser();
+  const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
+  const orgUsers: OrgUser[] = orgUsersData?.results || [];
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(user?.role?.code ?? '');
 
@@ -796,9 +959,12 @@ export default function CreateProject() {
       return Object.keys(next).length === 0;
     }
     if (step === 2) {
-      // Close the invite form if it's still open
+      // Scope of Works — all optional
+      return true;
+    }
+    if (step === 3) {
+      // Client Details
       if (isInvitingClient) setIsInvitingClient(false);
-      // If invite email is set, client will fill details later — allow proceed
       if (isInvited || inviteClientData.email.trim()) return true;
       const next: ClientErrors = {};
       if (!clientForm.company_name.trim())
@@ -806,19 +972,15 @@ export default function CreateProject() {
       setClientErrors(next);
       return Object.keys(next).length === 0;
     }
-    if (step === 3) {
+    if (step === 4) {
       return true; // All fields optional — invites are sent after project creation
     }
-    if (step === 4) {
+    if (step === 5) {
       const next: FormErrors = {};
       if (files.length === 0)
         next.attachments = "Please upload at least one document";
       setErrors(next);
       return Object.keys(next).length === 0;
-    }
-    if (step === 5) {
-      // brief and description are optional
-      return true;
     }
     if (step === 6) {
       const next: FormErrors = {};
@@ -854,6 +1016,8 @@ export default function CreateProject() {
   const handleSubmit = () => {
     if (!validateStep(6)) return;
     setIsSubmitting(true);
+    // Snapshot mutable state so onSuccess closure always has the latest values
+    const personnelSnapshot = [...clientPersonnelList];
 
     const b = parseBudget(form.total_budget);
     const fx = parseFloat(form.fx_rate) || 1;
@@ -959,6 +1123,7 @@ export default function CreateProject() {
           await handleInviteClient(pId);
         }
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
+        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
 
         setIsSubmitting(false);
         navigate("/");
@@ -1150,13 +1315,13 @@ export default function CreateProject() {
                   {currentStep === 1 &&
                     "Give your project a name and number so your team can identify it."}
                   {currentStep === 2 &&
-                    "Fill in the client's company details and assign personnel. This information will auto-populate into contracts and letters."}
-                  {currentStep === 3 &&
-                    "Enter the details of the appointed professional firm and their key team members."}
-                  {currentStep === 4 &&
-                    "Upload the key documents for this project. You can always add more later."}
-                  {currentStep === 5 &&
                     "Describe the full scope of construction works. This will auto-populate into contract documents and appointment letters."}
+                  {currentStep === 3 &&
+                    "Fill in the client's company details and assign personnel. This information will auto-populate into contracts and letters."}
+                  {currentStep === 4 &&
+                    "Enter the details of the appointed professional firm and their key team members."}
+                  {currentStep === 5 &&
+                    "Upload the key documents for this project. You can always add more later."}
                   {currentStep === 6 &&
                     "Define the financial parameters and schedule for this project."}
                 </p>
@@ -1258,8 +1423,8 @@ export default function CreateProject() {
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 2: CLIENT DETAILS ─────────────── */}
-                  {currentStep === 2 && (
+                  {/* ─────────────── STEP 3: CLIENT DETAILS ─────────────── */}
+                  {currentStep === 3 && (
                     <div className="p-8 space-y-6">
 
                       {/* ── Invite Client (if not CLIENT/OWNER/CONTRACTOR) ── */}
@@ -1482,11 +1647,12 @@ export default function CreateProject() {
                           </p>
                           <div className="space-y-3">
                             {clientPersonnelList.map((entry) => (
-                              <PersonnelEntryCard
+                              <OrgPersonnelSelectCard
                                 key={entry.id}
                                 entry={entry}
                                 roleOptions={CLIENT_ROLE_OPTIONS}
                                 takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                orgUsers={orgUsers}
                                 onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
                                 onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                 canRemove={true}
@@ -1509,8 +1675,8 @@ export default function CreateProject() {
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 3: APPOINTED COMPANY ─────────────── */}
-                  {currentStep === 3 && (
+                  {/* ─────────────── STEP 4: APPOINTED COMPANY ─────────────── */}
+                  {currentStep === 4 && (
                     <div className="p-8 space-y-6">
 
                       {/* CLIENT/OWNER/CONTRACTOR: simplified invite form */}
@@ -1557,19 +1723,10 @@ export default function CreateProject() {
                                     value={entry.position}
                                     onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}
                                   >
-                                    <option value="architect">Architect</option>
-                                    <option value="pm">Project Manager</option>
-                                    <option value="qs">Quantity Surveyor</option>
-                                    <option value="civil">Civil Engineer</option>
-                                    <option value="structural">Structural Engineer</option>
-                                    <option value="mep">MEP Engineer</option>
-                                    <option value="electrical">Electrical Engineer</option>
-                                    <option value="mechanical">Mechanical Engineer</option>
-                                    <option value="contractor">Contractor</option>
-                                    <option value="site_manager">Site Manager</option>
-                                    <option value="safety_officer">Safety Officer</option>
-                                    <option value="document_controller">Document Controller</option>
-                                    <option value="other">Other</option>
+                                    <option value="">Select role...</option>
+                                    {appRoles.map(r => (
+                                      <option key={r.code} value={r.code}>{r.name}</option>
+                                    ))}
                                   </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
@@ -1752,8 +1909,8 @@ export default function CreateProject() {
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 4: DOCUMENTS ─────────────── */}
-                  {currentStep === 4 && (
+                  {/* ─────────────── STEP 5: DOCUMENTS ─────────────── */}
+                  {currentStep === 5 && (
                     <div className="p-8 space-y-4 text-left">
 
                       {/* Label + tooltip */}
@@ -1880,8 +2037,8 @@ export default function CreateProject() {
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 5: SCOPE OF WORKS ─────────────── */}
-                  {currentStep === 5 && (
+                  {/* ─────────────── STEP 2: SCOPE OF WORKS ─────────────── */}
+                  {currentStep === 2 && (
                     <div className="p-8 space-y-6 text-left">
                       <div>
                         <SectionHeader

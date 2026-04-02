@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from '@/lib/roleUtils';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -79,6 +80,7 @@ const ALL_TASK_TYPES = ["SI", "VO", "RFI", "CPI", "GI", "DC"];
 
 // Role to document type mapping - keys are normalized to Title Case for simpler lookup
 const rolePermissions: Record<string, string[]> = {
+  // ── Backbone roles ──────────────────────────────────────────────────────────
   "Client": ALL_TASK_TYPES,
   "Owner": ALL_TASK_TYPES,
   "CLIENT": ALL_TASK_TYPES,
@@ -87,16 +89,53 @@ const rolePermissions: Record<string, string[]> = {
   "Client/Owner": ALL_TASK_TYPES,
   "Client / Owner": ALL_TASK_TYPES,
   "Client Project Manager": ALL_TASK_TYPES,
+  "CPM": ALL_TASK_TYPES,
   "Architect": ["VO", "SI"],
+  "ARCH": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
+  "CQS": ["VO"],
   "Consultant Planning Engineer": ["CPI", "DC"],
+  "CONS_PLANNER": ["CPI", "DC"],
   "Construction Manager": ["RFI", "SI", "DC", "CPI"],
+  "CM": ["RFI", "SI", "DC", "CPI"],
   "Contracts Manager": ["VO", "DC"],
+  "CONTRACTS_MGR": ["VO", "DC"],
   "Planning Engineer": ["CPI", "DC"],
+  "PLANNER": ["CPI", "DC"],
   "Site Engineer": ["RFI"],
+  "SE": ["RFI"],
   "Site Supervisor": ["RFI", "SI"],
+  "SS": ["RFI", "SI"],
   "Foreman": ["RFI"],
+  "FOREMAN": ["RFI"],
   "Project Manager": ["SI", "DC", "CPI"],
+  "PM": ["SI", "DC", "CPI"],
+  // ── New roles (inherit from backbone via resolvePermissionCode) ─────────────
+  "ADMIN":          ALL_TASK_TYPES,
+  "Administrator":  ALL_TASK_TYPES,
+  "PROJECT_ADMIN":  ALL_TASK_TYPES,
+  "Project Administrator": ALL_TASK_TYPES,
+  "PRINCIPAL_PM":   ["SI", "DC", "CPI"],
+  "Principal / PM": ["SI", "DC", "CPI"],
+  "Principal/PM":   ["SI", "DC", "CPI"],
+  "SUPER_USER":     ALL_TASK_TYPES,
+  "Super User":     ALL_TASK_TYPES,
+  "QS":             ["VO"],
+  "Quantity Surveyor": ["VO"],
+  "STANDARD":       ["RFI"],
+  "Standard User":  ["RFI"],
+  "STRUCT_ENG":     ["RFI"],
+  "Structural Engineer": ["RFI"],
+  "MECH_ENG":       ["RFI"],
+  "Mechanical Engineer": ["RFI"],
+  "ELEC_ENG":       ["RFI"],
+  "Electrical Engineer": ["RFI"],
+  "SPECIAL_USER":   ["SI", "DC", "CPI"],
+  "Special User":   ["SI", "DC", "CPI"],
+  "LIMITED":        ["RFI"],
+  "Limited User":   ["RFI"],
+  "LEGAL":          ["VO", "DC"],
+  "Legal":          ["VO", "DC"],
 };
 
 // Timeline stages per task type — used to map board columns to entity status
@@ -523,16 +562,27 @@ export default function Task() {
 
   const { mutateAsync: updateTask } = usePatch();
 
+  // Resolve role string to permitted task types (tries direct, case-insensitive, then backbone resolution)
+  const getPermittedTypes = (role: string): string[] => {
+    if (!role) return [];
+    const direct = rolePermissions[role];
+    if (direct) return direct;
+    const ciKey = Object.keys(rolePermissions).find(k => k.toLowerCase() === role.toLowerCase());
+    if (ciKey) return rolePermissions[ciKey];
+    // Resolve new role codes / display names to backbone, then retry
+    const resolved = resolvePermissionCode(role);
+    if (resolved !== role.toUpperCase()) {
+      const resolvedKey = Object.keys(rolePermissions).find(k => k.toUpperCase() === resolved);
+      if (resolvedKey) return rolePermissions[resolvedKey];
+    }
+    return [];
+  };
+
   // Check if user has permission to create any task type
   const canCreateTask = useMemo(() => {
     if (!userRole) return true;
     const currentRoles = userRole.split(/\s*\/\s*/).map((r: string) => r.trim());
-    return currentRoles.some((role: string) => {
-      const direct = rolePermissions[role];
-      if (direct && direct.length > 0) return true;
-      const foundKey = Object.keys(rolePermissions).find(k => k.toLowerCase() === role.toLowerCase());
-      return foundKey ? rolePermissions[foundKey].length > 0 : false;
-    });
+    return currentRoles.some((role: string) => getPermittedTypes(role).length > 0);
   }, [userRole]);
 
   // Filter buttons based on user role
@@ -545,22 +595,10 @@ export default function Task() {
     // Aggregate allowed document types from all user roles
     const allowedDocTypes = new Set<string>();
     currentRoles.forEach(role => {
-      // Direct match
-      const permissions = rolePermissions[role] || [];
-      permissions.forEach(type => allowedDocTypes.add(type));
-
-      // Case-insensitive match if direct match fails
-      if (permissions.length === 0) {
-        const foundKey = Object.keys(rolePermissions).find(
-          key => key.toLowerCase() === role.toLowerCase()
-        );
-        if (foundKey) {
-          rolePermissions[foundKey].forEach(type => allowedDocTypes.add(type));
-        }
-      }
+      getPermittedTypes(role).forEach(type => allowedDocTypes.add(type));
     });
 
-    if (allowedDocTypes.size === 0) return btns; // Show all if no roles identified in mapping
+    if (allowedDocTypes.size === 0) return btns; // Show all if role not recognized
 
     return btns.filter(btn => allowedDocTypes.has(btn.code));
   }, [userRole]);

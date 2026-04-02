@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRoles } from "@/hooks/useRoles";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -10,21 +11,28 @@ import {
 } from "@/components/ui/table";
 
 const modules = ["Finance", "Compliance", "Tasks", "Communication", "Documents", "Programme"];
-const roles = ["Project Manager", "Quantity Surveyor", "Site Manager"];
 
 type PermissionState = Record<string, Record<string, boolean>>;
 
 const RolePermissions = () => {
-  const [permissions, setPermissions] = useState<PermissionState>(() => {
-    const initial: PermissionState = {};
-    modules.forEach((mod) => {
-      initial[mod] = {};
-      roles.forEach((role) => {
-        initial[mod][role] = false;
+  const { roles: fetchedRoles } = useRoles();
+  const roles = fetchedRoles.map(r => r.name);
+
+  const [permissions, setPermissions] = useState<PermissionState>({});
+
+  useEffect(() => {
+    if (roles.length === 0) return;
+    setPermissions(prev => {
+      const next: PermissionState = {};
+      modules.forEach(mod => {
+        next[mod] = {};
+        roles.forEach(role => {
+          next[mod][role] = prev[mod]?.[role] ?? false;
+        });
       });
+      return next;
     });
-    return initial;
-  });
+  }, [roles.join(",")]);
 
   const handleToggle = (mod: string, role: string, checked: boolean) => {
     setPermissions((prev) => ({
