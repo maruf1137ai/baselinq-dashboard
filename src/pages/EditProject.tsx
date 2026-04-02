@@ -691,6 +691,33 @@ export default function EditProject() {
     setInitialized(true);
   }, [selectedProject, initialized]);
 
+  // ── Fallback: fill client details from profile when no organization ─────────
+
+  useEffect(() => {
+    if (!user || !initialized) return;
+    if (!CLIENT_ROLE_CODES.includes(user.role?.code ?? '')) return;
+    if (user.organization) return; // org pre-fill already handled by project data
+    if (clientForm.company_name) return; // already populated
+
+    const profile = user.profile;
+    setClientForm((prev) => ({
+      ...prev,
+      company_name: user.name || "",
+      office_number: profile?.phone_number || "",
+      physical_address: {
+        street: profile?.address || "",
+        city: profile?.city || "",
+        province: profile?.state || "",
+        postal_code: profile?.postal_code || "",
+      },
+      client: {
+        name: user.name || prev.client.name,
+        email: user.email || prev.client.email,
+        position: prev.client.position,
+      }
+    }));
+  }, [user, initialized, clientForm.company_name]);
+
   // ── Derived values ─────────────────────────────────────────────────────────
 
   const budget = parseBudget(form.total_budget);

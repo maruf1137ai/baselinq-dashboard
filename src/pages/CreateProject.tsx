@@ -816,6 +816,24 @@ export default function CreateProject() {
               position: prev.client.position,
             }
           }));
+        } else {
+          // No organization — use user's name as client name and fill from profile
+          setClientForm((prev) => ({
+            ...prev,
+            company_name: user.name || "",
+            office_number: profile?.phone_number || "",
+            physical_address: {
+              street: profile?.address || "",
+              city: profile?.city || "",
+              province: profile?.state || "",
+              postal_code: profile?.postal_code || "",
+            },
+            client: {
+              name: user.name || prev.client.name,
+              email: user.email || prev.client.email,
+              position: prev.client.position,
+            }
+          }));
         }
       }
 
