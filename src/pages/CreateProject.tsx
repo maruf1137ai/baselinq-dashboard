@@ -1916,7 +1916,7 @@ export default function CreateProject() {
                       {/* Label + tooltip */}
                       <div className="flex items-center gap-2">
                         <label className="text-[13px] font-normal text-[#374151]">
-                          Project Documents <span className="text-red-500">*</span>
+                          Upload your project contract document <span className="text-red-500">*</span>
                         </label>
                         <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                       </div>
