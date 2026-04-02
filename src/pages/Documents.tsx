@@ -8,8 +8,19 @@ import { cn } from '@/lib/utils';
 import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal';
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchData } from '@/lib/Api';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { fetchData, deleteData } from '@/lib/Api';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, FileText, AlertCircle, Calendar } from 'lucide-react';
 import type { ApiDocument } from '@/components/documents/DocumentTable';
 
 const SORT_OPTIONS = [
@@ -32,6 +43,27 @@ const Documents = () => {
   const [isAddingSegment, setIsAddingSegment] = useState(false);
   const [newSegmentName, setNewSegmentName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [docToDelete, setDocToDelete] = useState<any>(null);
+
+  // Summary stats from backend
+  const { data: summaryData } = useQuery({
+    queryKey: ['documents-summary', projectId],
+    queryFn: () => fetchData(`documents/summary/?project_id=${projectId}`),
+    enabled: !!projectId,
+  });
+
+  const { mutate: handleDeleteDoc, isPending: isDeletingDoc } = useMutation({
+    mutationFn: (docId: string) =>
+      deleteData({ url: `documents/${docId}/?project_id=${projectId}`, data: undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['documents-summary', projectId] });
+      toast.success('Document deleted.');
+      setDocToDelete(null);
+    },
+    onError: () => toast.error('Failed to delete document.'),
+  });
 
   // Filter & sort state
   const [selectedDiscipline, setSelectedDiscipline] = useState('All');
@@ -202,6 +234,48 @@ const Documents = () => {
           </div>
         )}
 
+        {/* Summary Stats */}
+        {summaryData && (
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+              <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-normal text-foreground">{summaryData.totalDocs ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Total Documents</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+              <div className="h-10 w-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-normal text-foreground">{summaryData.withAiFlags ?? 0}</p>
+                <p className="text-xs text-muted-foreground">AI Flagged</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+              <div className="h-10 w-10 bg-red-50 rounded-xl flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-normal text-foreground">{summaryData.overdueObligations ?? 0}</p>
+                <p className="text-xs text-muted-foreground">Overdue Obligations</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+              <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-normal text-foreground">{summaryData.nextDueDate ? new Date(summaryData.nextDueDate).toLocaleDateString() : '—'}</p>
+                <p className="text-xs text-muted-foreground">Next Due Date</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filters & Discipline Pills — dynamic */}
         <div className="flex flex-col gap-6 pt-4">
           <div className="flex items-center gap-2 flex-wrap">
@@ -325,6 +399,7 @@ const Documents = () => {
             isLoading={isLoading}
             onRowClick={handleOpenDetail}
             onVersionUpload={handleVersionUpload}
+            onDelete={(doc) => setDocToDelete(doc)}
             customDisciplines={customDisciplines}
           />
         </div>
@@ -340,7 +415,32 @@ const Documents = () => {
         isOpen={isVersionUploadModalOpen}
         onClose={() => setIsVersionUploadModalOpen(false)}
         document={selectedDoc}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
+          setIsVersionUploadModalOpen(false);
+        }}
       />
+
+      <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-medium text-[#1A1A1A]">{docToDelete?.name}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingDoc}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={isDeletingDoc}
+              onClick={() => { if (docToDelete) handleDeleteDoc(docToDelete._id); }}
+            >
+              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
