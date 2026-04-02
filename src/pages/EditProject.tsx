@@ -866,6 +866,10 @@ export default function EditProject() {
     goToStep(currentStep - 1);
   };
 
+  const handleSkip = () => {
+    goToStep(currentStep + 1);
+  };
+
   const handleInviteClient = async (projectId: number | string) => {
     if (!inviteClientData.email.trim()) return;
     try {
@@ -1773,27 +1777,35 @@ export default function EditProject() {
                           onDragLeave={() => setIsDragging(false)}
                           onDrop={handleDrop}
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl py-8 cursor-pointer transition-all duration-200",
+                            "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200",
                             "border-2 border-dashed",
                             isDragging
                               ? "border-[#6c5ce7] bg-[#f8f7ff]"
                               : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
                           )}>
-                          <CloudUpload
-                            className={cn(
-                              "w-8 h-8 mb-2 transition-colors",
-                              isDragging ? "text-[#6c5ce7]" : "text-[#9ca3af]"
-                            )}
-                          />
-                          <p className="text-[13px] font-normal text-[#374151]">
-                            Drag and drop files here
-                          </p>
-                          <p className="text-[12px] text-[#6b7280] mt-1">
-                            or{" "}
-                            <span className="text-[#6c5ce7] underline font-normal">
-                              click to browse
-                            </span>
-                          </p>
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                            isDragging ? "bg-[#ede9fb]" : "bg-[#f3f4f6]"
+                          )}>
+                            <CloudUpload className={cn(
+                              "w-6 h-6 transition-colors",
+                              isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]"
+                            )} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[14px] font-medium text-[#374151]">
+                              Drag and drop your files here
+                            </p>
+                            <p className="text-[12px] text-[#6b7280] mt-0.5">
+                              or{" "}
+                              <span className="text-[#6c5ce7] underline font-normal">
+                                click to browse
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-[#9ca3af] mt-1">
+                              PDF, JPG, PNG, GIF, WEBP, XLSX, XLS (max 20MB)
+                            </p>
+                          </div>
                         </div>
 
                         {/* New file list */}
@@ -2170,19 +2182,29 @@ export default function EditProject() {
                     )}
 
                     {currentStep < STEPS.length ? (
-                      <button
-                        type="button"
-                        onClick={handleNext}
-                        className={cn(
-                          "flex items-center gap-2 h-12 px-8 rounded-[10px] text-[14px] font-normal text-white transition-all",
-                          "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
-                          "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
-                        )}>
-                        Continue
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M5 12h14M12 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {[2, 3, 4, 5].includes(currentStep) && (
+                          <button
+                            type="button"
+                            onClick={handleSkip}
+                            className="flex items-center gap-1.5 h-12 px-5 rounded-[10px] text-[14px] font-normal text-[#6b7280] border-[1.5px] border-[#e5e7eb] bg-white hover:bg-[#f9fafb] hover:text-[#374151] transition-all">
+                            Skip
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleNext}
+                          className={cn(
+                            "flex items-center gap-2 h-12 px-8 rounded-[10px] text-[14px] font-normal text-white transition-all",
+                            "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
+                            "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
+                          )}>
+                          Continue
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
                     ) : (
                       <button
                         type="button"
