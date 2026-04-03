@@ -437,6 +437,7 @@ function OrgPersonnelSelectCard({
   roleOptions,
   takenRoles,
   orgUsers,
+  allRoles,
   onChange,
   onRemove,
   canRemove,
@@ -445,6 +446,7 @@ function OrgPersonnelSelectCard({
   roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
   takenRoles: string[];
   orgUsers: OrgUser[];
+  allRoles: { id?: number; name: string; code: string }[];
   onChange: (v: AssignedPersonnel) => void;
   onRemove: () => void;
   canRemove: boolean;
@@ -569,15 +571,22 @@ function OrgPersonnelSelectCard({
         </PopoverContent>
       </Popover>
 
-      {/* Org role display — shown once a user is selected */}
+      {/* Org role — editable dropdown, pre-filled with user's role */}
       {selectedOrgUser && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb]">
           <User className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
           <div className="flex-1">
-            <p className="text-[11px] text-[#9ca3af]">Organisation Role</p>
-            <p className="text-[13px] text-[#374151]">
-              {selectedOrgUser.role?.name || "No role assigned"}
-            </p>
+            <p className="text-[11px] text-[#9ca3af] mb-0.5">Organisation Role</p>
+            <select
+              value={entry.position}
+              onChange={(e) => onChange({ ...entry, position: e.target.value })}
+              className="w-full text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
+            >
+              <option value="">Select role...</option>
+              {allRoles.map((r) => (
+                <option key={r.code} value={r.name}>{r.name}</option>
+              ))}
+            </select>
           </div>
         </div>
       )}
@@ -1701,6 +1710,7 @@ export default function CreateProject() {
                                 roleOptions={CLIENT_ROLE_OPTIONS}
                                 takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
                                 orgUsers={orgUsers}
+                                allRoles={appRoles}
                                 onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
                                 onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                 canRemove={true}
