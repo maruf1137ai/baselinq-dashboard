@@ -467,7 +467,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         )}
       </div>
 
-      <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-209px)] relative overflow-hidden pb-[70px]">
+      <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-275px)] relative overflow-hidden pb-[70px]">
         <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
           <div className="relative size-full">
             {/* Chat Messages */}

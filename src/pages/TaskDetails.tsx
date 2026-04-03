@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import AiIcon from "@/components/icons/AiIcon";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapUnderline from "@tiptap/extension-underline";
@@ -57,6 +56,7 @@ import {
   Italic,
   Underline,
   Link2,
+  Zap,
   UserPlus,
   Check,
   ChevronsUpDown,
@@ -67,7 +67,7 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
@@ -126,7 +126,7 @@ const groupLogsByDate = (logs: any[]) => {
     let label: string;
     if (d.getTime() === today.getTime()) label = 'Today';
     else if (d.getTime() === yesterday.getTime()) label = 'Yesterday';
-    else label = formatDate(d);
+    else label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     if (seen[label] === undefined) { seen[label] = groups.length; groups.push({ label, logs: [] }); }
     groups[seen[label]].logs.push(log);
   });
@@ -614,7 +614,7 @@ export default function TaskDetails() {
       audit: [
         {
           action: `${taskType} created by ${task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || "User"}`,
-          date: formatDate(task.createdAt || apiResponse.created_at),
+          date: new Date(task.createdAt || apiResponse.created_at).toLocaleDateString(),
           isAI: false,
         },
       ],
@@ -628,7 +628,7 @@ export default function TaskDetails() {
           displayId: `#${task.voNumber || `VO-${task._id}`}`,
           title: task.title,
           task_code: task.voNumber,
-          dueDate: task.dueDate ? formatDate(task.dueDate) : "No Date",
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
           formFields: {
             title: task.title,
             discipline: task.discipline,
@@ -644,7 +644,7 @@ export default function TaskDetails() {
             tags: [],
           },
           deadlines: {
-            replyDue: task.dueDate ? formatDate(task.dueDate) : "N/A",
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "21 days",
           },
           timeline: {
@@ -665,7 +665,7 @@ export default function TaskDetails() {
           displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
           title: task.subject,
           task_code: task.rfiNumber,
-          dueDate: task.dueDate ? formatDate(task.dueDate) : "No Date",
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
           formFields: {
             subject: task.subject,
             discipline: task.discipline,
@@ -678,7 +678,7 @@ export default function TaskDetails() {
             tags: [],
           },
           deadlines: {
-            replyDue: task.dueDate ? formatDate(task.dueDate) : "N/A",
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "14 days",
           },
           timeline: {
@@ -699,7 +699,7 @@ export default function TaskDetails() {
           displayId: `#${task.siNumber || `SI-${task._id}`}`,
           title: task.title,
           task_code: task.siNumber,
-          dueDate: task.dueDate ? formatDate(task.dueDate) : "No Date",
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
           formFields: {
             title: task.title,
             discipline: task.discipline,
@@ -715,7 +715,7 @@ export default function TaskDetails() {
             tags: task.urgency ? [task.urgency] : [],
           },
           deadlines: {
-            replyDue: task.dueDate ? formatDate(task.dueDate) : "N/A",
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "7 days",
           },
           timeline: {
@@ -774,7 +774,7 @@ export default function TaskDetails() {
           displayId: `#CPI-${task._id}`,
           title: task.taskActivityName,
           task_code: `CPI-${task._id}`,
-          dueDate: task.finishDate ? formatDate(task.finishDate) : "No Date",
+          dueDate: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "No Date",
           formFields: {
             title: task.taskActivityName,
             description: task.description,
@@ -790,7 +790,7 @@ export default function TaskDetails() {
             tags: ["Critical Path"],
           },
           deadlines: {
-            replyDue: task.finishDate ? formatDate(task.finishDate) : "N/A",
+            replyDue: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "N/A",
             contractWindow: "7 days",
           },
           timeline: {
@@ -813,7 +813,7 @@ export default function TaskDetails() {
           displayId: `#${task.giNumber || `GI-${task._id}`}`,
           title: task.title,
           task_code: task.giNumber,
-          dueDate: task.dueDate ? formatDate(task.dueDate) : "No Date",
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
           formFields: {
             title: task.title,
             discipline: task.discipline,
@@ -828,7 +828,7 @@ export default function TaskDetails() {
             tags: [],
           },
           deadlines: {
-            replyDue: task.dueDate ? formatDate(task.dueDate) : "N/A",
+            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
             contractWindow: "14 days",
           },
           timeline: {
@@ -1528,7 +1528,7 @@ export default function TaskDetails() {
                           ? "bg-primary text-white hover:bg-primary/90"
                           : "bg-gray-900 text-white hover:bg-gray-800"
                       )}>
-                      <AiIcon size={16} />
+                      <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
                       {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
                     </button>
 

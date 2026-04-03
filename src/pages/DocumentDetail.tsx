@@ -243,7 +243,7 @@ const DocumentDetail = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6 p-4">
+      <div className="space-y-6">
 
         {/* Breadcrumbs */}
         <div className="flex items-center justify-between">
@@ -388,7 +388,7 @@ const DocumentDetail = () => {
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="w-1.5 h-6 bg-primary rounded-full" />
-                    <h3 className="text-sm font-normal text-[#1A1A1A] uppercase tracking-widest">Document Details</h3>
+                    <h3 className="text-sm font-medium text-foreground">Document Details</h3>
                   </div>
                   <div className="space-y-1">
                     <DetailItem label="Reference" value={doc.reference} isActionable />
@@ -406,7 +406,7 @@ const DocumentDetail = () => {
                 <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
-                    <h3 className="text-sm font-normal text-[#1A1A1A] uppercase tracking-widest">Key Dates</h3>
+                    <h3 className="text-sm font-medium text-foreground">Key Dates</h3>
                   </div>
                   <div className="space-y-1">
                     <DetailItem label="Executed" value={null} />
@@ -723,9 +723,9 @@ const DocumentDetail = () => {
                               <Badge className={cn(
                                 "text-xs font-normal border-0 px-2 py-0.5",
                                 ob.status === 'completed' ? "bg-emerald-50 text-emerald-700" :
-                                ob.status === 'overdue' ? "bg-red-50 text-red-600" :
-                                ob.status === 'in_progress' ? "bg-blue-50 text-blue-600" :
-                                "bg-gray-100 text-gray-500"
+                                  ob.status === 'overdue' ? "bg-red-50 text-red-600" :
+                                    ob.status === 'in_progress' ? "bg-blue-50 text-blue-600" :
+                                      "bg-gray-100 text-gray-500"
                               )}>
                                 {ob.status || 'pending'}
                               </Badge>
@@ -920,3 +920,5 @@ const DocumentDetail = () => {
 };
 
 export default DocumentDetail;
+
+// test push

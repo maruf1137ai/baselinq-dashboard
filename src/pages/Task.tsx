@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from '@/lib/roleUtils';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -33,17 +32,17 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 const btns = [
   {
-    code: "SI",
-    title: "SI - Site Instruction",
-    description: "Instruction issued directly for immediate site work.",
-    time: "5 minutes ago",
-    active: false,
-  },
-  {
     code: "VO",
     title: "VO - Variation Order",
     description: "Request to modify scope, cost, or materials.",
     time: "Just now",
+    active: false,
+  },
+  {
+    code: "SI",
+    title: "SI - Site Instruction",
+    description: "Instruction issued directly for immediate site work.",
+    time: "5 minutes ago",
     active: false,
   },
   {
@@ -54,33 +53,25 @@ const btns = [
     active: false,
   },
   {
-    code: "CPI",
-    title: "CPI - Critical Path Item",
-    description: "Task affecting the critical path timeline.",
-    time: "20 minutes ago",
-    active: false,
-  },
-  {
-    code: "GI",
-    title: "GI - General Instruction",
-    description: "General instruction for work or processes.",
-    time: "30 minutes ago",
-    active: false,
-  },
-  {
     code: "DC",
     title: "DC - Delay Claim",
     description: "Request for extension of time due to delays.",
     time: "15 minutes ago",
     active: false,
   },
+  {
+    code: "CPI",
+    title: "CPI - Critical Path Item",
+    description: "Task affecting the critical path timeline.",
+    time: "20 minutes ago",
+    active: false,
+  },
 ];
 
-const ALL_TASK_TYPES = ["SI", "VO", "RFI", "CPI", "GI", "DC"];
+const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
 
 // Role to document type mapping - keys are normalized to Title Case for simpler lookup
 const rolePermissions: Record<string, string[]> = {
-  // ── Backbone roles ──────────────────────────────────────────────────────────
   "Client": ALL_TASK_TYPES,
   "Owner": ALL_TASK_TYPES,
   "CLIENT": ALL_TASK_TYPES,
@@ -89,53 +80,16 @@ const rolePermissions: Record<string, string[]> = {
   "Client/Owner": ALL_TASK_TYPES,
   "Client / Owner": ALL_TASK_TYPES,
   "Client Project Manager": ALL_TASK_TYPES,
-  "CPM": ALL_TASK_TYPES,
   "Architect": ["VO", "SI"],
-  "ARCH": ["VO", "SI"],
   "Consultant Quantity Surveyor": ["VO"],
-  "CQS": ["VO"],
   "Consultant Planning Engineer": ["CPI", "DC"],
-  "CONS_PLANNER": ["CPI", "DC"],
   "Construction Manager": ["RFI", "SI", "DC", "CPI"],
-  "CM": ["RFI", "SI", "DC", "CPI"],
   "Contracts Manager": ["VO", "DC"],
-  "CONTRACTS_MGR": ["VO", "DC"],
   "Planning Engineer": ["CPI", "DC"],
-  "PLANNER": ["CPI", "DC"],
   "Site Engineer": ["RFI"],
-  "SE": ["RFI"],
   "Site Supervisor": ["RFI", "SI"],
-  "SS": ["RFI", "SI"],
   "Foreman": ["RFI"],
-  "FOREMAN": ["RFI"],
   "Project Manager": ["SI", "DC", "CPI"],
-  "PM": ["SI", "DC", "CPI"],
-  // ── New roles (inherit from backbone via resolvePermissionCode) ─────────────
-  "ADMIN": ALL_TASK_TYPES,
-  "Administrator": ALL_TASK_TYPES,
-  "PROJECT_ADMIN": ALL_TASK_TYPES,
-  "Project Administrator": ALL_TASK_TYPES,
-  "PRINCIPAL_PM": ["SI", "DC", "CPI"],
-  "Principal / PM": ["SI", "DC", "CPI"],
-  "Principal/PM": ["SI", "DC", "CPI"],
-  "SUPER_USER": ALL_TASK_TYPES,
-  "Super User": ALL_TASK_TYPES,
-  "QS": ["VO"],
-  "Quantity Surveyor": ["VO"],
-  "STANDARD": ["RFI"],
-  "Standard User": ["RFI"],
-  "STRUCT_ENG": ["RFI"],
-  "Structural Engineer": ["RFI"],
-  "MECH_ENG": ["RFI"],
-  "Mechanical Engineer": ["RFI"],
-  "ELEC_ENG": ["RFI"],
-  "Electrical Engineer": ["RFI"],
-  "SPECIAL_USER": ["SI", "DC", "CPI"],
-  "Special User": ["SI", "DC", "CPI"],
-  "LIMITED": ["RFI"],
-  "Limited User": ["RFI"],
-  "LEGAL": ["VO", "DC"],
-  "Legal": ["VO", "DC"],
 };
 
 // Timeline stages per task type — used to map board columns to entity status
@@ -253,7 +207,7 @@ function TaskCard({ task, isDragging }: any) {
   const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
   const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
   const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
-  const canDrag = userRoles.some((role) => allowedApproversUpper.includes(role));
+  const canDrag = true;
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: task.id,
@@ -559,22 +513,6 @@ export default function Task() {
   );
 
   const { mutateAsync: updateTask } = usePatch();
-
-  // Resolve role string to permitted task types (tries direct, case-insensitive, then backbone resolution)
-  const getPermittedTypes = (role: string): string[] => {
-    if (!role) return [];
-    const direct = rolePermissions[role];
-    if (direct) return direct;
-    const ciKey = Object.keys(rolePermissions).find(k => k.toLowerCase() === role.toLowerCase());
-    if (ciKey) return rolePermissions[ciKey];
-    // Resolve new role codes / display names to backbone, then retry
-    const resolved = resolvePermissionCode(role);
-    if (resolved !== role.toUpperCase()) {
-      const resolvedKey = Object.keys(rolePermissions).find(k => k.toUpperCase() === resolved);
-      if (resolvedKey) return rolePermissions[resolvedKey];
-    }
-    return [];
-  };
 
   // Check if user has permission to create any task type
   const canCreateTask = true;

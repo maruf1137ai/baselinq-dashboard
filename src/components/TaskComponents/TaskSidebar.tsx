@@ -12,7 +12,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { TaskAttachments } from "./TaskAttachments";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface TaskSidebarProps {
   taskType: string;
@@ -121,13 +121,13 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       <div
                         className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
                           ? "bg-[#8081F6] border-[#8081F6]"
-                          : "bg-white border-[#E7E9EB]"
+                          : "bg-white border-border"
                           }`}
                       />
                       <span
                         className={cn(
-                          "text-[10px] mt-3 text-[#6B7280] w-full text-center break-words px-1",
-                          i === currentStageIndex && "text-[#1B1C1F] font-medium"
+                          "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
+                          i === currentStageIndex && "text-foreground font-medium"
                         )}>
                         {stage}
                       </span>
@@ -185,16 +185,16 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#6B7280] mb-1">Discipline</p>
-              <p className="text-sm text-[#1B1C1F]">
+              <p className="text-xs text-muted-foreground mb-1">Discipline</p>
+              <p className="text-sm text-foreground">
                 {taskData?.discipline || "General Construction"}
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#6B7280] mb-1">Created By</p>
+              <p className="text-xs text-muted-foreground mb-1">Created By</p>
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-[#6B7280]" />
-                <p className="text-sm text-[#1B1C1F]">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm text-foreground">
                   {taskData?.createdBy || "Mike Wilson"}
                 </p>
               </div>
@@ -261,14 +261,14 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </h3>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Subject</p>
-            <p className="text-sm text-[#1B1C1F]">
+            <p className="text-xs text-muted-foreground mb-1">Subject</p>
+            <p className="text-sm text-foreground">
               {taskData?.formFields?.subject}
             </p>
           </div>
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Discipline</p>
-            <p className="text-sm text-[#1B1C1F]">
+            <p className="text-xs text-muted-foreground mb-1">Discipline</p>
+            <p className="text-sm text-foreground">
               {taskData?.formFields?.discipline}
             </p>
           </div>
@@ -287,8 +287,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-[#6B7280]">Contract Window</span>
-            <span className="text-sm text-[#6B7280]">
+            <span className="text-sm text-muted-foreground">Contract Window</span>
+            <span className="text-sm text-muted-foreground">
               {taskData?.deadlines?.contractWindow}
             </span>
           </div>
@@ -306,19 +306,19 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </h3>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Discipline</p>
-            <p className="text-sm text-[#1B1C1F]">
+            <p className="text-xs text-muted-foreground mb-1">Discipline</p>
+            <p className="text-sm text-foreground">
               {taskData?.formFields?.discipline}
             </p>
           </div>
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Location</p>
-            <p className="text-sm text-[#1B1C1F]">
+            <p className="text-xs text-muted-foreground mb-1">Location</p>
+            <p className="text-sm text-foreground">
               {taskData?.formFields?.location}
             </p>
           </div>
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Urgency</p>
+            <p className="text-xs text-muted-foreground mb-1">Urgency</p>
             <Badge
               className={`${taskData?.formFields?.urgency === "high"
                 ? "bg-red-50 text-red-700 border-red-200"
@@ -341,8 +341,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </h3>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-[#6B7280] mb-1">Discipline</p>
-            <p className="text-sm text-[#1B1C1F]">
+            <p className="text-xs text-muted-foreground mb-1">Discipline</p>
+            <p className="text-sm text-foreground">
               {taskData?.formFields?.discipline}
             </p>
           </div>
