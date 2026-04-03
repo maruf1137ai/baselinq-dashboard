@@ -487,6 +487,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         data: {
           userId: selectedUser.id,
           roleName: selectedRole.name,
+          roleCode: selectedRole.code,
         },
       });
 
