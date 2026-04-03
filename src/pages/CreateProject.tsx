@@ -679,12 +679,13 @@ export default function CreateProject() {
   interface AppointedInviteEntry {
     id: string;
     company_name: string;
+    company_type: string;
     contact_name: string;
     email: string;
     position: string; // professional role key e.g. 'architect','contractor','qs','pm'
   }
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([
-    { id: crypto.randomUUID(), company_name: '', contact_name: '', email: '', position: 'architect' }
+    { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }
   ]);
 
   const CLIENT_ROLE_OPTIONS = [
@@ -1751,6 +1752,24 @@ export default function CreateProject() {
                                   />
                                 </div>
                                 <div>
+                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
+                                  <select
+                                    className={inputCls()}
+                                    value={entry.company_type}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
+                                  >
+                                    <option value="">Select type...</option>
+                                    <option value="Pty Ltd">Pty Ltd (Private Company)</option>
+                                    <option value="Ltd">Ltd (Public Company)</option>
+                                    <option value="CC">CC (Close Corporation)</option>
+                                    <option value="Inc">Inc (Incorporated)</option>
+                                    <option value="Partnership">Partnership</option>
+                                    <option value="Sole Proprietor">Sole Proprietor</option>
+                                    <option value="Trust">Trust</option>
+                                    <option value="NPO">NPO (Non-Profit Organisation)</option>
+                                  </select>
+                                </div>
+                                <div>
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
                                   <select
                                     className={inputCls()}
@@ -1788,7 +1807,7 @@ export default function CreateProject() {
                             ))}
                             <button
                               type="button"
-                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', contact_name: '', email: '', position: 'architect' }])}
+                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }])}
                               className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
                             >
                               <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
