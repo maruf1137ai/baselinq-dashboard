@@ -1604,14 +1604,21 @@ export default function EditProject() {
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
                                   <select className={inputCls()} value={entry.company_type} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}>
                                     <option value="">Select type...</option>
-                                    <option value="Pty Ltd">Pty Ltd (Private Company)</option>
-                                    <option value="Ltd">Ltd (Public Company)</option>
-                                    <option value="CC">CC (Close Corporation)</option>
-                                    <option value="Inc">Inc (Incorporated)</option>
-                                    <option value="Partnership">Partnership</option>
-                                    <option value="Sole Proprietor">Sole Proprietor</option>
-                                    <option value="Trust">Trust</option>
-                                    <option value="NPO">NPO (Non-Profit Organisation)</option>
+                                    <option value="Architectural">Architectural</option>
+                                    <option value="Structural Engineering">Structural Engineering</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Quantity Surveying">Quantity Surveying</option>
+                                    <option value="Project Management">Project Management</option>
+                                    <option value="Construction Management">Construction Management</option>
+                                    <option value="Interior Design">Interior Design</option>
+                                    <option value="Landscape Architecture">Landscape Architecture</option>
+                                    <option value="Urban Planning">Urban Planning</option>
+                                    <option value="Environmental Consulting">Environmental Consulting</option>
+                                    <option value="Legal & Compliance">Legal &amp; Compliance</option>
+                                    <option value="General Contractor">General Contractor</option>
+                                    <option value="Other">Other</option>
                                   </select>
                                 </div>
                                 <div>
