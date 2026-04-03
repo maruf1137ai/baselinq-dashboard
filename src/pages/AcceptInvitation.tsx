@@ -87,18 +87,23 @@ export default function AcceptInvitation() {
   const totalSteps = steps.length;
 
   useEffect(() => {
-    if (!invite?.position || professionalBody) return;
-    const bodyMap: Record<string, string> = {
-      architect: "SACAP",
-      structural: "ECSA",
-      civil: "ECSA",
-      mep: "ECSA",
-      contractor: "CIDB",
-      pm: "SACPCMP",
-      qs: "ASAQS",
-    };
-    const suggested = bodyMap[invite.position];
-    if (suggested) setProfessionalBody(suggested);
+    if (!invite) return;
+    // Pre-fill name from invitation
+    if (invite.contact_name && !name) setName(invite.contact_name);
+    // Suggest professional body based on role
+    if (invite.position && !professionalBody) {
+      const bodyMap: Record<string, string> = {
+        architect: "SACAP",
+        structural: "ECSA",
+        civil: "ECSA",
+        mep: "ECSA",
+        contractor: "CIDB",
+        pm: "SACPCMP",
+        qs: "ASAQS",
+      };
+      const suggested = bodyMap[invite.position];
+      if (suggested) setProfessionalBody(suggested);
+    }
   }, [invite]);
 
   const acceptMutation = useMutation({

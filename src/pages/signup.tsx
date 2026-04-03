@@ -248,7 +248,7 @@ const SignupPage = () => {
           company_size: companySize || undefined,
           team_invites: teamMembers
             .filter((m) => m.email)
-            .map((m) => ({ email: m.email, position: m.position })),
+            .map((m) => ({ email: m.email, position: m.position, name: m.name })),
         }
         : {
           id_number: idNumber || undefined,

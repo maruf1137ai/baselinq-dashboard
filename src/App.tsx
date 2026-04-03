@@ -29,6 +29,7 @@ import Integrations from "./pages/settings/integrations";
 import Notifications from "./pages/settings/notifications";
 import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
+import Organization from "./pages/settings/Organization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
@@ -119,7 +120,6 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
           <Route path="/accept-appointed-invitation/:token" element={<AcceptAppointedInvitation />} />
-          <Route path="*" element={<NotFound />} />
           <Route path="/tasks" element={<Task />} />
           <Route path="/tasks/:taskId" element={<TaskDetails />} />
           <Route path="/compliance" element={<Compliance />} />
@@ -151,6 +151,7 @@ const App = () => (
           {/* <Route path="/settings" element={<TeamManagement />} /> */}
           <Route path="/settings" element={<Settings />}>
             <Route index element={<TeamManagement />} /> {/* default page */}
+            <Route path="organization" element={<Organization />} />
             <Route path="project-details" element={<ProjectDetails />} />
             <Route path="site" element={<Site />} />
             <Route path="notifications" element={<Notifications />} />
@@ -160,6 +161,7 @@ const App = () => (
             <Route path="data-management" element={<DataManagement />} />
             <Route path="audit" element={<Audit />} />
           </Route>
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

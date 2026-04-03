@@ -26,18 +26,33 @@ import {
   Loader2,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { validateFile, registerS3Document, deleteProjectDocument, ALLOWED_FILE_EXTENSIONS, ProjectDocument, lookupCompany, inviteAppointedCompany, inviteClient } from "@/lib/Api";
+  validateFile,
+  registerS3Document,
+  deleteProjectDocument,
+  ALLOWED_FILE_EXTENSIONS,
+  ProjectDocument,
+  lookupCompany,
+  inviteAppointedCompany,
+  inviteClient,
+  invitePersonnel,
+  postData
+} from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
-import { useUpdateProject } from "@/hooks/useProjects";
+import { useUpdateProject, useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
-import { useProjects } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import useFetch from "@/hooks/useFetch";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   format,
   parseISO,
@@ -45,6 +60,7 @@ import {
   differenceInMonths,
 } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
+import { ChevronsUpDown } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -126,10 +142,10 @@ interface TaskOrderState {
 
 const STEPS = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
-  { id: 2, label: "Client Details", description: "Client company & contacts" },
-  { id: 3, label: "Appointed Company", description: "Professional firm & contacts" },
-  { id: 4, label: "Documents", description: "Upload project files" },
-  { id: 5, label: "Scope of Works", description: "Description & requirements" },
+  { id: 2, label: "Scope of Works", description: "Description & requirements" },
+  { id: 3, label: "Client Details", description: "Client company & contacts" },
+  { id: 4, label: "Appointed Company", description: "Professional firm & contacts" },
+  { id: 5, label: "Documents", description: "Upload project files" },
   { id: 6, label: "Financials & Timeline", description: "Budget, dates, and rates" },
 ];
 
@@ -371,6 +387,7 @@ interface AssignedPersonnel {
   name: string;
   email: string;
   position: string;
+  userId?: number;
 }
 
 function PersonnelEntryCard({
@@ -467,6 +484,175 @@ function PersonnelEntryCard({
   );
 }
 
+interface OrgUser {
+  id: number;
+  name: string;
+  email: string;
+  role: { name: string; code: string } | null;
+}
+
+function OrgPersonnelSelectCard({
+  entry,
+  roleOptions,
+  takenRoles,
+  orgUsers,
+  allRoles,
+  onChange,
+  onRemove,
+  canRemove,
+}: {
+  entry: AssignedPersonnel;
+  roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
+  takenRoles: string[];
+  orgUsers: OrgUser[];
+  allRoles: { id?: number; name: string; code: string }[];
+  onChange: (v: AssignedPersonnel) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const selectedRole = roleOptions.find((r) => r.value === entry.role);
+  const selectedOrgUser = orgUsers.find((u) => u.email === entry.email);
+
+  return (
+    <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
+      {/* Role selector row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
+            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+          </div>
+          <select
+            value={entry.role}
+            onChange={(e) => onChange({ ...entry, role: e.target.value })}
+            className="flex-1 text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none">
+            <option value="">Select role...</option>
+            {roleOptions.map((r) => (
+              <option
+                key={r.value}
+                value={r.value}
+                disabled={takenRoles.includes(r.value) && r.value !== entry.role}>
+                {r.value}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {selectedRole && (
+            <span
+              className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
+              style={{ background: selectedRole.badgeColor }}>
+              {selectedRole.badge}
+            </span>
+          )}
+          {canRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* User combobox */}
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+            {selectedOrgUser ? (
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                  {(selectedOrgUser.name || selectedOrgUser.email).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-[13px] text-[#374151]">{selectedOrgUser.name}</p>
+                  <p className="text-[11px] text-[#9ca3af]">
+                    {selectedOrgUser.email}{selectedOrgUser.role?.name ? ` · ${selectedOrgUser.role.name}` : ""}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <span className="text-[13px] text-[#9ca3af]">Select team member...</span>
+            )}
+            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+          <Command>
+            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+            <CommandList>
+              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No team members found.</CommandEmpty>
+              <CommandGroup>
+                {orgUsers.map((u) => {
+                  const isSelected = entry.email === u.email;
+                  return (
+                    <CommandItem
+                      key={u.id}
+                      value={u.name || u.email}
+                      onSelect={() => {
+                        const matchedRole = roleOptions.find(
+                          (r) => r.value === u.role?.code || r.value === u.role?.name
+                        );
+                        onChange({
+                          ...entry,
+                          name: u.name,
+                          email: u.email,
+                          position: u.role?.name || "",
+                          userId: u.id,
+                          role: matchedRole ? matchedRole.value : entry.role,
+                        });
+                        setPopoverOpen(false);
+                      }}
+                      className="cursor-pointer px-3 py-2.5">
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                            {(u.name || u.email).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
+                            <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0" />}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {/* Org role — editable dropdown, pre-filled with user's role */}
+      {selectedOrgUser && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb]">
+          <User className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+          <div className="flex-1">
+            <p className="text-[11px] text-[#9ca3af] mb-0.5">Organisation Role</p>
+            <select
+              value={entry.position}
+              onChange={(e) => onChange({ ...entry, position: e.target.value })}
+              className="w-full text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
+            >
+              <option value="">Select role...</option>
+              {allRoles.map((r) => (
+                <option key={r.code} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── SectionHeader ──────────────────────────────────────────────────────────────
 
 function SectionHeader({
@@ -516,7 +702,7 @@ export default function EditProject() {
   const [stepDir, setStepDir] = useState<"fwd" | "back">("fwd");
   const [stepKey, setStepKey] = useState(0);
   const [pnEditable, setPnEditable] = useState(false);
-  const files = s3Upload.entries;
+  const entries = s3Upload.entries;
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -604,6 +790,49 @@ export default function EditProject() {
   const [isInvitingClient, setIsInvitingClient] = useState(false);
   const [inviteClientData, setInviteClientData] = useState({ name: '', email: '' });
   const [isInvited, setIsInvited] = useState(false);
+
+  // Invite Personnel modal
+  const [showInvitePersonnelModal, setShowInvitePersonnelModal] = useState(false);
+  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
+  const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
+
+  const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
+  const orgUsers: OrgUser[] = orgUsersData?.results || [];
+
+  const handleInvitePersonnelSubmit = async () => {
+    if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
+    setInvitePersonnelSubmitting(true);
+    try {
+      await invitePersonnel({
+        name: invitePersonnelForm.name,
+        email: invitePersonnelForm.email,
+        role_code: invitePersonnelForm.role_code,
+      });
+      toast.success(`Invitation sent to ${invitePersonnelForm.email}`);
+      setShowInvitePersonnelModal(false);
+      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to send invitation.");
+    } finally {
+      setInvitePersonnelSubmitting(false);
+    }
+  };
+
+  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
+    const toAdd = personnel.filter(e => e.userId);
+    if (toAdd.length === 0) return;
+    await Promise.all(toAdd.map(async (entry) => {
+      try {
+        await postData({
+          url: `projects/${projectId}/team-members/`,
+          data: { userId: entry.userId, roleName: entry.position || entry.role || "Member" },
+        });
+      } catch (err: any) {
+        const msg = err?.response?.data?.error || err?.message || "Unknown error";
+        toast.error(`Could not add ${entry.name || entry.email} to project: ${msg}`);
+      }
+    }));
+  };
 
   // ── Pre-populate from project ──────────────────────────────────────────────
 
@@ -841,21 +1070,30 @@ export default function EditProject() {
         next.name = "Project name must be at least 2 characters";
       if (!form.project_number.trim())
         next.project_number = "Project number is required";
+      // Location is technically optional but good to have
       setErrors(next);
       return Object.keys(next).length === 0;
     }
     if (step === 2) {
+      // Scope of works - optional but can add validation here if needed
+      return true;
+    }
+    if (step === 3) {
+      // Client Details
       if (isInvitingClient) setIsInvitingClient(false);
-      if (!isClientOrContractor && (isInvited || (inviteClientData.name && inviteClientData.email))) return true;
+      // For contractors/clients, they might just invite the client
+      if (!isClientOrContractor && (isInvited || (inviteClientData.name && inviteClientData.email.trim()))) return true;
 
       const next: ClientErrors = {};
-      if (!clientForm.company_name.trim())
+      // If manually filling:
+      if (!isClientOrContractor && !clientForm.company_name.trim() && !inviteClientData.email.trim())
         next.company_name = "Client name or company is required";
       setClientErrors(next);
       return Object.keys(next).length === 0;
     }
-    if (step === 3) {
-      // For clients/contractors, step 3 is the invite form — all optional
+    if (step === 4) {
+      // Appointed Company
+      // For clients/contractors, step 4 is often the invite form — all optional
       if (isClientOrContractor) return true;
       const next: AppointedErrors = {};
       if (!appointedForm.company_name.trim())
@@ -863,8 +1101,10 @@ export default function EditProject() {
       setAppointedErrors(next);
       return Object.keys(next).length === 0;
     }
-    // Steps 4 and 5 are optional when editing
-    if (step === 4 || step === 5) return true;
+    if (step === 5) {
+      // Documents - always optional
+      return true;
+    }
     if (step === 6) {
       const next: FormErrors = {};
       if (form.start_date && form.end_date && form.end_date <= form.start_date)
@@ -954,6 +1194,7 @@ export default function EditProject() {
       fx_rate: fx,
       retention_rate: ret,
       vat_rate: vat,
+      status: "Active",
       contract_type: form.contract_type,
       total_budget: b,
       location: form.location,
@@ -982,18 +1223,21 @@ export default function EditProject() {
       task_order_brief: taskOrder.brief,
     };
 
+    // Create snapshot for handleAddPersonnelToProject
+    const personnelSnapshot = [...clientPersonnelList, ...appointedPersonnelList];
+
     updateProject(data, {
       onSuccess: async (result: any) => {
         const projectData = result?.project || result;
         const pId = projectData?._id || projectData?.id || projectId;
 
-        if (files.length > 0 && pId) {
-          const ids = files.map((e) => e.id);
+        if (entries.length > 0 && pId) {
+          const ids = entries.map((e) => e.id);
           const s3Keys = await s3Upload.waitForAll(ids);
 
           let anyFailed = false;
           await Promise.all(
-            files.map(async (entry) => {
+            entries.map(async (entry) => {
               const key = s3Keys.get(entry.id);
               if (!key) { anyFailed = true; return; }
               try {
@@ -1013,11 +1257,17 @@ export default function EditProject() {
           toast.success("Project updated successfully!");
         }
 
-        // Invitations
+        // Invitations & Personnel
         if (!isClientOrContractor) await handleInviteClient(pId);
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
+        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
 
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return typeof key === "string" && key.startsWith("projects");
+          },
+        });
         if (pId) queryClient.invalidateQueries({ queryKey: ["project", pId] });
 
         setIsSubmitting(false);
@@ -1318,8 +1568,45 @@ export default function EditProject() {
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 2: CLIENT DETAILS ─────────────── */}
+                  {/* ─────────────── STEP 2: SCOPE OF WORKS ─────────────── */}
                   {currentStep === 2 && (
+                    <div className="p-8 space-y-6 text-left">
+                      <div>
+                        <SectionHeader
+                          icon={<ScrollText className="w-3.5 h-3.5" />}
+                          label="Scope of Works"
+                          iconBg="#f0edff"
+                          iconColor="#6c5ce7"
+                        />
+                        <p className="text-[13px] text-[#6b7280] -mt-2">
+                          Describe the full scope of construction works. This will auto-populate into contract documents and appointment letters.
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="relative group">
+                          <textarea
+                            className={cn(
+                              "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none leading-relaxed",
+                              "bg-[#f5f6f8] border border-[#e2e5ea]",
+                              "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+                              "min-h-[250px]"
+                            )}
+                            placeholder={`e.g. The Client wishes to appoint an Architect to measure up the existing residential building...`}
+                            value={taskOrder.brief}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setTaskOrder({ brief: val });
+                              setField("description", val); // Sync with description
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─────────────── STEP 3: CLIENT DETAILS ─────────────── */}
+                  {currentStep === 3 && (
                     <div className="p-8 space-y-6">
 
                       {/* ── Invite Client (if not CLIENT/OWNER/CONTRACTOR) ── */}
@@ -1528,50 +1815,61 @@ export default function EditProject() {
                         </div>
                       )}
 
-                      {/* ── Assigned Personnel ── */}
-                      <div>
-                        <SectionHeader
-                          icon={<User className="w-3.5 h-3.5" />}
-                          label="Assigned Personnel"
-                          iconBg="#f0fdf4"
-                          iconColor="#00b894"
-                        />
-                        <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                          These members will be given predetermined access rights to the project.
-                        </p>
-                        <div className="space-y-3">
-                          {clientPersonnelList.map((entry) => (
-                            <PersonnelEntryCard
-                              key={entry.id}
-                              entry={entry}
-                              roleOptions={CLIENT_ROLE_OPTIONS}
-                              takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
-                              onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                              onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
-                              canRemove={true}
-                            />
-                          ))}
-                          {clientPersonnelList.length < CLIENT_ROLE_OPTIONS.length && (
+                      {/* ── Assigned Personnel (Only for Clients) ── */}
+                      {isClientOrContractor && (
+                        <div>
+                          <SectionHeader
+                            icon={<User className="w-3.5 h-3.5" />}
+                            label="Assigned Personnel"
+                            iconBg="#f0fdf4"
+                            iconColor="#00b894"
+                          />
+                          <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4 text-left">
+                            These members will be given predetermined access rights to the project.
+                          </p>
+                          <div className="space-y-3">
+                            {clientPersonnelList.map((entry) => (
+                              <OrgPersonnelSelectCard
+                                key={entry.id}
+                                entry={entry}
+                                roleOptions={CLIENT_ROLE_OPTIONS}
+                                takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                orgUsers={orgUsers}
+                                allRoles={appRoles}
+                                onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                canRemove={true}
+                              />
+                            ))}
+                            {clientPersonnelList.length < CLIENT_ROLE_OPTIONS.length && (
+                              <button
+                                type="button"
+                                onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
+                                <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="font-normal">Add User</span>
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
-                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
-                              </div>
-                              <span className="font-normal">Add User</span>
+                              onClick={() => setShowInvitePersonnelModal(true)}
+                              className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="font-normal">Invite User</span>
                             </button>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
-                  {/* ─────────────── STEP 3: APPOINTED COMPANY ─────────────── */}
-                  {currentStep === 3 && (
+                  {/* ─────────────── STEP 4: APPOINTED COMPANY ─────────────── */}
+                  {currentStep === 4 && (
                     <div className="p-8 space-y-6">
 
-                      {/* CLIENT/CONTRACTOR: invite form */}
+                      {/* CLIENT/OWNER/CONTRACTOR: simplified invite form */}
                       {isClientOrContractor && (
                         <>
                           <div>
@@ -1581,28 +1879,40 @@ export default function EditProject() {
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4 text-left">
                               Invite the professional firms appointed to this project. They'll receive an email to fill in their company details.
                             </p>
                           </div>
                           <div className="space-y-4">
-                            {appointedInvites.map((entry, idx) => (
+                            {appointedInvites.map((entry) => (
                               <div key={entry.id} className="bg-[#f8f9fb] rounded-xl p-4 space-y-3 border border-[#e2e5ea]">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[13px] font-normal text-[#374151]">Company {idx + 1}</span>
+                                <div className="flex items-center justify-end">
                                   {appointedInvites.length > 1 && (
-                                    <button type="button" onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))} className="text-[#9ca3af] hover:text-red-500 transition-colors">
+                                    <button
+                                      type="button"
+                                      onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))}
+                                      className="text-[#9ca3af] hover:text-red-500 transition-colors"
+                                    >
                                       <X className="w-4 h-4" />
                                     </button>
                                   )}
                                 </div>
-                                <div>
+                                <div className="text-left">
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Name</label>
-                                  <input className={inputCls()} placeholder="e.g. Base Architects and Associates" value={entry.company_name} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_name: e.target.value } : x))} />
+                                  <input
+                                    className={inputCls()}
+                                    placeholder="e.g. Base Architects and Associates"
+                                    value={entry.company_name}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
+                                  />
                                 </div>
-                                <div>
+                                <div className="text-left">
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
-                                  <select className={inputCls()} value={entry.company_type} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}>
+                                  <select
+                                    className={inputCls()}
+                                    value={entry.company_type}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
+                                  >
                                     <option value="">Select type...</option>
                                     <option value="Architectural">Architectural</option>
                                     <option value="Structural Engineering">Structural Engineering</option>
@@ -1621,36 +1931,57 @@ export default function EditProject() {
                                     <option value="Other">Other</option>
                                   </select>
                                 </div>
-                                <div>
+                                <div className="text-left">
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
-                                  <select className={inputCls()} value={entry.position} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}>
+                                  <select
+                                    className={inputCls()}
+                                    value={entry.position}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}
+                                  >
                                     <option value="">Select role...</option>
                                     {appRoles.map(r => (
                                       <option key={r.code} value={r.code}>{r.name}</option>
                                     ))}
                                   </select>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3 text-left">
                                   <div>
                                     <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Contact Person Name</label>
-                                    <input className={inputCls()} placeholder="e.g. John Smith" value={entry.contact_name} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))} />
+                                    <input
+                                      className={inputCls()}
+                                      placeholder="e.g. John Smith"
+                                      value={entry.contact_name}
+                                      onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))}
+                                    />
                                   </div>
                                   <div>
                                     <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Email Address</label>
-                                    <input className={inputCls()} placeholder="e.g. john@firm.co.za" type="email" value={entry.email} onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, email: e.target.value } : x))} />
+                                    <input
+                                      className={inputCls()}
+                                      placeholder="e.g. john@firm.co.za"
+                                      type="email"
+                                      value={entry.email}
+                                      onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, email: e.target.value } : x))}
+                                    />
                                   </div>
                                 </div>
                               </div>
                             ))}
-                            <button type="button" onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }])} className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors"><Plus className="w-3.5 h-3.5" /></div>
+                            <button
+                              type="button"
+                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }])}
+                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
+                            >
+                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                <Plus className="w-3.5 h-3.5" />
+                              </div>
                               <span className="font-normal">Add Another Company</span>
                             </button>
                           </div>
                         </>
                       )}
 
-                      {/* Non-client: full appointed company details form */}
+                      {/* Other roles: full appointed company details form */}
                       {!isClientOrContractor && (
                         <>
                           <div>
@@ -1660,74 +1991,139 @@ export default function EditProject() {
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                              Fill in once, this will auto-populate into PROCSA and JBCC agreements.
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4 text-left">
+                              Fill in once, this will auto-populate into all contracts and appointment letters.
                             </p>
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
-                                  <input className={inputCls(!!appointedErrors.company_name)} placeholder="e.g. Base Architects and Associates" value={appointedForm.company_name}
-                                    onChange={(e) => { setAppointedForm((p) => ({ ...p, company_name: e.target.value })); setAppointedErrors((p) => ({ ...p, company_name: undefined })); }} />
-                                  {appointedErrors.company_name && <p className="text-[12px] text-red-500 mt-1">{appointedErrors.company_name}</p>}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-1.5 mb-1.5">
-                                    <label className="text-[13px] font-normal text-[#374151]">Responsibility / Role</label>
-                                    <Tooltip text="Role as per the appointment (e.g. Principal Agent, Architect, QS)" />
-                                  </div>
-                                  <input className={inputCls()} placeholder="e.g. Principal Agent / Architect" value={appointedForm.role_as_per_appointment}
-                                    onChange={(e) => setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))} />
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="text-left">
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name</label>
+                              <input
+                                className={inputCls()}
+                                placeholder="e.g. Base Architects and Associates"
+                                value={appointedForm.company_name}
+                                onChange={(e) => setAppointedForm((p) => ({ ...p, company_name: e.target.value }))}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-left">
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Registration / ID</label>
+                                <div className="relative group">
+                                  <input
+                                    className={cn(inputCls(), "pr-10")}
+                                    placeholder="e.g. 1970/014526/07"
+                                    value={appointedForm.company_registration}
+                                    onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCompanyLookup("appointed")}
+                                    disabled={isLookingUp}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    title="Auto-fill from registration"
+                                  >
+                                    {isLookingUp ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                    ) : (
+                                      <Search className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
                                 </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Registration</label>
-                                  <div className="relative group">
-                                    <input className={cn(inputCls(), "pr-10")} placeholder="e.g. 2012/123456/07" value={appointedForm.company_registration}
-                                      onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))} />
-                                    <button type="button" onClick={() => handleCompanyLookup("appointed")} disabled={isLookingUp} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all">
-                                      {isLookingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" /> : <Search className="w-3.5 h-3.5" />}
-                                    </button>
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="block text-[13px] font-normal text-[#374151] mb-1.5">VAT Number</label>
-                                  <input className={inputCls()} placeholder="e.g. 4123456789" value={appointedForm.vat_number} onChange={(e) => setAppointedForm((p) => ({ ...p, vat_number: e.target.value }))} />
-                                </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">VAT Number</label>
+                                <input
+                                  className={inputCls()}
+                                  placeholder="e.g. 4123456789"
+                                  value={appointedForm.vat_number}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, vat_number: e.target.value }))}
+                                />
                               </div>
-                              <div className="space-y-5">
-                                <AddressFields label="Physical Address" value={appointedForm.physical_address} onChange={(v) => setAppointedForm((p) => ({ ...p, physical_address: v }))} />
-                                <AddressFields label="Postal Address" value={appointedForm.postal_address} onChange={(v) => setAppointedForm((p) => ({ ...p, postal_address: v }))} />
-                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-left">
                               <div>
                                 <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Office Number</label>
                                 <div className="relative">
                                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                                  <input className={inputCls(false, "pl-10")} placeholder="e.g. +27 11 123 4567" type="tel" value={appointedForm.office_number}
-                                    onChange={(e) => setAppointedForm((p) => ({ ...p, office_number: e.target.value }))} />
+                                  <input
+                                    className={inputCls(false, "pl-10")}
+                                    placeholder="e.g. +27 11 123 4567"
+                                    type="tel"
+                                    value={appointedForm.office_number}
+                                    onChange={(e) => setAppointedForm((p) => ({ ...p, office_number: e.target.value }))}
+                                  />
                                 </div>
                               </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Role / Responsibility</label>
+                                <input
+                                  className={inputCls()}
+                                  placeholder="e.g. Principal Architect"
+                                  value={appointedForm.role_as_per_appointment}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-5 text-left">
+                              <AddressFields
+                                label="Physical Address"
+                                value={appointedForm.physical_address}
+                                onChange={(v) => setAppointedForm((p) => ({ ...p, physical_address: v }))}
+                              />
+                              <AddressFields
+                                label="Postal Address"
+                                value={appointedForm.postal_address}
+                                onChange={(v) => setAppointedForm((p) => ({ ...p, postal_address: v }))}
+                              />
                             </div>
                           </div>
-                          <div>
-                            <SectionHeader icon={<User className="w-3.5 h-3.5" />} label="Assigned Personnel" iconBg="#f0fdf4" iconColor="#00b894" />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">These members will be given predetermined access rights to the project.</p>
+
+                          <div className="pt-6">
+                            <SectionHeader
+                              icon={<User className="w-3.5 h-3.5" />}
+                              label="Key Personnel"
+                              iconBg="#f0fdf4"
+                              iconColor="#00b894"
+                            />
+                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4 text-left">
+                              These members will be given predetermined access rights to the project.
+                            </p>
                             <div className="space-y-3">
                               {appointedPersonnelList.map((entry) => (
-                                <PersonnelEntryCard key={entry.id} entry={entry} roleOptions={APPOINTED_ROLE_OPTIONS}
+                                <OrgPersonnelSelectCard
+                                  key={entry.id}
+                                  entry={entry}
+                                  roleOptions={APPOINTED_ROLE_OPTIONS}
                                   takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                  orgUsers={orgUsers}
+                                  allRoles={appRoles}
                                   onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
                                   onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
-                                  canRemove={true} />
+                                  canRemove={true}
+                                />
                               ))}
                               {appointedPersonnelList.length < APPOINTED_ROLE_OPTIONS.length && (
-                                <button type="button" onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                <button
+                                  type="button"
+                                  onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                   className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                  <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors"><Plus className="w-3.5 h-3.5" /></div>
+                                  <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </div>
                                   <span className="font-normal">Add User</span>
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => setShowInvitePersonnelModal(true)}
+                                className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
+                                <Mail className="w-3.5 h-3.5" />
+                                <span className="font-normal">Invite User</span>
+                              </button>
                             </div>
                           </div>
                         </>
@@ -1735,11 +2131,9 @@ export default function EditProject() {
                     </div>
                   )}
 
-
-                  {/* ─────────────── STEP 4: DOCUMENTS ─────────────── */}
-                  {currentStep === 4 && (
-                    <div className="p-8 space-y-5 text-left">
-
+                  {/* ─────────────── STEP 5: DOCUMENTS ─────────────── */}
+                  {currentStep === 5 && (
+                    <div className="p-8 space-y-5 text-left animate-in slide-in-from-right-4 duration-500">
                       {/* ── Existing documents ── */}
                       {existingDocs.length > 0 && (
                         <div>
@@ -1760,7 +2154,7 @@ export default function EditProject() {
                                 <div
                                   key={String(docId)}
                                   className={cn(
-                                    "flex items-center gap-3 bg-[#f9fafb] rounded-[10px] px-4 py-3 border border-[#f3f4f6] transition-opacity",
+                                    "flex items-center gap-3 bg-[#f5f6f8] rounded-[10px] px-4 py-3 border border-[#e2e5ea] transition-opacity",
                                     isDeleting && "opacity-50"
                                   )}>
                                   <FileTypeIcon filename={docName} />
@@ -1788,23 +2182,22 @@ export default function EditProject() {
                         </div>
                       )}
 
-                      {existingDocs.length === 0 && files.length === 0 && (
-                        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mt-4">
-                          <span className="text-[15px] shrink-0 mt-px">📁</span>
-                          <p className="text-[12px] text-amber-700 leading-relaxed">
-                            No documents found. Upload the key documents for this project below.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* ── Upload new documents ── */}
+                      {/* ── Upload interaction: same as CreateProject ── */}
                       <div>
-                        <div className="flex items-center gap-2 pb-3 mb-3 border-b border-[#f3f4f6]">
-                          <div className="w-6 h-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
-                            <CloudUpload className="w-3.5 h-3.5 text-[#00b894]" />
+                        {existingDocs.length === 0 && entries.length === 0 && (
+                          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4">
+                            <span className="text-[15px] shrink-0 mt-px">📁</span>
+                            <p className="text-[12px] text-amber-700 leading-relaxed">
+                              No documents found. Upload the key documents for this project below.
+                            </p>
                           </div>
-                          <span className="text-[13px] font-normal text-[#374151]">Add New Documents</span>
-                          <Tooltip text="Upload additional project files. PDF, JPG, PNG, XLSX (max 20MB)" />
+                        )}
+
+                        <div className="flex items-center gap-2 mb-3">
+                          <label className="text-[13px] font-normal text-[#374151]">
+                            Upload New Documents
+                          </label>
+                          <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                         </div>
 
                         <input
@@ -1819,15 +2212,14 @@ export default function EditProject() {
                           }}
                         />
 
-                        {/* Drop zone */}
+                        {/* Drop zone: CreateProject style */}
                         <div
                           onClick={() => fileInputRef.current?.click()}
                           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                           onDragLeave={() => setIsDragging(false)}
-                          onDrop={handleDrop}
+                          onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
                           className={cn(
-                            "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200",
-                            "border-2 border-dashed",
+                            "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200 border-2 border-dashed",
                             isDragging
                               ? "border-[#6c5ce7] bg-[#f8f7ff]"
                               : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
@@ -1851,16 +2243,17 @@ export default function EditProject() {
                                 click to browse
                               </span>
                             </p>
-                            <p className="text-[11px] text-[#9ca3af] mt-1">
-                              PDF, JPG, PNG, GIF, WEBP, XLSX, XLS (max 20MB)
+                            <p className="text-[11px] text-[#9ca3af] mt-1 uppercase tracking-tight">
+                              PDF, Excel, Images up to 20MB
                             </p>
                           </div>
                         </div>
 
-                        {/* New file list */}
-                        {files.length > 0 && (
-                          <div className="space-y-2 mt-3 px-1">
-                            {files.map((f) => (
+                        {/* File list: CreateProject style with progress bars */}
+                        {entries.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-[12px] font-normal text-[#6b7280] uppercase tracking-wider ml-1 mb-2">New Files ({entries.length})</p>
+                            {entries.map((f) => (
                               <div
                                 key={f.id}
                                 className="bg-[#f9fafb] rounded-[10px] px-4 py-3 border border-[#f3f4f6]">
@@ -1871,7 +2264,7 @@ export default function EditProject() {
                                       {f.file.name}
                                     </p>
                                     <p className="text-[11px] text-[#9ca3af]">
-                                      {(f.file.size / 1024).toFixed(1)} KB
+                                      {(f.file.size / 1024 / 1024).toFixed(2)} MB
                                     </p>
                                   </div>
                                   {f.status === "error" && (
@@ -1916,43 +2309,6 @@ export default function EditProject() {
                             ))}
                           </div>
                         )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ─────────────── STEP 5: SCOPE OF WORKS ─────────────── */}
-                  {currentStep === 5 && (
-                    <div className="p-8 space-y-6 text-left">
-                      <div>
-                        <SectionHeader
-                          icon={<ScrollText className="w-3.5 h-3.5" />}
-                          label="Scope of Works"
-                          iconBg="#f0edff"
-                          iconColor="#6c5ce7"
-                        />
-                        <p className="text-[13px] text-[#6b7280] -mt-2">
-                          Describe the full scope of construction works. This will auto-populate into contract documents and appointment letters.
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="relative group">
-                          <textarea
-                            className={cn(
-                              "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none leading-relaxed",
-                              "bg-[#f5f6f8] border border-[#e2e5ea]",
-                              "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
-                              "min-h-[250px]"
-                            )}
-                            placeholder={`e.g. The Client wishes to appoint an Architect to measure up the existing residential building...`}
-                            value={taskOrder.brief}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setTaskOrder({ brief: val });
-                              setField("description", val); // Sync with description
-                            }}
-                          />
-                        </div>
                       </div>
                     </div>
                   )}
@@ -2276,8 +2632,93 @@ export default function EditProject() {
               </div>
             </div>
           </div>
+        </div >
+      </div >
+      {/* ── Invite Personnel Modal ── */}
+      {showInvitePersonnelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f0fdf4" }}>
+                  <Mail className="w-4 h-4" style={{ color: "#00b894" }} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Invite User</h3>
+                  <p className="text-[12px] text-[#9ca3af]">Send an invitation email with a role</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <div className="text-left">
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <input
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
+                    placeholder="e.g. John Smith"
+                    value={invitePersonnelForm.name}
+                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="text-left">
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <input
+                    type="email"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
+                    placeholder="e.g. john@company.com"
+                    value={invitePersonnelForm.email}
+                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="text-left">
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                  value={invitePersonnelForm.role_code}
+                  onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
+                  <option value="">Select role...</option>
+                  {appRoles.map((r) => (
+                    <option key={r.code} value={r.code}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                className="px-4 py-2 text-[13px] text-[#6b7280] hover:text-[#374151] transition-all">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleInvitePersonnelSubmit}
+                disabled={invitePersonnelSubmitting}
+                className="px-6 py-2 bg-[#6c5ce7] text-white rounded-lg text-[13px] font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                {invitePersonnelSubmitting ? "Inviting…" : "Invite User"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

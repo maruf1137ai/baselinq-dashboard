@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { Button } from "@/components/ui/button";
 import { ProjectStatusCard } from '@/components/ProjectStatusCard';
 import { ProjectTimelineCard } from '@/components/ProjectTimelineCard';
 import { ActionItem } from '@/components/ActionItem';
@@ -7,7 +8,7 @@ import { ActivityFeedItem } from '@/components/ActivityFeedItem';
 import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen } from 'lucide-react';
+import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X } from 'lucide-react';
 import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import MyAction from '@/components/icons/MyAction';
@@ -174,9 +175,76 @@ const Index = () => {
   const allProjects = projectListData?.results || [];
   const hasNoProjects = !projectId && allProjects.length === 0;
 
+  const [dismissedDrafts, setDismissedDrafts] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("dismissedDraftProjects") || "[]"); } catch { return []; }
+  });
+  const draftProjects = allProjects.filter(
+    (p: any) => (p.status === "Draft" || p.status === "draft") && !dismissedDrafts.includes(String(p._id || p.id))
+  );
+  const dismissDraft = (id: string) => {
+    const updated = [...dismissedDrafts, id];
+    setDismissedDrafts(updated);
+    localStorage.setItem("dismissedDraftProjects", JSON.stringify(updated));
+  };
+  const continueDraftProject = (p: any) => {
+    const id = String(p._id || p.id);
+    localStorage.setItem("selectedProjectId", id);
+    window.dispatchEvent(new Event("project-change"));
+    navigate("/edit-project");
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {draftProjects.length > 0 && (
+          <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex-1 text-center md:text-left">
+              <h4 className="text-sm font-normal text-foreground leading-none">
+                {draftProjects.length === 1
+                  ? "Project Setup Incomplete"
+                  : "Incomplete Project Setups"}
+              </h4>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
+                {draftProjects.length === 1
+                  ? "Continue setting up your project to unlock all coordination features — client details, appointed company, and task order."
+                  : `You have ${draftProjects.length} projects currently in draft mode. Complete the onboarding for these to start collaborating with your team.`}
+              </p>
+
+              <div className="mt-4 space-y-2">
+                {draftProjects.slice(0, 2).map((p: any) => {
+                  const id = String(p._id || p.id);
+                  return (
+                    <div key={id} className="flex items-center justify-between gap-3 bg-slate-50 border border-border rounded-xl px-4 py-2.5 group transition-all hover:bg-white hover:shadow-sm">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="text-sm text-foreground truncate font-normal tracking-tight">{p.name || "Untitled Project"}</span>
+                        <span className="text-[9px] font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Draft</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          onClick={() => continueDraftProject(p)}
+                          className="h-8 px-4 bg-primary text-white text-[11px] rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2"
+                        >
+                          Complete Setup
+                          <ArrowRight className="w-3 h-3 translate-x-0 group-hover:translate-x-0.5 transition-transform" />
+                        </Button>
+                        <button
+                          onClick={() => dismissDraft(id)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {draftProjects.length > 2 && (
+                  <p className="text-[10px] text-muted-foreground ml-2">+ {draftProjects.length - 2} more draft projects</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {/* No Projects Banner */}
         {hasNoProjects && (
           <div className="w-full bg-white rounded-2xl border border-[#e2e5ea] p-8 text-center shadow-sm flex flex-col items-center">

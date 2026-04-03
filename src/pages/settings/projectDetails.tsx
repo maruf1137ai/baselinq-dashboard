@@ -9,6 +9,11 @@ import {
   FileText,
   Trash2,
   TriangleAlert,
+  ShieldCheck,
+  Building2,
+  ClipboardList,
+  FolderOpen,
+  Search,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -64,22 +69,30 @@ function PersonnelCard({ label, role, personnel }: {
   );
 }
 
-function SectionCard({ title, badge, children }: {
+function SectionCard({ title, badge, icon, children }: {
   title: string;
   badge?: string;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-lg bg-white overflow-hidden mt-6">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <span className="text-sm font-medium text-foreground">{title}</span>
+    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-8">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-slate-50/50">
+        <div className="flex items-center gap-4">
+          {icon && (
+            <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0 transition-transform duration-200 hover:scale-105">
+              {icon}
+            </div>
+          )}
+          <span className="text-sm font-normal text-foreground tracking-tight">{title}</span>
+        </div>
         {badge && (
-          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-normal text-muted-foreground bg-white border border-border px-2.5 py-1 rounded-full uppercase tracking-wider">
             {badge}
           </span>
         )}
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-8">{children}</div>
     </div>
   );
 }
@@ -137,7 +150,6 @@ const ProjectDetails = () => {
 
   // Normalise new fields (API returns camelCase)
   const clientDetails = selectedProject?.clientDetails || selectedProject?.client_details;
-  const appointedCompany = selectedProject?.appointedCompany || selectedProject?.appointed_company;
   const taskOrderBrief = selectedProject?.taskOrderBrief || selectedProject?.task_order_brief;
 
   const currency = selectedProject?.currency || "ZAR";
@@ -174,40 +186,89 @@ const ProjectDetails = () => {
     }
   };
 
+  const getProjectCompletionStats = () => {
+    const fields = [
+      { label: "Client Details", value: clientDetails },
+      { label: "Scope of Works", value: taskOrderBrief },
+      { label: "Documents", value: documents.length > 0 ? "yes" : null },
+      { label: "Budget Allocation", value: (selectedProject?.totalBudget ?? selectedProject?.total_budget) != null ? "yes" : null },
+    ];
+
+    const filledCount = fields.filter(f => !!f.value).length;
+    const totalCount = fields.length;
+    const percentage = Math.round((filledCount / totalCount) * 100);
+    const missing = fields.filter(f => !f.value).map(f => f.label);
+
+    return { percentage, filledCount, totalCount, missing };
+  };
+
+  const stats = getProjectCompletionStats();
+
   return (
     <div className="p-6 space-y-2">
 
       {/* ── Page Header ── */}
-      <div className="flex justify-between items-center flex-wrap gap-2 mb-2">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 border-b border-border pb-8">
         <div>
-          <h2 className="text-2xl font-normal tracking-tight text-foreground">Project Details</h2>
-          <p className="text-muted-foreground text-sm">
-            View and manage core project information.
-          </p>
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
+            <ShieldCheck className="w-3 h-3" />
+            Project Settings
+          </div>
+          <h1 className="text-3xl font-normal text-foreground tracking-tight">Project Details</h1>
         </div>
         <div className="flex gap-2">
-          <Button className={cn("bg-transparent text-muted-foreground border border-border hover:bg-transparent flex items-center gap-2 cursor-pointer")}>
+          <Button className={cn("h-11 bg-transparent text-muted-foreground border border-border hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors px-6 rounded-xl")}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 10V2" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M14 10V12.6667C14 13.0203 13.8595 13.3594 13.6095 13.6095C13.3594 13.8595 13.0203 14 12.6667 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V10" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M4.66699 6.6665L8.00033 9.99984L11.3337 6.6665" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Export Details
+            <span className="font-normal">Export Data</span>
           </Button>
           <Button
             onClick={() => navigate("/edit-project")}
-            className={cn("bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-2 cursor-pointer")}>
+            className={cn("h-11 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 px-8 rounded-xl")}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.1156 4.54126C14.4681 4.18888 14.6662 3.71091 14.6662 3.2125C14.6663 2.71409 14.4683 2.23607 14.116 1.8836C13.7636 1.53112 13.2856 1.33307 12.7872 1.33301C12.2888 1.33295 11.8108 1.53088 11.4583 1.88326L2.56096 10.7826C2.40618 10.9369 2.29171 11.127 2.22763 11.3359L1.34696 14.2373C1.32973 14.2949 1.32843 14.3562 1.3432 14.4145C1.35796 14.4728 1.38824 14.5261 1.43083 14.5686C1.47341 14.6111 1.52671 14.6413 1.58507 14.656C1.64343 14.6707 1.70467 14.6693 1.7623 14.6519L4.6643 13.7719C4.87308 13.7084 5.06308 13.5947 5.21763 13.4406L14.1156 4.54126Z" stroke="white" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Edit Project Info
+            <span className="font-normal">Edit Project</span>
           </Button>
         </div>
       </div>
 
+      {/* ── Completion Reminder Banner ── */}
+      {stats.percentage < 100 && (
+        <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex-1 text-center md:text-left">
+            <h4 className="text-sm font-normal text-foreground leading-none">Project Setup Incomplete</h4>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
+              You've completed <span className="font-bold text-primary">{stats.filledCount} of {stats.totalCount}</span> project onboarding steps.
+              Ensure all details are filled to enable automated contract generation and team collaboration.
+            </p>
+            {stats.missing.length > 0 && (
+              <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mt-3">
+                {stats.missing.slice(0, 4).map(f => (
+                  <span key={f} className="inline-flex px-2 py-0.5 rounded bg-slate-50 text-[9px] text-muted-foreground border border-border">
+                    {f} Required
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="shrink-0">
+            <Button
+              onClick={() => navigate("/edit-project")}
+              className="h-10 px-6 bg-primary/10 hover:bg-primary/20 text-primary text-xs rounded-xl transition-all border border-primary/10 shadow-none font-normal"
+            >
+              Complete Onboarding
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* ── Overview ── */}
-      <SectionCard title="Overview">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+      <SectionCard title="Overview" icon={<FileText className="w-5 h-5" />}>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
           <InfoField label="Project Name" value={selectedProject?.name} />
           <InfoField label="Project Code" value={selectedProject?.projectNumber || selectedProject?.project_number} />
           <InfoField label="Location" value={selectedProject?.location} />
@@ -250,7 +311,8 @@ const ProjectDetails = () => {
       {/* ── Client Details ── */}
       <SectionCard
         title="Client Details"
-        badge="Fill once · auto-populates contracts">
+        badge="Contracts & Invoicing"
+        icon={<Building2 className="w-5 h-5" />}>
         {clientDetails ? (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
@@ -286,48 +348,8 @@ const ProjectDetails = () => {
         )}
       </SectionCard>
 
-      {/* ── Appointed Company ── */}
-      <SectionCard
-        title="Appointed Company"
-        badge="Professional firm">
-        {appointedCompany ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-              <InfoField label="Company Name" value={appointedCompany.company_name} />
-              <InfoField label="Role as per Appointment" value={appointedCompany.role_as_per_appointment} />
-              <InfoField label="Company Registration" value={appointedCompany.company_registration} />
-              <InfoField label="VAT Number" value={appointedCompany.vat_number} />
-              <InfoField label="Office Number" value={appointedCompany.office_number} />
-              <InfoField label="Physical Address" value={formatAddress(appointedCompany.physical_address)} />
-              <InfoField label="Postal Address" value={formatAddress(appointedCompany.postal_address)} />
-              <InfoField label="Banking Details" value={formatBanking(appointedCompany.banking_details)} />
-            </div>
-
-            <div className="border-t border-border pt-5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                Assigned Personnel
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <PersonnelCard
-                  label="Principal Architect"
-                  role="Super User"
-                  personnel={appointedCompany.principal}
-                />
-                <PersonnelCard
-                  label="Technical Representative"
-                  role="Tech User"
-                  personnel={appointedCompany.technical_representative}
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No appointed company details captured yet.</p>
-        )}
-      </SectionCard>
-
       {/* ── Scope of Works ── */}
-      <SectionCard title="Scope of Works">
+      <SectionCard title="Scope of Works" icon={<ClipboardList className="w-5 h-5" />}>
         {taskOrderBrief ? (
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
@@ -351,7 +373,8 @@ const ProjectDetails = () => {
       {/* ── Documents ── */}
       <SectionCard
         title="Documents"
-        badge={`${documents.length} file${documents.length !== 1 ? "s" : ""}`}>
+        badge={`${documents.length} file${documents.length !== 1 ? "s" : ""}`}
+        icon={<FolderOpen className="w-5 h-5" />}>
         {documents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {documents.map((doc, i) => (

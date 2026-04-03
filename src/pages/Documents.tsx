@@ -235,7 +235,7 @@ const Documents = () => {
         )}
 
         {/* Summary Stats */}
-        {summaryData && (
+        {/* {summaryData && (
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
               <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -274,7 +274,7 @@ const Documents = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Filters & Discipline Pills — dynamic */}
         <div className="flex flex-col gap-6 pt-4">

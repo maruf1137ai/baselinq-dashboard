@@ -5,11 +5,13 @@ import { DashboardHeader } from "./DashboardHeader";
 interface DashboardLayoutProps {
   children: React.ReactNode;
   padding?: string;
+  overflow?: string;
 }
 
 export function DashboardLayout({
   children,
   padding = "p-6",
+  overflow = "overflow-auto",
 }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
@@ -17,7 +19,7 @@ export function DashboardLayout({
         <DashboardSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardHeader />
-          <main className={`flex-1 ${padding} bg-background  overflow-auto`}>
+          <main className={`flex-1 ${padding} bg-background ${overflow}`}>
             {children}
           </main>
         </div>

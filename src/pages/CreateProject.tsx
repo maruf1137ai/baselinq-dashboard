@@ -832,7 +832,7 @@ export default function CreateProject() {
       try {
         await postData({
           url: `projects/${projectId}/team-members/`,
-          data: { userId: entry.userId, roleName: entry.role || "Member" },
+          data: { userId: entry.userId, roleName: entry.position || entry.role || "Member" },
         });
       } catch (err: any) {
         const msg = err?.response?.data?.error || err?.message || "Unknown error";
@@ -1126,7 +1126,7 @@ export default function CreateProject() {
       totalBudget: b,
       location: form.location,
       currency: form.currency,
-      status: "Draft",
+      status: "Active",
       // New onboarding fields — backend needs to support these
       client_details: {
         company_name: clientForm.company_name,

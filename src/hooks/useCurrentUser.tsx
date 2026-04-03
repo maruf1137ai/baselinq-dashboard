@@ -13,6 +13,7 @@ interface Organization {
 interface Profile {
   id: number;
   phone_number: string | null;
+  bio: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -22,13 +23,31 @@ interface Profile {
   id_number: string | null;
 }
 
+interface InsuranceDocument {
+  s3_key: string | null;
+  file_name: string | null;
+  expiry_date: string | null;
+}
+
+interface BankingDetails {
+  bank_name: string | null;
+  branch_name: string | null;
+  branch_code: string | null;
+  account_number: string | null;
+  account_type: string | null;
+  swift_code: string | null;
+}
+
 export interface User {
   id: number;
   email: string;
   name: string;
+  account_type: "organisation" | "individual";
   organization: Organization | null;
   role: { id: number; name: string; code: string } | null;
   profile: Profile | null;
+  insurance_document: InsuranceDocument | null;
+  banking_details: BankingDetails | null;
   is_email_verified: boolean;
   is_active: boolean;
   created_at: string;

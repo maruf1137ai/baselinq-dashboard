@@ -218,11 +218,17 @@ export const getProfile = async () => {
   return res.data;
 };
 
+export const updateProfile = async (data: any) => {
+  const res = await api.put("auth/profile/update/", data);
+  return res.data;
+};
+
 export const fetchInvitation = async (token: string) => {
   const res = await api.get(`auth/invitations/${token}/`);
   return res.data as {
     email: string;
     position: string;
+    contact_name: string;
     invited_by: string;
     organization: string | null;
     expires_at: string;

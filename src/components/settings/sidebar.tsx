@@ -13,16 +13,29 @@ import {
   HelpCircle,
   ChevronDown,
   Users,
+  User,
   MapPin,
   CreditCard,
   Link2,
   Bell,
   Database,
   CircleCheckBig,
+  Building2,
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
 const navItems = [
+  {
+    title: "Account",
+    items: [
+      {
+        id: 0,
+        title: "Organization",
+        url: "/settings/organization",
+        icon: <Building2 className="h-4 w-4 text-current" />,
+      },
+    ],
+  },
   {
     title: "Project",
     items: [
