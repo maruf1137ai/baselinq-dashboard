@@ -510,7 +510,9 @@ function OrgPersonnelSelectCard({
                 </div>
                 <div>
                   <p className="text-[13px] text-[#374151]">{selectedOrgUser.name}</p>
-                  <p className="text-[11px] text-[#9ca3af]">{selectedOrgUser.email}</p>
+                  <p className="text-[11px] text-[#9ca3af]">
+                    {selectedOrgUser.email}{selectedOrgUser.role?.name ? ` · ${selectedOrgUser.role.name}` : ""}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -532,7 +534,17 @@ function OrgPersonnelSelectCard({
                       key={u.id}
                       value={u.name || u.email}
                       onSelect={() => {
-                        onChange({ ...entry, name: u.name, email: u.email, position: u.role?.name || "", userId: u.id });
+                        const matchedRole = roleOptions.find(
+                          (r) => r.value === u.role?.code || r.value === u.role?.name
+                        );
+                        onChange({
+                          ...entry,
+                          name: u.name,
+                          email: u.email,
+                          position: u.role?.name || "",
+                          userId: u.id,
+                          role: matchedRole ? matchedRole.value : entry.role,
+                        });
                         setPopoverOpen(false);
                       }}
                       className="cursor-pointer px-3 py-2.5">
