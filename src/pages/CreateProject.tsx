@@ -2440,19 +2440,19 @@ export default function CreateProject() {
                             Skip
                           </button>
                         )}
-                      <button
-                        type="button"
-                        onClick={handleNext}
-                        className={cn(
-                          "flex items-center gap-2 h-12 px-8 rounded-[10px] text-[14px] font-normal text-white transition-all",
-                          "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
-                          "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
-                        )}>
-                        Continue
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M5 12h14M12 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={handleNext}
+                          className={cn(
+                            "flex items-center gap-2 h-12 px-8 rounded-[10px] text-[14px] font-normal text-white transition-all",
+                            "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
+                            "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
+                          )}>
+                          Continue
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
                     ) : (
                       <button
@@ -2481,3 +2481,5 @@ export default function CreateProject() {
     </>
   );
 }
+
+// make test
