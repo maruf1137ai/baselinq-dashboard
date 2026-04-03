@@ -14,6 +14,7 @@ import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
@@ -81,9 +82,10 @@ export default function MeetingDetails() {
   const { id } = useParams<{ id: string }>();
   const [showTranscript, setShowTranscript] = useState(false);
   const [approvingIndex, setApprovingIndex] = useState<number | null>(null);
+  const [aiNotesOpen, setAiNotesOpen] = useState(false);
   const { mutateAsync: postRequest } = usePost();
 
-  const { data: meeting, isLoading, isError } = useFetch<MeetingDetail>(
+  const { data: meeting, isLoading, isError, refetch } = useFetch<MeetingDetail>(
     id ? `meetings/${id}/` : null
   );
 
@@ -189,7 +191,7 @@ export default function MeetingDetails() {
               </div>
               {!hasAiNotes && (
                 <button
-                  onClick={() => toast.info("AI Notes generation coming soon.")}
+                  onClick={() => setAiNotesOpen(true)}
                   className="text-xs text-primary hover:underline flex items-center gap-1"
                 >
                   <AiIcon size={12} /> Generate AI Notes
@@ -351,6 +353,14 @@ export default function MeetingDetails() {
           </div>
         )}
       </div>
+      {meeting && (
+        <GenerateAiNotesDialog
+          meetingId={meeting.id}
+          open={aiNotesOpen}
+          onOpenChange={setAiNotesOpen}
+          onSuccess={refetch}
+        />
+      )}
     </DashboardLayout>
   );
 }
