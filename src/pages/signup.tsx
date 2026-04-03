@@ -162,6 +162,15 @@ const SignupPage = () => {
   // Step 2 — Role
   const [role, setRole] = useState("");
 
+  // Roles available for team invite — filtered by user's own role
+  const CLIENT_INVITE_CODES = ["CLIENT", "CPM", "ADMIN", "VIEWER", "LIMITED", "LIMITED_VIEWER"];
+  const isClientOrContractor = role === "client" || role === "contractor";
+  const inviteRoles = roles.filter((r) =>
+    isClientOrContractor
+      ? CLIENT_INVITE_CODES.includes(r.code)
+      : !CLIENT_INVITE_CODES.includes(r.code)
+  );
+
   // Step 3 — Account type
   const [accountType, setAccountType] = useState<AccountType | "">("");
 
@@ -983,7 +992,7 @@ const SignupPage = () => {
                               className={INPUT_CLS}
                             >
                               <option value="">Position...</option>
-                              {roles.map((r) => (
+                              {inviteRoles.map((r) => (
                                 <option key={r.code} value={r.code}>{r.name}</option>
                               ))}
                               <option value="admin">Administrator</option>
