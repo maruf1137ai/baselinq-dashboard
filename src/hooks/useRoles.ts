@@ -10,5 +10,13 @@ export interface AppRole {
 
 export function useRoles() {
   const { data, isLoading } = useFetch<AppRole[]>("auth/roles/");
-  return { roles: (data ?? []).filter((r) => r.is_active !== false), isLoading };
+  const all = Array.isArray(data) ? data : [];
+  const seen = new Set<string>();
+  const roles = all.filter((r) => {
+    if (!r.code || r.is_active === false) return false;
+    if (seen.has(r.code)) return false;
+    seen.add(r.code);
+    return true;
+  });
+  return { roles, isLoading };
 }
