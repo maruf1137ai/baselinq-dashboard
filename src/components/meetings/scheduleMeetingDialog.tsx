@@ -17,28 +17,58 @@ import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { TimePicker } from "../commons/TimePicker";
+import { usePost } from "@/hooks/usePost";
+import { toast } from "sonner";
 
 const priorityBtns = [
-  {
-    id: 1,
-    title: "Low",
-  },
-  {
-    id: 2,
-    title: "Medium",
-  },
-  {
-    id: 3,
-    title: "High",
-  },
+  { id: 1, title: "Low" },
+  { id: 2, title: "Medium" },
+  { id: 3, title: "High" },
 ];
 
-export function ScheduleNewMeetingDialog() {
+export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [priorityBtn, setPriorityBtn] = useState("Low");
   const [meetingLink, setMeetingLink] = useState("");
+
+  const { mutateAsync: postRequest, isPending } = usePost();
+
+  const handleSubmit = async () => {
+    if (!title.trim()) { toast.error("Meeting title is required."); return; }
+    if (!date) { toast.error("Please select a date."); return; }
+
+    const projectId = localStorage.getItem("selectedProjectId");
+    if (!projectId) { toast.error("No project selected."); return; }
+
+    try {
+      await postRequest({
+        url: "meetings/",
+        data: {
+          project: parseInt(projectId),
+          title: title.trim(),
+          meeting_link: meetingLink.trim() || null,
+          date: format(date, "yyyy-MM-dd"),
+          time,
+          priority: priorityBtn,
+          status: "scheduled",
+          location: meetingLink.trim() ? "Virtual — Video Call" : "",
+        },
+      });
+      toast.success("Meeting scheduled.");
+      setOpen(false);
+      setTitle("");
+      setDate(undefined);
+      setTime("");
+      setPriorityBtn("Low");
+      setMeetingLink("");
+      onCreated?.();
+    } catch {
+      toast.error("Failed to schedule meeting.");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -58,7 +88,6 @@ export function ScheduleNewMeetingDialog() {
 
         <div className="space-y-4 px-6 pb-6">
           <div className="space-y-5">
-            {/* Document Title */}
             <div>
               <Label htmlFor="title" className="text-sm text-foreground">
                 Meeting Title *
@@ -67,10 +96,11 @@ export function ScheduleNewMeetingDialog() {
                 id="title"
                 placeholder="e.g., Confirm concrete supplier availability"
                 className="mt-2"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
             </div>
 
-            {/* Meeting Link */}
             <div>
               <Label htmlFor="meeting-link" className="text-sm text-foreground">
                 Meeting Link
@@ -87,16 +117,11 @@ export function ScheduleNewMeetingDialog() {
               </div>
             </div>
 
-            {/* Date & Time */}
             <div className="flex gap-4">
-              {/* DATE FIELD */}
               <div className="flex flex-col w-1/2">
-                <Label
-                  htmlFor="due-date"
-                  className="text-sm text-foreground mb-2">
-                  Due Date *
+                <Label htmlFor="due-date" className="text-sm text-foreground mb-2">
+                  Date *
                 </Label>
-
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -105,65 +130,49 @@ export function ScheduleNewMeetingDialog() {
                       className={cn(
                         "w-full justify-start text-left font-normal",
                         !date && "text-muted-foreground"
-                      )}>
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {date ? format(date, "PPP") : <span>Pick date</span>}
                     </Button>
                   </PopoverTrigger>
-
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
 
-              {/* TIME FIELD */}
               <div className="w-1/2">
                 <TimePicker time={time} setTime={setTime} />
               </div>
             </div>
 
-            {/* priority */}
             <div className="flex flex-col">
-              {/* 👇 Added your label here */}
-              <Label htmlFor="date" className="text-sm text-foreground mb-2">
-                Due Date *
-              </Label>
+              <Label className="text-sm text-foreground mb-2">Priority</Label>
               <div className="flex items-center gap-3">
-                {priorityBtns?.map(({ id, title }) => (
+                {priorityBtns.map(({ id, title: t }) => (
                   <button
                     key={id}
-                    onClick={() => setPriorityBtn(title)}
+                    onClick={() => setPriorityBtn(t)}
                     className={`border py-3 px-4 rounded-lg text-left w-full ${
-                      title == priorityBtn
-                        ? "bg-primary/10 border-primary"
-                        : "border-border"
-                    }`}>
-                    {title}
+                      t === priorityBtn ? "bg-primary/10 border-primary" : "border-border"
+                    }`}
+                  >
+                    {t}
                   </button>
                 ))}
-                {/* <button className="border border-border py-3 px-4 rounded-lg text-left w-full">
-                  Low
-                </button>
-                <button className="border border-primary py-3 px-4 rounded-lg text-left w-full bg-primary/10">
-                  Low
-                </button>
-                <button className="border border-border py-3 px-4 rounded-lg text-left w-full">
-                  Low
-                </button> */}
               </div>
             </div>
           </div>
 
           <div className="flex items-end justify-end border-t pt-4 mt-4">
             <div className="flex gap-2 items-end">
-              <Button variant="outline">Cancel</Button>
-              <Button>Schedule Meeting</Button>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isPending}>
+                {isPending ? "Scheduling..." : "Schedule Meeting"}
+              </Button>
             </div>
           </div>
         </div>
