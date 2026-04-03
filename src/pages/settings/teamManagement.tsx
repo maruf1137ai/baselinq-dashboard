@@ -11,8 +11,9 @@ const TeamManagement = () => {
 
   const btns = [
     "Team Members",
-    ...(canEditTeamRoles ? ["Role Permissions"] : []),
-    ...(canManageTeam ? ["Approval Chains", "AI Routing"] : []),
+    "Role Permissions",
+    "Approval Chains",
+    "AI Routing",
   ];
 
   return (
@@ -26,11 +27,10 @@ const TeamManagement = () => {
           <button
             key={btn}
             onClick={() => setActiveTab(btn)}
-            className={`text-sm py-4 px-6 border-b-2 transition-all ${
-              activeTab === btn
+            className={`text-sm py-4 px-6 border-b-2 transition-all ${activeTab === btn
                 ? "border-primary text-foreground"
                 : "text-muted-foreground border-transparent"
-            }`}>
+              }`}>
             {btn}
           </button>
         ))}
@@ -38,9 +38,9 @@ const TeamManagement = () => {
 
       <div className="mt-6">
         {activeTab === "Team Members" && <TeamMembersTable />}
-        {activeTab === "Role Permissions" && canEditTeamRoles && <RolePermissions />}
-        {activeTab === "Approval Chains" && canManageTeam && <ApprovalChains />}
-        {activeTab === "AI Routing" && canManageTeam && <AiRouting />}
+        {activeTab === "Role Permissions" && <RolePermissions />}
+        {activeTab === "Approval Chains" && <ApprovalChains />}
+        {activeTab === "AI Routing" && <AiRouting />}
       </div>
     </div>
   );

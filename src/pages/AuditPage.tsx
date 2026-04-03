@@ -138,7 +138,7 @@ const getTaskType = (task: any): string => {
 export default function AuditPage() {
   const projectId = localStorage.getItem("selectedProjectId");
   const { userRole } = useUserRoleStore();
-  const accessLevel = getAccessLevel(userRole);
+  const accessLevel = "full";
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [deadlineFilter, setDeadlineFilter] = useState("all");

@@ -90,9 +90,7 @@ const App = () => (
             path="/finance"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewFinance">
-                  <Finance />
-                </RoleRoute>
+                <Finance />
               </ProtectedRoute>
             }
           />
@@ -116,9 +114,7 @@ const App = () => (
             path="/programme"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewProgramme">
-                  <Programme />
-                </RoleRoute>
+                <Programme />
               </ProtectedRoute>
             }
           />
@@ -130,17 +126,13 @@ const App = () => (
           <Route path="/tasks/:taskId" element={<TaskDetails />} />
           <Route path="/compliance" element={
             <ProtectedRoute>
-              <RoleRoute permission="viewCompliance">
-                <Compliance />
-              </RoleRoute>
+              <Compliance />
             </ProtectedRoute>
           } />
           <Route path="/audit"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewAudit">
-                  <AuditPage />
-                </RoleRoute>
+                <AuditPage />
               </ProtectedRoute>
             }
           />
@@ -165,9 +157,7 @@ const App = () => (
           {/* <Route path="/settings" element={<TeamManagement />} /> */}
           <Route path="/settings" element={
             <ProtectedRoute>
-              <RoleRoute permission="manageSettings">
-                <Settings />
-              </RoleRoute>
+              <Settings />
             </ProtectedRoute>
           }>
             <Route index element={<TeamManagement />} />
@@ -176,21 +166,15 @@ const App = () => (
             <Route path="site" element={<Site />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="billing" element={
-              <RoleRoute permission="viewBilling">
-                <Billing />
-              </RoleRoute>
+              <Billing />
             } />
             <Route path="integrations" element={
-              <RoleRoute permission="manageIntegrations">
-                <Integrations />
-              </RoleRoute>
+              <Integrations />
             } />
             <Route path="security" element={<Security />} />
             <Route path="data-management" element={<DataManagement />} />
             <Route path="audit" element={
-              <RoleRoute permission="viewAudit">
-                <Audit />
-              </RoleRoute>
+              <Audit />
             } />
           </Route>
           <Route path="/unauthorized" element={<Unauthorized />} />

@@ -199,19 +199,20 @@ const DocumentDetail = () => {
     label: string;
     value?: string | null;
     isActionable?: boolean;
-  }) => (
-    <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2 rounded-lg">
-      <span className="text-xs text-gray-500 font-normal uppercase tracking-wider">{label}</span>
-      <span className={cn(
-        "text-sm font-normal",
-        !value && "text-gray-300",
-        value && isActionable && "text-[#B45309] hover:underline cursor-pointer",
-        value && !isActionable && "text-[#1A1A1A]",
-      )}>
-        {value || '—'}
-      </span>
-    </div>
-  );
+  }) => {
+    if (!value) return null;
+    return (
+      <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2 rounded-lg">
+        <span className="text-xs text-gray-500 font-normal uppercase tracking-wider">{label}</span>
+        <span className={cn(
+          "text-sm font-normal",
+          isActionable ? "text-[#B45309] hover:underline cursor-pointer" : "text-[#1A1A1A]",
+        )}>
+          {value}
+        </span>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (

@@ -171,11 +171,7 @@ const CostLadger = () => {
   const projectId = localStorage.getItem('selectedProjectId') || '';
   const { userRole } = useUserRoleStore();
 
-  // Any user with project access can create; only specific roles can edit/update
-  // resolveRoleCodes handles display names, codes, and compound roles (e.g. "Client / Owner")
-  const resolvedCodes = resolveRoleCodes(userRole);
-  const canEdit = resolvedCodes.some((code) => COST_LEDGER_EDIT_ROLES.has(code));
-  // canCreate is always true for any logged-in project member (backend enforces project access)
+  const canEdit = true;
   const canCreate = true;
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -338,7 +334,7 @@ const CostLadger = () => {
       </div>
 
       <header className="flex flex-col sm:flex-row justify-between sm:items-center mt-6 mb-6">
-        
+
         <div className="flex items-center space-x-2">
           {/* New Entry Button — visible to all project members */}
           {canCreate && (

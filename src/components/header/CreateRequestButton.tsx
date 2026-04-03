@@ -147,20 +147,7 @@ export default function CreateRequestButton() {
   // console.log(userRole)
 
   // Filter buttons based on user role
-  const filteredBtns = useMemo(() => {
-    if (!userRole) return btns;
-
-    const currentRoles = userRole.split(/\s*\/\s*/).map(r => r.trim());
-    const allowedDocTypes = new Set<string>();
-
-    currentRoles.forEach(role => {
-      const permitted = getPermittedTypes(role);
-      if (permitted) permitted.forEach(type => allowedDocTypes.add(type));
-    });
-
-    if (allowedDocTypes.size === 0) return btns;
-    return btns.filter(btn => allowedDocTypes.has(btn.code));
-  }, [userRole]);
+  const filteredBtns = btns;
 
   const handleClick = (btn) => {
     setSelectedType(btn);

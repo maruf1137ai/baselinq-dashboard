@@ -62,20 +62,20 @@ interface Project {
 }
 
 const navItems = [
-  { title: "Home",           url: "/",               icon: <Trending />,   permission: null },
-  { title: "Tasks",          url: "/tasks",           icon: <Task />,       permission: null },
-  { title: "Programme",      url: "/programme",       icon: <Programme />,  permission: "viewProgramme" },
-  { title: "Meetings",       url: "/meetings",        icon: <Meetings />,   permission: null },
-  { title: "Communications", url: "/communications",  icon: <Communication />, permission: null },
-  { title: "Documents",      url: "/documents",       icon: <Document2 />,  permission: null },
-  { title: "Finance",        url: "/finance",         icon: <SaveMoney />,  permission: "viewFinance" },
-  { title: "Compliance",     url: "/compliance",      icon: <Shield />,     permission: "viewCompliance" },
-  { title: "Linq",           url: "/ai-workspace",    icon: <AiWorkspace />,permission: null },
+  { title: "Home", url: "/", icon: <Trending />, permission: null },
+  { title: "Tasks", url: "/tasks", icon: <Task />, permission: null },
+  { title: "Programme", url: "/programme", icon: <Programme />, permission: null },
+  { title: "Meetings", url: "/meetings", icon: <Meetings />, permission: null },
+  { title: "Communications", url: "/communications", icon: <Communication />, permission: null },
+  { title: "Documents", url: "/documents", icon: <Document2 />, permission: null },
+  { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: null },
+  { title: "Compliance", url: "/compliance", icon: <Shield />, permission: null },
+  { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ] as const;
 
 const settingsItems = [
-  { title: "Settings", url: "/settings", icon: <Settings />, permission: "manageSettings" },
-  { title: "Help",     url: "/help",     icon: <Help />,     permission: null },
+  { title: "Settings", url: "/settings", icon: <Settings />, permission: null },
+  { title: "Help", url: "/help", icon: <Help />, permission: null },
 ] as const;
 
 export function DashboardSidebar() {
@@ -321,7 +321,7 @@ export function DashboardSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent className="">
                 <SidebarMenu>
-                  {navItems.filter((item) => !item.permission || can(item.permission as PermissionKey)).map((item) => {
+                  {navItems.map((item) => {
                     const isActive = item.url === "/"
                       ? location.pathname === "/"
                       : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
@@ -363,7 +363,7 @@ export function DashboardSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {settingsItems.filter((item) => !item.permission || can(item.permission as PermissionKey)).map((item) => {
+                  {settingsItems.map((item) => {
                     const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                     return (
                       <SidebarMenuItem key={item.title}>

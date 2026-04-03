@@ -53,17 +53,7 @@ const PaymentCertificate = () => {
   const certificates: PCEntry[] = data?.results ?? [];
   const { userRole } = useUserRoleStore();
 
-  // Roles allowed to create PCs (matching backend PAYMENT_CERTIFICATE_CREATE_ALLOWED_ROLES)
-  const allowedRoles = new Set(["CQS", "CONTRACTS_MGR", "CPM", "CLIENT", "OWNER"]);
-
-  // Support compound roles like "Client / Owner" by splitting on " / "
-  const userRoles = userRole
-    ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase())
-    : [];
-
-  const canCreatePC = userRoles.some((role) =>
-    allowedRoles.has(role) || allowedRoles.has(resolvePermissionCode(role))
-  );
+  const canCreatePC = true;
 
   return (
     <main className="p-6">
