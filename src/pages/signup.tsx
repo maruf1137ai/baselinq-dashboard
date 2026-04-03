@@ -165,14 +165,21 @@ const SignupPage = () => {
   // Roles available for team invite — filtered by user's own role, deduplicated by code
   const CLIENT_INVITE_CODES = ["CLIENT", "CPM", "ADMIN", "VIEWER", "LIMITED", "LIMITED_VIEWER"];
   const isClientOrContractor = role === "client" || role === "contractor";
-  const inviteRoles = roles
-    .filter((r) =>
-      r.code &&
-      (isClientOrContractor
+  const inviteRoles = (() => {
+    const seenCodes = new Set<string>();
+    const seenNames = new Set<string>();
+    return roles.filter((r) => {
+      if (!r.code) return false;
+      if (!(isClientOrContractor
         ? CLIENT_INVITE_CODES.includes(r.code)
-        : !CLIENT_INVITE_CODES.includes(r.code))
-    )
-    .filter((r, idx, arr) => arr.findIndex((x) => x.code === r.code) === idx);
+        : !CLIENT_INVITE_CODES.includes(r.code))) return false;
+      const nameKey = r.name.trim().toLowerCase();
+      if (seenCodes.has(r.code) || seenNames.has(nameKey)) return false;
+      seenCodes.add(r.code);
+      seenNames.add(nameKey);
+      return true;
+    });
+  })();
 
   // Step 3 — Account type
   const [accountType, setAccountType] = useState<AccountType | "">("");

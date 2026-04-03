@@ -11,11 +11,14 @@ export interface AppRole {
 export function useRoles() {
   const { data, isLoading } = useFetch<AppRole[]>("auth/roles/");
   const all = Array.isArray(data) ? data : [];
-  const seen = new Set<string>();
+  const seenCodes = new Set<string>();
+  const seenNames = new Set<string>();
   const roles = all.filter((r) => {
     if (!r.code || r.is_active === false) return false;
-    if (seen.has(r.code)) return false;
-    seen.add(r.code);
+    const nameKey = r.name.trim().toLowerCase();
+    if (seenCodes.has(r.code) || seenNames.has(nameKey)) return false;
+    seenCodes.add(r.code);
+    seenNames.add(nameKey);
     return true;
   });
   return { roles, isLoading };
