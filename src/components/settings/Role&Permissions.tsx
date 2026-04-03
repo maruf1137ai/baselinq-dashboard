@@ -1,50 +1,56 @@
-import React, { useState, useEffect } from "react";
-import { useRoles } from "@/hooks/useRoles";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// UPCOMING_FEATURE: All original code commented out — restore when backend integration is ready
 
-const modules = ["Finance", "Compliance", "Tasks", "Communication", "Documents", "Programme"];
+// import React, { useState, useEffect } from "react";
+// import { useRoles } from "@/hooks/useRoles";
+// import { Checkbox } from "@/components/ui/checkbox";
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableHead,
+//   TableHeader,
+//   TableRow,
+// } from "@/components/ui/table";
 
-type PermissionState = Record<string, Record<string, boolean>>;
+import UpcomingFeature from "@/components/settings/UpcomingFeature";
+
+// const modules = ["Finance", "Compliance", "Tasks", "Communication", "Documents", "Programme"];
+
+// type PermissionState = Record<string, Record<string, boolean>>;
 
 const RolePermissions = () => {
-  const { roles: fetchedRoles } = useRoles();
-  const roles = fetchedRoles.map(r => r.name);
+  // const { roles: fetchedRoles } = useRoles();
+  // const roles = fetchedRoles.map(r => r.name);
 
-  const [permissions, setPermissions] = useState<PermissionState>({});
+  // const [permissions, setPermissions] = useState<PermissionState>({});
 
-  useEffect(() => {
-    if (roles.length === 0) return;
-    setPermissions(prev => {
-      const next: PermissionState = {};
-      modules.forEach(mod => {
-        next[mod] = {};
-        roles.forEach(role => {
-          next[mod][role] = prev[mod]?.[role] ?? false;
-        });
-      });
-      return next;
-    });
-  }, [roles.join(",")]);
+  // useEffect(() => {
+  //   if (roles.length === 0) return;
+  //   setPermissions(prev => {
+  //     const next: PermissionState = {};
+  //     modules.forEach(mod => {
+  //       next[mod] = {};
+  //       roles.forEach(role => {
+  //         next[mod][role] = prev[mod]?.[role] ?? false;
+  //       });
+  //     });
+  //     return next;
+  //   });
+  // }, [roles.join(",")]);
 
-  const handleToggle = (mod: string, role: string, checked: boolean) => {
-    setPermissions((prev) => ({
-      ...prev,
-      [mod]: {
-        ...prev[mod],
-        [role]: checked,
-      },
-    }));
-  };
+  // const handleToggle = (mod: string, role: string, checked: boolean) => {
+  //   setPermissions((prev) => ({
+  //     ...prev,
+  //     [mod]: {
+  //       ...prev[mod],
+  //       [role]: checked,
+  //     },
+  //   }));
+  // };
 
   return (
+    <UpcomingFeature title="Role Permissions" />
+    /* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
     <div className="border border-border rounded-lg overflow-hidden bg-white">
       <Table>
         <TableHeader className="bg-muted/50">
@@ -86,6 +92,7 @@ const RolePermissions = () => {
         </TableBody>
       </Table>
     </div>
+    */
   );
 };
 
