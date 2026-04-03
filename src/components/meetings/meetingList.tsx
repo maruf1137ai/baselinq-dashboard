@@ -31,11 +31,11 @@ export default function MeetingsList() {
   const [searchQuery, setSearchQuery] = useState("");
   const projectId = localStorage.getItem("selectedProjectId");
 
-  const { data, isLoading, refetch } = useFetch<Meeting[]>(
+  const { data, isLoading, refetch } = useFetch<any>(
     projectId ? `meetings/?project_id=${projectId}` : null
   );
 
-  const meetings = data ?? [];
+  const meetings: Meeting[] = Array.isArray(data) ? data : (data?.results ?? []);
   const upcoming = meetings.filter((m) => m.status !== "held");
   const completed = meetings.filter((m) => m.status === "held");
 
