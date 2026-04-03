@@ -2528,7 +2528,7 @@ export default function CreateProject() {
                   <Mail className="w-4 h-4" style={{ color: "#00b894" }} />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-semibold text-[#1a1a2e]">Invite User</h3>
+                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Invite User</h3>
                   <p className="text-[12px] text-[#9ca3af]">Send an invitation email with a role</p>
                 </div>
               </div>
