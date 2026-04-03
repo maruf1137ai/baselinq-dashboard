@@ -2195,7 +2195,7 @@ export default function EditProject() {
 
                         <div className="flex items-center gap-2 mb-3">
                           <label className="text-[13px] font-normal text-[#374151]">
-                            Upload New Documents
+                            Upload your Construction Project Contrac
                           </label>
                           <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                         </div>

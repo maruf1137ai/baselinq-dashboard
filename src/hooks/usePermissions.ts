@@ -1,0 +1,52 @@
+import { useUserRoleStore } from "@/store/useUserRoleStore";
+import { useCurrentUser } from "./useCurrentUser";
+import { resolvePermissionCode, PERMISSIONS, PermissionKey } from "@/lib/roleUtils";
+
+/**
+ * Central permissions hook.
+ *
+ * Checks both the user's project-level role (from useUserRoleStore, fetched
+ * per project) and their global org role (from useCurrentUser). Access is
+ * granted if either role satisfies the permission.
+ *
+ * IMPORTANT: Always check `isLoading` before using permission flags.
+ * While loading, all `can()` calls return true to prevent false redirects
+ * during page reload before auth data is available.
+ *
+ * Usage:
+ *   const { isLoading, canViewCompliance, canEditTeamRoles, can } = usePermissions();
+ *   if (isLoading) return <Spinner />;
+ *   if (!canViewCompliance) return <Navigate to="/unauthorized" />;
+ *   {canEditTeamRoles && <button>Edit Role</button>}
+ */
+export function usePermissions() {
+  const { userRole } = useUserRoleStore();
+  const { data: user, isLoading } = useCurrentUser();
+
+  const projectCode = resolvePermissionCode(userRole ?? "");
+  const globalCode  = resolvePermissionCode(user?.role?.code ?? "");
+
+  const can = (permission: PermissionKey): boolean => {
+    // While auth is loading, allow everything — RoleRoute handles the gate
+    if (isLoading) return true;
+    const allowed = PERMISSIONS[permission] as readonly string[];
+    return allowed.includes(projectCode) || allowed.includes(globalCode);
+  };
+
+  return {
+    isLoading,
+    can,
+    canViewCompliance:     can("viewCompliance"),
+    canViewFinance:        can("viewFinance"),
+    canViewAudit:          can("viewAudit"),
+    canViewProgramme:      can("viewProgramme"),
+    canEditTeamRoles:      can("editTeamRoles"),
+    canManageTeam:         can("manageTeam"),
+    canManageSettings:     can("manageSettings"),
+    canViewBilling:        can("viewBilling"),
+    canManageIntegrations: can("manageIntegrations"),
+    canCreateProject:      can("createProject"),
+    canEditProject:        can("editProject"),
+    canCreateTasks:        can("createTasks"),
+  };
+}

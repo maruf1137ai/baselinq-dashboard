@@ -9,6 +9,8 @@ import Finance from "./pages/finance";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import ProtectedRoute from "./ProtectedRoute";
+import RoleRoute from "./RoleRoute";
+import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import Meetings from "./pages/meetings";
@@ -88,7 +90,9 @@ const App = () => (
             path="/finance"
             element={
               <ProtectedRoute>
-                <Finance />
+                <RoleRoute permission="viewFinance">
+                  <Finance />
+                </RoleRoute>
               </ProtectedRoute>
             }
           />
@@ -112,7 +116,9 @@ const App = () => (
             path="/programme"
             element={
               <ProtectedRoute>
-                <Programme />
+                <RoleRoute permission="viewProgramme">
+                  <Programme />
+                </RoleRoute>
               </ProtectedRoute>
             }
           />
@@ -122,11 +128,19 @@ const App = () => (
           <Route path="/accept-appointed-invitation/:token" element={<AcceptAppointedInvitation />} />
           <Route path="/tasks" element={<Task />} />
           <Route path="/tasks/:taskId" element={<TaskDetails />} />
-          <Route path="/compliance" element={<Compliance />} />
+          <Route path="/compliance" element={
+            <ProtectedRoute>
+              <RoleRoute permission="viewCompliance">
+                <Compliance />
+              </RoleRoute>
+            </ProtectedRoute>
+          } />
           <Route path="/audit"
             element={
               <ProtectedRoute>
-                <AuditPage />
+                <RoleRoute permission="viewAudit">
+                  <AuditPage />
+                </RoleRoute>
               </ProtectedRoute>
             }
           />
@@ -149,18 +163,37 @@ const App = () => (
             }
           />
           {/* <Route path="/settings" element={<TeamManagement />} /> */}
-          <Route path="/settings" element={<Settings />}>
-            <Route index element={<TeamManagement />} /> {/* default page */}
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <RoleRoute permission="manageSettings">
+                <Settings />
+              </RoleRoute>
+            </ProtectedRoute>
+          }>
+            <Route index element={<TeamManagement />} />
             <Route path="organization" element={<Organization />} />
             <Route path="project-details" element={<ProjectDetails />} />
             <Route path="site" element={<Site />} />
             <Route path="notifications" element={<Notifications />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="integrations" element={<Integrations />} />
+            <Route path="billing" element={
+              <RoleRoute permission="viewBilling">
+                <Billing />
+              </RoleRoute>
+            } />
+            <Route path="integrations" element={
+              <RoleRoute permission="manageIntegrations">
+                <Integrations />
+              </RoleRoute>
+            } />
             <Route path="security" element={<Security />} />
             <Route path="data-management" element={<DataManagement />} />
-            <Route path="audit" element={<Audit />} />
+            <Route path="audit" element={
+              <RoleRoute permission="viewAudit">
+                <Audit />
+              </RoleRoute>
+            } />
           </Route>
+          <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -26,17 +26,6 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 
 const navItems = [
   {
-    title: "Account",
-    items: [
-      {
-        id: 0,
-        title: "Organization",
-        url: "/settings/organization",
-        icon: <Building2 className="h-4 w-4 text-current" />,
-      },
-    ],
-  },
-  {
     title: "Project",
     items: [
       {
@@ -56,6 +45,17 @@ const navItems = [
         title: "Site Settings",
         url: "/settings/site",
         icon: <MapPin className="h-4 w-4 text-current" />,
+      },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        id: 10,
+        title: "Organization",
+        url: "/settings/organization",
+        icon: <Building2 className="h-4 w-4 text-current" />,
       },
     ],
   },

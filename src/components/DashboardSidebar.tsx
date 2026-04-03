@@ -50,6 +50,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionKey } from "@/lib/roleUtils";
 
 interface Project {
   id: string;
@@ -60,21 +62,21 @@ interface Project {
 }
 
 const navItems = [
-  { title: "Home", url: "/", icon: <Trending /> },
-  { title: "Tasks", url: "/tasks", icon: <Task /> },
-  { title: "Programme", url: "/programme", icon: <Programme /> },
-  { title: "Meetings", url: "/meetings", icon: <Meetings /> },
-  { title: "Communications", url: "/communications", icon: <Communication /> },
-  { title: "Documents", url: "/documents", icon: <Document2 /> },
-  { title: "Finance", url: "/finance", icon: <SaveMoney /> },
-  { title: "Compliance", url: "/compliance", icon: <Shield /> },
-  { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace /> },
-];
+  { title: "Home",           url: "/",               icon: <Trending />,   permission: null },
+  { title: "Tasks",          url: "/tasks",           icon: <Task />,       permission: null },
+  { title: "Programme",      url: "/programme",       icon: <Programme />,  permission: "viewProgramme" },
+  { title: "Meetings",       url: "/meetings",        icon: <Meetings />,   permission: null },
+  { title: "Communications", url: "/communications",  icon: <Communication />, permission: null },
+  { title: "Documents",      url: "/documents",       icon: <Document2 />,  permission: null },
+  { title: "Finance",        url: "/finance",         icon: <SaveMoney />,  permission: "viewFinance" },
+  { title: "Compliance",     url: "/compliance",      icon: <Shield />,     permission: "viewCompliance" },
+  { title: "Linq",           url: "/ai-workspace",    icon: <AiWorkspace />,permission: null },
+] as const;
 
 const settingsItems = [
-  { title: "Settings", url: "/settings", icon: <Settings /> },
-  { title: "Help", url: "/help", icon: <Help /> },
-];
+  { title: "Settings", url: "/settings", icon: <Settings />, permission: "manageSettings" },
+  { title: "Help",     url: "/help",     icon: <Help />,     permission: null },
+] as const;
 
 export function DashboardSidebar() {
   const { open } = useSidebar();
@@ -86,6 +88,7 @@ export function DashboardSidebar() {
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
   const { setUserRole, clearUserRole } = useUserRoleStore();
+  const { can } = usePermissions();
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
@@ -318,7 +321,7 @@ export function DashboardSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent className="">
                 <SidebarMenu>
-                  {navItems.map((item) => {
+                  {navItems.filter((item) => !item.permission || can(item.permission as PermissionKey)).map((item) => {
                     const isActive = item.url === "/"
                       ? location.pathname === "/"
                       : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
@@ -360,7 +363,7 @@ export function DashboardSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {settingsItems.map((item) => {
+                  {settingsItems.filter((item) => !item.permission || can(item.permission as PermissionKey)).map((item) => {
                     const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                     return (
                       <SidebarMenuItem key={item.title}>

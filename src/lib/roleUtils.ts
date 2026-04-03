@@ -51,6 +51,32 @@ export const NEW_ROLE_DISPLAY_TO_CODE: Record<string, string> = {
 };
 
 /**
+ * Feature permission definitions.
+ * Each key maps to the backbone role codes that are allowed to access it.
+ * VIEWER / LIMITED / FOREMAN are read-only — not listed in write/manage permissions.
+ */
+export const PERMISSIONS = {
+  // Page-level access
+  viewCompliance:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER"],
+  viewFinance:       ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  viewAudit:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  viewProgramme:     ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS"],
+  // Settings actions
+  editTeamRoles:     ["CLIENT", "CPM", "PM", "CM"],
+  manageTeam:        ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  manageSettings:    ["CLIENT", "CPM", "PM"],
+  viewBilling:       ["CLIENT", "CPM"],
+  manageIntegrations:["CLIENT", "CPM", "PM"],
+  // Project actions
+  createProject:     ["CLIENT", "CPM", "PM", "CM"],
+  editProject:       ["CLIENT", "CPM", "PM", "CM"],
+  // Task actions
+  createTasks:       ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
+} as const;
+
+export type PermissionKey = keyof typeof PERMISSIONS;
+
+/**
  * Resolve a role string (code or display name) to its backbone permission code.
  * - "ADMIN"                → "CLIENT"
  * - "QS"                   → "CQS"
