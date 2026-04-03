@@ -568,6 +568,19 @@ function OrgPersonnelSelectCard({
           </Command>
         </PopoverContent>
       </Popover>
+
+      {/* Org role display — shown once a user is selected */}
+      {selectedOrgUser && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb]">
+          <User className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+          <div className="flex-1">
+            <p className="text-[11px] text-[#9ca3af]">Organisation Role</p>
+            <p className="text-[13px] text-[#374151]">
+              {selectedOrgUser.role?.name || "No role assigned"}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
