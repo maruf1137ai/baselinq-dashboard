@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ScheduleNewMeetingDialog } from "./scheduleMeetingDialog";
 import { Badge } from "../ui/badge";
 import useFetch from "@/hooks/useFetch";
+import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 interface Meeting {
   id: number;
@@ -67,9 +68,7 @@ export default function MeetingsList() {
         <ScheduleNewMeetingDialog onCreated={refetch} />
       </div>
 
-      {isLoading && (
-        <div className="text-center py-20 text-sm text-muted-foreground">Loading meetings...</div>
-      )}
+      {isLoading && <AwesomeLoader message="Loading Meetings" />}
 
       {!isLoading && (
         <>
