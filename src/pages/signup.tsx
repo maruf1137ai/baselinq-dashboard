@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
 import type { RegisterPayload } from "@/lib/Api";
 import { cn } from "@/lib/utils";
+import { useRoles } from "@/hooks/useRoles";
 
 type AccountType = "organisation" | "individual";
 
@@ -54,23 +55,6 @@ const ROLES = [
   { id: "client", label: "Client / Owner", icon: <Briefcase className="w-4 h-4" />, body: "" },
 ];
 
-// Real role codes used across the app — matches auth/roles/ API
-const TEAM_POSITIONS = [
-  { value: "ADMIN",         label: "Administrator" },
-  { value: "PROJECT_ADMIN", label: "Project Administrator" },
-  { value: "PRINCIPAL_PM",  label: "Principal / PM" },
-  { value: "SUPER_USER",    label: "Super User" },
-  { value: "QS",            label: "Quantity Surveyor" },
-  { value: "STANDARD",      label: "Standard User" },
-  { value: "STRUCT_ENG",    label: "Structural Engineer" },
-  { value: "MECH_ENG",      label: "Mechanical Engineer" },
-  { value: "ELEC_ENG",      label: "Electrical Engineer" },
-  { value: "SPECIAL_USER",  label: "Special User" },
-  { value: "LIMITED",       label: "Limited User" },
-  { value: "VIEWER",        label: "Viewer" },
-  { value: "LIMITED_VIEWER",label: "Limited Viewer" },
-  { value: "LEGAL",         label: "Legal" },
-];
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
@@ -147,6 +131,7 @@ const SectionDivider = ({ label }: { label: string }) => (
 const SignupPage = () => {
   const navigate = useNavigate();
   const signupMutation = useSignup();
+  const { roles } = useRoles();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
@@ -998,8 +983,8 @@ const SignupPage = () => {
                               className={INPUT_CLS}
                             >
                               <option value="">Position...</option>
-                              {TEAM_POSITIONS.map((r) => (
-                                <option key={r.value} value={r.value}>{r.label}</option>
+                              {roles.map((r) => (
+                                <option key={r.code} value={r.code}>{r.name}</option>
                               ))}
                               <option value="admin">Administrator</option>
                               <option value="other">Other</option>
