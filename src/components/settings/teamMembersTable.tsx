@@ -710,7 +710,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     <div>{member.user.email}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm uppercase">
                     <CategoryBadge category={member.roleName || "N/A"} />
                   </td>
                   {/* Permissions column - commented out as data not available in API */}
