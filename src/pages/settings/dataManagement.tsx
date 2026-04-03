@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Download, Upload, Archive, TriangleAlert } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+// UPCOMING_FEATURE: All original code commented out — restore when backend integration is ready
+
+// import React, { useState } from 'react';
+// import { Button } from '@/components/ui/button';
+// import { Card, CardContent } from '@/components/ui/card';
+// import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+// import { Label } from '@/components/ui/label';
+// import { Download, Upload, Archive, TriangleAlert } from 'lucide-react';
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+// import { Input } from '@/components/ui/input';
+
+import UpcomingFeature from "@/components/settings/UpcomingFeature";
 
 const DataManagement = () => {
-  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
-  const [confirmationText, setConfirmationText] = useState('');
-  const PROJECT_NAME = 'Westfield Shopping Center';
+  // const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  // const [confirmationText, setConfirmationText] = useState('');
+  // const PROJECT_NAME = 'Westfield Shopping Center';
 
   return (
     <div className="p-6 space-y-6">
@@ -18,9 +22,10 @@ const DataManagement = () => {
         <h2 className="text-2xl font-normal tracking-tight text-foreground">Data Management</h2>
         <p className="text-sm text-muted-foreground mt-1">Export, import, and manage your project data.</p>
       </div>
+      <UpcomingFeature title="Data Management" />
+      {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
       <div className="space-y-6">
-        {/* Export Section */}
         <Card className="bg-white border-border  rounded-lg">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
@@ -58,7 +63,6 @@ const DataManagement = () => {
           </CardContent>
         </Card>
 
-        {/* Import Section */}
         <Card className="bg-white border-border rounded-lg">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
@@ -85,7 +89,6 @@ const DataManagement = () => {
           </CardContent>
         </Card>
 
-        {/* Archive Section */}
         <Card className="bg-white border-destructive/20 ">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
@@ -167,6 +170,7 @@ const DataManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      */}
     </div>
   );
 };

@@ -1,38 +1,42 @@
-import { ArrowRight, GripVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// UPCOMING_FEATURE: All original code commented out — restore when backend integration is ready
 
-const data = [
-  {
-    title: "Purchase Order Approval",
-    items: [
-      { id: 1, title: "Site Manager", subTitle: "Review" },
-      { id: 2, title: "Quantity Surveyor", subTitle: "Cost Check" },
-      { id: 3, title: "Project Manager", subTitle: "Final Approval" },
-    ],
-  },
-  {
-    title: "Variation Order Workflow",
-    items: [
-      { id: 4, title: "Engineer", subTitle: "Technical Review" },
-      { id: 5, title: "Quantity Surveyor", subTitle: "Cost Impact" },
-      { id: 6, title: "Project Manager", subTitle: "Client Approval" },
-    ],
-  },
-];
+// import { ArrowRight, GripVertical } from "lucide-react";
+// import { Button } from "@/components/ui/button";
+
+import UpcomingFeature from "@/components/settings/UpcomingFeature";
+
+// const data = [
+//   {
+//     title: "Purchase Order Approval",
+//     items: [
+//       { id: 1, title: "Site Manager", subTitle: "Review" },
+//       { id: 2, title: "Quantity Surveyor", subTitle: "Cost Check" },
+//       { id: 3, title: "Project Manager", subTitle: "Final Approval" },
+//     ],
+//   },
+//   {
+//     title: "Variation Order Workflow",
+//     items: [
+//       { id: 4, title: "Engineer", subTitle: "Technical Review" },
+//       { id: 5, title: "Quantity Surveyor", subTitle: "Cost Impact" },
+//       { id: 6, title: "Project Manager", subTitle: "Client Approval" },
+//     ],
+//   },
+// ];
 
 function ApprovalChains() {
   return (
+    <UpcomingFeature title="Approval Chains" />
+    /* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
     <div className="space-y-4">
       {data.map((workflow, workflowIndex) => (
         <div
           key={workflowIndex}
           className="border border-border rounded-lg bg-white overflow-hidden">
-          {/* Header */}
           <div className="px-4 py-3 border-b border-border">
             <span className="text-sm font-medium text-foreground">{workflow.title}</span>
           </div>
 
-          {/* Steps */}
           <div className="p-4">
             <div className="flex flex-wrap items-center gap-3">
               {workflow.items.map((item, index) => (
@@ -62,6 +66,7 @@ function ApprovalChains() {
         + Create New Approval Chain
       </button>
     </div>
+    */
   );
 }
 

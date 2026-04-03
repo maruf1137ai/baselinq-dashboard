@@ -1,11 +1,15 @@
-import React from 'react';
-import { Shield, Smartphone, Globe, Monitor } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import EnableTwoFactorModal from './components/EnableTwoFactorModal';
+// UPCOMING_FEATURE: All original code commented out — restore when backend integration is ready
+
+// import React from 'react';
+// import { Shield, Smartphone, Globe, Monitor } from 'lucide-react';
+// import { Button } from '@/components/ui/button';
+// import { Badge } from '@/components/ui/badge';
+// import EnableTwoFactorModal from './components/EnableTwoFactorModal';
+
+import UpcomingFeature from "@/components/settings/UpcomingFeature";
 
 const Security = () => {
-  const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = React.useState(false);
+  // const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = React.useState(false);
 
   return (
     <div className="p-6 space-y-6">
@@ -13,8 +17,9 @@ const Security = () => {
         <h2 className="text-2xl font-normal tracking-tight text-foreground">Security</h2>
         <p className="text-sm text-muted-foreground mt-1">Manage account security, sessions, and authentication settings.</p>
       </div>
+      <UpcomingFeature title="Security" />
+      {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
-      {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg border border-border p-4">
           <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center mb-3">
@@ -43,7 +48,6 @@ const Security = () => {
         </div>
       </div>
 
-      {/* Active Sessions */}
       <div className="bg-white rounded-lg border border-border overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <span className="text-sm font-medium text-foreground">Active Sessions</span>
@@ -78,6 +82,7 @@ const Security = () => {
       </div>
 
       <EnableTwoFactorModal open={isTwoFactorModalOpen} onOpenChange={setIsTwoFactorModalOpen} />
+      */}
     </div>
   );
 };

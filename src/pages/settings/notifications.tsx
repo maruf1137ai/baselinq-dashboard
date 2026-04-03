@@ -1,98 +1,102 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// UPCOMING_FEATURE: All original code commented out — restore when backend integration is ready
 
-interface NotificationSetting {
-  id: string;
-  title: string;
-  description: string;
-  email: boolean;
-  slack: boolean;
-  inApp: boolean;
-}
+// import React, { useState } from 'react';
+// import { Button } from '@/components/ui/button';
+// import { Checkbox } from '@/components/ui/checkbox';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-const initialSettings: NotificationSetting[] = [
-  {
-    id: 'compliance',
-    title: 'Compliance Alerts',
-    description: 'JBCC violations and regulatory updates',
-    email: true,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'sla-breach',
-    title: 'SLA Breach Alerts',
-    description: 'When tasks exceed response deadlines',
-    email: true,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'ai-summaries',
-    title: 'AI Summaries',
-    description: 'Daily project insights and recommendations',
-    email: true,
-    slack: false,
-    inApp: true,
-  },
-  {
-    id: 'task',
-    title: 'Task Reminders',
-    description: 'Due dates and task assignments',
-    email: true,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'document-updates',
-    title: 'Document Updates',
-    description: 'New versions, revisions, and linked changes',
-    email: false,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'meeting-actions',
-    title: 'Meeting Action Items',
-    description: 'Follow-ups and assigned actions from meetings',
-    email: true,
-    slack: false,
-    inApp: true,
-  },
-  {
-    id: 'obligation-warnings',
-    title: 'Obligation Warnings',
-    description: 'Contractual obligations approaching due date',
-    email: true,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'vo-approval',
-    title: 'VO Approval Requests',
-    description: 'Variation orders requiring your approval',
-    email: true,
-    slack: true,
-    inApp: true,
-  },
-  {
-    id: 'billing',
-    title: 'Billing Updates',
-    description: 'Invoices, payments, and subscription changes',
-    email: true,
-    slack: false,
-    inApp: true,
-  },
-];
+import UpcomingFeature from "@/components/settings/UpcomingFeature";
+
+// interface NotificationSetting {
+//   id: string;
+//   title: string;
+//   description: string;
+//   email: boolean;
+//   slack: boolean;
+//   inApp: boolean;
+// }
+
+// const initialSettings: NotificationSetting[] = [
+//   {
+//     id: 'compliance',
+//     title: 'Compliance Alerts',
+//     description: 'JBCC violations and regulatory updates',
+//     email: true,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'sla-breach',
+//     title: 'SLA Breach Alerts',
+//     description: 'When tasks exceed response deadlines',
+//     email: true,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'ai-summaries',
+//     title: 'AI Summaries',
+//     description: 'Daily project insights and recommendations',
+//     email: true,
+//     slack: false,
+//     inApp: true,
+//   },
+//   {
+//     id: 'task',
+//     title: 'Task Reminders',
+//     description: 'Due dates and task assignments',
+//     email: true,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'document-updates',
+//     title: 'Document Updates',
+//     description: 'New versions, revisions, and linked changes',
+//     email: false,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'meeting-actions',
+//     title: 'Meeting Action Items',
+//     description: 'Follow-ups and assigned actions from meetings',
+//     email: true,
+//     slack: false,
+//     inApp: true,
+//   },
+//   {
+//     id: 'obligation-warnings',
+//     title: 'Obligation Warnings',
+//     description: 'Contractual obligations approaching due date',
+//     email: true,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'vo-approval',
+//     title: 'VO Approval Requests',
+//     description: 'Variation orders requiring your approval',
+//     email: true,
+//     slack: true,
+//     inApp: true,
+//   },
+//   {
+//     id: 'billing',
+//     title: 'Billing Updates',
+//     description: 'Invoices, payments, and subscription changes',
+//     email: true,
+//     slack: false,
+//     inApp: true,
+//   },
+// ];
 
 const Notifications = () => {
-  const [settings, setSettings] = useState<NotificationSetting[]>(initialSettings);
+  // const [settings, setSettings] = useState<NotificationSetting[]>(initialSettings);
 
-  const handleCheckboxChange = (id: string, field: 'email' | 'slack' | 'inApp', checked: boolean) => {
-    setSettings(prev => prev.map(setting => (setting.id === id ? { ...setting, [field]: checked } : setting)));
-  };
+  // const handleCheckboxChange = (id: string, field: 'email' | 'slack' | 'inApp', checked: boolean) => {
+  //   setSettings(prev => prev.map(setting => (setting.id === id ? { ...setting, [field]: checked } : setting)));
+  // };
 
   return (
     <div className="p-6 space-y-6">
@@ -100,6 +104,8 @@ const Notifications = () => {
         <h2 className="text-2xl font-normal tracking-tight text-foreground">Notifications</h2>
         <p className="text-sm text-muted-foreground mt-1">Manage how and when you receive notifications.</p>
       </div>
+      <UpcomingFeature title="Notifications" />
+      {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
       <div className="border border-border rounded-lg overflow-hidden bg-white">
         <Table>
@@ -156,6 +162,7 @@ const Notifications = () => {
       <div className="flex justify-end">
         <Button className="h-10 rounded-lg">Save Preferences</Button>
       </div>
+      */}
     </div>
   );
 };
