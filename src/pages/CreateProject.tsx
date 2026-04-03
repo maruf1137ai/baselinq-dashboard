@@ -543,7 +543,7 @@ function OrgPersonnelSelectCard({
                           </div>
                           <div>
                             <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
-                            <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
+                            <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
                           </div>
                         </div>
                         {isSelected && <Check className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0" />}
