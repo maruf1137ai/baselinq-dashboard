@@ -32,7 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, postData } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, invitePersonnel, postData } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
@@ -671,6 +671,11 @@ export default function CreateProject() {
   const [inviteClientData, setInviteClientData] = useState({ name: "", email: "" });
   const [isInvited, setIsInvited] = useState(false);
 
+  // Invite Personnel modal
+  const [showInvitePersonnelModal, setShowInvitePersonnelModal] = useState(false);
+  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
+  const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { mutate: createProject, isPending } = useCreateProject();
@@ -799,6 +804,25 @@ export default function CreateProject() {
       }
     }));
     if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
+  };
+
+  const handleInvitePersonnelSubmit = async () => {
+    if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
+    setInvitePersonnelSubmitting(true);
+    try {
+      await invitePersonnel({
+        name: invitePersonnelForm.name,
+        email: invitePersonnelForm.email,
+        role_code: invitePersonnelForm.role_code,
+      });
+      toast.success(`Invitation sent to ${invitePersonnelForm.email}`);
+      setShowInvitePersonnelModal(false);
+      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to send invitation.");
+    } finally {
+      setInvitePersonnelSubmitting(false);
+    }
   };
 
   const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
@@ -1727,6 +1751,13 @@ export default function CreateProject() {
                                 <span className="font-normal">Add User</span>
                               </button>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => setShowInvitePersonnelModal(true)}
+                              className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="font-normal">Invite User</span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -1782,14 +1813,21 @@ export default function CreateProject() {
                                     onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
                                   >
                                     <option value="">Select type...</option>
-                                    <option value="Pty Ltd">Pty Ltd (Private Company)</option>
-                                    <option value="Ltd">Ltd (Public Company)</option>
-                                    <option value="CC">CC (Close Corporation)</option>
-                                    <option value="Inc">Inc (Incorporated)</option>
-                                    <option value="Partnership">Partnership</option>
-                                    <option value="Sole Proprietor">Sole Proprietor</option>
-                                    <option value="Trust">Trust</option>
-                                    <option value="NPO">NPO (Non-Profit Organisation)</option>
+                                    <option value="Architectural">Architectural</option>
+                                    <option value="Structural Engineering">Structural Engineering</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Quantity Surveying">Quantity Surveying</option>
+                                    <option value="Project Management">Project Management</option>
+                                    <option value="Construction Management">Construction Management</option>
+                                    <option value="Interior Design">Interior Design</option>
+                                    <option value="Landscape Architecture">Landscape Architecture</option>
+                                    <option value="Urban Planning">Urban Planning</option>
+                                    <option value="Environmental Consulting">Environmental Consulting</option>
+                                    <option value="Legal & Compliance">Legal &amp; Compliance</option>
+                                    <option value="General Contractor">General Contractor</option>
+                                    <option value="Other">Other</option>
                                   </select>
                                 </div>
                                 <div>
@@ -1992,7 +2030,7 @@ export default function CreateProject() {
                       {/* Label + tooltip */}
                       <div className="flex items-center gap-2">
                         <label className="text-[13px] font-normal text-[#374151]">
-                          Upload your project contract document <span className="text-red-500">*</span>
+                          Upload your Construction Project Contract<span className="text-red-500">*</span>
                         </label>
                         <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                       </div>
@@ -2478,6 +2516,97 @@ export default function CreateProject() {
           </div >
         </div >
       </div >
+
+      {/* ── Invite Personnel Modal ── */}
+      {showInvitePersonnelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f0fdf4" }}>
+                  <Mail className="w-4 h-4" style={{ color: "#00b894" }} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-[#1a1a2e]">Invite User</h3>
+                  <p className="text-[12px] text-[#9ca3af]">Send an invitation email with a role</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <input
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                    placeholder="e.g. John Smith"
+                    value={invitePersonnelForm.name}
+                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <input
+                    type="email"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                    placeholder="e.g. john@company.com"
+                    value={invitePersonnelForm.email}
+                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
+                <select
+                  className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                  value={invitePersonnelForm.role_code}
+                  onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
+                  <option value="">Select role...</option>
+                  {appRoles.map((r) => (
+                    <option key={r.code} value={r.code}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6]">
+              <button
+                type="button"
+                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code || invitePersonnelSubmitting}
+                onClick={handleInvitePersonnelSubmit}
+                className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
+                {invitePersonnelSubmitting ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                ) : (
+                  <><Mail className="w-3.5 h-3.5" /> Send Invite</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

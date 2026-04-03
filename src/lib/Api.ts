@@ -192,6 +192,16 @@ export const inviteClient = async (payload: { client_name: string; client_email:
   return res.data;
 };
 
+export const invitePersonnel = async (data: {
+  name: string;
+  email: string;
+  role_code: string;
+  project_id?: number | string;
+}) => {
+  const res = await api.post("auth/invite-personnel/", data);
+  return res.data;
+};
+
 export const inviteAppointedCompany = async (data: {
   company_name: string;
   contact_name: string;
