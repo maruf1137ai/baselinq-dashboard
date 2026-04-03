@@ -9,7 +9,6 @@ import Finance from "./pages/finance";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import ProtectedRoute from "./ProtectedRoute";
-import RoleRoute from "./RoleRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";

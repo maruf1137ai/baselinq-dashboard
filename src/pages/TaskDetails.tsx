@@ -885,14 +885,7 @@ export default function TaskDetails() {
     })()
     : 0;
 
-  // Check if the current user's role is authorized to approve this task type
-  const taskType = displayTask?.type || currentTask?.taskType || "";
-  const normalizedTaskType = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
-  const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
-  const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
-  // Support compound roles like "Client / Owner" by splitting on " / "
-  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
-  const canApprove = userRoles.some((role) => allowedApproversUpper.includes(role));
+  const canApprove = true;
 
   const editor = useEditor({
     extensions: [

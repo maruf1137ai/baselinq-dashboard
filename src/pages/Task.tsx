@@ -111,31 +111,31 @@ const rolePermissions: Record<string, string[]> = {
   "Project Manager": ["SI", "DC", "CPI"],
   "PM": ["SI", "DC", "CPI"],
   // ── New roles (inherit from backbone via resolvePermissionCode) ─────────────
-  "ADMIN":          ALL_TASK_TYPES,
-  "Administrator":  ALL_TASK_TYPES,
-  "PROJECT_ADMIN":  ALL_TASK_TYPES,
+  "ADMIN": ALL_TASK_TYPES,
+  "Administrator": ALL_TASK_TYPES,
+  "PROJECT_ADMIN": ALL_TASK_TYPES,
   "Project Administrator": ALL_TASK_TYPES,
-  "PRINCIPAL_PM":   ["SI", "DC", "CPI"],
+  "PRINCIPAL_PM": ["SI", "DC", "CPI"],
   "Principal / PM": ["SI", "DC", "CPI"],
-  "Principal/PM":   ["SI", "DC", "CPI"],
-  "SUPER_USER":     ALL_TASK_TYPES,
-  "Super User":     ALL_TASK_TYPES,
-  "QS":             ["VO"],
+  "Principal/PM": ["SI", "DC", "CPI"],
+  "SUPER_USER": ALL_TASK_TYPES,
+  "Super User": ALL_TASK_TYPES,
+  "QS": ["VO"],
   "Quantity Surveyor": ["VO"],
-  "STANDARD":       ["RFI"],
-  "Standard User":  ["RFI"],
-  "STRUCT_ENG":     ["RFI"],
+  "STANDARD": ["RFI"],
+  "Standard User": ["RFI"],
+  "STRUCT_ENG": ["RFI"],
   "Structural Engineer": ["RFI"],
-  "MECH_ENG":       ["RFI"],
+  "MECH_ENG": ["RFI"],
   "Mechanical Engineer": ["RFI"],
-  "ELEC_ENG":       ["RFI"],
+  "ELEC_ENG": ["RFI"],
   "Electrical Engineer": ["RFI"],
-  "SPECIAL_USER":   ["SI", "DC", "CPI"],
-  "Special User":   ["SI", "DC", "CPI"],
-  "LIMITED":        ["RFI"],
-  "Limited User":   ["RFI"],
-  "LEGAL":          ["VO", "DC"],
-  "Legal":          ["VO", "DC"],
+  "SPECIAL_USER": ["SI", "DC", "CPI"],
+  "Special User": ["SI", "DC", "CPI"],
+  "LIMITED": ["RFI"],
+  "Limited User": ["RFI"],
+  "LEGAL": ["VO", "DC"],
+  "Legal": ["VO", "DC"],
 };
 
 // Timeline stages per task type — used to map board columns to entity status
@@ -257,7 +257,7 @@ function TaskCard({ task, isDragging }: any) {
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: task.id,
-    disabled: !canDrag,
+    disabled: false,
   });
   const navigate = useNavigate();
 
@@ -272,8 +272,8 @@ function TaskCard({ task, isDragging }: any) {
   const docTypeTextColor = DOC_TYPE_TEXT_COLORS[normalizedTaskType] || 'text-muted-foreground';
   const attachmentCount = task?.attachments?.length || 0;
   // Use assignedTo if available, otherwise fall back to assignedBy
-  const displayAssignees = (task.assignedTo && task.assignedTo.length > 0) 
-    ? task.assignedTo 
+  const displayAssignees = (task.assignedTo && task.assignedTo.length > 0)
+    ? task.assignedTo
     : task.assignedBy ? [task.assignedBy] : [];
   const firstAssigneeName = displayAssignees[0]?.name || 'Assignee';
 
@@ -322,12 +322,11 @@ function TaskCard({ task, isDragging }: any) {
             <div className="flex items-center gap-2">
               <span className={`text-xs font-medium ${docTypeTextColor}`}>{displayId}</span>
               {priorityInfo && (
-                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                  priority === 'critical' ? 'bg-red-50 text-red-600' :
-                  priority === 'high' ? 'bg-orange-50 text-orange-600' :
-                  priority === 'medium' ? 'bg-blue-50 text-blue-600' :
-                  'bg-muted text-muted-foreground'
-                }`}>{priorityInfo.label}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${priority === 'critical' ? 'bg-red-50 text-red-600' :
+                    priority === 'high' ? 'bg-orange-50 text-orange-600' :
+                      priority === 'medium' ? 'bg-blue-50 text-blue-600' :
+                        'bg-muted text-muted-foreground'
+                  }`}>{priorityInfo.label}</span>
               )}
             </div>
             {isResolved && dueDateInfo.isOverdue ? (
@@ -370,17 +369,16 @@ function TaskCard({ task, isDragging }: any) {
                   {`${overdueDays}d overdue`}
                 </span>
               ) : task.due_date && !isResolved ? (
-                <span className={`flex items-center gap-1 text-xs shrink-0 ${
-                  dueDateInfo.isOverdue ? 'text-red-600 font-medium' :
-                  isWarning ? 'text-amber-600' :
-                  'text-muted-foreground'
-                }`}>
+                <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue ? 'text-red-600 font-medium' :
+                    isWarning ? 'text-amber-600' :
+                      'text-muted-foreground'
+                  }`}>
                   <Calendar className="h-3 w-3" />
                   {dueDateInfo.isOverdue
                     ? `${overdueDays}d overdue`
                     : isWarning
-                    ? `Due in ${daysUntilDue}d`
-                    : new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                      ? `Due in ${daysUntilDue}d`
+                      : new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                   }
                 </span>
               ) : isResolved && task.due_date ? (
@@ -579,29 +577,10 @@ export default function Task() {
   };
 
   // Check if user has permission to create any task type
-  const canCreateTask = useMemo(() => {
-    if (!userRole) return true;
-    const currentRoles = userRole.split(/\s*\/\s*/).map((r: string) => r.trim());
-    return currentRoles.some((role: string) => getPermittedTypes(role).length > 0);
-  }, [userRole]);
+  const canCreateTask = true;
 
   // Filter buttons based on user role
-  const filteredBtns = useMemo(() => {
-    if (!userRole) return btns; // Show all if no role set
-
-    // Support compound roles like "Client / Owner"
-    const currentRoles = userRole.split(/\s*\/\s*/).map(r => r.trim());
-
-    // Aggregate allowed document types from all user roles
-    const allowedDocTypes = new Set<string>();
-    currentRoles.forEach(role => {
-      getPermittedTypes(role).forEach(type => allowedDocTypes.add(type));
-    });
-
-    if (allowedDocTypes.size === 0) return btns; // Show all if role not recognized
-
-    return btns.filter(btn => allowedDocTypes.has(btn.code));
-  }, [userRole]);
+  const filteredBtns = btns;
 
   /* State */
   const [tasks, setTasks] = useState<{ todo: any[], inReview: any[], done: any[] }>({
@@ -664,7 +643,7 @@ export default function Task() {
       const transformedTasks = serverTasks.map((item: any, idx: number) => {
         const apiType = item?.taskType;
         const type = apiType || TASK_TYPES[idx % TASK_TYPES.length];
-        
+
         // Ensure every task has a due date
         let dueDate = item.task?.dueDate;
         if (!dueDate) {
