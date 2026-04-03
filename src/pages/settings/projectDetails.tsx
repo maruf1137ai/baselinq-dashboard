@@ -14,6 +14,7 @@ import {
   ClipboardList,
   FolderOpen,
   Search,
+  Plus,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -139,6 +140,7 @@ const ProjectDetails = () => {
       </div>
     );
   }
+
 
   const documents: ProjectDocument[] = selectedProject?.documents || [];
 
