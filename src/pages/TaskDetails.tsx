@@ -96,10 +96,8 @@ const approvalPermissions: Record<string, string[]> = {
 const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
 
 const displayStatus = (status: string): string => {
-  const s = (status || '').toLowerCase().replace(/_/g, ' ').trim();
-  if (s === 'done') return 'Approved';
-  if (s === 'in review' || s === 'review') return 'Review';
-  return capitalize(status.replace(/_/g, ' '));
+  if (!status) return '';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 };
 
 const getRelativeTime = (dateStr: string): string => {
@@ -151,9 +149,19 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
 
 const getStatusBadgeColor = (status: string) => {
   const s = (status || '').toLowerCase().replace(/_/g, ' ');
-  if (s === 'done' || s === 'approved' || s === 'completed') return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
-  if (s === 'in progress' || s === 'in review' || s === 'review') return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
-  if (s === 'rejected' || s === 'declined') return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
+  // Final/positive stages - green
+  if (['done', 'approved', 'completed', 'verified', 'closed', 'eot awarded', 'acknowledged'].includes(s))
+    return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
+  // In-progress stages - blue
+  if (['in progress', 'in review', 'review', 'issued', 'submitted', 'actioned', 'under review',
+       'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
+       'further info required', 'response provided', 'determination made', 'on track / at risk',
+       'scheduled'].includes(s))
+    return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
+  // Negative stages - red
+  if (['rejected', 'declined'].includes(s))
+    return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
+  // Default (Draft, Todo, Delay Identified, etc.) - gray
   return 'bg-muted text-muted-foreground border border-border';
 };
 
