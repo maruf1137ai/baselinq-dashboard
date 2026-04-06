@@ -30,13 +30,17 @@ import Integrations from "./pages/settings/integrations";
 import Notifications from "./pages/settings/notifications";
 import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
-import Organization from "./pages/settings/Organization";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
 import DocumentDetail from "./pages/DocumentDetail";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import AcceptAppointedInvitation from "./pages/AcceptAppointedInvitation";
+import OnboardingDashboard from "./pages/OnboardingDashboard";
+import OnboardingDashboard2 from "./pages/OnboardingDashboard2";
+import SelectProject from "./pages/account/SelectProject";
+import AccountProfile from "./pages/account/AccountProfile";
+import AccountOrganization from "./pages/account/AccountOrganization";
 
 const queryClient = new QueryClient();
 // fghfjhjf
@@ -160,7 +164,6 @@ const App = () => (
             </ProtectedRoute>
           }>
             <Route index element={<TeamManagement />} />
-            <Route path="organization" element={<Organization />} />
             <Route path="project-details" element={<ProjectDetails />} />
             <Route path="site" element={<Site />} />
             <Route path="notifications" element={<Notifications />} />
@@ -175,6 +178,26 @@ const App = () => (
             <Route path="audit" element={
               <Audit />
             } />
+          </Route>
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <OnboardingDashboard2 />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<SelectProject />} />
+            <Route path="profile" element={<AccountProfile />} />
+            <Route path="organization" element={<AccountOrganization />} />
           </Route>
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />

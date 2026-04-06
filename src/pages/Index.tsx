@@ -1,6 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProjectStatusCard } from '@/components/ProjectStatusCard';
 import { ProjectTimelineCard } from '@/components/ProjectTimelineCard';
 import { ActionItem } from '@/components/ActionItem';
@@ -8,7 +12,7 @@ import { ActivityFeedItem } from '@/components/ActivityFeedItem';
 import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X } from 'lucide-react';
+import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check } from 'lucide-react';
 import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import MyAction from '@/components/icons/MyAction';
@@ -19,14 +23,94 @@ import Calander2 from '@/components/icons/Calander2';
 import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useS3Upload } from "@/hooks/useS3Upload";
+
+const qInputCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10";
+const qTextareaCls = "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 min-h-[200px] leading-relaxed";
 
 const Index = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<any>(true);
+
+  // Quick-fill modal state
+  const [quickFillOpen, setQuickFillOpen] = useState(false);
+  const [quickForm, setQuickForm] = useState({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "" });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const s3Upload = useS3Upload("project-documents/pending");
+
+  const addFiles = useCallback((files: File[]) => {
+    files.forEach((file) => {
+      const result = validateFile(file);
+      if (result.valid) {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        s3Upload.startUpload(id, file);
+      } else {
+        toast.error(`${file.name}: ${result.error}`);
+      }
+    });
+  }, [s3Upload]);
+
+  const openQuickFill = () => setQuickFillOpen(true);
+  const closeQuickFill = () => {
+    setQuickFillOpen(false);
+    setQuickForm({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "" });
+    s3Upload.entries.forEach((e) => s3Upload.removeEntry(e.id));
+  };
+
+  const submitQuickFill = async (missing: string[]) => {
+    if (!projectId) return;
+    setIsSaving(true);
+    try {
+      const payload: Record<string, any> = {};
+      if (missing.includes("Scope of Work") && quickForm.brief.trim()) {
+        payload.task_order_brief = quickForm.brief.trim();
+      }
+      if (missing.includes("Client Details") && quickForm.company_name.trim()) {
+        payload.client_details = {
+          company_name: quickForm.company_name.trim(),
+          client: { name: quickForm.client_name.trim(), email: quickForm.client_email.trim(), position: "" },
+        };
+      }
+      if (missing.includes("Budget Allocation")) {
+        const num = parseFloat(quickForm.total_budget.replace(/,/g, ""));
+        if (!num || num <= 0) { toast.error("Please enter a valid budget amount"); setIsSaving(false); return; }
+        payload.total_budget = num;
+      }
+      if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0) {
+        toast.error("Please fill in at least one field");
+        setIsSaving(false);
+        return;
+      }
+      await patchData({ url: `projects/${projectId}/`, data: payload });
+
+      // Register S3 documents if any uploaded
+      if (s3Upload.entries.length > 0) {
+        const ids = s3Upload.entries.map((e) => e.id);
+        const s3Keys = await s3Upload.waitForAll(ids);
+        await Promise.all(
+          s3Upload.entries.map(async (entry) => {
+            const key = s3Keys.get(entry.id);
+            if (key) await registerS3Document(projectId, { file_name: entry.file.name, s3_key: key }).catch(() => { });
+          })
+        );
+      }
+
+      toast.success("Project updated successfully");
+      queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("projects") });
+      closeQuickFill();
+    } catch {
+      toast.error("Failed to update. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const { data: tasksResponse, isLoading: loadingTasks } = useFetch<{ tasks: any[] }>(
     projectId ? `projects/${projectId}/tasks/` : "",
@@ -199,7 +283,7 @@ const Index = () => {
     const projectDocs = project.documents || project.attachments || [];
     const fields = [
       { label: "Client Details", value: clientDetails },
-      { label: "Scope of Works", value: taskOrderBrief },
+      { label: "Scope of Work", value: taskOrderBrief },
       { label: "Documents", value: projectDocs.length > 0 ? "yes" : null },
       { label: "Budget Allocation", value: (project.totalBudget ?? project.total_budget) != null ? "yes" : null },
     ];
@@ -224,41 +308,68 @@ const Index = () => {
     <DashboardLayout>
       <div className="space-y-6">
         {showCompletionCard && (
-          <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex-1 text-center md:text-left">
-              <h4 className="text-sm font-normal text-foreground leading-none">
-                Project Setup Incomplete
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
-                {projectStats && projectStats.percentage < 100
-                  ? `Your selected project "${project.name}" is ${projectStats.percentage}% complete. Finish the onboarding to unlock all coordination features.`
-                  : "Finish setting up your draft projects to start collaborating with your team."}
-              </p>
+          <div className="p-6 rounded-2xl bg-white border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h4 className="text-sm font-normal text-foreground leading-none">
+                  Project Setup Incomplete
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
+                  {projectStats && projectStats.percentage < 100
+                    ? `Your selected project "${project.name}" is ${projectStats.percentage}% complete. Finish the onboarding to unlock all coordination features.`
+                    : "Finish setting up your draft projects to start collaborating with your team."}
+                </p>
+              </div>
+              {projectStats && projectStats.percentage < 100 && (
+                <Button
+                  onClick={() => openQuickFill()}
+                  className="h-8 px-4 bg-primary text-white text-[11px] rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
+                >
+                  Complete Setup
+                  <ArrowRight className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
 
-              <div className="mt-4 space-y-2">
-                {/* Selected project if incomplete */}
-                {projectStats && projectStats.percentage < 100 && (
-                  <div className="flex items-center justify-between gap-3 bg-slate-50 border border-primary/10 rounded-xl px-4 py-2.5 group transition-all hover:bg-white hover:shadow-sm">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                      <span className="text-sm text-foreground truncate font-normal tracking-tight">{project.name}</span>
-                      <span className="text-[9px] font-normal text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Current</span>
-                      <span className="hidden sm:inline text-[10px] text-muted-foreground ml-1">
-                        Missing: {projectStats.missing.slice(0, 2).join(", ")}{projectStats.missing.length > 2 ? "..." : ""}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={() => navigate("/edit-project")}
-                      className="h-8 px-4 bg-primary text-white text-[11px] rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
+            {/* Missing point cards */}
+            {projectStats && projectStats.percentage < 100 && (
+              <div className="grid grid-cols-1 gap-3">
+                {projectStats.missing.map((item) => {
+                  const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
+                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-[#f0edff]", iconColor: "text-[#6c5ce7]", description: "Describe the full construction scope." },
+                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-[#eef2ff]", iconColor: "text-[#6c5ce7]", description: "Add client company and contact info." },
+                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-[#f0fdf4]", iconColor: "text-[#16a34a]", description: "Set the total project budget." },
+                    "Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
+                  };
+                  const cfg = cardConfig[item];
+                  if (!cfg) return null;
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => openQuickFill()}
+                      className="group text-left bg-slate-50 border border-[#e2e5ea] rounded-xl px-4 py-3.5 hover:border-primary/40 hover:bg-white hover:shadow-sm transition-all duration-200"
                     >
-                      Complete Setup
-                      <ArrowRight className="w-3 h-3 translate-x-0 group-hover:translate-x-0.5 transition-transform" />
-                    </Button>
-                  </div>
-                )}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
+                          {cfg.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-normal text-[#111827]">{item}</p>
+                          <p className="text-[11px] text-[#9ca3af] mt-0.5">{cfg.description}</p>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-                {/* Other draft projects */}
-                {draftProjects.slice(0, projectStats && projectStats.percentage < 100 ? 1 : 2).map((p: any) => {
+            {/* Draft projects */}
+            {draftProjects.length > 0 && (
+              <div className={`space-y-2 ${projectStats && projectStats.percentage < 100 ? "mt-3" : ""}`}>
+                {draftProjects.slice(0, 2).map((p: any) => {
                   const id = String(p._id || p.id);
                   return (
                     <div key={id} className="flex items-center justify-between gap-3 bg-slate-50/50 border border-border rounded-xl px-4 py-2.5 group transition-all hover:bg-white hover:shadow-sm">
@@ -285,11 +396,11 @@ const Index = () => {
                     </div>
                   );
                 })}
-                {draftProjects.length > (projectStats && projectStats.percentage < 100 ? 1 : 2) && (
-                  <p className="text-[10px] text-muted-foreground ml-2">+ {draftProjects.length - (projectStats && projectStats.percentage < 100 ? 1 : 2)} more draft projects</p>
+                {draftProjects.length > 2 && (
+                  <p className="text-[10px] text-muted-foreground ml-2">+ {draftProjects.length - 2} more draft projects</p>
                 )}
               </div>
-            </div>
+            )}
           </div>
         )}
         {/* No Projects Banner */}
@@ -564,6 +675,217 @@ const Index = () => {
           url: selectedDoc.streamUrl || selectedDoc.stream_url || selectedDoc.file_url || selectedDoc.fileUrl || "",
         } : null}
       />
+
+      {/* Quick-fill modal — shows all missing fields at once */}
+      {projectStats && (
+        <Dialog open={quickFillOpen} onOpenChange={(open) => { if (!open) closeQuickFill(); }}>
+          <DialogContent className="sm:max-w-[680px] w-full bg-white rounded-2xl p-0 overflow-hidden">
+            <DialogHeader className="px-8 pt-7 pb-5 border-b border-[#e2e5ea]">
+              <DialogTitle className="text-[16px] font-normal text-[#111827]">
+                Complete Project Setup
+              </DialogTitle>
+              <p className="text-[13px] text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
+            </DialogHeader>
+
+            <div className="px-8 py-6 space-y-4 max-h-[72vh] overflow-y-auto">
+
+              {/* ── Scope of Work card ── */}
+              {projectStats.missing.includes("Scope of Work") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-[#6c5ce7]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Scope of Work</p>
+                      <p className="text-[11px] text-[#9ca3af]">Describe the construction scope — auto-populates into contracts</p>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <textarea
+                      className={qTextareaCls}
+                      placeholder="e.g. The Client wishes to appoint an Architect to measure up the existing residential building..."
+                      value={quickForm.brief}
+                      onChange={(e) => setQuickForm((v) => ({ ...v, brief: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Client Details card ── */}
+              {projectStats.missing.includes("Client Details") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-[#6c5ce7]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Client Details</p>
+                      <p className="text-[11px] text-[#9ca3af]">Fill once — auto-populates into all contracts and appointment letters</p>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                        Client Name or Company <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
+                        value={quickForm.company_name}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, company_name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                        <input
+                          className={qInputCls}
+                          placeholder="Full name"
+                          value={quickForm.client_name}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                        <input
+                          type="email"
+                          className={qInputCls}
+                          placeholder="client@company.com"
+                          value={quickForm.client_email}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Budget Allocation card ── */}
+              {projectStats.missing.includes("Budget Allocation") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center shrink-0">
+                      <ClipboardList className="w-4 h-4 text-[#16a34a]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Budget Allocation</p>
+                      <p className="text-[11px] text-[#9ca3af]">Set the total project budget</p>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                      Total Budget <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[16px] text-[#6b7280] pointer-events-none select-none">R</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className={cn(qInputCls, "pl-10 text-[18px] h-[52px]")}
+                        placeholder="0"
+                        value={quickForm.total_budget}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, "");
+                          setQuickForm((v) => ({ ...v, total_budget: raw ? Number(raw).toLocaleString() : "" }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Documents card ── */}
+              {projectStats.missing.includes("Documents") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
+                      <CloudUpload className="w-4 h-4 text-[#ea580c]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Documents</p>
+                      <p className="text-[11px] text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept={ALLOWED_FILE_EXTENSIONS.join(",")}
+                      onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); e.target.value = ""; }}
+                    />
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
+                      className={cn(
+                        "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200 border-2 border-dashed",
+                        isDragging ? "border-[#6c5ce7] bg-[#f8f7ff]" : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                      )}
+                    >
+                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-[#f3f4f6]")}>
+                        <CloudUpload className={cn("w-6 h-6 transition-colors", isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]")} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[14px] font-medium text-[#374151]">Drag and drop your files here</p>
+                        <p className="text-[12px] text-[#6b7280] mt-0.5">or <span className="text-[#6c5ce7] underline">click to browse</span></p>
+                        <p className="text-[11px] text-[#9ca3af] mt-1 uppercase tracking-tight">PDF, Excel, Images up to 20MB</p>
+                      </div>
+                    </div>
+                    {s3Upload.entries.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {s3Upload.entries.map((f) => (
+                          <div key={f.id} className="bg-[#f9fafb] rounded-[10px] px-4 py-3 border border-[#f3f4f6]">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-4 h-4 text-[#6c5ce7] shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-normal text-[#111827] truncate">{f.file.name}</p>
+                                <p className="text-[11px] text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              </div>
+                              {f.status === "done" && <Check className="w-4 h-4 text-[#00b894] shrink-0" />}
+                              <button type="button" onClick={() => s3Upload.removeEntry(f.id)} className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            {f.status === "uploading" && (
+                              <div className="mt-2.5">
+                                <div className="h-1 bg-[#e5e7eb] rounded-full overflow-hidden">
+                                  <div className="h-full bg-[#6c5ce7] rounded-full transition-all duration-300" style={{ width: `${f.progress}%` }} />
+                                </div>
+                                <p className="text-[10px] text-[#9ca3af] mt-1">{f.progress}%</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            <div className="px-8 py-5 border-t border-[#e2e5ea] flex items-center justify-end gap-3">
+              <button
+                onClick={closeQuickFill}
+                className="px-4 py-2 text-[13px] text-[#6b7280] hover:text-[#111827] transition-colors"
+              >
+                Cancel
+              </button>
+              <Button
+                onClick={() => submitQuickFill(projectStats.missing)}
+                disabled={isSaving}
+                className="h-10 px-6 bg-[#6c5ce7] text-white text-[13px] rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </DashboardLayout>
   );
 };

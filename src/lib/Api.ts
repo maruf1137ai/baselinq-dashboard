@@ -157,9 +157,9 @@ export interface RegisterPayload {
   email: string;
   password: string;
   password_confirm: string;
-  // profile
-  role: string;
-  account_type: "organisation" | "individual";
+  // profile (optional — filled later via complete-profile flow)
+  role?: string;
+  account_type?: "organisation" | "individual";
   // organisation
   company_name?: string;
   company_reg_number?: string;

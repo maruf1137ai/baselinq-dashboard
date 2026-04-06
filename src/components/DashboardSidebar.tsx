@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, PlusCircle, LogOut, Trash2 } from "lucide-react";
+import { ChevronDown, PlusCircle, LogOut, Trash2, UserCircle, FolderOpen, User as UserIcon, Building2 } from "lucide-react";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -29,11 +29,9 @@ import SaveMoney from "./icons/SaveMoney";
 import Shield from "./icons/Shield";
 import Meetings from "./icons/Meeting";
 import Programme from "./icons/Programme";
-import Document from "./icons/Document";
 import Settings from "./icons/Settings";
 import Help from "./icons/Help";
 import Document2 from "./icons/Document2";
-import { useProjects } from "@/hooks/useProjects"; // Django API hook
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { deleteProject, fetchData } from "@/lib/Api";
@@ -50,8 +48,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
-import { usePermissions } from "@/hooks/usePermissions";
-import type { PermissionKey } from "@/lib/roleUtils";
 
 interface Project {
   id: string;
@@ -88,7 +84,6 @@ export function DashboardSidebar() {
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
   const { setUserRole, clearUserRole } = useUserRoleStore();
-  const { can } = usePermissions();
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
@@ -315,100 +310,111 @@ export function DashboardSidebar() {
           </div>
 
           <div className="flex-1 overflow-auto px-2">
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 uppercase py-2 text-muted-foreground/50">
-                Main Menu
-              </SidebarGroupLabel>
-              <SidebarGroupContent className="">
-                <SidebarMenu>
-                  {navItems.map((item) => {
-                    const isActive = item.url === "/"
-                      ? location.pathname === "/"
-                      : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          className={
-                            isActive
-                              ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg"
-                              : "border border-transparent px-[16px] py-[11px]"
-                          }>
-                          <NavLink
-                            to={item.url}
-                            className="flex items-center gap-3">
-                            {React.cloneElement(item.icon, {
-                              className: `text-muted-foreground  ${isActive ? "text-black" : ""
-                                }`,
-                            })}
-                            {open && (
-                              <span
-                                className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>
-                                {item.title}
-                              </span>
-                            )}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {location.pathname.startsWith("/account") ? (
+              // ── Account nav ──
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 uppercase py-2">
+                  Account
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {[
+                      { title: "Select Project", url: "/account", icon: <FolderOpen className="w-4 h-4" /> },
+                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" /> },
+                      { title: "Organization", url: "/account/organization", icon: <Building2 className="w-4 h-4" /> },
+                    ].map((item) => {
+                      const isActive = location.pathname === item.url;
+                      return (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                            <NavLink to={item.url} className="flex items-center gap-3">
+                              {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                              {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : (
+              // ── Normal nav (project selected) ──
+              <>
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 uppercase py-2">
+                    Main Menu
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {navItems.map((item) => {
+                        const isActive = item.url === "/"
+                          ? location.pathname === "/"
+                          : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                        return (
+                          <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={isActive}
+                              className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                              <NavLink to={item.url} className="flex items-center gap-3">
+                                {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
 
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase px-3 py-2">
-                Settings
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {settingsItems.map((item) => {
-                    const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          className={
-                            isActive
-                              ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg"
-                              : "border border-transparent px-[16px] py-[11px]"
-                          }>
-                          <NavLink
-                            to={item.url}
-                            className="flex items-center gap-3">
-                            {React.cloneElement(item.icon, {
-                              className: `text-muted-foreground  ${isActive ? "text-black" : ""
-                                }`,
-                            })}
-                            {open && (
-                              <span
-                                className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>
-                                {item.title}
-                              </span>
-                            )}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs text-muted-foreground uppercase px-3 py-2">
+                    Settings
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {settingsItems.map((item) => {
+                        const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                        return (
+                          <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={isActive}
+                              className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                              <NavLink to={item.url} className="flex items-center gap-3">
+                                {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </>
+            )}
           </div>
 
           {open && (
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+                <button
+                  onClick={() => navigate("/account")}
+                  className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+                >
                   <span className="text-white text-sm font-medium uppercase">
                     {(user?.name ||
                       user?.email?.split("@")[0] ||
                       "U")[0]}
                   </span>
-                </div>
-                <div className="flex-1 min-w-0">
+                </button>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate("/account")}>
                   <p className="text-sm capitalize font-medium text-sidebar-foreground truncate">
                     {user?.name ||
                       user?.email?.split("@")[0] ||
@@ -437,6 +443,13 @@ export function DashboardSidebar() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => navigate("/account")}
+                      className="cursor-pointer gap-2">
+                      <UserCircle className="h-4 w-4" />
+                      <span>My Account</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleLogout}
                       className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer gap-2">

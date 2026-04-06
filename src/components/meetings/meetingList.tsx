@@ -8,20 +8,31 @@ import { Badge } from "../ui/badge";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
+import { isMeetingPast } from "@/lib/dateUtils";
+
 interface Meeting {
   id: number;
   title: string;
   status: "scheduled" | "held" | "cancelled";
+  date: string;
+  time: string;
   date_time: string;
   location: string;
   meeting_link?: string;
   attendees: string[];
   extra_attendees: number;
   ai_notes: boolean;
+  is_completed?: boolean;
 }
 
-const StatusBadge = ({ status }: { status: string }) => {
-  if (status === "held") {
+
+
+const StatusBadge = ({ item }: { item: Meeting }) => {
+  const isCompleted = item.status === "held" || isMeetingPast(item.date, item.time);
+  if (item.status === "cancelled") {
+    return <Badge className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full">Cancelled</Badge>;
+  }
+  if (isCompleted) {
     return <Badge className="bg-green-50 text-green-700 border border-green-200 text-xs px-2 py-0.5 rounded-full">Completed</Badge>;
   }
   return <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>;
@@ -35,9 +46,13 @@ export default function MeetingsList() {
     projectId ? `meetings/?project_id=${projectId}` : null
   );
 
-  const meetings: Meeting[] = Array.isArray(data) ? data : (data?.results ?? []);
-  const upcoming = meetings.filter((m) => m.status !== "held");
-  const completed = meetings.filter((m) => m.status === "held");
+  const meetings: Meeting[] = (Array.isArray(data) ? data : (data?.results ?? [])).map((m: any) => ({
+    ...m,
+    is_completed: m.status === "held" || isMeetingPast(m.date, m.time)
+  }));
+
+  const upcoming = meetings.filter((m) => !m.is_completed && m.status !== "cancelled");
+  const completed = meetings.filter((m) => m.is_completed && m.status !== "cancelled");
 
   const filterMeetings = (list: Meeting[]) => {
     if (!searchQuery) return list;
@@ -114,7 +129,7 @@ function MeetingCard({ item }: { item: Meeting }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-sm font-medium text-foreground truncate">{item.title}</h3>
-          <StatusBadge status={item.status} />
+          <StatusBadge item={item} />
           {item.ai_notes && (
             <span className="flex items-center gap-1 text-xs text-primary shrink-0">
               <AiIcon size={14} className="text-primary" /> AI Notes

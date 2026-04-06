@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -682,6 +682,7 @@ function SectionHeader({
 
 export default function EditProject() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { mutate: updateProject, isPending } = useUpdateProject();
   const s3Upload = useS3Upload("project-documents/pending");
@@ -698,7 +699,10 @@ export default function EditProject() {
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() => {
+    const s = parseInt(searchParams.get("step") || "1", 10);
+    return s >= 1 && s <= 6 ? s : 1;
+  });
   const [stepDir, setStepDir] = useState<"fwd" | "back">("fwd");
   const [stepKey, setStepKey] = useState(0);
   const [pnEditable, setPnEditable] = useState(false);

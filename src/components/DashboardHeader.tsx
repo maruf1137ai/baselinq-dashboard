@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bell, Search, Wand2, Command, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Bell, Search, Wand2, Command, X, LogOut } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,14 @@ import AiButton from "./AiButton";
 import WeatherWidget from "./NavbarWeather";
 import NavbarWeather from "./NavbarWeather";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useLogout } from "@/hooks/useLogout";
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useLogout();
+  const isAccountPage = location.pathname.startsWith("/account");
   const {
     notifications,
     unreadCount,
@@ -60,24 +64,35 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <CreateRequestButton />
-          <button>
-            <AiButton />
-          </button>
-
-          {/* Bell trigger */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDropdownOpen(true)}
-            className="relative h-10 w-10 flex justify-center items-center bg-[#FFFFFF] border border-border rounded-lg">
-            <Bell className="h-6 w-6" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </Button>
+          {isAccountPage ? (
+            <Button
+              onClick={() => logout()}
+              variant="outline"
+              className="h-9 px-4 rounded-lg border-border text-muted-foreground hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all flex items-center gap-2 font-normal text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          ) : (
+            <>
+              <CreateRequestButton />
+              <button>
+                <AiButton />
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDropdownOpen(true)}
+                className="relative h-10 w-10 flex justify-center items-center bg-[#FFFFFF] border border-border rounded-lg">
+                <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </header>
 

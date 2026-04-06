@@ -16,6 +16,8 @@ import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 
+import { isMeetingPast } from "@/lib/dateUtils";
+
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
 interface ActionItem { id: number; text: string; owner: string; due: string; }
@@ -24,6 +26,7 @@ interface MeetingDetail {
   id: number;
   title: string;
   status: string;
+  date: string;
   date_display: string;
   time: string;
   location: string;
@@ -129,7 +132,7 @@ export default function MeetingDetails() {
     );
   }
 
-  const isCompleted = meeting.status === "held";
+  const isCompleted = meeting.status === "held" || isMeetingPast(meeting.date, meeting.time);
   const hasAiNotes = isCompleted && !!meeting.summary?.overview;
 
   return (
