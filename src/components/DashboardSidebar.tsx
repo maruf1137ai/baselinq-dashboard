@@ -193,7 +193,7 @@ export function DashboardSidebar() {
                     {[
                       { title: "Select Project", url: "/account", icon: <FolderOpen className="w-4 h-4" /> },
                       { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" /> },
-                      { title: "Organization", url: "/account/organization", icon: <Building2 className="w-4 h-4" /> },
+                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" /> },
                     ].map((item) => {
                       const isActive = location.pathname === item.url;
                       return (

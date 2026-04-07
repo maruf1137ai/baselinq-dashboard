@@ -49,7 +49,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">
+      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">
         {label}
       </label>
       {children}
@@ -184,13 +184,13 @@ const OrganizationPage = () => {
       <div className="max-w-5xl mx-auto p-8 pb-32">
 
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 border-b border-border pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 border-b border-border pb-4">
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
               <ShieldCheck className="w-3 h-3" />
-              Organization Settings
+              Organisation Settings
             </div>
-            <h1 className="text-3xl font-normal text-foreground tracking-tight">Organization</h1>
+            <h1 className="text-3xl font-normal text-foreground tracking-tight">Organisation</h1>
             {/* <p className="text-muted-foreground text-sm mt-1 max-w-xl">
               Consolidated view of your personal, professional, and organizational profile details captured during onboarding.
             </p> */}
@@ -353,7 +353,7 @@ const OrganizationPage = () => {
           {/* ── Organisation Details ── */}
           {user?.account_type === 'organisation' && (
             <SectionCard
-              title="Organization & Entity Details"
+              title="Organisation & Entity Details"
               subtitle="Corporate profile and registration information"
               icon={<Building2 className="w-5 h-5" />}
             >

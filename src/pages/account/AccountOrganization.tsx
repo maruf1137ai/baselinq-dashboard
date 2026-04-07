@@ -163,7 +163,7 @@ const AccountOrganization = () => {
     <div className="max-w-4xl mx-auto p-8">
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-normal tracking-tight text-foreground">Organization</h2>
+          <h2 className="text-2xl font-normal tracking-tight text-foreground">Organisation</h2>
           <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
         </div>
         {isOrg && (
@@ -178,7 +178,7 @@ const AccountOrganization = () => {
         <>
           {/* Org details */}
           <form onSubmit={handleSave}>
-            <SectionCard title="Organization & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
+            <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Company / Entity Name">
                   <Input value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal")} />
@@ -367,7 +367,7 @@ const AccountOrganization = () => {
           <div>
             <h3 className="text-sm font-normal text-foreground">Organisation account required</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto leading-relaxed">
-              Organization details are only available for organisation accounts. Contact support to upgrade.
+              Organisation details are only available for organisation accounts. Contact support to upgrade.
             </p>
           </div>
         </div>

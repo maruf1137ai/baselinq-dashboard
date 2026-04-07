@@ -823,7 +823,7 @@ const SelectProject = () => {
                           <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
                           {project.location && (
                             <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
+                              {/* <MapPin className="w-3 h-3" /> */}
                               {project.location}
                             </p>
                           )}

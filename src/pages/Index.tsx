@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, inviteClient, inviteAppointedCompany } from "@/lib/Api";
+import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, inviteClient, inviteAppointedCompany, getAppointedCompanies } from "@/lib/Api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProjectStatusCard } from '@/components/ProjectStatusCard';
@@ -58,7 +58,7 @@ const Index = () => {
     brief: "",
     company_name: "", client_name: "", client_email: "",
     total_budget: "",
-    location: "",
+    location_street: "", location_city: "", location_province: "", location_postal: "",
     start_date: "", end_date: "",
     appointed_company_name: "",
     appointed_company_type: "",
@@ -68,6 +68,18 @@ const Index = () => {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Appointed companies (multi-invite)
+  interface AppointedInviteEntry { id: string; company_name: string; company_type: string; contact_name: string; email: string; position: string; }
+  const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
+  const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  const fetchAppointedCompanies = async (pid: string) => {
+    setIsLoadingCompanies(true);
+    try { setAppointedCompanies((await getAppointedCompanies(pid)) || []); }
+    catch { /* silent */ }
+    finally { setIsLoadingCompanies(false); }
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const s3Upload = useS3Upload("project-documents/pending");
 
@@ -93,7 +105,7 @@ const Index = () => {
       brief: "",
       company_name: "", client_name: "", client_email: "",
       total_budget: "",
-      location: "",
+      location_street: "", location_city: "", location_province: "", location_postal: "",
       start_date: "", end_date: "",
       appointed_company_name: "",
       appointed_company_type: "",
@@ -123,8 +135,10 @@ const Index = () => {
         if (!num || num <= 0) { toast.error("Please enter a valid budget amount"); setIsSaving(false); return; }
         payload.total_budget = num;
       }
-      if (missing.includes("Location") && quickForm.location.trim()) {
-        payload.location = quickForm.location.trim();
+      if (missing.includes("Location")) {
+        const loc = [quickForm.location_street, quickForm.location_city, quickForm.location_province, quickForm.location_postal]
+          .map(s => s.trim()).filter(Boolean).join(", ");
+        if (loc) payload.location = loc;
       }
       if (missing.includes("Project Timeline") && quickForm.start_date && quickForm.end_date) {
         payload.start_date = quickForm.start_date;
@@ -903,13 +917,43 @@ const Index = () => {
                       <p className="text-[11px] text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
                     </div>
                   </div>
-                  <div className="p-5">
-                    <input
-                      className={qInputCls}
-                      placeholder="e.g. 12 Main Street, Cape Town, 8001"
-                      value={quickForm.location}
-                      onChange={(e) => setQuickForm((v) => ({ ...v, location: e.target.value }))}
-                    />
+                  <div className="p-5 grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider mb-1.5">Street / Area</label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. 12 Main Street, Sandton"
+                        value={quickForm.location_street}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, location_street: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider mb-1.5">City</label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. Johannesburg"
+                        value={quickForm.location_city}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, location_city: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider mb-1.5">Province</label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. Gauteng"
+                        value={quickForm.location_province}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, location_province: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider mb-1.5">Postal Code</label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. 2196"
+                        value={quickForm.location_postal}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, location_postal: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

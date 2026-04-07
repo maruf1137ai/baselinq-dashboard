@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 import { useProject, useUpdateProject } from "@/hooks/useProjects";
 import React, { useState, useEffect } from "react";
 import {
-  lookupCompany,
   inviteAppointedCompany,
   getAppointedCompanies,
+  getPresignedUrl,
+  uploadFileToPresignedUrl,
 } from "@/lib/Api";
 import {
   Building2,
@@ -14,7 +15,11 @@ import {
   Loader2,
   X,
   Plus,
-  User as UserIcon,
+  FileText,
+  Download,
+  ShieldCheck,
+  ShieldAlert,
+  Paperclip,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -22,6 +27,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRoles } from "@/hooks/useRoles";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
+
+const INPUT_CLS =
+  "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
+
+const SELECT_CLS =
+  "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
 const COMPANY_TYPES = [
   "Architectural", "Structural Engineering", "Civil Engineering",
@@ -38,6 +49,8 @@ interface AppointedInviteEntry {
   contact_name: string;
   email: string;
   position: string;
+  insurance_file: File | null;
+  insurance_expiry: string;
 }
 
 const AppointedCompanies = () => {
@@ -45,8 +58,7 @@ const AppointedCompanies = () => {
   const updateProjectMutation = useUpdateProject();
   const { roles: appRoles } = useRoles();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const { data: fetchedProject, isLoading } = useProject(selectedProjectId ?? undefined);
-  const isClientOrContractor = ["CLIENT", "OWNER", "CONTRACTOR", "CPM", "PM"].includes(fetchedProject?.roleName?.toUpperCase() || "");
+  const { isLoading } = useProject(selectedProjectId ?? undefined);
 
   const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
@@ -80,15 +92,32 @@ const AppointedCompanies = () => {
 
     try {
       await Promise.allSettled(
-        toInvite.map((entry) =>
-          inviteAppointedCompany({
+        toInvite.map(async (entry) => {
+          let insurance_s3_key: string | undefined;
+          let insurance_file_name: string | undefined;
+
+          if (entry.insurance_file) {
+            const { upload_url, key } = await getPresignedUrl({
+              filename: entry.insurance_file.name,
+              content_type: entry.insurance_file.type || "application/octet-stream",
+              folder: "projects/insurance",
+            });
+            await uploadFileToPresignedUrl(upload_url, entry.insurance_file, entry.insurance_file.type || "application/octet-stream");
+            insurance_s3_key = key;
+            insurance_file_name = entry.insurance_file.name;
+          }
+
+          return inviteAppointedCompany({
             project_id: selectedProjectId,
             company_name: entry.company_name,
             contact_name: entry.contact_name,
             contact_email: entry.email,
-            position: entry.position || 'architect',
-          })
-        )
+            position: entry.position || "architect",
+            insurance_s3_key,
+            insurance_file_name,
+            insurance_expiry: entry.insurance_expiry || undefined,
+          });
+        })
       );
       toast.success("Invitation(s) sent successfully");
       setAppointedInvites([]);
@@ -112,186 +141,331 @@ const AppointedCompanies = () => {
 
   const isSaving = updateProjectMutation.isPending;
 
-  return (
-    <div className="max-w-[1000px] mx-auto p-12">
-      {/* ── Main Container ── */}
-      <div className="bg-white border border-[#EAECF0] rounded-[20px] shadow-[0_1px_3px_rgba(16,24,40,0.1),0_1px_2px_rgba(16,24,40,0.06)] overflow-hidden">
+  const CLIENT_ROLES = ["CLIENT", "OWNER", "CLIENT OWNER"];
+  const appointedOnly = appointedCompanies.filter((c) =>
+    !CLIENT_ROLES.includes((c.role || "").toUpperCase().trim())
+  );
 
-        {/* Header */}
-        <div className="px-8 py-7 border-b border-[#F2F4F7] flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white border border-[#EAECF0] shadow-sm flex items-center justify-center text-[#667085] shrink-0">
-            <UserIcon className="w-5 h-5" />
-          </div>
+  return (
+    <div className="w-full bg-slate-50/30">
+      <div className="max-w-5xl mx-auto p-8 pb-20">
+
+        {/* ── Page Header ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4 mb-4">
           <div>
-            <h2 className="text-[18px] font-medium text-[#101828] leading-tight tracking-tight">Appointed Company</h2>
-            <p className="text-[14px] text-[#667085] mt-1">Professional firm appointed to this project</p>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
+              <Building2 className="w-3 h-3" />
+              Project Settings
+            </div>
+            <h1 className="text-3xl font-normal text-foreground tracking-tight">Appointed Companies</h1>
           </div>
+          {appointedInvites.length > 0 && (
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              <span className="font-normal">{isSaving ? "Inviting..." : "Send Invitations"}</span>
+            </Button>
+          )}
         </div>
 
-        <div className="p-10 space-y-10">
+        {/* ── Single Card ── */}
+        <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden">
 
-          {/* Participating Companies Section */}
-          <div className="space-y-6">
-            <h3 className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">
-              Participating Companies
-            </h3>
-
-            <div className="grid grid-cols-1 gap-4">
-              {isLoadingCompanies ? (
-                <p className="text-sm text-gray-400">Loading companies...</p>
-              ) : appointedCompanies.length === 0 ? (
-                <div className="p-8 border border-dashed border-[#EAECF0] rounded-2xl text-center">
-                  <p className="text-sm text-[#667085]">No companies have joined yet.</p>
-                </div>
-              ) : (
-                appointedCompanies.map((comp) => (
-                  <div key={comp.id} className="group relative flex items-center justify-between p-5 rounded-[18px] border border-[#EAECF0] bg-white hover:border-[#8081F6] hover:shadow-[0_4px_12px_rgba(108,92,231,0.08)] transition-all">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-11 h-11 rounded-xl bg-[#F9FAFB] border border-[#F2F4F7] flex items-center justify-center text-[#8081F6] group-hover:bg-[#8081F6]/5 group-hover:border-[#8081F6]/10 transition-colors">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-[15px] font-medium text-[#101828]">{comp.company_name}</p>
-                        <p className="text-[12px] text-[#667085] uppercase tracking-wider mt-0.5">{comp.role || 'Partner'}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <span className={cn(
-                        "text-[11px] font-medium px-2.5 py-0.5 rounded-full",
-                        comp.status === "Joined"
-                          ? "bg-[#ECFDF3] text-[#027A48]"
-                          : "bg-[#EFF8FF] text-[#175CD3]"
-                      )}>
-                        {comp.status}
-                      </span>
-                      <p className="text-[12px] text-[#667085]">{comp.contact_name}</p>
-                    </div>
-                  </div>
-                ))
-              )}
+          {/* Header */}
+          <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-slate-50/50">
+            <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-normal text-foreground tracking-tight">Appointed Companies</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Professional firms appointed to this project</p>
             </div>
           </div>
 
-          <div className="h-px bg-[#F2F4F7]" />
+          <div className="p-6 space-y-4">
+            {/* Existing companies */}
+            {isLoadingCompanies ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : appointedOnly.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  {appointedOnly.map((comp) => {
+                    const hasInsurance = !!comp.insurance_file_name;
+                    const isExpired = comp.insurance_expiry
+                      ? new Date(comp.insurance_expiry) < new Date()
+                      : false;
+                    return (
+                      <div key={comp.id} className="p-4 rounded-lg border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all space-y-3">
+                        {/* Top row: company info + status */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-3 items-center">
+                            <div className="w-9 h-9 rounded-lg bg-white border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-normal text-foreground">{comp.company_name}</p>
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-tighter mt-0.5">{comp.role || "Partner"}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full border",
+                              comp.status === "Joined"
+                                ? "bg-slate-100 text-foreground border-border"
+                                : "bg-slate-50 text-muted-foreground border-border"
+                            )}>
+                              {comp.status}
+                            </span>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">{comp.contact_name}</p>
+                          </div>
+                        </div>
 
-          {/* Invitation Area */}
-          <div className="space-y-6">
-            <p className="text-[14px] text-[#667085]">
-              Invite the professional firms appointed to this project. They'll receive an email to fill in their company details.
-            </p>
+                        {/* Insurance Certificate Card */}
+                        <div className={cn(
+                          "rounded-xl border overflow-hidden",
+                          hasInsurance && !isExpired
+                            ? "border-green-200"
+                            : hasInsurance && isExpired
+                            ? "border-amber-200"
+                            : "border-border"
+                        )}>
+                          {/* Certificate header stripe */}
+                          <div className={cn(
+                            "flex items-center justify-between px-4 py-2.5",
+                            hasInsurance && !isExpired
+                              ? "bg-green-600"
+                              : hasInsurance && isExpired
+                              ? "bg-amber-500"
+                              : "bg-slate-400"
+                          )}>
+                            <div className="flex items-center gap-2 text-white">
+                              {hasInsurance && !isExpired
+                                ? <ShieldCheck className="w-3.5 h-3.5" />
+                                : hasInsurance && isExpired
+                                ? <ShieldAlert className="w-3.5 h-3.5" />
+                                : <FileText className="w-3.5 h-3.5" />
+                              }
+                              <span className="text-[10px] font-medium uppercase tracking-widest">
+                                {hasInsurance && !isExpired
+                                  ? "Certificate of Insurance"
+                                  : hasInsurance && isExpired
+                                  ? "Insurance Expired"
+                                  : "No Insurance on File"}
+                              </span>
+                            </div>
+                            <span className={cn(
+                              "text-[9px] font-medium px-2 py-0.5 rounded-full",
+                              hasInsurance && !isExpired
+                                ? "bg-green-500 text-white"
+                                : hasInsurance && isExpired
+                                ? "bg-amber-400 text-white"
+                                : "bg-slate-300 text-slate-600"
+                            )}>
+                              {hasInsurance && !isExpired ? "VALID" : hasInsurance && isExpired ? "EXPIRED" : "PENDING"}
+                            </span>
+                          </div>
 
-            <div className="space-y-4">
-              {appointedInvites.map((entry) => (
-                <div key={entry.id} className="relative bg-white border border-[#EAECF0] rounded-[20px] p-8 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                          {/* Certificate body */}
+                          <div className={cn(
+                            "px-4 py-3 flex items-center justify-between",
+                            hasInsurance && !isExpired
+                              ? "bg-green-50"
+                              : hasInsurance && isExpired
+                              ? "bg-amber-50"
+                              : "bg-slate-50"
+                          )}>
+                            <div className="flex items-center gap-3">
+                              {/* Certificate icon */}
+                              <div className={cn(
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                                hasInsurance && !isExpired
+                                  ? "bg-green-100 text-green-600"
+                                  : hasInsurance && isExpired
+                                  ? "bg-amber-100 text-amber-600"
+                                  : "bg-slate-100 text-slate-400"
+                              )}>
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-normal text-foreground leading-snug">
+                                  {hasInsurance ? comp.insurance_file_name : "No document uploaded"}
+                                </p>
+                                {comp.insurance_expiry ? (
+                                  <p className={cn(
+                                    "text-[10px] mt-0.5",
+                                    isExpired ? "text-amber-600" : "text-muted-foreground"
+                                  )}>
+                                    {isExpired ? "Expired" : "Expires"}{" "}
+                                    {new Date(comp.insurance_expiry).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">No expiry date recorded</p>
+                                )}
+                              </div>
+                            </div>
+                            {comp.insurance_url && (
+                              <a
+                                href={comp.insurance_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                  "flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border transition-all shrink-0 ml-3",
+                                  hasInsurance && !isExpired
+                                    ? "bg-white border-green-200 text-green-700 hover:bg-green-100"
+                                    : "bg-white border-amber-200 text-amber-700 hover:bg-amber-100"
+                                )}
+                                title="Download insurance certificate"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="h-px bg-border/60" />
+              </>
+            ) : null}
+
+            {/* Invite forms */}
+            {appointedInvites.map((entry) => (
+              <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
+                <div className="flex items-center justify-end">
                   <button
                     type="button"
                     onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
-                    className="absolute top-6 right-6 p-2 rounded-lg text-[#98A2B3] hover:text-[#F04438] hover:bg-[#FEF3F2] transition-all"
+                    className="text-muted-foreground hover:text-destructive transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Name</label>
+                    <Input
+                      value={entry.company_name}
+                      onChange={(e) => updateInvite(entry.id, { company_name: e.target.value })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. Base Architects and Associates"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
+                    <select
+                      value={entry.company_type}
+                      onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select type...</option>
+                      {COMPANY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Professional Role</label>
+                    <select
+                      value={entry.position}
+                      onChange={(e) => updateInvite(entry.id, { position: e.target.value })}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select role...</option>
+                      {appRoles.map((r) => (
+                        <option key={r.code} value={r.code}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Contact Person Name</label>
+                    <Input
+                      value={entry.contact_name}
+                      onChange={(e) => updateInvite(entry.id, { contact_name: e.target.value })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. John Smith"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Email Address</label>
+                    <Input
+                      type="email"
+                      value={entry.email}
+                      onChange={(e) => updateInvite(entry.id, { email: e.target.value })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. john@firm.co.za"
+                    />
+                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">Company Name</label>
-                      <Input
-                        value={entry.company_name}
-                        onChange={(e) => updateInvite(entry.id, { company_name: e.target.value })}
-                        className="h-11 rounded-xl border-[#D0D5DD] bg-white focus:ring-4 focus:ring-[#8081F6]/10 focus:border-[#8081F6] text-[14px] placeholder:text-[#98A2B3]"
-                        placeholder="e.g. Base Architects and Associates"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">Company Type</label>
-                      <select
-                        value={entry.company_type}
-                        onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
-                        className="w-full h-11 px-3.5 rounded-xl border border-[#D0D5DD] bg-white focus:outline-none focus:ring-4 focus:ring-[#8081F6]/10 focus:border-[#8081F6] text-[14px] appearance-none"
-                      >
-                        <option value="">Select type...</option>
-                        {COMPANY_TYPES.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">Professional Role</label>
-                      <select
-                        value={entry.position}
-                        onChange={(e) => updateInvite(entry.id, { position: e.target.value })}
-                        className="w-full h-11 px-3.5 rounded-xl border border-[#D0D5DD] bg-white focus:outline-none focus:ring-4 focus:ring-[#8081F6]/10 focus:border-[#8081F6] text-[14px] appearance-none"
-                      >
-                        <option value="">Select role...</option>
-                        {appRoles.map((r) => (
-                          <option key={r.code} value={r.code}>{r.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">Contact Person Name</label>
-                      <Input
-                        value={entry.contact_name}
-                        onChange={(e) => updateInvite(entry.id, { contact_name: e.target.value })}
-                        className="h-11 rounded-xl border-[#D0D5DD] bg-white focus:ring-4 focus:ring-[#8081F6]/10 focus:border-[#8081F6] text-[14px] placeholder:text-[#98A2B3]"
-                        placeholder="e.g. John Smith"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-[#667085] uppercase tracking-wider">Email Address</label>
-                      <Input
-                        type="email"
-                        value={entry.email}
-                        onChange={(e) => updateInvite(entry.id, { email: e.target.value })}
-                        className="h-11 rounded-xl border-[#D0D5DD] bg-white focus:ring-4 focus:ring-[#8081F6]/10 focus:border-[#8081F6] text-[14px] placeholder:text-[#98A2B3]"
-                        placeholder="e.g. john@firm.co.za"
-                      />
+                  {/* Insurance Certificate */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Certificate</label>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-border bg-white text-sm text-muted-foreground cursor-pointer hover:bg-slate-50 transition-colors shrink-0">
+                        <Paperclip className="w-4 h-4" />
+                        <span>{entry.insurance_file ? "Replace file" : "Attach file"}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="hidden"
+                          onChange={(e) => updateInvite(entry.id, { insurance_file: e.target.files?.[0] ?? null })}
+                        />
+                      </label>
+                      {entry.insurance_file ? (
+                        <div className="flex items-center gap-2 flex-1 min-w-0 h-10 px-3 rounded-lg border border-border bg-slate-50">
+                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <span className="text-sm text-foreground truncate">{entry.insurance_file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateInvite(entry.id, { insurance_file: null })}
+                            className="ml-auto text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">PDF, JPG or PNG</span>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setAppointedInvites((prev) => [
-                    ...prev,
-                    { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" },
-                  ])
-                }
-                className="w-full py-6 border-2 border-dashed border-[#EAECF0] rounded-[20px] flex items-center justify-center gap-2 group hover:border-[#8081F6] hover:bg-[#F9FAFB] transition-all"
-              >
-                <div className="w-8 h-8 rounded-full bg-[#F2F4F7] flex items-center justify-center group-hover:bg-[#8081F6] transition-colors">
-                  <Plus className="w-4 h-4 text-[#667085] group-hover:text-white" />
+                  {/* Insurance Expiry */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Expiry Date</label>
+                    <Input
+                      type="date"
+                      value={entry.insurance_expiry}
+                      onChange={(e) => updateInvite(entry.id, { insurance_expiry: e.target.value })}
+                      className={INPUT_CLS}
+                    />
+                  </div>
                 </div>
-                <span className="text-[15px] font-medium text-[#475467] group-hover:text-[#8081F6]">
-                  {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
-                </span>
-              </button>
-            </div>
+              </div>
+            ))}
+
+            {/* Add button */}
+            <button
+              type="button"
+              onClick={() =>
+                setAppointedInvites((prev) => [
+                  ...prev,
+                  { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "", insurance_file: null, insurance_expiry: "" },
+                ])
+              }
+              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+            </button>
           </div>
-
-          {/* Action Footer */}
-          {appointedInvites.length > 0 && (
-            <div className="flex justify-end pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="h-12 px-8 rounded-xl bg-[#8081F6] text-white hover:bg-[#6c6de9] shadow-[0_4px_14px_rgba(108,92,231,0.25)] transition-all flex items-center gap-2.5 text-[15px] font-medium"
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                {isSaving ? "Inviting..." : "Send Invitations"}
-              </Button>
-            </div>
-          )}
         </div>
+
       </div>
     </div>
   );
 };
 
 export default AppointedCompanies;
-

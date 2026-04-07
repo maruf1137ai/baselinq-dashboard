@@ -187,7 +187,7 @@ const OnboardingDashboard = () => {
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "project", label: "Select Project", icon: <FolderOpen className="w-4 h-4" /> },
     { key: "profile", label: "Profile Details", icon: <UserIcon className="w-4 h-4" /> },
-    { key: "organization", label: "Organization", icon: <Building2 className="w-4 h-4" /> },
+    { key: "organization", label: "Organisation", icon: <Building2 className="w-4 h-4" /> },
   ];
 
   return (
@@ -476,7 +476,7 @@ const OnboardingDashboard = () => {
           <form onSubmit={handleSave} className="space-y-2">
             {user?.account_type === "organisation" ? (
               <SectionCard
-                title="Organization & Entity Details"
+                title="Organisation & Entity Details"
                 subtitle="Corporate profile and registration information"
                 icon={<Building2 className="w-5 h-5" />}
               >
@@ -531,7 +531,7 @@ const OnboardingDashboard = () => {
                   <Building2 className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Organization details are only available for organisation accounts.
+                  Organisation details are only available for organisation accounts.
                 </p>
               </div>
             )}

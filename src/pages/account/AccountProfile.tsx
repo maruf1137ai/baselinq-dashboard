@@ -39,7 +39,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">{label}</label>
+      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">{label}</label>
       {children}
     </div>
   );
