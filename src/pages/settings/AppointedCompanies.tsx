@@ -4,28 +4,35 @@ import { cn } from "@/lib/utils";
 import { useProject, useUpdateProject } from "@/hooks/useProjects";
 import React, { useState, useEffect } from "react";
 import {
-  lookupCompany,
   inviteAppointedCompany,
   getAppointedCompanies,
+  getPresignedUrl,
+  uploadFileToPresignedUrl,
 } from "@/lib/Api";
 import {
   Building2,
   Save,
   Loader2,
-  Search,
   X,
   Plus,
-  Phone,
-  User as UserIcon,
+  FileText,
+  Download,
   ShieldCheck,
+  ShieldAlert,
+  Paperclip,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRoles } from "@/hooks/useRoles";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
+
+const INPUT_CLS =
+  "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
+
+const SELECT_CLS =
+  "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
 const COMPANY_TYPES = [
   "Architectural", "Structural Engineering", "Civil Engineering",
@@ -35,68 +42,6 @@ const COMPANY_TYPES = [
   "Legal & Compliance", "General Contractor", "Other",
 ];
 
-const CLIENT_ROLE_CODES = ["CLIENT", "OWNER", "CONTRACTOR"];
-
-const INPUT_CLS =
-  "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
-
-const SELECT_CLS =
-  "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-sm";
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function SectionCard({
-  title,
-  subtitle,
-  icon,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-5">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50">
-        <div className="flex items-center gap-4">
-          {icon && (
-            <div className="w-9 h-9 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
-              {icon}
-            </div>
-          )}
-          <div>
-            <h3 className="text-sm font-normal text-foreground tracking-tight">{title}</h3>
-            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-          </div>
-        </div>
-      </div>
-      <div className="p-6">{children}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-  colSpan,
-}: {
-  label: string;
-  children: React.ReactNode;
-  colSpan?: boolean;
-}) {
-  return (
-    <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-// ── Main Component ─────────────────────────────────────────────────────────────
-
 interface AppointedInviteEntry {
   id: string;
   company_name: string;
@@ -104,59 +49,25 @@ interface AppointedInviteEntry {
   contact_name: string;
   email: string;
   position: string;
+  insurance_file: File | null;
+  insurance_expiry: string;
 }
 
 const AppointedCompanies = () => {
   const queryClient = useQueryClient();
   const updateProjectMutation = useUpdateProject();
-  const { data: userInfo } = useCurrentUser();
   const { roles: appRoles } = useRoles();
-  const isClientOrContractor = CLIENT_ROLE_CODES.includes(userInfo?.role?.code ?? "");
-
   const selectedProjectId = localStorage.getItem("selectedProjectId");
-  const { data: fetchedProject, isLoading } = useProject(selectedProjectId ?? undefined);
+  const { isLoading } = useProject(selectedProjectId ?? undefined);
 
   const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
-  const [isLookingUp, setIsLookingUp] = useState(false);
-
-  const [appointedForm, setAppointedForm] = useState({
-    company_name: "",
-    company_registration: "",
-    vat_number: "",
-    office_number: "",
-    role_as_per_appointment: "",
-    physical_address: { street: "", city: "", province: "", postal_code: "" },
-    postal_address: { street: "", city: "", province: "", postal_code: "" },
-  });
 
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
 
   useEffect(() => {
-    if (!fetchedProject) return;
-    const ac = (fetchedProject as any).appointedCompany || (fetchedProject as any).appointed_company || {};
-    const acPa = ac.physical_address || {};
-    const acPostal = ac.postal_address || {};
-    setAppointedForm({
-      company_name: ac.company_name || "",
-      company_registration: ac.company_registration || "",
-      vat_number: ac.vat_number || "",
-      office_number: ac.office_number || "",
-      role_as_per_appointment: ac.role_as_per_appointment || "",
-      physical_address: {
-        street: typeof acPa === "string" ? acPa : acPa.street || "",
-        city: typeof acPa === "string" ? "" : acPa.city || "",
-        province: typeof acPa === "string" ? "" : acPa.province || "",
-        postal_code: typeof acPa === "string" ? "" : acPa.postal_code || "",
-      },
-      postal_address: {
-        street: typeof acPostal === "string" ? acPostal : acPostal.street || "",
-        city: typeof acPostal === "string" ? "" : acPostal.city || "",
-        province: typeof acPostal === "string" ? "" : acPostal.province || "",
-        postal_code: typeof acPostal === "string" ? "" : acPostal.postal_code || "",
-      },
-    });
-  }, [fetchedProject]);
+    if (selectedProjectId) fetchCompanies();
+  }, [selectedProjectId]);
 
   const fetchCompanies = async () => {
     if (!selectedProjectId) return;
@@ -171,84 +82,51 @@ const AppointedCompanies = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCompanies();
-  }, [selectedProjectId]);
-
-  const handleCompanyLookup = async () => {
-    const reg = appointedForm.company_registration.trim();
-    if (!reg) { toast.error("Enter a registration number to look up."); return; }
-    setIsLookingUp(true);
-    try {
-      const data = await lookupCompany(reg);
-      if (data) {
-        setAppointedForm((prev) => ({
-          ...prev,
-          company_name: data.company_name || prev.company_name,
-          vat_number: data.vat_number || prev.vat_number,
-          office_number: data.office_number || prev.office_number,
-          physical_address: data.physical_address
-            ? { ...prev.physical_address, ...data.physical_address }
-            : prev.physical_address,
-        }));
-        toast.success("Company details retrieved successfully!");
-      }
-    } catch {
-      toast.error("Company not found. Please enter details manually.");
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     if (!selectedProjectId) return;
+    const toInvite = appointedInvites.filter((e) => e.email.trim() && e.company_name.trim());
+    if (toInvite.length === 0) {
+      toast.info("No new companies to invite.");
+      return;
+    }
 
     try {
-      await updateProjectMutation.mutateAsync({
-        id: selectedProjectId,
-        appointed_company: appointedForm,
-      } as any);
+      await Promise.allSettled(
+        toInvite.map(async (entry) => {
+          let insurance_s3_key: string | undefined;
+          let insurance_file_name: string | undefined;
+
+          if (entry.insurance_file) {
+            const { upload_url, key } = await getPresignedUrl({
+              filename: entry.insurance_file.name,
+              content_type: entry.insurance_file.type || "application/octet-stream",
+              folder: "projects/insurance",
+            });
+            await uploadFileToPresignedUrl(upload_url, entry.insurance_file, entry.insurance_file.type || "application/octet-stream");
+            insurance_s3_key = key;
+            insurance_file_name = entry.insurance_file.name;
+          }
+
+          return inviteAppointedCompany({
+            project_id: selectedProjectId,
+            company_name: entry.company_name,
+            contact_name: entry.contact_name,
+            contact_email: entry.email,
+            position: entry.position || "architect",
+            insurance_s3_key,
+            insurance_file_name,
+            insurance_expiry: entry.insurance_expiry || undefined,
+          });
+        })
+      );
+      toast.success("Invitation(s) sent successfully");
+      setAppointedInvites([]);
+      fetchCompanies();
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
-
-      if (isClientOrContractor) {
-        const toInvite = appointedInvites.filter((e) => e.email.trim());
-        await Promise.allSettled(
-          toInvite.map((entry) =>
-            inviteAppointedCompany({
-              project_id: selectedProjectId,
-              company_name: entry.company_name,
-              contact_name: entry.contact_name,
-              contact_email: entry.email,
-              position: entry.position,
-            })
-          )
-        );
-        if (toInvite.length > 0) {
-          toast.success("Invitation(s) sent to appointed companies");
-          setAppointedInvites([]);
-          fetchCompanies();
-        }
-      }
-
-      toast.success("Details saved successfully");
     } catch {
-      toast.error("Failed to save. Please try again.");
+      toast.error("Failed to send invitations.");
     }
   };
-
-  const setAppointedField = (key: string, value: string) =>
-    setAppointedForm((prev) => ({ ...prev, [key]: value }));
-
-  const setAppointedAddressField = (
-    type: "physical_address" | "postal_address",
-    key: string,
-    value: string
-  ) =>
-    setAppointedForm((prev) => ({
-      ...prev,
-      [type]: { ...prev[type], [key]: value },
-    }));
 
   const updateInvite = (id: string, patch: Partial<AppointedInviteEntry>) =>
     setAppointedInvites((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
@@ -263,323 +141,329 @@ const AppointedCompanies = () => {
 
   const isSaving = updateProjectMutation.isPending;
 
+  const CLIENT_ROLES = ["CLIENT", "OWNER", "CLIENT OWNER"];
+  const appointedOnly = appointedCompanies.filter((c) =>
+    !CLIENT_ROLES.includes((c.role || "").toUpperCase().trim())
+  );
+
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <form onSubmit={handleSave}>
+    <div className="w-full bg-slate-50/30">
+      <div className="max-w-5xl mx-auto p-8 pb-20">
+
         {/* ── Page Header ── */}
-        <div className="flex items-start justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4 mb-4">
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
-              <ShieldCheck className="w-3 h-3" />
+              <Building2 className="w-3 h-3" />
               Project Settings
             </div>
-            <h2 className="text-2xl font-normal tracking-tight text-foreground">Appointed Companies</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage the professional firms and consultants appointed to this project.
-            </p>
+            <h1 className="text-3xl font-normal text-foreground tracking-tight">Appointed Companies</h1>
           </div>
-          <Button
-            type="submit"
-            disabled={isSaving}
-            className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0 mt-10"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isSaving ? "Saving..." : "Save Details"}
-          </Button>
+          {appointedInvites.length > 0 && (
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              <span className="font-normal">{isSaving ? "Inviting..." : "Send Invitations"}</span>
+            </Button>
+          )}
         </div>
 
-        {/* ── Appointed Company Section ── */}
-        <SectionCard
-          title="Appointed Company"
-          subtitle="Professional firm appointed to this project"
-          icon={<UserIcon className="w-4 h-4" />}
-        >
-          <div className="space-y-8">
-            {/* 1. Show already appointed/invited companies */}
-            {appointedCompanies.length > 0 && (
-              <div className="space-y-4">
-                <p className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider">
-                  Participating Companies
-                </p>
-                <div className="grid grid-cols-1 gap-4">
-                  {appointedCompanies.map((comp) => (
-                    <div
-                      key={comp.id}
-                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all"
-                    >
-                      <div className="flex gap-3 items-center">
-                        <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center text-primary shadow-sm">
-                          <Building2 className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-normal text-foreground">
-                            {comp.company_name}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground uppercase tracking-tighter mt-0.5">
-                            {comp.role}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full border",
-                            comp.status === "Joined"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                              : comp.status === "Expired"
-                                ? "bg-rose-50 text-rose-700 border-rose-100"
-                                : "bg-blue-50 text-blue-700 border-blue-100"
-                          )}
-                        >
-                          {comp.status}
-                        </span>
-                        <p className="text-[10px] text-muted-foreground mt-1.5 font-normal">
-                          {comp.contact_name}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {isClientOrContractor && <div className="h-px bg-border/60 my-6" />}
-              </div>
-            )}
+        {/* ── Single Card ── */}
+        <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden">
 
-            {isClientOrContractor ? (
-              /* CLIENT / CONTRACTOR: invite form */
-              <div className="space-y-4">
-                {appointedInvites.length > 0 && (
-                  <p className="text-xs text-muted-foreground -mt-1">
-                    Invite the professional firms appointed to this project. They'll receive an email to fill in their company details.
-                  </p>
-                )}
-                {appointedInvites.map((entry) => (
-                  <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                      <Field label="Company Name" colSpan>
-                        <Input
-                          value={entry.company_name}
-                          onChange={(e) => updateInvite(entry.id, { company_name: e.target.value })}
-                          className={INPUT_CLS}
-                          placeholder="e.g. Base Architects and Associates"
-                        />
-                      </Field>
-                      <Field label="Company Type">
-                        <select
-                          value={entry.company_type}
-                          onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
-                          className={SELECT_CLS}
-                        >
-                          <option value="">Select type...</option>
-                          {COMPANY_TYPES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Professional Role">
-                        <select
-                          value={entry.position}
-                          onChange={(e) => updateInvite(entry.id, { position: e.target.value })}
-                          className={SELECT_CLS}
-                        >
-                          <option value="">Select role...</option>
-                          {appRoles.map((r) => (
-                            <option key={r.code} value={r.code}>{r.name}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Contact Person Name">
-                        <Input
-                          value={entry.contact_name}
-                          onChange={(e) => updateInvite(entry.id, { contact_name: e.target.value })}
-                          className={INPUT_CLS}
-                          placeholder="e.g. John Smith"
-                        />
-                      </Field>
-                      <Field label="Email Address">
-                        <Input
-                          type="email"
-                          value={entry.email}
-                          onChange={(e) => updateInvite(entry.id, { email: e.target.value })}
-                          className={INPUT_CLS}
-                          placeholder="e.g. john@firm.co.za"
-                        />
-                      </Field>
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAppointedInvites((prev) => [
-                      ...prev,
-                      { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" },
-                    ])
-                  }
-                  className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all group"
-                >
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <Plus className="w-3.5 h-3.5" />
-                  </div>
-                  {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
-                </button>
-              </div>
-            ) : (
-              /* Other roles: full company details form */
-              <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-slate-50/50">
+            <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-normal text-foreground tracking-tight">Appointed Companies</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Professional firms appointed to this project</p>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Existing companies */}
+            {isLoadingCompanies ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : appointedOnly.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  {appointedOnly.map((comp) => {
+                    const hasInsurance = !!comp.insurance_file_name;
+                    const isExpired = comp.insurance_expiry
+                      ? new Date(comp.insurance_expiry) < new Date()
+                      : false;
+                    return (
+                      <div key={comp.id} className="p-4 rounded-lg border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all space-y-3">
+                        {/* Top row: company info + status */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-3 items-center">
+                            <div className="w-9 h-9 rounded-lg bg-white border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-normal text-foreground">{comp.company_name}</p>
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-tighter mt-0.5">{comp.role || "Partner"}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full border",
+                              comp.status === "Joined"
+                                ? "bg-slate-100 text-foreground border-border"
+                                : "bg-slate-50 text-muted-foreground border-border"
+                            )}>
+                              {comp.status}
+                            </span>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">{comp.contact_name}</p>
+                          </div>
+                        </div>
+
+                        {/* Insurance Certificate Card */}
+                        <div className={cn(
+                          "rounded-xl border overflow-hidden",
+                          hasInsurance && !isExpired
+                            ? "border-green-200"
+                            : hasInsurance && isExpired
+                            ? "border-amber-200"
+                            : "border-border"
+                        )}>
+                          {/* Certificate header stripe */}
+                          <div className={cn(
+                            "flex items-center justify-between px-4 py-2.5",
+                            hasInsurance && !isExpired
+                              ? "bg-green-600"
+                              : hasInsurance && isExpired
+                              ? "bg-amber-500"
+                              : "bg-slate-400"
+                          )}>
+                            <div className="flex items-center gap-2 text-white">
+                              {hasInsurance && !isExpired
+                                ? <ShieldCheck className="w-3.5 h-3.5" />
+                                : hasInsurance && isExpired
+                                ? <ShieldAlert className="w-3.5 h-3.5" />
+                                : <FileText className="w-3.5 h-3.5" />
+                              }
+                              <span className="text-[10px] font-medium uppercase tracking-widest">
+                                {hasInsurance && !isExpired
+                                  ? "Certificate of Insurance"
+                                  : hasInsurance && isExpired
+                                  ? "Insurance Expired"
+                                  : "No Insurance on File"}
+                              </span>
+                            </div>
+                            <span className={cn(
+                              "text-[9px] font-medium px-2 py-0.5 rounded-full",
+                              hasInsurance && !isExpired
+                                ? "bg-green-500 text-white"
+                                : hasInsurance && isExpired
+                                ? "bg-amber-400 text-white"
+                                : "bg-slate-300 text-slate-600"
+                            )}>
+                              {hasInsurance && !isExpired ? "VALID" : hasInsurance && isExpired ? "EXPIRED" : "PENDING"}
+                            </span>
+                          </div>
+
+                          {/* Certificate body */}
+                          <div className={cn(
+                            "px-4 py-3 flex items-center justify-between",
+                            hasInsurance && !isExpired
+                              ? "bg-green-50"
+                              : hasInsurance && isExpired
+                              ? "bg-amber-50"
+                              : "bg-slate-50"
+                          )}>
+                            <div className="flex items-center gap-3">
+                              {/* Certificate icon */}
+                              <div className={cn(
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                                hasInsurance && !isExpired
+                                  ? "bg-green-100 text-green-600"
+                                  : hasInsurance && isExpired
+                                  ? "bg-amber-100 text-amber-600"
+                                  : "bg-slate-100 text-slate-400"
+                              )}>
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-normal text-foreground leading-snug">
+                                  {hasInsurance ? comp.insurance_file_name : "No document uploaded"}
+                                </p>
+                                {comp.insurance_expiry ? (
+                                  <p className={cn(
+                                    "text-[10px] mt-0.5",
+                                    isExpired ? "text-amber-600" : "text-muted-foreground"
+                                  )}>
+                                    {isExpired ? "Expired" : "Expires"}{" "}
+                                    {new Date(comp.insurance_expiry).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">No expiry date recorded</p>
+                                )}
+                              </div>
+                            </div>
+                            {comp.insurance_url && (
+                              <a
+                                href={comp.insurance_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                  "flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border transition-all shrink-0 ml-3",
+                                  hasInsurance && !isExpired
+                                    ? "bg-white border-green-200 text-green-700 hover:bg-green-100"
+                                    : "bg-white border-amber-200 text-amber-700 hover:bg-amber-100"
+                                )}
+                                title="Download insurance certificate"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="h-px bg-border/60" />
+              </>
+            ) : null}
+
+            {/* Invite forms */}
+            {appointedInvites.map((entry) => (
+              <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                  <Field label="Company Name" colSpan>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Name</label>
                     <Input
-                      value={appointedForm.company_name}
-                      onChange={(e) => setAppointedField("company_name", e.target.value)}
+                      value={entry.company_name}
+                      onChange={(e) => updateInvite(entry.id, { company_name: e.target.value })}
                       className={INPUT_CLS}
                       placeholder="e.g. Base Architects and Associates"
                     />
-                  </Field>
-                  <Field label="Company Registration / ID">
-                    <div className="relative">
-                      <Input
-                        value={appointedForm.company_registration}
-                        onChange={(e) => setAppointedField("company_registration", e.target.value)}
-                        className={cn(INPUT_CLS, "pr-10")}
-                        placeholder="e.g. 1970/014526/07"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCompanyLookup}
-                        disabled={isLookingUp}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all"
-                        title="Auto-fill from registration"
-                      >
-                        {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                        ) : (
-                          <Search className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-                  </Field>
-                  <Field label="VAT Number">
-                    <Input
-                      value={appointedForm.vat_number}
-                      onChange={(e) => setAppointedField("vat_number", e.target.value)}
-                      className={INPUT_CLS}
-                      placeholder="e.g. 4123456789"
-                    />
-                  </Field>
-                  <Field label="Office Number">
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        value={appointedForm.office_number}
-                        onChange={(e) => setAppointedField("office_number", e.target.value)}
-                        className={cn(INPUT_CLS, "pl-9")}
-                        placeholder="+27 11 123 4567"
-                      />
-                    </div>
-                  </Field>
-                  <Field label="Role / Responsibility" colSpan>
-                    <Input
-                      value={appointedForm.role_as_per_appointment}
-                      onChange={(e) => setAppointedField("role_as_per_appointment", e.target.value)}
-                      className={INPUT_CLS}
-                      placeholder="e.g. Principal Architect"
-                    />
-                  </Field>
-                </div>
-
-                {/* Physical Address */}
-                <div>
-                  <p className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider mb-3">
-                    Physical Address
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    <Field label="Street" colSpan>
-                      <Input
-                        value={appointedForm.physical_address.street}
-                        onChange={(e) => setAppointedAddressField("physical_address", "street", e.target.value)}
-                        className={INPUT_CLS}
-                        placeholder="Building No., Street Name"
-                      />
-                    </Field>
-                    <Field label="City">
-                      <Input
-                        value={appointedForm.physical_address.city}
-                        onChange={(e) => setAppointedAddressField("physical_address", "city", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
-                    <Field label="Province">
-                      <Input
-                        value={appointedForm.physical_address.province}
-                        onChange={(e) => setAppointedAddressField("physical_address", "province", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
-                    <Field label="Postal Code">
-                      <Input
-                        value={appointedForm.physical_address.postal_code}
-                        onChange={(e) => setAppointedAddressField("physical_address", "postal_code", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
                   </div>
-                </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
+                    <select
+                      value={entry.company_type}
+                      onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select type...</option>
+                      {COMPANY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Professional Role</label>
+                    <select
+                      value={entry.position}
+                      onChange={(e) => updateInvite(entry.id, { position: e.target.value })}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select role...</option>
+                      {appRoles.map((r) => (
+                        <option key={r.code} value={r.code}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Contact Person Name</label>
+                    <Input
+                      value={entry.contact_name}
+                      onChange={(e) => updateInvite(entry.id, { contact_name: e.target.value })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. John Smith"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Email Address</label>
+                    <Input
+                      type="email"
+                      value={entry.email}
+                      onChange={(e) => updateInvite(entry.id, { email: e.target.value })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. john@firm.co.za"
+                    />
+                  </div>
 
-                {/* Postal Address */}
-                <div>
-                  <p className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider mb-3">
-                    Postal Address
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    <Field label="Street" colSpan>
-                      <Input
-                        value={appointedForm.postal_address.street}
-                        onChange={(e) => setAppointedAddressField("postal_address", "street", e.target.value)}
-                        className={INPUT_CLS}
-                        placeholder="Building No., Street Name"
-                      />
-                    </Field>
-                    <Field label="City">
-                      <Input
-                        value={appointedForm.postal_address.city}
-                        onChange={(e) => setAppointedAddressField("postal_address", "city", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
-                    <Field label="Province">
-                      <Input
-                        value={appointedForm.postal_address.province}
-                        onChange={(e) => setAppointedAddressField("postal_address", "province", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
-                    <Field label="Postal Code">
-                      <Input
-                        value={appointedForm.postal_address.postal_code}
-                        onChange={(e) => setAppointedAddressField("postal_address", "postal_code", e.target.value)}
-                        className={INPUT_CLS}
-                      />
-                    </Field>
+                  {/* Insurance Certificate */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Certificate</label>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-border bg-white text-sm text-muted-foreground cursor-pointer hover:bg-slate-50 transition-colors shrink-0">
+                        <Paperclip className="w-4 h-4" />
+                        <span>{entry.insurance_file ? "Replace file" : "Attach file"}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="hidden"
+                          onChange={(e) => updateInvite(entry.id, { insurance_file: e.target.files?.[0] ?? null })}
+                        />
+                      </label>
+                      {entry.insurance_file ? (
+                        <div className="flex items-center gap-2 flex-1 min-w-0 h-10 px-3 rounded-lg border border-border bg-slate-50">
+                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <span className="text-sm text-foreground truncate">{entry.insurance_file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateInvite(entry.id, { insurance_file: null })}
+                            className="ml-auto text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">PDF, JPG or PNG</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Insurance Expiry */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Expiry Date</label>
+                    <Input
+                      type="date"
+                      value={entry.insurance_expiry}
+                      onChange={(e) => updateInvite(entry.id, { insurance_expiry: e.target.value })}
+                      className={INPUT_CLS}
+                    />
                   </div>
                 </div>
               </div>
-            )}
+            ))}
+
+            {/* Add button */}
+            <button
+              type="button"
+              onClick={() =>
+                setAppointedInvites((prev) => [
+                  ...prev,
+                  { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "", insurance_file: null, insurance_expiry: "" },
+                ])
+              }
+              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+            </button>
           </div>
-        </SectionCard>
-      </form>
+        </div>
+
+      </div>
     </div>
   );
 };

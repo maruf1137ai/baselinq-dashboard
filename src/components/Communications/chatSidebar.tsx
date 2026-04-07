@@ -85,11 +85,9 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                   >
                     {/* Header Row: ID/Title and Status */}
                     <div className="flex justify-between items-start mb-1">
-                      {displayId ? (
-                        <span className="text-xs font-medium text-primary">
-                          {displayId}
-                        </span>
-                      ) : null}
+                      <span className="text-xs font-medium text-primary">
+                        {displayId || "--"}
+                      </span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${status === 'Done' ? 'bg-green-50 text-green-700' : 'bg-muted text-muted-foreground'
                         }`}>
                         {status}

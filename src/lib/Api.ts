@@ -208,6 +208,9 @@ export const inviteAppointedCompany = async (data: {
   contact_email: string;
   project_id: number | string;
   position?: string;
+  insurance_s3_key?: string;
+  insurance_file_name?: string;
+  insurance_expiry?: string;
 }) => {
   const res = await api.post("auth/invite-appointed-company/", data);
   return res.data;
@@ -222,6 +225,9 @@ export const getAppointedCompanies = async (projectId: string | number) => {
     status: string;
     contact_name: string;
     email: string;
+    insurance_file_name: string | null;
+    insurance_expiry: string | null;
+    insurance_url: string | null;
   }[];
 };
 

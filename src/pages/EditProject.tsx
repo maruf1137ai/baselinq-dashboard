@@ -69,6 +69,10 @@ interface FormState {
   project_number: string;
   description: string;
   location: string;
+  location_street: string;
+  location_city: string;
+  location_province: string;
+  location_postal: string;
   start_date: string;
   end_date: string;
   total_budget: string;
@@ -167,6 +171,10 @@ const DEFAULT_FORM: FormState = {
   project_number: "",
   description: "",
   location: "",
+  location_street: "",
+  location_city: "",
+  location_province: "",
+  location_postal: "",
   start_date: "",
   end_date: "",
   total_budget: "",
@@ -856,11 +864,16 @@ export default function EditProject() {
       return v.split("T")[0];
     };
 
+    const locParts = (p.location || "").split(",").map((s: string) => s.trim());
     setForm({
       name: p.name || "",
       project_number: p.project_number || p.projectNumber || "",
       description: p.description || "",
       location: p.location || "",
+      location_street: locParts[0] || "",
+      location_city: locParts[1] || "",
+      location_province: locParts[2] || "",
+      location_postal: locParts[3] || "",
       start_date: toDateStr(p.start_date || p.startDate),
       end_date: toDateStr(p.end_date || p.endDate),
       total_budget: budgetStr,
@@ -1201,7 +1214,8 @@ export default function EditProject() {
       status: "Active",
       contract_type: form.contract_type,
       total_budget: b,
-      location: form.location,
+      location: [form.location_street, form.location_city, form.location_province, form.location_postal]
+        .map(s => s.trim()).filter(Boolean).join(", ") || form.location || undefined,
       currency: form.currency,
       client_details: {
         company_name: clientForm.company_name,
@@ -1556,17 +1570,37 @@ export default function EditProject() {
 
                       {/* Location */}
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                          Project Location
-                        </label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin className="w-3.5 h-3.5 text-[#9ca3af]" />
+                          <label className="text-[13px] font-normal text-[#374151]">Project Location</label>
+                        </div>
+                        <div className="space-y-3">
                           <input
-                            className={inputCls(false, "pl-10")}
-                            placeholder="e.g. Cape Town, Western Cape"
-                            value={form.location}
-                            onChange={(e) => setField("location", e.target.value)}
+                            className={inputCls()}
+                            placeholder="Street / Area (e.g. 12 Main Street, Sandton)"
+                            value={form.location_street}
+                            onChange={(e) => setField("location_street", e.target.value)}
                           />
+                          <div className="grid grid-cols-3 gap-3">
+                            <input
+                              className={inputCls()}
+                              placeholder="City"
+                              value={form.location_city}
+                              onChange={(e) => setField("location_city", e.target.value)}
+                            />
+                            <input
+                              className={inputCls()}
+                              placeholder="Province"
+                              value={form.location_province}
+                              onChange={(e) => setField("location_province", e.target.value)}
+                            />
+                            <input
+                              className={inputCls()}
+                              placeholder="Postal Code"
+                              value={form.location_postal}
+                              onChange={(e) => setField("location_postal", e.target.value)}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

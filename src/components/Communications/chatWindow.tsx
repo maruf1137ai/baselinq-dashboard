@@ -380,8 +380,8 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     : `# ${channel.name}`;
 
   return (
-    <div>
-      <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3">
+    <div className="h-full flex flex-col">
+      <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3 flex-shrink-0">
         {/* Breadcrumb & Header */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
@@ -467,7 +467,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         )}
       </div>
 
-      <div className="bg-white border-r border-[#DEDEDE] h-[calc(100vh-275px)] relative overflow-hidden pb-[70px]">
+      <div className="bg-white border-r border-[#DEDEDE] flex-1 relative overflow-hidden">
         <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
           <div className="relative size-full">
             {/* Chat Messages */}
@@ -659,9 +659,10 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Search - Input Area */}
-        <div className="w-full flex flex-col gap-2 absolute bottom-2.5 left-0 px-5">
+      {/* Search - Input Area */}
+        <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
           {/* Attached Files Preview */}
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -767,7 +768,6 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             </button>
           </div>
         </div>
-      </div>
     </div >
   );
 };

@@ -8,7 +8,15 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard } from "lucide-react";
+import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { useNavigate } from "react-router-dom";
 
 function SectionCard({ title, subtitle, icon, children }: {
@@ -31,7 +39,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">{label}</label>
+      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">{label}</label>
       {children}
     </div>
   );
@@ -51,8 +59,10 @@ const AccountProfile = () => {
       phone_number: "", bio: "", address: "", city: "", state: "",
       postal_code: "", id_number: "", professional_body: "", professional_reg_number: "",
     },
+    role: "",
     insurance_document: { expiry_date: "" },
   });
+
 
   useEffect(() => {
     if (user) {
@@ -69,8 +79,10 @@ const AccountProfile = () => {
           professional_body: user.profile?.professional_body || "",
           professional_reg_number: user.profile?.professional_reg_number || "",
         },
+        role: user.role?.code?.toLowerCase() || "",
         insurance_document: { expiry_date: user.insurance_document?.expiry_date || "" },
       });
+
     }
   }, [user]);
 
@@ -139,11 +151,24 @@ const AccountProfile = () => {
         <SectionCard title="Professional Credentials" subtitle="Registrations, discipline, and insurance" icon={<Briefcase className="w-4 h-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Primary Discipline / Role">
-              <div className="flex items-center gap-2.5 px-3 h-10 bg-slate-100/50 rounded-lg text-sm text-foreground border border-border cursor-not-allowed">
-                <Briefcase className="w-3.5 h-3.5 text-primary" />
-                {user?.role?.name || "—"}
-              </div>
+              <Select
+                value={formData.role}
+                onValueChange={(val) => setFormData({ ...formData, role: val })}
+              >
+                <SelectTrigger className={INPUT_CLS}>
+                  <SelectValue placeholder="Select Discipline..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="architect">Architect</SelectItem>
+                  <SelectItem value="client">Client / Owner</SelectItem>
+                  <SelectItem value="cpm">Client Project Manager</SelectItem>
+                  <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
+                  <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
+                  <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
+
             <Field label="Professional Body">
               <Input value={formData.profile.professional_body} onChange={e => setFormData({ ...formData, profile: { ...formData.profile, professional_body: e.target.value } })} className={INPUT_CLS} placeholder="e.g. SACAP, ECSA, ASAQS" />
             </Field>
