@@ -15,10 +15,15 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import useFetch from '@/hooks/useFetch';
 
+export interface LinkItem {
+  type: string;
+  taskId: number;
+}
+
 interface LinkDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLink: (selectedIds: string[]) => void;
+  onLink: (items: LinkItem[]) => void;
   alreadyLinkedIds?: string[];
 }
 
@@ -58,6 +63,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
       .filter((item: any) => !DONE_STATUSES.includes(item.status || ''))
       .map((item: any) => ({
         id: `${item.taskType}-${String(item.taskId).padStart(3, '0')}`,
+        taskId: item.taskId,
         title: item.task?.subject || item.task?.title || item.task?.taskActivityName || '—',
         type: item.taskType || 'GI',
         status: item.status || 'Open',
@@ -83,8 +89,14 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
   };
 
   const handleLink = () => {
-    onLink(selectedIds);
-    toast.success(`${selectedIds.length} task${selectedIds.length > 1 ? 's' : ''} linked successfully.`);
+    const linkItems = selectedIds
+      .map(id => {
+        const task = tasks.find(t => t.id === id);
+        return task ? { type: task.type, taskId: task.taskId } : null;
+      })
+      .filter((item): item is LinkItem => item !== null);
+    onLink(linkItems);
+    toast.success(`${linkItems.length} task${linkItems.length > 1 ? 's' : ''} linked successfully.`);
     setSelectedIds([]);
     onClose();
   };
