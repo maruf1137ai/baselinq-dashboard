@@ -799,78 +799,82 @@ const SelectProject = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {projects.map((project: any) => {
-              const pId = String(project._id || project.id);
-              const isActive = selectedProjectId === pId;
-              const isDraft = project.status === "Draft" || project.status === "draft";
-              return (
-                <button
-                  key={pId}
-                  onClick={() => handleSelectProject(project)}
-                  className={cn(
-                    "group text-left border rounded-xl bg-white shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200",
-                    isActive ? "border-primary/40 ring-1 ring-primary/20" : "border-border"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
-                        <FolderOpen className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
-                        {project.location && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {project.location}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          {isDraft ? (
-                            <span className="text-[9px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
-                          ) : (
-                            <span className="text-[9px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {projects.map((project: any) => {
+                const pId = String(project._id || project.id);
+                const isActive = selectedProjectId === pId;
+                const isDraft = project.status === "Draft" || project.status === "draft";
+                return (
+                  <button
+                    key={pId}
+                    onClick={() => handleSelectProject(project)}
+                    className={cn(
+                      "group text-left border rounded-xl bg-white shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200",
+                      isActive ? "border-primary/40 ring-1 ring-primary/20" : "border-border"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
+                          <FolderOpen className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
+                          {project.location && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {project.location}
+                            </p>
                           )}
-                          {isActive && (
-                            <span className="text-[9px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
-                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            {isDraft ? (
+                              <span className="text-[9px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
+                            ) : (
+                              <span className="text-[9px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+                            )
+                            }
+                            {isActive && (
+                              <span className="text-[9px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-3 shrink-0">
-                      <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                        isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                      )}>
-                        {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                      <div className="flex flex-col items-end gap-3 shrink-0">
+                        <div className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                          isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                        )}>
+                          {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProjectToDelete(project);
+                            setShowDeleteDialog(true);
+                          }}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjectToDelete(project);
-                          setShowDeleteDialog(true);
-                        }}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               onClick={() => navigate("/create-project")}
-              className="group text-left border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-5 py-4 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200"
+              className="w-full group text-left border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-6 py-5 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Plus className="w-4 h-4 text-primary" />
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-normal text-foreground">Create New Project</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
+                  <p className="text-[15px] font-normal text-foreground">Create New Project</p>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
                 </div>
               </div>
             </button>
