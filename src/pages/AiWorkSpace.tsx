@@ -141,9 +141,10 @@ const AiWorkSpace = () => {
           sources: response.sources || [],
         };
         setMessages(prev => [...prev, aiMessage]);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Chat API error:', err);
-        toast.error('Failed to get AI response. Please try again.');
+        const backendMessage = err?.response?.data?.message;
+        toast.error(backendMessage || 'Failed to get AI response. Please try again.');
       } finally {
         setIsTyping(false);
       }

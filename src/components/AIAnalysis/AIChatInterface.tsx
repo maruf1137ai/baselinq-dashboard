@@ -146,8 +146,9 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err: any) {
       console.error("Chat API error:", err);
-      setError("Failed to get response from AI. Please try again.");
-      toast.error("AI Communication Error");
+      const backendMessage = err?.response?.data?.message;
+      setError(backendMessage || "Failed to get response from AI. Please try again.");
+      toast.error(backendMessage || "AI Communication Error");
 
       // Remove the optimistic user message if it failed? 
       // Or just leave it and show error.

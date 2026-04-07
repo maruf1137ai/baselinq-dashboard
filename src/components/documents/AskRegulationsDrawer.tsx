@@ -10,19 +10,21 @@ import {
   Send,
   Paperclip,
   ExternalLink,
-  CheckCircle2,
   Link2,
-  Download,
-  Share2,
   ChevronRight,
   FileText,
   MessageSquare,
   ArrowRight,
   Loader2,
+  Copy,
+  Check,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
 } from 'lucide-react';
 import AiIcon from '@/components/icons/AiIcon';
 import { cn } from '@/lib/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchData, postData } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -67,8 +69,11 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [dislikedIds, setDislikedIds] = useState<Set<string>>(new Set());
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
 
   const projectId = localStorage.getItem('selectedProjectId');
   const isProjectLevel = !documentId;
@@ -158,38 +163,12 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
       };
       setMessages(prev => [...prev, assistantMsg]);
     },
-    onError: () => {
-      toast.error('Failed to get AI response.');
+    onError: (err: any) => {
+      const backendMessage = err?.response?.data?.message;
+      toast.error(backendMessage || 'Failed to get AI response.');
     },
   });
 
-  // Create obligation from chat
-  const { mutate: createObligationFromChat } = useMutation({
-    mutationFn: (data: { documentId?: string; title: string }) =>
-      postData({ url: 'documents/chat/create-obligation/', data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['obligations'] });
-      toast.success('Obligation created from chat.');
-    },
-    onError: () => toast.error('Failed to create obligation.'),
-  });
-
-  // Export chat answer
-  const { mutate: exportAnswer } = useMutation({
-    mutationFn: (data: { question?: string; content: string; sources?: any[] }) =>
-      postData({ url: 'documents/chat/export/', data, config: { responseType: 'blob' } }),
-    onSuccess: (response) => {
-      const blob = new Blob([response], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = window.document.createElement('a');
-      a.href = url;
-      a.download = 'chat-export.md';
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Answer exported.');
-    },
-    onError: () => toast.error('Failed to export answer.'),
-  });
 
   const handleSend = (text: string = inputValue) => {
     if (!text.trim()) return;
@@ -205,9 +184,6 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
     setInputValue('');
     sendMessage(text);
   };
-
-  // Find the last assistant message for action buttons context
-  const getLastAssistantMessage = () => messages.filter(m => m.role === 'assistant').pop();
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -350,32 +326,52 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                     )}
 
                     {msg.role === 'assistant' && msg.hasActions && (
-                      <div className="mt-6 flex flex-wrap gap-2 pt-4 border-t border-gray-50">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-full hover:bg-emerald-50 hover:text-emerald-700 transition-all"
+                      <div className="mt-4 flex items-center gap-1 pt-3 border-t border-gray-50">
+                        <button
+                          title="Copy"
+                          className="p-1.5 rounded-md hover:bg-gray-100 transition-all"
                           onClick={() => {
-                            const title = msg.content.split('\n').find(l => l.trim())?.replace(/^#+\s*/, '').slice(0, 100) || 'Obligation from chat';
-                            createObligationFromChat({ documentId, title });
+                            navigator.clipboard.writeText(msg.content);
+                            setCopiedId(msg.id);
+                            setTimeout(() => setCopiedId(null), 3000);
                           }}
                         >
-                          <CheckCircle2 className="h-3 w-3" /> Create Obligation
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-full hover:bg-gray-50 transition-all"
-                          onClick={() => exportAnswer({
-                            content: msg.content,
-                            sources: msg.citations,
-                          })}
+                          {copiedId === msg.id
+                            ? <Check className="h-3.5 w-3.5 text-green-500" />
+                            : <Copy className="h-3.5 w-3.5 text-gray-400" />}
+                        </button>
+                        <button
+                          title="Helpful"
+                          className="p-1.5 rounded-md hover:bg-gray-100 transition-all"
+                          onClick={() => {
+                            setLikedIds(prev => { const s = new Set(prev); s.has(msg.id) ? s.delete(msg.id) : s.add(msg.id); return s; });
+                            setDislikedIds(prev => { const s = new Set(prev); s.delete(msg.id); return s; });
+                          }}
                         >
-                          <Download className="h-3 w-3" /> Export Answer
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-full hover:bg-gray-50 transition-all">
-                          <Share2 className="h-3 w-3" /> Share
-                        </Button>
+                          <ThumbsUp className={`h-3.5 w-3.5 ${likedIds.has(msg.id) ? 'text-green-500 fill-green-500' : 'text-gray-400'}`} />
+                        </button>
+                        <button
+                          title="Not helpful"
+                          className="p-1.5 rounded-md hover:bg-gray-100 transition-all"
+                          onClick={() => {
+                            setDislikedIds(prev => { const s = new Set(prev); s.has(msg.id) ? s.delete(msg.id) : s.add(msg.id); return s; });
+                            setLikedIds(prev => { const s = new Set(prev); s.delete(msg.id); return s; });
+                          }}
+                        >
+                          <ThumbsDown className={`h-3.5 w-3.5 ${dislikedIds.has(msg.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+                        </button>
+                        <button
+                          title="Regenerate"
+                          className="p-1.5 rounded-md hover:bg-gray-100 transition-all"
+                          onClick={() => {
+                            setRegeneratingId(msg.id);
+                            const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+                            if (lastUserMsg) handleSend(lastUserMsg.content);
+                            setTimeout(() => setRegeneratingId(null), 1000);
+                          }}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 text-gray-400 ${regeneratingId === msg.id ? 'animate-spin' : ''}`} />
+                        </button>
                       </div>
                     )}
                   </div>
