@@ -113,6 +113,7 @@ interface ClientErrors {
 
 interface AppointedFormState {
   company_name: string;
+  company_type: string;
   company_registration: string;
   vat_number: string;
   physical_address: AddressState;
@@ -128,6 +129,14 @@ interface TaskOrderState {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
+
+const COMPANY_TYPES = [
+  "Architectural", "Structural Engineering", "Civil Engineering",
+  "Mechanical Engineering", "Electrical Engineering", "Quantity Surveying",
+  "Project Management", "Construction Management", "Interior Design",
+  "Landscape Architecture", "Urban Planning", "Environmental Consulting",
+  "Legal & Compliance", "General Contractor", "Other",
+];
 
 const STEPS = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
@@ -179,6 +188,7 @@ const DEFAULT_CLIENT_FORM: ClientFormState = {
 
 const DEFAULT_APPOINTED_FORM: AppointedFormState = {
   company_name: "",
+  company_type: "",
   company_registration: "",
   vat_number: "",
   physical_address: { ...DEFAULT_ADDRESS },
@@ -1957,13 +1967,30 @@ export default function CreateProject() {
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Role / Responsibility</label>
-                                <input
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                                <select
                                   className={inputCls()}
-                                  placeholder="e.g. Principal Architect"
+                                  value={appointedForm.company_type}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, company_type: e.target.value }))}
+                                >
+                                  <option value="">Select type...</option>
+                                  {COMPANY_TYPES.map((t) => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
+                                <select
+                                  className={inputCls()}
                                   value={appointedForm.role_as_per_appointment}
                                   onChange={(e) => setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))}
-                                />
+                                >
+                                  <option value="">Select role...</option>
+                                  {appRoles.map((r) => (
+                                    <option key={r.code} value={r.code}>{r.name}</option>
+                                  ))}
+                                </select>
                               </div>
                             </div>
 

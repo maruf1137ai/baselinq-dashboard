@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRoles } from "@/hooks/useRoles";
+import { hasPermission } from "@/lib/roleUtils";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,6 @@ const COMPANY_TYPES = [
   "Legal & Compliance", "General Contractor", "Other",
 ];
 
-const CLIENT_ROLE_CODES = ["CLIENT", "OWNER", "CONTRACTOR"];
 
 const INPUT_CLS =
   "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
@@ -111,10 +111,9 @@ const AppointedCompanies = () => {
   const updateProjectMutation = useUpdateProject();
   const { data: userInfo } = useCurrentUser();
   const { roles: appRoles } = useRoles();
-  const isClientOrContractor = CLIENT_ROLE_CODES.includes(userInfo?.role?.code ?? "");
-
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { data: fetchedProject, isLoading } = useProject(selectedProjectId ?? undefined);
+  const isClientOrContractor = ["CLIENT", "OWNER", "CONTRACTOR", "CPM", "PM"].includes(fetchedProject?.roleName?.toUpperCase() || "");
 
   const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
@@ -122,10 +121,13 @@ const AppointedCompanies = () => {
 
   const [appointedForm, setAppointedForm] = useState({
     company_name: "",
+    company_type: "",
     company_registration: "",
     vat_number: "",
     office_number: "",
     role_as_per_appointment: "",
+    contact_name: "",
+    contact_email: "",
     physical_address: { street: "", city: "", province: "", postal_code: "" },
     postal_address: { street: "", city: "", province: "", postal_code: "" },
   });
@@ -139,10 +141,13 @@ const AppointedCompanies = () => {
     const acPostal = ac.postal_address || {};
     setAppointedForm({
       company_name: ac.company_name || "",
+      company_type: ac.company_type || "",
       company_registration: ac.company_registration || "",
       vat_number: ac.vat_number || "",
       office_number: ac.office_number || "",
       role_as_per_appointment: ac.role_as_per_appointment || "",
+      contact_name: ac.contact?.name || ac.contact_name || "",
+      contact_email: ac.contact?.email || ac.contact_email || "",
       physical_address: {
         street: typeof acPa === "string" ? acPa : acPa.street || "",
         city: typeof acPa === "string" ? "" : acPa.city || "",
@@ -207,7 +212,13 @@ const AppointedCompanies = () => {
     try {
       await updateProjectMutation.mutateAsync({
         id: selectedProjectId,
-        appointed_company: appointedForm,
+        appointed_company: {
+          ...appointedForm,
+          contact: {
+            name: appointedForm.contact_name,
+            email: appointedForm.contact_email
+          }
+        },
       } as any);
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
 
@@ -479,6 +490,18 @@ const AppointedCompanies = () => {
                       placeholder="e.g. 4123456789"
                     />
                   </Field>
+                  <Field label="Company Type">
+                    <select
+                      value={appointedForm.company_type}
+                      onChange={(e) => setAppointedField("company_type", e.target.value)}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select type...</option>
+                      {COMPANY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="Office Number">
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -490,14 +513,37 @@ const AppointedCompanies = () => {
                       />
                     </div>
                   </Field>
-                  <Field label="Role / Responsibility" colSpan>
-                    <Input
+                  <Field label="Professional Role">
+                    <select
                       value={appointedForm.role_as_per_appointment}
                       onChange={(e) => setAppointedField("role_as_per_appointment", e.target.value)}
-                      className={INPUT_CLS}
-                      placeholder="e.g. Principal Architect"
-                    />
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select role...</option>
+                      {appRoles.map((r) => (
+                        <option key={r.code} value={r.code}>{r.name}</option>
+                      ))}
+                    </select>
                   </Field>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2 border-t border-border/40 pt-4 mt-2">
+                    <Field label="Contact Person Name">
+                      <Input
+                        value={appointedForm.contact_name}
+                        onChange={(e) => setAppointedField("contact_name", e.target.value)}
+                        className={INPUT_CLS}
+                        placeholder="e.g. John Smith"
+                      />
+                    </Field>
+                    <Field label="Email Address">
+                      <Input
+                        type="email"
+                        value={appointedForm.contact_email}
+                        onChange={(e) => setAppointedField("contact_email", e.target.value)}
+                        className={INPUT_CLS}
+                        placeholder="e.g. john@firm.co.za"
+                      />
+                    </Field>
+                  </div>
                 </div>
 
                 {/* Physical Address */}

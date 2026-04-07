@@ -25,6 +25,13 @@ import {
   Plus,
   Check,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ── Reuse same shared UI as Organization.tsx ────────────────────────────────
 
@@ -104,6 +111,7 @@ const OnboardingDashboard = () => {
       vat_number: "",
       company_size: "",
     },
+    role: "",
     insurance_document: {
       expiry_date: "",
     },
@@ -131,6 +139,7 @@ const OnboardingDashboard = () => {
           vat_number: user.organization?.vat_number || "",
           company_size: user.organization?.company_size || "",
         },
+        role: user.role?.code?.toLowerCase() || "",
         insurance_document: {
           expiry_date: user.insurance_document?.expiry_date || "",
         },
@@ -176,9 +185,9 @@ const OnboardingDashboard = () => {
   }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "project",      label: "Select Project",    icon: <FolderOpen className="w-4 h-4" /> },
-    { key: "profile",      label: "Profile Details",   icon: <UserIcon className="w-4 h-4" /> },
-    { key: "organization", label: "Organization",      icon: <Building2 className="w-4 h-4" /> },
+    { key: "project", label: "Select Project", icon: <FolderOpen className="w-4 h-4" /> },
+    { key: "profile", label: "Profile Details", icon: <UserIcon className="w-4 h-4" /> },
+    { key: "organization", label: "Organization", icon: <Building2 className="w-4 h-4" /> },
   ];
 
   return (
@@ -377,11 +386,24 @@ const OnboardingDashboard = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Primary Discipline / Role">
-                  <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
-                    <Briefcase className="w-4 h-4 text-primary" />
-                    {user?.role?.name || "—"}
-                  </div>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(val) => setFormData({ ...formData, role: val })}
+                  >
+                    <SelectTrigger className={INPUT_CLS}>
+                      <SelectValue placeholder="Select Discipline..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="architect">Architect</SelectItem>
+                      <SelectItem value="client">Client / Owner</SelectItem>
+                      <SelectItem value="cpm">Client Project Manager</SelectItem>
+                      <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
+                      <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
+                      <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Field>
+
                 <Field label="Professional Body">
                   <Input
                     value={formData.profile.professional_body}

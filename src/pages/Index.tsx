@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS } from "@/lib/Api";
+import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, inviteClient, inviteAppointedCompany } from "@/lib/Api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProjectStatusCard } from '@/components/ProjectStatusCard';
@@ -27,15 +27,27 @@ import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
+import { hasPermission } from "@/lib/roleUtils";
 import { useNavigate } from "react-router-dom";
 import { useS3Upload } from "@/hooks/useS3Upload";
+import { useRoles } from "@/hooks/useRoles";
 
 const qInputCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10";
+const qSelectCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 appearance-none";
 const qTextareaCls = "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 min-h-[200px] leading-relaxed";
+
+const COMPANY_TYPES = [
+  "Architectural", "Structural Engineering", "Civil Engineering",
+  "Mechanical Engineering", "Electrical Engineering", "Quantity Surveying",
+  "Project Management", "Construction Management", "Interior Design",
+  "Landscape Architecture", "Urban Planning", "Environmental Consulting",
+  "Legal & Compliance", "General Contractor", "Other",
+];
 
 const Index = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { roles: appRoles } = useRoles();
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<any>(true);
@@ -48,7 +60,11 @@ const Index = () => {
     total_budget: "",
     location: "",
     start_date: "", end_date: "",
-    appointed_company_name: "", appointed_contact_name: "", appointed_contact_email: "",
+    appointed_company_name: "",
+    appointed_company_type: "",
+    appointed_contact_name: "",
+    appointed_contact_email: "",
+    appointed_position: "",
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,7 +89,18 @@ const Index = () => {
   const closeQuickFill = () => {
     setQuickFillOpen(false);
     setQuickFillSection(null);
-    setQuickForm({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "", location: "", start_date: "", end_date: "", appointed_company_name: "", appointed_contact_name: "", appointed_contact_email: "" });
+    setQuickForm({
+      brief: "",
+      company_name: "", client_name: "", client_email: "",
+      total_budget: "",
+      location: "",
+      start_date: "", end_date: "",
+      appointed_company_name: "",
+      appointed_company_type: "",
+      appointed_contact_name: "",
+      appointed_contact_email: "",
+      appointed_position: ""
+    });
     s3Upload.entries.forEach((e) => s3Upload.removeEntry(e.id));
   };
 
@@ -106,7 +133,12 @@ const Index = () => {
       if (missing.includes("Appointed Company") && quickForm.appointed_company_name.trim()) {
         payload.appointed_company = {
           company_name: quickForm.appointed_company_name.trim(),
-          contact: { name: quickForm.appointed_contact_name.trim(), email: quickForm.appointed_contact_email.trim() },
+          company_type: quickForm.appointed_company_type,
+          role_as_per_appointment: quickForm.appointed_position, // Match backend field name for main appointed company
+          contact: {
+            name: quickForm.appointed_contact_name.trim(),
+            email: quickForm.appointed_contact_email.trim()
+          },
         };
       }
 
@@ -131,6 +163,36 @@ const Index = () => {
 
       toast.success("Project updated successfully");
       queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("projects") });
+
+      // Send invitations if emails provided
+      if (missing.includes("Client Details") && quickForm.client_email.trim()) {
+        try {
+          await inviteClient({
+            client_name: quickForm.client_name.trim(),
+            client_email: quickForm.client_email.trim(),
+            project_id: projectId,
+          });
+          toast.success(`Client invite sent to ${quickForm.client_email}`);
+        } catch (err: any) {
+          toast.warning(`Project updated, but client invite failed: ${err?.response?.data?.error || err.message}`);
+        }
+      }
+
+      if (missing.includes("Appointed Company") && quickForm.appointed_contact_email.trim()) {
+        try {
+          await inviteAppointedCompany({
+            company_name: quickForm.appointed_company_name.trim(),
+            contact_name: quickForm.appointed_contact_name.trim(),
+            contact_email: quickForm.appointed_contact_email.trim(),
+            project_id: projectId,
+            position: quickForm.appointed_position || 'architect',
+          });
+          toast.success(`Appointed company invite sent to ${quickForm.appointed_contact_email}`);
+        } catch (err: any) {
+          toast.warning(`Project updated, but appointed company invite failed: ${err?.response?.data?.error || err.message}`);
+        }
+      }
+
       closeQuickFill();
     } catch {
       toast.error("Failed to update. Please try again.");
@@ -309,10 +371,10 @@ const Index = () => {
     const taskOrderBrief = project.taskOrderBrief || project.task_order_brief;
     const projectDocs = project.documents || project.attachments || [];
     const fields = [
-      { label: "Client Details", value: clientDetails },
-      { label: "Scope of Work", value: taskOrderBrief },
+      { label: "Client Details", value: (clientDetails?.company_name || clientDetails?.companyName) ? clientDetails : null },
+      { label: "Scope of Work", value: taskOrderBrief || null },
       { label: "Upload your Construction Project Contract", value: projectDocs.length > 0 ? "yes" : null },
-      { label: "Budget Allocation", value: (project.totalBudget ?? project.total_budget) != null ? "yes" : null },
+      { label: "Budget Allocation", value: Number((project.totalBudget ?? project.total_budget) || 0) > 0 ? "yes" : null },
       { label: "Location", value: project.location || null },
       { label: "Project Timeline", value: (project.startDate || project.start_date) && (project.endDate || project.end_date) ? "yes" : null },
       { label: "Appointed Company", value: (project.appointedCompany || project.appointed_company)?.company_name || null },
@@ -331,6 +393,7 @@ const Index = () => {
       return isDraft && !isSelected && !dismissedDrafts.includes(String(p._id || p.id));
     }
   );
+
 
   const showCompletionCard = (projectStats && projectStats.percentage < 100) || draftProjects.length > 0;
 
@@ -935,6 +998,40 @@ const Index = () => {
                         value={quickForm.appointed_company_name}
                         onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_name: e.target.value }))}
                       />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                        <div className="relative">
+                          <select
+                            className={qSelectCls}
+                            value={quickForm.appointed_company_type}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_type: e.target.value }))}
+                          >
+                            <option value="">Select type...</option>
+                            {COMPANY_TYPES.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
+                        <div className="relative">
+                          <select
+                            className={qSelectCls}
+                            value={quickForm.appointed_position}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_position: e.target.value }))}
+                          >
+                            <option value="">Select role...</option>
+                            {appRoles.map((r) => (
+                              <option key={r.code} value={r.code}>{r.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>

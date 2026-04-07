@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Category, LedgerEntry } from "../finance/costLadger";
 import { MoreHorizontal, ChevronsUpDown, Check } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { hasPermission, canManageMember } from "@/lib/roleUtils";
 import { cn } from "@/lib/utils";
 import { postData, deleteData, patchData } from "@/lib/Api";
 import { toast } from "sonner";
@@ -298,97 +300,17 @@ const ActionsCell = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Details for {entry.ref}</DialogTitle>
-            <DialogDescription>
-              Supplier: {entry.supplier} {entry.supplierShort}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 space-y-2 text-sm">
-            <p>
-              <strong>Date:</strong> {entry.date}
-            </p>
-            <p>
-              <strong>Period:</strong> {entry.period}
-            </p>
-            <p>
-              <strong>Net:</strong> {formatCurrency(entry.net)}
-            </p>
-            <p>
-              <strong>Total:</strong> {formatCurrency(entry.total)}
-            </p>
-            <p>
-              <strong>Category:</strong> {entry.category}
-            </p>
-            <p>
-              <strong>Linked VO/PC:</strong> {entry.linkedVO}
-            </p>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-foreground bg-white hover:bg-muted">
-                Close
-              </button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Entry</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the entry for invoice{" "}
-              <strong>{entry.ref}</strong> from{" "}
-              <strong>{entry.supplier}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-foreground bg-white hover:bg-muted">
-                Cancel
-              </button>
-            </DialogClose>
-            <button
-              onClick={() => {
-                onDelete(entry.id);
-                setShowDeleteDialog(false);
-              }}
-              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-red-600 hover:bg-red-700">
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
     </>
   );
 };
 
 interface CategoryBadgeProps {
-  category: Category | string;
+  category: string;
 }
 
-const categoryColors: Record<string, string> = {
-  [Category?.Electrical]:
-    "bg-orange-100 text-orange-800 border border-orange-200",
-  [Category?.Structure]: "bg-blue-100 text-blue-800 border border-blue-200",
-  [Category?.Plumbing]: "bg-green-100 text-green-800 border border-green-200",
-  [Category?.Concrete]: "bg-muted text-foreground border border-border",
-  [Category?.HVAC]: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-};
-
 const CategoryBadge: React.FC<CategoryBadgeProps> = ({ category }) => {
-  const colorClasses =
-    categoryColors[category as string] ||
-    "bg-muted text-foreground border border-border";
-
   return (
-    <span
-      className={`px-4 py-1 inline-flex text-sm leading-5 rounded-full ${colorClasses}`}>
+    <span className="px-4 py-1 inline-flex text-sm leading-5 rounded-full bg-muted text-foreground border border-border">
       {category}
     </span>
   );
@@ -400,66 +322,41 @@ export enum OrderStatus {
   Rejected = "Rejected",
 }
 
-const StatusBadge: React.FC<{ status: OrderStatus | string }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const baseClasses = "px-3 py-1 text-xs rounded-full inline-block";
 
-  if (status === OrderStatus.Active) {
+  if (status === "Active") {
     return (
-      <span
-        className={`${baseClasses} bg-green-50 text-green-700 border border-green-200`}>
+      <span className={`${baseClasses} bg-green-50 text-green-700 border border-green-200`}>
         {status}
       </span>
     );
   }
 
-  if (status === OrderStatus.Pending) {
+  if (status === "Pending") {
     return (
-      <span
-        className={`${baseClasses} bg-amber-50 text-amber-700 border border-amber-200`}>
+      <span className={`${baseClasses} bg-amber-50 text-amber-700 border border-amber-200`}>
         {status}
       </span>
     );
   }
 
-  // Default to Rejected style
   return (
-    <span
-      className={`${baseClasses} bg-red-50 text-red-700 border border-red-200`}>
+    <span className={`${baseClasses} bg-red-50 text-red-700 border border-red-200`}>
       {status}
     </span>
   );
 };
 
-// const data = [
-//   {
-//     id: 1,
-//     name: "John Smith",
-//     profile: "",
-//     email: "john.smith@westfield.com",
-//     role: "Project Manager",
-//     status: "Active",
-//     permissions: ["Finance", "Compliance", "Tasks", "Communication"],
-//   },
-//   {
-//     id: 2,
-//     name: "John Smith",
-//     profile: "",
-//     email: "john.smith@westfield.com",
-//     role: "Project Manager",
-//     status: "Active",
-//     permissions: ["Finance", "Compliance", "Tasks", "Communication"],
-//   },
-// ];
-
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   entries,
   onDeleteEntry,
 }) => {
-  const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
+  const [projectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
   const { data: projectUsersData, isLoading, refetch } = useFetch<ProjectUsersResponse>(
     `projects/${projectId}/team-members/`
   );
-  const { data: allUsersData, refetch: refetchAllUsers } = useFetch<UsersResponse>("auth/users/?page_size=500");
+  const { data: allUsersData } = useFetch<UsersResponse>("auth/users/?page_size=500");
   const { data: rolesData, refetch: refetchRoles } = useFetch<Role[]>("auth/roles/");
 
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -472,14 +369,18 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const allUsers = allUsersData?.results || [];
   const roles = rolesData || [];
 
-  // Filter out users who are already in the project
+  const { data: user } = useCurrentUser();
+  const currentMember = teamMembers.find((m) => String(m.user.id) === String(user?.id));
+  const myRole = currentMember?.roleName || user?.role?.code || "";
+  const canManageTeam = hasPermission(myRole, "manageTeam");
+
   const availableUsers = allUsers.filter(
-    (user) => !teamMembers.some((member: TeamMember) => member.user.id === user.id)
+    (u) => !teamMembers.some((member: TeamMember) => member.user.id === u.id)
   );
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [activeTab, setActiveTab] = useState("add"); // "add" or "invite"
+  const [activeTab, setActiveTab] = useState("add");
 
   const handleAddMember = async () => {
     if (activeTab === "add") {
@@ -550,15 +451,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           placeholder="Search team members"
         />
         <FilterBtns />
-        <Button
-          onClick={() => setShowAddMemberModal(true)}
-          className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
-          <span className="mr-1">+</span>
-          Add members
-        </Button>
+        {canManageTeam && (
+          <Button
+            onClick={() => setShowAddMemberModal(true)}
+            className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
+            <span className="mr-1">+</span>
+            Add members
+          </Button>
+        )}
       </div>
 
-      {/* Add Member Modal */}
       <Dialog open={showAddMemberModal} onOpenChange={setShowAddMemberModal}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader>
@@ -587,7 +489,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       {selectedUser ? (
                         <div className="flex items-center gap-2">
                           <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-normal">
-                            {selectedUser.name.charAt(0).toUpperCase()}
+                            {selectedUser.name?.charAt(0).toUpperCase()}
                           </div>
                           <span>{selectedUser.name}</span>
                         </div>
@@ -603,27 +505,27 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       <CommandList>
                         <CommandEmpty>No user found.</CommandEmpty>
                         <CommandGroup>
-                          {availableUsers.map((user) => {
-                            const isSelected = selectedUser?.id === user.id;
+                          {availableUsers.map((u) => {
+                            const isSelected = selectedUser?.id === u.id;
                             return (
                               <CommandItem
-                                key={user.id}
-                                value={user.name || user.email}
+                                key={u.id}
+                                value={u.name || u.email}
                                 onSelect={() => {
-                                  setSelectedUser(user);
+                                  setSelectedUser(u);
                                   setUserPopoverOpen(false);
                                 }}
                                 className="cursor-pointer">
                                 <div className="flex items-center justify-between w-full">
                                   <div className="flex items-center gap-3">
                                     <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal">
-                                      {(user.name || user.email).charAt(0).toUpperCase()}
+                                      {(u.name || u.email).charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex flex-col">
                                       <span className="text-sm font-normal text-foreground">
-                                        {user.name || user.email}
+                                        {u.name || u.email}
                                       </span>
-                                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                                      <span className="text-xs text-muted-foreground">{u.email}</span>
                                     </div>
                                   </div>
                                   <div
@@ -654,7 +556,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     type="text"
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-normal placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="e.g. John Doe"
                   />
                 </div>
@@ -667,7 +569,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-normal placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="e.g. john@example.com"
                   />
                 </div>
@@ -686,9 +588,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.code} value={role.code}>
-                      {role.name}
+                  {roles.map((r) => (
+                    <SelectItem key={r.code} value={r.code}>
+                      {r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -729,19 +631,21 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 {[
                   "Name",
                   "Email",
-                  "Role",
-                  "Permissions",
+                  "Project Role",
+                  "Discipline",
                   "Status",
-                  "Actions",
-                ].map((header) => (
-                  <th
-                    key={header}
-                    scope="col"
-                    className={`px-4 py-2.5 text-left text-xs text-muted-foreground font-normal ${header === "Actions" ? "text-center" : ""
-                      }`}>
-                    {header}
-                  </th>
-                ))}
+                  canManageTeam ? "Actions" : null,
+                ]
+                  .filter(Boolean)
+                  .map((header) => (
+                    <th
+                      key={header as string}
+                      scope="col"
+                      className={`px-4 py-2.5 text-left text-xs text-muted-foreground font-normal ${header === "Actions" ? "text-center" : ""
+                        }`}>
+                      {header}
+                    </th>
+                  ))}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-border">
@@ -749,19 +653,8 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 <tr
                   key={member._id}
                   className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground h">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     <div className="my-auto flex items-center gap-5 capitalize">
-                      {/* {member.user.profile ? (
-                        <img
-                          src={member.user.profile}
-                          alt=""
-                          className="h-8 w-8 rounded-full"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal uppercase">
-                          {member.user.name?.charAt(0) || "?"}
-                        </div>
-                      )} */}
                       <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal uppercase">
                         {member.user.name?.charAt(0) || "?"}
                       </div>
@@ -774,30 +667,35 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <td className="px-4 py-3 whitespace-nowrap text-sm uppercase">
                     <CategoryBadge category={member.roleName || "N/A"} />
                   </td>
-                  {/* Permissions column - commented out as data not available in API */}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm flex flex-wrap gap-1">
-                    {(member.user as any)?.permissions ? (member.user as any)?.permissions?.map((permission: string) => (
-                      <div key={permission} className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                        {permission}
-                      </div>
-                    )) : "N/A"}
-                    {/* <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                      Finance
-                    </div>
-                    <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                      Finance
-                    </div>
-                    <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                      Finance
-                    </div> */}
-                  </td>
-                  {/* Status column - commented out as data not available in API */}
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <StatusBadge status={(member.user as any)?.is_active ? "Active" : "Rejected"} />
+                    <div className="flex flex-wrap gap-1">
+                      {member.user?.role?.name ? (
+                        <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
+                          {member.user.role.name}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic text-xs">Unspecified</span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                    <ActionsCell member={member} projectId={projectId} onRefetch={refetch} onRefetchRoles={refetchRoles} roles={roles} />
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <StatusBadge status={member.user?.is_active ? "Active" : "Rejected"} />
                   </td>
+                  {canManageTeam && (
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                      {canManageMember(myRole, member.roleName) ? (
+                        <ActionsCell
+                          member={member}
+                          projectId={projectId}
+                          onRefetch={refetch}
+                          onRefetchRoles={refetchRoles}
+                          roles={roles}
+                        />
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

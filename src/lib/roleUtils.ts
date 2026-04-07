@@ -12,42 +12,42 @@
 
 // New role code → backbone permission code
 export const NEW_ROLE_PERMISSION_MAP: Record<string, string> = {
-  ADMIN:          "CLIENT",
-  PROJECT_ADMIN:  "CPM",
-  PRINCIPAL_PM:   "PM",
-  SUPER_USER:     "CPM",
-  QS:             "CQS",
-  STANDARD:       "SE",
-  STRUCT_ENG:     "SE",
-  MECH_ENG:       "SE",
-  ELEC_ENG:       "SE",
-  SPECIAL_USER:   "PM",
-  LIMITED:        "FOREMAN",
-  VIEWER:         "FOREMAN",
+  ADMIN: "CLIENT",
+  PROJECT_ADMIN: "CPM",
+  PRINCIPAL_PM: "PM",
+  SUPER_USER: "CPM",
+  QS: "CQS",
+  STANDARD: "SE",
+  STRUCT_ENG: "SE",
+  MECH_ENG: "SE",
+  ELEC_ENG: "SE",
+  SPECIAL_USER: "PM",
+  LIMITED: "FOREMAN",
+  VIEWER: "FOREMAN",
   LIMITED_VIEWER: "FOREMAN",
-  LEGAL:          "CONTRACTS_MGR",
+  LEGAL: "CONTRACTS_MGR",
 };
 
 // New role display names → code (so display-name lookups also resolve)
 export const NEW_ROLE_DISPLAY_TO_CODE: Record<string, string> = {
-  "Administrator":          "ADMIN",
-  "Admin":                  "ADMIN",
-  "Project Administrator":  "PROJECT_ADMIN",
-  "Project Admin":          "PROJECT_ADMIN",
-  "Principal / PM":         "PRINCIPAL_PM",
-  "Principal/PM":           "PRINCIPAL_PM",
-  "Super User":             "SUPER_USER",
-  "Quantity Surveyor":      "QS",
-  "Standard User":          "STANDARD",
-  "Standard":               "STANDARD",
-  "Structural Engineer":    "STRUCT_ENG",
-  "Mechanical Engineer":    "MECH_ENG",
-  "Electrical Engineer":    "ELEC_ENG",
-  "Special User":           "SPECIAL_USER",
-  "Limited User":           "LIMITED",
-  "Viewer":                 "VIEWER",
-  "Limited Viewer":         "LIMITED_VIEWER",
-  "Legal":                  "LEGAL",
+  "Administrator": "ADMIN",
+  "Admin": "ADMIN",
+  "Project Administrator": "PROJECT_ADMIN",
+  "Project Admin": "PROJECT_ADMIN",
+  "Principal / PM": "PRINCIPAL_PM",
+  "Principal/PM": "PRINCIPAL_PM",
+  "Super User": "SUPER_USER",
+  "Quantity Surveyor": "QS",
+  "Standard User": "STANDARD",
+  "Standard": "STANDARD",
+  "Structural Engineer": "STRUCT_ENG",
+  "Mechanical Engineer": "MECH_ENG",
+  "Electrical Engineer": "ELEC_ENG",
+  "Special User": "SPECIAL_USER",
+  "Limited User": "LIMITED",
+  "Viewer": "VIEWER",
+  "Limited Viewer": "LIMITED_VIEWER",
+  "Legal": "LEGAL",
 };
 
 /**
@@ -57,21 +57,21 @@ export const NEW_ROLE_DISPLAY_TO_CODE: Record<string, string> = {
  */
 export const PERMISSIONS = {
   // Page-level access
-  viewCompliance:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER"],
-  viewFinance:       ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
-  viewAudit:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  viewProgramme:     ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS"],
+  viewCompliance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER"],
+  viewFinance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  viewAudit: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS"],
   // Settings actions
-  editTeamRoles:     ["CLIENT", "CPM", "PM", "CM"],
-  manageTeam:        ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  manageSettings:    ["CLIENT", "CPM", "PM"],
-  viewBilling:       ["CLIENT", "CPM"],
-  manageIntegrations:["CLIENT", "CPM", "PM"],
+  editTeamRoles: ["CLIENT", "CPM", "PM", "CM"],
+  manageTeam: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  manageSettings: ["CLIENT", "CPM", "PM"],
+  viewBilling: ["CLIENT", "CPM"],
+  manageIntegrations: ["CLIENT", "CPM", "PM"],
   // Project actions
-  createProject:     ["CLIENT", "CPM", "PM", "CM"],
-  editProject:       ["CLIENT", "CPM", "PM", "CM"],
+  createProject: ["CLIENT", "CPM", "PM", "CM"],
+  editProject: ["CLIENT", "CPM", "PM", "CM"],
   // Task actions
-  createTasks:       ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
+  createTasks: ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -98,4 +98,53 @@ export function resolvePermissionCode(role: string): string {
 
   // Unknown / backbone roles pass through uppercased
   return upper;
+}
+
+/**
+ * Check if a role has permission for a specific feature.
+ * Automatically resolves new/display roles to backbone codes.
+ */
+export function hasPermission(role: string | undefined | null, permission: PermissionKey): boolean {
+  if (!role) return false;
+  const backbone = resolvePermissionCode(role);
+  return (PERMISSIONS[permission] as readonly string[]).includes(backbone);
+}
+
+// Hierarchy level (higher = more authority)
+export const ROLE_HIERARCHY: Record<string, number> = {
+  CLIENT: 100,
+  CPM: 90,
+  PM: 80,
+  CM: 60,
+  CONTRACTS_MGR: 55,
+  ARCH: 50,
+  CQS: 45,
+  CONS_PLANNER: 44,
+  PLANNER: 40,
+  SE: 30,
+  SS: 25,
+  FOREMAN: 20,
+};
+
+/**
+ * Check if an actor can manage (remove/edit) a target member based on roles.
+ * Mirrored from backend role_permissions.py.
+ */
+export function canManageMember(actorRole: string | undefined | null, targetRole: string | undefined | null): boolean {
+  if (!actorRole || !targetRole) return false;
+  const actor = resolvePermissionCode(actorRole);
+  const target = resolvePermissionCode(targetRole);
+
+  if (actor === "CLIENT") return true;
+  if (actor === "CPM") return target !== "CLIENT";
+
+  const actorLevel = ROLE_HIERARCHY[actor] || 0;
+  const targetLevel = ROLE_HIERARCHY[target] || 0;
+
+  // Specific rules for mid-level managers
+  if (actor === "PM") return target !== "CLIENT" && targetLevel < ROLE_HIERARCHY.PM;
+  if (actor === "CM") return ["SE", "SS", "FOREMAN"].includes(target);
+  if (actor === "CONTRACTS_MGR") return ["SE", "SS", "FOREMAN", "PLANNER"].includes(target);
+
+  return false;
 }

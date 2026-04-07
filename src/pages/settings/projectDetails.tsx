@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRoles } from "@/hooks/useRoles";
+import { hasPermission } from "@/lib/roleUtils";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -182,26 +183,30 @@ const ProjectDetails = () => {
   const queryClient = useQueryClient();
   const { data: projects = [] } = useProjects();
   const updateProjectMutation = useUpdateProject();
-  const { data: userInfo } = useCurrentUser();
+  const { data: currentUser } = useCurrentUser();
   const { roles: appRoles } = useRoles();
-  const isClientOrContractor = CLIENT_ROLE_CODES.includes(userInfo?.role?.code ?? "");
-
-  const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { data: fetchedProject, isLoading } = useProject(selectedProjectId ?? undefined);
 
-  const selectedProject =
-    fetchedProject ||
-    projects.find((project: any) => (project._id || project.id) == selectedProjectId);
+  const project = fetchedProject || projects.find((p: any) => (p._id || p.id) == selectedProjectId);
+  const myRole = project?.roleName || currentUser?.role?.code || "";
+  const canEditProject = hasPermission(myRole, "editProject");
+
+  const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+
+  const selectedProject = project;
 
   const [appointedForm, setAppointedForm] = useState({
     company_name: "",
+    company_type: "",
     company_registration: "",
     vat_number: "",
     office_number: "",
     role_as_per_appointment: "",
+    contact_name: "",
+    contact_email: "",
     physical_address: { street: "", city: "", province: "", postal_code: "" },
     postal_address: { street: "", city: "", province: "", postal_code: "" },
   });
@@ -243,10 +248,13 @@ const ProjectDetails = () => {
     const acPostal = ac.postal_address || {};
     setAppointedForm({
       company_name: ac.company_name || "",
+      company_type: ac.company_type || "",
       company_registration: ac.company_registration || "",
       vat_number: ac.vat_number || "",
       office_number: ac.office_number || "",
       role_as_per_appointment: ac.role_as_per_appointment || "",
+      contact_name: ac.contact?.name || ac.contact_name || "",
+      contact_email: ac.contact?.email || ac.contact_email || "",
       physical_address: {
         street: typeof acPa === "string" ? acPa : acPa.street || "",
         city: typeof acPa === "string" ? "" : acPa.city || "",
@@ -365,11 +373,17 @@ const ProjectDetails = () => {
         total_budget: formData.total_budget ? Number(formData.total_budget) : undefined,
         vat_rate: formData.vat_rate ? Number(formData.vat_rate) : undefined,
         retention_rate: formData.retention_rate ? Number(formData.retention_rate) : undefined,
-        appointed_company: appointedForm,
+        appointed_company: {
+          ...appointedForm,
+          contact: {
+            name: appointedForm.contact_name,
+            email: appointedForm.contact_email
+          }
+        },
       } as any);
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
 
-      if (isClientOrContractor) {
+      if (canEditProject) {
         const toInvite = appointedInvites.filter((e) => e.email.trim());
         await Promise.allSettled(
           toInvite.map((entry) =>
@@ -507,7 +521,7 @@ const ProjectDetails = () => {
             </div>
             <h2 className="text-2xl font-normal tracking-tight text-foreground">Project Details</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage your project information, client details, and scope of works.
+              Configure basic project info, financials and legal framework.
             </p>
           </div>
           <Button
@@ -520,7 +534,7 @@ const ProjectDetails = () => {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving..." : "Save Details"}
           </Button>
         </div>
 
@@ -912,11 +926,11 @@ const ProjectDetails = () => {
                     </div>
                   ))}
                 </div>
-                {isClientOrContractor && <div className="h-px bg-border/60 my-6" />}
+                {canEditProject && <div className="h-px bg-border/60 my-6" />}
               </div>
             )}
 
-            {isClientOrContractor ? (
+            {canEditProject ? (
               /* CLIENT / CONTRACTOR: invite form */
               <div className="space-y-4">
                 {appointedInvites.length > 0 && (
@@ -1047,6 +1061,18 @@ const ProjectDetails = () => {
                       placeholder="e.g. 4123456789"
                     />
                   </Field>
+                  <Field label="Company Type">
+                    <select
+                      value={appointedForm.company_type}
+                      onChange={(e) => setAppointedField("company_type", e.target.value)}
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select type...</option>
+                      {COMPANY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="Office Number">
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -1058,14 +1084,37 @@ const ProjectDetails = () => {
                       />
                     </div>
                   </Field>
-                  <Field label="Role / Responsibility" colSpan>
-                    <Input
+                  <Field label="Professional Role">
+                    <select
                       value={appointedForm.role_as_per_appointment}
                       onChange={(e) => setAppointedField("role_as_per_appointment", e.target.value)}
-                      className={INPUT_CLS}
-                      placeholder="e.g. Principal Architect"
-                    />
+                      className={SELECT_CLS}
+                    >
+                      <option value="">Select role...</option>
+                      {appRoles.map((r) => (
+                        <option key={r.code} value={r.code}>{r.name}</option>
+                      ))}
+                    </select>
                   </Field>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2 border-t border-border/40 pt-4 mt-2">
+                    <Field label="Contact Person Name">
+                      <Input
+                        value={appointedForm.contact_name}
+                        onChange={(e) => setAppointedField("contact_name", e.target.value)}
+                        className={INPUT_CLS}
+                        placeholder="e.g. John Smith"
+                      />
+                    </Field>
+                    <Field label="Email Address">
+                      <Input
+                        type="email"
+                        value={appointedForm.contact_email}
+                        onChange={(e) => setAppointedField("contact_email", e.target.value)}
+                        className={INPUT_CLS}
+                        placeholder="e.g. john@firm.co.za"
+                      />
+                    </Field>
+                  </div>
                 </div>
 
                 {/* Physical Address */}

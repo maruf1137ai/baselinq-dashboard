@@ -866,16 +866,14 @@ const SelectProject = () => {
 
             <button
               onClick={() => navigate("/create-project")}
-              className="w-full group text-left border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-6 py-5 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200"
+              className="w-full group border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-6 py-8 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center text-center"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Plus className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[15px] font-normal text-foreground">Create New Project</p>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
-                </div>
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mb-3 group-hover:scale-110 transition-transform duration-200">
+                <Plus className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-[15px] font-normal text-foreground">Create New Project</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
               </div>
             </button>
           </div>
