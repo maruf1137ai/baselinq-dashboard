@@ -547,8 +547,12 @@ const DocumentDetail = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {links.map((link: any) => (
-                    <div key={link._id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/20 hover:shadow-sm transition-all group/link">
-                      <div className="flex items-center gap-4 cursor-pointer flex-1">
+                    <div
+                      key={link._id}
+                      onClick={() => link.taskId && navigate(`/tasks/${link.taskId}`)}
+                      className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/20 hover:shadow-sm transition-all group/link cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
                         <div className="h-10 w-10 bg-gray-50 rounded-xl flex items-center justify-center group-hover/link:bg-primary/5 transition-colors">
                           <span className="text-primary text-xs font-normal">{link.itemType}</span>
                         </div>
@@ -559,7 +563,7 @@ const DocumentDetail = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setLinkToDelete({ id: link._id, ref: link.itemReference })}
+                          onClick={(e) => { e.stopPropagation(); setLinkToDelete({ id: link._id, ref: link.itemReference }); }}
                           className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -662,47 +666,33 @@ const DocumentDetail = () => {
                             onChange={(e) => setEditingObligation({ ...editingObligation, title: e.target.value })}
                             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                           />
-                          <div className="grid grid-cols-3 gap-3">
-                            <input
-                              type="date"
-                              value={editingObligation.due_date || ''}
-                              onChange={(e) => setEditingObligation({ ...editingObligation, due_date: e.target.value })}
-                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
-                            />
-                            <input
-                              value={editingObligation.responsible_role || ''}
-                              onChange={(e) => setEditingObligation({ ...editingObligation, responsible_role: e.target.value })}
-                              placeholder="Responsible role"
-                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
-                            />
+                          <div className="flex items-center justify-between">
                             <select
-                              value={editingObligation.status || 'pending'}
+                              value={editingObligation.status || 'Pending'}
                               onChange={(e) => setEditingObligation({ ...editingObligation, status: e.target.value })}
                               className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                             >
-                              <option value="pending">Pending</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="overdue">Overdue</option>
+                              <option value="Pending">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Completed">Completed</option>
+                              <option value="Overdue">Overdue</option>
                             </select>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => setEditingObligation(null)} className="h-7 text-xs">Cancel</Button>
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => updateObligation({
-                                obligationId: ob._id,
-                                data: {
-                                  title: editingObligation.title,
-                                  due_date: editingObligation.due_date || undefined,
-                                  responsible_role: editingObligation.responsible_role || undefined,
-                                  status: editingObligation.status,
-                                },
-                              })}
-                            >
-                              Save
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setEditingObligation(null)} className="h-7 text-xs">Cancel</Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => updateObligation({
+                                  obligationId: ob._id,
+                                  data: {
+                                    title: editingObligation.title,
+                                    status: editingObligation.status,
+                                  },
+                                })}
+                              >
+                                Save
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -710,24 +700,24 @@ const DocumentDetail = () => {
                           <div className="flex-1 space-y-1.5">
                             <p className="text-sm font-normal text-[#1A1A1A]">{ob.title}</p>
                             <div className="flex items-center gap-3 text-xs text-gray-500">
-                              {ob.due_date && (
+                              {ob.dueDate && (
                                 <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" /> Due: {ob.due_date}
+                                  <Calendar className="w-3 h-3" /> Due: {ob.dueDate}
                                 </span>
                               )}
-                              {ob.responsible_role && (
+                              {ob.responsibleRole && (
                                 <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" /> {ob.responsible_role}
+                                  <User className="w-3 h-3" /> {ob.responsibleRole}
                                 </span>
                               )}
                               <Badge className={cn(
                                 "text-xs font-normal border-0 px-2 py-0.5",
-                                ob.status === 'completed' ? "bg-emerald-50 text-emerald-700" :
-                                  ob.status === 'overdue' ? "bg-red-50 text-red-600" :
-                                    ob.status === 'in_progress' ? "bg-blue-50 text-blue-600" :
+                                ob.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
+                                  ob.status === 'Overdue' ? "bg-red-50 text-red-600" :
+                                    ob.status === 'In Progress' ? "bg-blue-50 text-blue-600" :
                                       "bg-gray-100 text-gray-500"
                               )}>
-                                {ob.status || 'pending'}
+                                {ob.status || 'Pending'}
                               </Badge>
                             </div>
                           </div>
@@ -915,6 +905,7 @@ const DocumentDetail = () => {
         onOpenChange={(open) => { if (!open) setPreviewFile(null); }}
         file={previewFile}
       />
+
     </DashboardLayout>
   );
 };
