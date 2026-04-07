@@ -111,20 +111,12 @@ export function DashboardSidebar() {
         clearUserRole();
       }
       // navigate("/create-project");
-    } else if (projects.length > 0 && (!selectedProjectId || !projects.some((p: any) => String(p._id || p.id) === selectedProjectId))) {
-      // Auto select first project if none selected or stored ID doesn't match any project
-      const firstProject = projects[0];
-      const firstId = firstProject._id || firstProject.id;
-      if (firstId) {
-        // console.log("Auto-selecting first project:", firstId);
-        setSelectedProjectId(String(firstId));
-        localStorage.setItem("selectedProjectId", String(firstId));
-
-        // Fetch user role for the first project
-        if (user?.id) {
-          fetchUserRole(String(firstId), user.id);
-        }
-      }
+    } else if (selectedProjectId && projects.length > 0 && !projects.some((p: any) => String(p._id || p.id) === selectedProjectId)) {
+      // Clear selection if it doesn't match any accessible project
+      localStorage.removeItem("selectedProjectId");
+      localStorage.removeItem("projectLocation");
+      setSelectedProjectId("");
+      clearUserRole();
     }
   }, [projects, isLoading, selectedProjectId, projectsData, user?.id]);
 
