@@ -34,7 +34,7 @@ const DataManagement = () => {
               </div>
               <div className="space-y-4 flex-1">
                 <div>
-                  <h3 className=" text-foreground text-sm font-medium mb-2">Export All Project Data</h3>
+                  <h3 className=" text-foreground text-sm font-normal mb-2">Export All Project Data</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     Download a complete backup of your project including tasks, documents, financials, and compliance records.
                   </p>
@@ -71,7 +71,7 @@ const DataManagement = () => {
               </div>
               <div className="space-y-4 flex-1">
                 <div>
-                  <h3 className="text-foreground text-sm font-medium mb-2">Import Data</h3>
+                  <h3 className="text-foreground text-sm font-normal mb-2">Import Data</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     Upload and import data from external sources. Supports CSV, JSON, and Excel formats.
                   </p>
@@ -97,7 +97,7 @@ const DataManagement = () => {
               </div>
               <div className="space-y-4 flex-1">
                 <div>
-                  <h3 className=" text-destructive text-sm font-medium mb-2">Archive Project</h3>
+                  <h3 className=" text-destructive text-sm font-normal mb-2">Archive Project</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     Permanently archive this project. This action cannot be undone. All data will be moved to read-only archive storage.
                   </p>

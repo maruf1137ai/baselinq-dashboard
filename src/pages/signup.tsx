@@ -3,6 +3,7 @@ import { Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
 import { cn } from "@/lib/utils";
+import AiIcon from "@/components/icons/AiIcon";
 
 const INPUT_CLS =
   "w-full px-4 py-3.5 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
@@ -64,7 +65,7 @@ const SignupPage = () => {
 
         {/* Headline */}
         <div className="flex-1 flex flex-col justify-center px-10">
-          <h1 className="text-[38px] font-bold text-white leading-tight tracking-tight">
+          <h1 className="text-[38px] text-white">
             Let's get you<br />started!
           </h1>
           <p className="text-[14px] text-white/50 mt-4 leading-relaxed max-w-xs">
@@ -74,10 +75,11 @@ const SignupPage = () => {
           {/* Info card */}
           <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-[#8081F6]" />
+              {/* <Sparkles className="w-5 h-5 text-[#8081F6]" /> */}
+              <AiIcon size={16} className="text-[#8081F6]" />
             </div>
             <p className="text-[13px] text-white/60 leading-snug">
-              AI-powered contracts, compliance, and document management — all in one workspace.
+              AI-powered contracts, compliance, and document management, all in one workspace.
             </p>
           </div>
         </div>

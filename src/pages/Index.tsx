@@ -12,7 +12,10 @@ import { ActivityFeedItem } from '@/components/ActivityFeedItem';
 import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check } from 'lucide-react';
+import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check, MapPin, CalendarIcon, Building2 } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import MyAction from '@/components/icons/MyAction';
@@ -39,7 +42,14 @@ const Index = () => {
 
   // Quick-fill modal state
   const [quickFillOpen, setQuickFillOpen] = useState(false);
-  const [quickForm, setQuickForm] = useState({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "" });
+  const [quickForm, setQuickForm] = useState({
+    brief: "",
+    company_name: "", client_name: "", client_email: "",
+    total_budget: "",
+    location: "",
+    start_date: "", end_date: "",
+    appointed_company_name: "", appointed_contact_name: "", appointed_contact_email: "",
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,10 +67,13 @@ const Index = () => {
     });
   }, [s3Upload]);
 
-  const openQuickFill = () => setQuickFillOpen(true);
+  const [quickFillSection, setQuickFillSection] = useState<string | null>(null);
+  const openQuickFill = () => { setQuickFillSection(null); setQuickFillOpen(true); };
+  const openQuickFillFor = (section: string) => { setQuickFillSection(section); setQuickFillOpen(true); };
   const closeQuickFill = () => {
     setQuickFillOpen(false);
-    setQuickForm({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "" });
+    setQuickFillSection(null);
+    setQuickForm({ brief: "", company_name: "", client_name: "", client_email: "", total_budget: "", location: "", start_date: "", end_date: "", appointed_company_name: "", appointed_contact_name: "", appointed_contact_email: "" });
     s3Upload.entries.forEach((e) => s3Upload.removeEntry(e.id));
   };
 
@@ -83,6 +96,20 @@ const Index = () => {
         if (!num || num <= 0) { toast.error("Please enter a valid budget amount"); setIsSaving(false); return; }
         payload.total_budget = num;
       }
+      if (missing.includes("Location") && quickForm.location.trim()) {
+        payload.location = quickForm.location.trim();
+      }
+      if (missing.includes("Project Timeline") && quickForm.start_date && quickForm.end_date) {
+        payload.start_date = quickForm.start_date;
+        payload.end_date = quickForm.end_date;
+      }
+      if (missing.includes("Appointed Company") && quickForm.appointed_company_name.trim()) {
+        payload.appointed_company = {
+          company_name: quickForm.appointed_company_name.trim(),
+          contact: { name: quickForm.appointed_contact_name.trim(), email: quickForm.appointed_contact_email.trim() },
+        };
+      }
+
       if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0) {
         toast.error("Please fill in at least one field");
         setIsSaving(false);
@@ -284,8 +311,11 @@ const Index = () => {
     const fields = [
       { label: "Client Details", value: clientDetails },
       { label: "Scope of Work", value: taskOrderBrief },
-      { label: "Documents", value: projectDocs.length > 0 ? "yes" : null },
+      { label: "Upload your Construction Project Contract", value: projectDocs.length > 0 ? "yes" : null },
       { label: "Budget Allocation", value: (project.totalBudget ?? project.total_budget) != null ? "yes" : null },
+      { label: "Location", value: project.location || null },
+      { label: "Project Timeline", value: (project.startDate || project.start_date) && (project.endDate || project.end_date) ? "yes" : null },
+      { label: "Appointed Company", value: (project.appointedCompany || project.appointed_company)?.company_name || null },
     ];
     const filledCount = fields.filter(f => !!f.value).length;
     const totalCount = fields.length;
@@ -340,14 +370,17 @@ const Index = () => {
                     "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-[#f0edff]", iconColor: "text-[#6c5ce7]", description: "Describe the full construction scope." },
                     "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-[#eef2ff]", iconColor: "text-[#6c5ce7]", description: "Add client company and contact info." },
                     "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-[#f0fdf4]", iconColor: "text-[#16a34a]", description: "Set the total project budget." },
-                    "Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
+                    "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
+                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-[#f0f9ff]", iconColor: "text-[#0284c7]", description: "Add the project site address or location." },
+                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-[#fdf4ff]", iconColor: "text-[#9333ea]", description: "Set the project start and end dates." },
+                    "Appointed Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: "Add the appointed professional firm details." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
                   return (
                     <button
                       key={item}
-                      onClick={() => openQuickFill()}
+                      onClick={() => openQuickFillFor(item)}
                       className="group text-left bg-slate-50 border border-[#e2e5ea] rounded-xl px-4 py-3.5 hover:border-primary/40 hover:bg-white hover:shadow-sm transition-all duration-200"
                     >
                       <div className="flex items-center gap-3">
@@ -682,7 +715,7 @@ const Index = () => {
           <DialogContent className="sm:max-w-[680px] w-full bg-white rounded-2xl p-0 overflow-hidden">
             <DialogHeader className="px-8 pt-7 pb-5 border-b border-[#e2e5ea]">
               <DialogTitle className="text-[16px] font-normal text-[#111827]">
-                Complete Project Setup
+                {quickFillSection ?? "Complete Project Setup"}
               </DialogTitle>
               <p className="text-[13px] text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
             </DialogHeader>
@@ -690,7 +723,7 @@ const Index = () => {
             <div className="px-8 py-6 space-y-4 max-h-[72vh] overflow-y-auto">
 
               {/* ── Scope of Work card ── */}
-              {projectStats.missing.includes("Scope of Work") && (
+              {(quickFillSection === null || quickFillSection === "Scope of Work") && projectStats.missing.includes("Scope of Work") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
@@ -713,7 +746,7 @@ const Index = () => {
               )}
 
               {/* ── Client Details card ── */}
-              {projectStats.missing.includes("Client Details") && (
+              {(quickFillSection === null || quickFillSection === "Client Details") && projectStats.missing.includes("Client Details") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
@@ -762,7 +795,7 @@ const Index = () => {
               )}
 
               {/* ── Budget Allocation card ── */}
-              {projectStats.missing.includes("Budget Allocation") && (
+              {(quickFillSection === null || quickFillSection === "Budget Allocation") && projectStats.missing.includes("Budget Allocation") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center shrink-0">
@@ -795,15 +828,148 @@ const Index = () => {
                 </div>
               )}
 
+              {/* ── Location card ── */}
+              {(quickFillSection === null || quickFillSection === "Location") && projectStats.missing.includes("Location") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#f0f9ff] flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4 text-[#0284c7]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Location</p>
+                      <p className="text-[11px] text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <input
+                      className={qInputCls}
+                      placeholder="e.g. 12 Main Street, Cape Town, 8001"
+                      value={quickForm.location}
+                      onChange={(e) => setQuickForm((v) => ({ ...v, location: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Project Timeline card ── */}
+              {(quickFillSection === null || quickFillSection === "Project Timeline") && projectStats.missing.includes("Project Timeline") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#fdf4ff] flex items-center justify-center shrink-0">
+                      <CalendarIcon className="w-4 h-4 text-[#9333ea]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Project Timeline</p>
+                      <p className="text-[11px] text-[#9ca3af]">Start and end dates — used for scheduling and contract periods</p>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
+                              <span className={quickForm.start_date ? "text-[#111827]" : "text-gray-400"}>
+                                {quickForm.start_date ? format(new Date(quickForm.start_date), "dd MMM yyyy") : "Pick a date"}
+                              </span>
+                              <CalendarIcon className="w-4 h-4 text-[#9ca3af] shrink-0" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={quickForm.start_date ? new Date(quickForm.start_date) : undefined}
+                              onSelect={(date) => setQuickForm((v) => ({ ...v, start_date: date ? format(date, "yyyy-MM-dd") : "" }))}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">End Date <span className="text-red-500">*</span></label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
+                              <span className={quickForm.end_date ? "text-[#111827]" : "text-gray-400"}>
+                                {quickForm.end_date ? format(new Date(quickForm.end_date), "dd MMM yyyy") : "Pick a date"}
+                              </span>
+                              <CalendarIcon className="w-4 h-4 text-[#9ca3af] shrink-0" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={quickForm.end_date ? new Date(quickForm.end_date) : undefined}
+                              onSelect={(date) => setQuickForm((v) => ({ ...v, end_date: date ? format(date, "yyyy-MM-dd") : "" }))}
+                              disabled={(date) => quickForm.start_date ? date < new Date(quickForm.start_date) : false}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Appointed Company card ── */}
+              {/* ── Appointed Company card ── */}
+              {(quickFillSection === null || quickFillSection === "Appointed Company") && projectStats.missing.includes("Appointed Company") && (
+                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                    <div className="w-8 h-8 rounded-lg bg-[#fefce8] flex items-center justify-center shrink-0">
+                      <Building2 className="w-4 h-4 text-[#ca8a04]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-normal text-[#111827]">Appointed Company</p>
+                      <p className="text-[11px] text-[#9ca3af]">The professional firm appointed on this project</p>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
+                      <input
+                        className={qInputCls}
+                        placeholder="e.g. Smith Architects (Pty) Ltd"
+                        value={quickForm.appointed_company_name}
+                        onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                        <input
+                          className={qInputCls}
+                          placeholder="Full name"
+                          value={quickForm.appointed_contact_name}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                        <input
+                          type="email"
+                          className={qInputCls}
+                          placeholder="contact@firm.com"
+                          value={quickForm.appointed_contact_email}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_email: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── Documents card ── */}
-              {projectStats.missing.includes("Documents") && (
+              {(quickFillSection === null || quickFillSection === "Upload your Construction Project Contract") && projectStats.missing.includes("Upload your Construction Project Contract") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
                       <CloudUpload className="w-4 h-4 text-[#ea580c]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Documents</p>
+                      <p className="text-[13px] font-normal text-[#111827]">Upload your Construction Project Contract</p>
                       <p className="text-[11px] text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
                     </div>
                   </div>
@@ -876,7 +1042,7 @@ const Index = () => {
                 Cancel
               </button>
               <Button
-                onClick={() => submitQuickFill(projectStats.missing)}
+                onClick={() => submitQuickFill(quickFillSection ? [quickFillSection] : projectStats.missing)}
                 disabled={isSaving}
                 className="h-10 px-6 bg-[#6c5ce7] text-white text-[13px] rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal"
               >

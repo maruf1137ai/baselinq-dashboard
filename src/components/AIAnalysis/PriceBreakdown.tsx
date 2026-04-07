@@ -60,11 +60,11 @@ export const PriceBreakdown = ({ priceData, visibleSections, startSelector }: { 
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground mb-2 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          strong: ({ children }) => <strong className="font-normal">{children}</strong>,
           ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2 text-sm text-foreground">{children}</ul>,
           ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2 text-sm text-foreground">{children}</ol>,
           li: ({ children }) => <li className="leading-relaxed text-sm">{children}</li>,
-          h3: ({ children }) => <h3 className="text-sm font-bold mb-2 text-foreground">{children}</h3>,
+          h3: ({ children }) => <h3 className="text-sm font-normal mb-2 text-foreground">{children}</h3>,
           hr: () => <hr className="my-3 border-border" />,
           table: ({ children }) => <table className="text-sm w-full my-2">{children}</table>,
           thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,

@@ -20,6 +20,7 @@ import {
   Bell,
   Database,
   CircleCheckBig,
+  Building2,
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
@@ -32,6 +33,12 @@ const navItems = [
         title: "Team Management",
         url: "/settings",
         icon: <Users className="h-4 w-4 text-current" />,
+      },
+      {
+        id: 10,
+        title: "Appointed Companies",
+        url: "/settings/appointed-companies",
+        icon: <Building2 className="h-4 w-4 text-current" />,
       },
       {
         id: 2,

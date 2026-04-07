@@ -896,8 +896,8 @@ export default function CreateProject() {
         }
       }
 
-      // 2. Pre-populate Appointed details — only if user has an organization
-      if (!appointedForm.company_name) {
+      // 2. Pre-populate Appointed details — only if user is NOT a client/owner/contractor
+      if (!isClientOrContractor && !appointedForm.company_name) {
         const org = user.organization;
         const profile = user.profile;
 

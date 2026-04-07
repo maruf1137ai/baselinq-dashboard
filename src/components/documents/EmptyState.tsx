@@ -57,13 +57,13 @@ export const DocumentEmptyState: React.FC<EmptyStateProps> = ({ type, onAction, 
           <div className="h-10 w-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 mb-2">
             <Link2 className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Linking</span>
+          <span className="text-xs font-normal text-gray-400 uppercase tracking-widest">Linking</span>
         </div>
         <div className="flex flex-col items-center">
           <div className="h-10 w-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 mb-2">
             <FileSearch className="h-5 w-5" />
           </div>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Compliance</span>
+          <span className="text-xs font-normal text-gray-400 uppercase tracking-widest">Compliance</span>
         </div>
       </div>
     </div>

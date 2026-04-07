@@ -102,17 +102,7 @@ const AccountProfile = () => {
             <p className="text-sm text-muted-foreground mt-1">Your personal identity, contact info, and professional credentials.</p>
           </div>
           <div className="flex items-center gap-3">
-            {localStorage.getItem("selectedProjectId") && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="h-9 px-4 rounded-lg text-muted-foreground hover:text-foreground font-normal text-sm flex items-center gap-2 border-border shadow-none"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                Dashboard
-              </Button>
-            )}
+
             <Button type="submit" disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {isSaving ? "Saving..." : "Save Changes"}

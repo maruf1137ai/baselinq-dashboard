@@ -30,6 +30,7 @@ import Integrations from "./pages/settings/integrations";
 import Notifications from "./pages/settings/notifications";
 import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
+import AppointedCompanies from "./pages/settings/AppointedCompanies";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
@@ -164,6 +165,7 @@ const App = () => (
             </ProtectedRoute>
           }>
             <Route index element={<TeamManagement />} />
+            <Route path="appointed-companies" element={<AppointedCompanies />} />
             <Route path="project-details" element={<ProjectDetails />} />
             <Route path="site" element={<Site />} />
             <Route path="notifications" element={<Notifications />} />

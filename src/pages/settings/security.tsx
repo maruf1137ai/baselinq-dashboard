@@ -25,7 +25,7 @@ const Security = () => {
           <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center mb-3">
             <Shield className="w-4 h-4 text-muted-foreground" />
           </div>
-          <h3 className="text-sm font-medium text-foreground mb-1">Password</h3>
+          <h3 className="text-sm font-normal text-foreground mb-1">Password</h3>
           <p className="text-xs text-muted-foreground mb-3">Last updated 45 days ago</p>
           <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg">Change Password</Button>
         </div>
@@ -34,7 +34,7 @@ const Security = () => {
           <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center mb-3">
             <Smartphone className="w-4 h-4 text-muted-foreground" />
           </div>
-          <h3 className="text-sm font-medium text-foreground mb-1">2FA Status</h3>
+          <h3 className="text-sm font-normal text-foreground mb-1">2FA Status</h3>
           <p className="text-xs text-muted-foreground mb-3">Not enabled</p>
           <Button size="sm" className="h-8 text-xs rounded-lg" onClick={() => setIsTwoFactorModalOpen(true)}>Enable 2FA</Button>
         </div>
@@ -43,14 +43,14 @@ const Security = () => {
           <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center mb-3">
             <Globe className="w-4 h-4 text-muted-foreground" />
           </div>
-          <h3 className="text-sm font-medium text-foreground mb-1">Active Sessions</h3>
+          <h3 className="text-sm font-normal text-foreground mb-1">Active Sessions</h3>
           <p className="text-xs text-muted-foreground">3 sessions</p>
         </div>
       </div>
 
       <div className="bg-white rounded-lg border border-border overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <span className="text-sm font-medium text-foreground">Active Sessions</span>
+          <span className="text-sm font-normal text-foreground">Active Sessions</span>
         </div>
         <div className="divide-y divide-border">
           {[

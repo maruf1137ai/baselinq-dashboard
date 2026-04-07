@@ -205,112 +205,98 @@ export default function AcceptAppointedInvitation() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
+    <div className="flex h-screen overflow-hidden bg-[#f5f5f7]">
 
       {/* ══════════════════════════════ LEFT SIDEBAR ══════════════════════ */}
-      <aside className="hidden lg:flex w-[272px] bg-sidebar border-r border-[#ededed] flex-col h-full shrink-0">
+      <aside className="hidden lg:flex w-[45%] shrink-0 flex-col h-full"
+        style={{ background: "linear-gradient(145deg, #1a1c3d 0%, #11132d 100%)" }}>
 
         {/* Logo */}
-        <div className="px-6 pt-6 pb-5 border-b border-[#f3f4f6]">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
+        <div className="px-10 pt-10">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
+            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
           </div>
         </div>
 
-        {/* Heading */}
-        <div className="px-6 pt-5 pb-3">
-          <p className="text-[17px] text-[#101828] leading-tight font-medium">
-            {info?.position ? info.position.replace('_', ' ').split(' ').map((s: string) => s.charAt(0).toUpperCase() + s.substring(1)).join(' ') : "Appointed Member"}
+        {/* Content area */}
+        <div className="flex-1 flex flex-col justify-center px-10">
+          <h1 className="text-[36px] font-normal text-white leading-tight tracking-tight">
+            Join the project.
+          </h1>
+          <p className="text-[14px] text-white/50 mt-3 leading-relaxed max-w-xs">
+            You've been invited to {info?.project_name || "a project"} on Baselinq. Complete your workspace setup to get started.
           </p>
-          <p className="text-[12px] text-[#9ca3af] mt-1 truncate max-w-full" title={info?.project_name}>
-            For {info?.project_name || "Project Setup"}
-          </p>
-        </div>
 
-        {/* Stepper */}
-        <nav className="px-4 pt-1 flex-1 overflow-y-auto">
-          {STEPS.map((s, i) => {
-            const done = step > s.id;
-            const active = step === s.id;
-            return (
-              <React.Fragment key={s.id}>
-                <div className={cn(
-                  "relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-                  active ? "bg-[#f0edff]" : "hover:bg-gray-50/70"
-                )}>
+          <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-[#8081F6]" />
+            </div>
+            <div>
+              <p className="text-[13px] text-white/80 font-medium">Invited by {info?.invited_by || "a team member"}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">{info?.position?.replace('_', ' ') || "Project Member"}</p>
+            </div>
+          </div>
+
+          {/* Stepper (Dark Version) */}
+          <nav className="mt-10 space-y-1">
+            {STEPS.map((s, i) => {
+              const done = step > s.id;
+              const active = step === s.id;
+              return (
+                <div key={s.id} className="flex items-center gap-3.5">
                   <div className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 text-[11px]",
-                    done ? "bg-[#8081F6] text-white shadow-sm shadow-[#8081F6]/30"
-                      : active ? "bg-[#8081F6] text-white shadow-sm shadow-[#8081F6]/30"
-                        : "bg-[#f3f4f6] text-[#9ca3af]"
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-all duration-300",
+                    done ? "bg-[#8081F6] text-white" : active ? "bg-[#8081F6] text-white shadow-lg" : "bg-white/5 text-white/20 border border-white/10"
                   )}>
-                    {done ? <Check className="w-3.5 h-3.5" /> : s.id}
+                    {done ? <Check className="w-3 h-3" /> : s.id}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className={cn(
-                      "text-[13px] leading-tight transition-colors",
-                      done ? "text-[#374151]" : active ? "text-[#101828]" : "text-[#9ca3af]"
+                  <div className="flex flex-col">
+                    <span className={cn(
+                      "text-[13px] transition-colors",
+                      done ? "text-white/60" : active ? "text-white" : "text-white/20"
                     )}>
                       {s.label}
-                    </p>
-                    <p className={cn(
-                      "text-[11px] mt-0.5 transition-colors",
-                      done || active ? "text-[#9ca3af]" : "text-[#d1d5db]"
-                    )}>
-                      {s.description}
-                    </p>
+                    </span>
                   </div>
-                  {active && <ChevronRight className="w-3.5 h-3.5 text-[#8081F6] shrink-0" />}
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className="flex items-center" style={{ marginLeft: "22px", height: "14px" }}>
-                    <div
-                      style={{
-                        width: "2px",
-                        height: "100%",
-                        background: done ? "#8081F6" : "#e5e7eb",
-                        borderRadius: "2px",
-                        transition: "background 0.3s",
-                      }}
-                    />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </nav>
-
-        {/* Invitation info card */}
-        <div className="px-4 pb-5 mt-auto border-t border-[#f3f4f6] pt-4">
-          <p className="text-[10px] text-[#9ca3af] uppercase tracking-widest mb-2">Your Invitation</p>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-3.5 h-3.5 text-[#6b7280] shrink-0" />
-              <p className="text-[12px] text-[#374151] truncate">{info.project_name}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="w-3.5 h-3.5 text-[#6b7280] shrink-0" />
-              <p className="text-[12px] text-[#6b7280]">Invited by {info.invited_by}</p>
-            </div>
-          </div>
+              );
+            })}
+          </nav>
         </div>
 
+        {/* Bottom */}
+        <div className="px-10 pb-10">
+          <div className="border-t border-white/10 pt-6 space-y-3">
+            <p className="text-[13px] text-white/50">
+              Already have an account?{" "}
+              <button onClick={() => navigate("/login")} className="text-[#8081F6] hover:underline">
+                Sign in
+              </button>
+            </p>
+            <p className="text-[11px] text-white/25 leading-relaxed max-w-xs">
+              By joining this project you agree to our{" "}
+              <span className="underline cursor-pointer hover:text-white/40 transition-colors">Terms of Service</span>
+              {" "}and{" "}
+              <span className="underline cursor-pointer hover:text-white/40 transition-colors">Privacy Policy</span>.
+            </p>
+          </div>
+        </div>
       </aside>
 
       {/* ══════════════════════════════ RIGHT PANEL ═══════════════════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#fafafa]">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-[#f5f5f7]">
 
         {/* Top bar */}
         <div className="flex items-center justify-between px-8 pt-5 pb-3 shrink-0">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="h-7 w-7 bg-[#121212] rounded-[8px] flex items-center justify-center">
+          <div className="lg:hidden flex items-center gap-2.5">
+            <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[13px] text-[#121212] tracking-tight">baselinq</span>
+            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0edff] border border-[#ddd9ff]">
@@ -335,10 +321,10 @@ export default function AcceptAppointedInvitation() {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto flex flex-col items-center px-6 py-6">
-          <div className="w-full max-w-2xl my-auto">
+        <div className="flex-1 overflow-y-auto flex flex-col items-center px-8 py-12">
+          <div className="w-full max-w-xl my-auto">
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[24px] shadow-sm border border-[#ededed] overflow-hidden">
 
               {/* Progress bar across top */}
               <div className="flex h-[3px]">
@@ -354,9 +340,9 @@ export default function AcceptAppointedInvitation() {
               <div className="p-8">
 
                 {/* Step heading */}
-                <div className="mb-6">
-                  <h2 className="text-[20px] text-[#101828]">{STEPS[step - 1]?.label}</h2>
-                  <p className="text-[13px] text-[#6b7280] mt-1">{STEPS[step - 1]?.description}</p>
+                <div className="mb-8">
+                  <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">{STEPS[step - 1]?.label}</h2>
+                  <p className="text-sm text-gray-400 mt-1">{STEPS[step - 1]?.description}</p>
                 </div>
 
                 {/* ── Step 1: Account Setup ── */}
@@ -625,7 +611,7 @@ export default function AcceptAppointedInvitation() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

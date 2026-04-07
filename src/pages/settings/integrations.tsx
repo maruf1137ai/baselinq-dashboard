@@ -19,7 +19,7 @@ const Integrations = () => {
           <Plug className="w-6 h-6 text-muted-foreground" />
         </div>
         <div>
-          <h3 className="text-sm font-medium text-foreground mb-1">Integrations</h3>
+          <h3 className="text-sm font-normal text-foreground mb-1">Integrations</h3>
           <p className="text-xs text-muted-foreground max-w-md">Connect to Slack, Procore, Autodesk, Microsoft 365, and more, coming soon.</p>
         </div>
       </div>

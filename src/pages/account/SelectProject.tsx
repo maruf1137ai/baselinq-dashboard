@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
-import { fetchData, updateProfile, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
+import { fetchData, updateProfile, orgInviteMember, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { Button } from "@/components/ui/button";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { cn } from "@/lib/utils";
@@ -12,8 +12,20 @@ import {
   FolderOpen, Plus, ChevronRight, MapPin, Check, X,
   Compass, Layers, Map, Zap, HardHat, ClipboardList,
   Calculator, Briefcase, Building2, User, FileText,
-  Upload, Info, UserPlus, Trash2, CalendarIcon, ArrowRight, LayoutDashboard,
+  Upload, Info, UserPlus, Trash2, CalendarIcon, ArrowRight, LayoutDashboard, Loader2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteProject } from "@/lib/Api";
+import { toast } from "sonner";
 
 const SparkleIcon = ({ className }: { className?: string }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -161,13 +173,21 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
         payload.ck_number = ckNumber || undefined;
         payload.vat_number = vatNumber || undefined;
         payload.company_size = companySize || undefined;
-        payload.team_invites = teamMembers
-          .filter((m) => m.email)
-          .map((m) => ({ email: m.email, position: m.position, name: m.name }));
       } else {
         payload.id_number = idNumber || undefined;
       }
       await updateProfile(payload);
+
+      // Send team invites via dedicated endpoint (duplicate-safe, same flow as org page)
+      if (accountType === "organisation") {
+        const validInvites = teamMembers.filter((m) => m.email.trim());
+        await Promise.all(
+          validInvites.map((m) =>
+            orgInviteMember({ name: m.name, email: m.email, position: m.position }).catch(() => { })
+          )
+        );
+      }
+
       onDone();
     } catch (err: unknown) {
       console.error("Profile update error:", err);
@@ -231,7 +251,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
 
           {/* Headline + stepper */}
           <div className="flex-1 flex flex-col justify-center px-10">
-            <h1 className="text-[32px] font-bold text-white leading-tight tracking-tight">
+            <h1 className="text-[32px] font-normal text-white leading-tight tracking-tight">
               Complete your<br />profile.
             </h1>
             <p className="text-[14px] text-white/50 mt-3 leading-relaxed max-w-xs">
@@ -572,56 +592,58 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
           </div>{/* closes flex-1 overflow-y-auto scroll area */}
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 flex gap-3 shrink-0">
-            {step > 1 && (
-              <button type="button" onClick={() => setStep((s) => (s - 1) as any)} className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
-                Back
-              </button>
-            )}
+          <div className="px-10 py-6 border-t border-gray-100 bg-slate-50/50 shrink-0">
+            <div className="max-w-[480px] mx-auto flex gap-3">
+              {step > 1 && (
+                <button type="button" onClick={() => setStep((s) => (s - 1) as any)} className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+                  Back
+                </button>
+              )}
 
-            {/* Step 1 → 2 */}
-            {step === 1 && (
-              <button type="button" disabled={!role} onClick={() => setStep(2)}
-                className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                Continue <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Step 2 → 3 */}
-            {step === 2 && (
-              <button type="button" disabled={!accountType} onClick={handleGoToDetails}
-                className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                Continue <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Step 3 → save (individual) or → 4 (org) */}
-            {step === 3 && (
-              accountType === "organisation" ? (
-                <button type="button" disabled={!companyName} onClick={() => setStep(4)}
+              {/* Step 1 → 2 */}
+              {step === 1 && (
+                <button type="button" disabled={!role} onClick={() => setStep(2)}
                   className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
-              ) : (
-                <button type="button" disabled={saving} onClick={handleSave}
-                  className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                  {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
-                </button>
-              )
-            )}
+              )}
 
-            {/* Step 4 → save */}
-            {step === 4 && (
-              <>
-                <button type="button" disabled={saving} onClick={handleSave}
-                  className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                  {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+              {/* Step 2 → 3 */}
+              {step === 2 && (
+                <button type="button" disabled={!accountType} onClick={handleGoToDetails}
+                  className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  Continue <ArrowRight className="w-4 h-4" />
                 </button>
-                <button type="button" disabled={saving} onClick={handleSave} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
-                  Skip invites
-                </button>
-              </>
-            )}
+              )}
+
+              {/* Step 3 → save (individual) or → 4 (org) */}
+              {step === 3 && (
+                accountType === "organisation" ? (
+                  <button type="button" disabled={!companyName} onClick={() => setStep(4)}
+                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button type="button" disabled={saving} onClick={handleSave}
+                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                  </button>
+                )
+              )}
+
+              {/* Step 4 → save */}
+              {step === 4 && (
+                <>
+                  <button type="button" disabled={saving} onClick={handleSave}
+                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                  </button>
+                  <button type="button" disabled={saving} onClick={handleSave} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
+                    Skip invites
+                  </button>
+                </>
+              )}
+            </div>
           </div>{/* closes footer */}
         </div>{/* closes flex-1 flex-col bg-white right panel */}
       </div>{/* closes w-full h-full flex container */}
@@ -637,6 +659,9 @@ const SelectProject = () => {
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { setUserRole } = useUserRoleStore();
   const [showModal, setShowModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<any>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isProfileComplete = !userLoading && user && user.role !== null;
 
@@ -669,6 +694,31 @@ const SelectProject = () => {
   const handleProfileDone = async () => {
     setShowModal(false);
     await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
+    try {
+      const pId = String(projectToDelete._id || projectToDelete.id);
+      await deleteProject(pId);
+      toast.success("Project deleted successfully");
+
+      // Clear selection if this project was active
+      if (selectedProjectId === pId) {
+        localStorage.removeItem("selectedProjectId");
+        localStorage.removeItem("projectLocation");
+      }
+
+      await queryClient.invalidateQueries({ queryKey: [`projects/?userId=${user?.id}`] });
+      setShowDeleteDialog(false);
+      setProjectToDelete(null);
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete project");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (userLoading) {
@@ -722,25 +772,6 @@ const SelectProject = () => {
           <div>
             <h2 className="text-2xl font-normal tracking-tight text-foreground">Select Project</h2>
             <p className="text-sm text-muted-foreground mt-1">Choose a project to enter your workspace.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {selectedProjectId && (
-              <Button
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="h-9 px-4 rounded-lg text-muted-foreground hover:text-foreground font-normal text-sm flex items-center gap-2 border-border shadow-none"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                Dashboard
-              </Button>
-            )}
-            <Button
-              onClick={() => navigate("/create-project")}
-              className="h-9 px-4 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              New Project
-            </Button>
           </div>
         </div>
 
@@ -807,18 +838,73 @@ const SelectProject = () => {
                         </div>
                       </div>
                     </div>
-                    <div className={cn(
-                      "w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                    )}>
-                      {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    <div className="flex flex-col items-end gap-3 shrink-0">
+                      <div className={cn(
+                        "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                        isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                      )}>
+                        {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjectToDelete(project);
+                          setShowDeleteDialog(true);
+                        }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </button>
               );
             })}
+            <button
+              onClick={() => navigate("/create-project")}
+              className="group text-left border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-5 py-4 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Plus className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-normal text-foreground">Create New Project</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
+                </div>
+              </div>
+            </button>
           </div>
         )}
+
+        {showModal && (
+          <CompleteProfileModal
+            onClose={() => setShowModal(false)}
+            onDone={handleProfileDone}
+          />
+        )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Project</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteProject}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+                {isDeleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );

@@ -14,7 +14,7 @@ const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden bg-white">
         <DialogHeader className="px-6 py-4 border-b border-border">
-          <DialogTitle className="text-sm font-medium text-foreground">Enable Two-Factor Authentication</DialogTitle>
+          <DialogTitle className="text-sm font-normal text-foreground">Enable Two-Factor Authentication</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-6">

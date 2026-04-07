@@ -280,11 +280,11 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                           remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed font-normal text-sm text-gray-700">{children}</p>,
-                            strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            strong: ({ children }) => <strong className="font-normal text-gray-900">{children}</strong>,
                             em: ({ children }) => <em className="italic text-gray-600">{children}</em>,
-                            h1: ({ children }) => <h1 className="text-lg font-semibold mb-3 mt-4 text-gray-900 first:mt-0">{children}</h1>,
-                            h2: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-4 text-gray-900 first:mt-0">{children}</h2>,
-                            h3: ({ children }) => <h3 className="text-sm font-semibold mb-2 mt-3 text-gray-800 first:mt-0">{children}</h3>,
+                            h1: ({ children }) => <h1 className="text-lg font-normal mb-3 mt-4 text-gray-900 first:mt-0">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-base font-normal mb-2 mt-4 text-gray-900 first:mt-0">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-sm font-normal mb-2 mt-3 text-gray-800 first:mt-0">{children}</h3>,
                             ul: ({ children }) => <ul className="list-disc list-outside space-y-1.5 my-2 ml-4 font-normal">{children}</ul>,
                             ol: ({ children }) => <ol className="list-decimal list-outside space-y-2 my-3 ml-4 font-normal">{children}</ol>,
                             li: ({ children }) => <li className="text-sm leading-relaxed text-gray-700 pl-1 font-normal">{children}</li>,

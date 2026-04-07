@@ -211,7 +211,7 @@ const OrganizationPage = () => {
             <div className="flex-1 text-center md:text-left">
               <h4 className="text-sm font-normal text-foreground">Complete your profile</h4>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                You've completed <span className="font-bold text-primary">{stats.filledCount} of {stats.totalCount}</span> essential fields.
+                You've completed <span className="font-normal text-primary">{stats.filledCount} of {stats.totalCount}</span> essential fields.
                 Keep your profile updated to ensure compliance and smooth collaboration on projects.
               </p>
               {stats.missing.length > 0 && (

@@ -277,9 +277,9 @@ function TaskCard({ task, isDragging }: any) {
               <span className={`text-xs font-medium ${docTypeTextColor}`}>{displayId}</span>
               {priorityInfo && (
                 <span className={`text-xs px-1.5 py-0.5 rounded ${priority === 'critical' ? 'bg-red-50 text-red-600' :
-                    priority === 'high' ? 'bg-orange-50 text-orange-600' :
-                      priority === 'medium' ? 'bg-blue-50 text-blue-600' :
-                        'bg-muted text-muted-foreground'
+                  priority === 'high' ? 'bg-orange-50 text-orange-600' :
+                    priority === 'medium' ? 'bg-blue-50 text-blue-600' :
+                      'bg-muted text-muted-foreground'
                   }`}>{priorityInfo.label}</span>
               )}
             </div>
@@ -324,8 +324,8 @@ function TaskCard({ task, isDragging }: any) {
                 </span>
               ) : task.due_date && !isResolved ? (
                 <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue ? 'text-red-600 font-medium' :
-                    isWarning ? 'text-amber-600' :
-                      'text-muted-foreground'
+                  isWarning ? 'text-amber-600' :
+                    'text-muted-foreground'
                   }`}>
                   <Calendar className="h-3 w-3" />
                   {dueDateInfo.isOverdue
@@ -582,9 +582,11 @@ export default function Task() {
         const apiType = item?.taskType;
         const type = apiType || TASK_TYPES[idx % TASK_TYPES.length];
 
-        // Ensure every task has a due date
-        let dueDate = item.task?.dueDate;
-        if (!dueDate) {
+        // Use real dueDate from Task object, fall back to entity's dueDate
+        let dueDate = item.dueDate || item.task?.dueDate;
+
+        // Only use fallback for demo data (if no real IDs are present)
+        if (!dueDate && !item.taskId && !item.task?.id) {
           const offset = DUE_OFFSETS[idx % DUE_OFFSETS.length];
           const d = new Date(taskNow);
           d.setDate(d.getDate() + offset);

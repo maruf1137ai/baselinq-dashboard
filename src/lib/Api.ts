@@ -209,8 +209,20 @@ export const inviteAppointedCompany = async (data: {
   project_id: number | string;
   position?: string;
 }) => {
-  const res = await api.post("/auth/invite-appointed-company/", data);
+  const res = await api.post("auth/invite-appointed-company/", data);
   return res.data;
+};
+
+export const getAppointedCompanies = async (projectId: string | number) => {
+  const res = await api.get(`projects/${projectId}/appointed-companies/`);
+  return res.data as {
+    id: string | number;
+    company_name: string;
+    role: string;
+    status: string;
+    contact_name: string;
+    email: string;
+  }[];
 };
 
 export const getProfile = async () => {
@@ -220,6 +232,29 @@ export const getProfile = async () => {
 
 export const updateProfile = async (data: any) => {
   const res = await api.put("auth/profile/update/", data);
+  return res.data;
+};
+
+export const getOrgMembers = async () => {
+  const res = await api.get("auth/organization/members/");
+  return res.data as {
+    members: { id: number; name: string; email: string; role: string | null; role_code: string | null }[];
+    pending_invitations: { id: number; email: string; name: string; position: string; invited_at: string; expires_at: string }[];
+  };
+};
+
+export const orgInviteMember = async (data: { name: string; email: string; position: string }) => {
+  const res = await api.post("auth/organization/members/invite/", data);
+  return res.data;
+};
+
+export const orgRemoveMember = async (userId: number) => {
+  const res = await api.delete(`auth/organization/members/${userId}/`);
+  return res.data;
+};
+
+export const orgCancelInvitation = async (invitationId: number) => {
+  const res = await api.delete(`auth/organization/invitations/${invitationId}/`);
   return res.data;
 };
 
@@ -330,7 +365,7 @@ export const updateProject = async (projectData: ProjectData) => {
   const { id, _id, ...data } = projectData;
 
   try {
-    const response = await api.put(`projects/${pId}/`, data);
+    const response = await api.patch(`projects/${pId}/`, data);
     return response.data; // { message, project }
   } catch (error) {
     handleError(error);

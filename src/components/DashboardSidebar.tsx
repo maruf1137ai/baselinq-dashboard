@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, PlusCircle, LogOut, Trash2, UserCircle, FolderOpen, User as UserIcon, Building2 } from "lucide-react";
+import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2 } from "lucide-react";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -36,26 +36,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { deleteProject, fetchData } from "@/lib/Api";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 
-interface Project {
-  id: string;
-  name: string;
-  project_number: string;
-  location?: string;
-  status?: string;
-}
 
 const navItems = [
   { title: "Home", url: "/", icon: <Trending />, permission: null },
@@ -87,8 +70,6 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -167,7 +148,7 @@ export function DashboardSidebar() {
       window.removeEventListener("user-role-change", handleUserRoleChange);
   }, [selectedProjectId, user?.id]);
 
-  const handleProjectSelect = async (project: Project) => {
+  const handleProjectSelect = async (project: any) => {
     const pId = (project as any)?._id;
     setSelectedProjectId(pId);
     localStorage.setItem("selectedProjectId", pId);
@@ -189,60 +170,6 @@ export function DashboardSidebar() {
     logout();
   };
 
-  const handleDeleteProject = async () => {
-    if (!projectToDelete) return;
-
-    try {
-      const projectId = (projectToDelete as any)._id;
-      await deleteProject(projectId);
-
-      toast.success("Project deleted successfully");
-
-      // Find next project to select
-      const currentIndex = projects.findIndex((p: any) => p._id === projectId);
-      let nextProject = null;
-
-      if (projects.length > 1) {
-        // Select next project, or previous if deleting the last one
-        if (currentIndex < projects.length - 1) {
-          nextProject = projects[currentIndex + 1];
-        } else if (currentIndex > 0) {
-          nextProject = projects[currentIndex - 1];
-        }
-      }
-
-      if (nextProject) {
-        const nextId = (nextProject as any)._id;
-        setSelectedProjectId(nextId);
-        localStorage.setItem("selectedProjectId", nextId);
-        localStorage.setItem("projectLocation", nextProject?.location || "");
-        window.dispatchEvent(new Event("project-change"));
-
-        // Fetch user role for the next project
-        if (user?.id) {
-          await fetchUserRole(nextId, user.id);
-        }
-      } else {
-        // No projects left
-        // Invalidate specific query key for projects
-        queryClient.invalidateQueries({ queryKey: [`projects/?userId=${user?.id}`] });
-        localStorage.removeItem("selectedProjectId");
-        localStorage.removeItem("projectLocation");
-        setSelectedProjectId("");
-        clearUserRole();
-        window.dispatchEvent(new Event("project-change"));
-      }
-
-      // Refetch projects to update the list
-      await refetch();
-
-      setShowDeleteDialog(false);
-      setProjectToDelete(null);
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      toast.error("Failed to delete project. Please try again.");
-    }
-  };
 
 
   return (
@@ -250,63 +177,16 @@ export function DashboardSidebar() {
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
           <div className="p-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="p-3 border border-border rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors">
-                  <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center">
-                    <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <h1 className="text-sm font-regular text-foreground aeonik truncate">
-                      {selectedProject
-                        ? selectedProject.name
-                        : isLoading
-                          ? "Loading..."
-                          : "Select Project"}
-                    </h1>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="start">
-                <DropdownMenuLabel>Projects</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {projects.map((project: any) => {
-                  // console.log(selectedProjectId == String(project._id))
-                  return <DropdownMenuItem
-                    key={project._id || project.id}
-                    onClick={() => handleProjectSelect(project)}
-                    className="cursor-pointer flex justify-between">
-                    <div className="flex items-center gap-2">
-                      {(selectedProjectId == String(project._id) || selectedProjectId == String(project.id)) && (
-                        <span className="ml-auto text-xs text-blue-500 h-2 w-2 rounded-full bg-blue-500 block">
-                        </span>
-                      )}
-                      {project.name}
-
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Trash2
-                        className="h-4 w-4 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjectToDelete(project);
-                          setShowDeleteDialog(true);
-                        }}
-                      />
-
-                    </div>
-                  </DropdownMenuItem>
-                })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => navigate("/create-project")}
-                  className="cursor-pointer text-blue-600 gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  <span>Create New Project</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50">
+              <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10">
+                <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <h1 className="text-sm font-regular text-foreground aeonik truncate">
+                  {selectedProject?.name || "baselinq"}
+                </h1>
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 overflow-auto px-2">
@@ -464,26 +344,6 @@ export function DashboardSidebar() {
         </SidebarContent>
       </Sidebar>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteProject}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

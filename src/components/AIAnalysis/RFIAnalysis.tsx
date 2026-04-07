@@ -80,11 +80,11 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
           <AlertTriangle className="h-4 w-4 text-[#d63031] shrink-0" />
         )}
 
-        <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#1a1a1a] flex-1">
+        <span className="text-[11px] font-normal uppercase tracking-[0.05em] text-[#1a1a1a] flex-1">
           {label}
         </span>
 
-        <span className={cn("text-[11px] font-semibold uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", sc.text, sc.border)}>
+        <span className={cn("text-[11px] font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", sc.text, sc.border)}>
           {item.status}
         </span>
 
@@ -140,7 +140,7 @@ function ImpactIndicator({ label, item, icon: Icon, defaultOpen }: { label: stri
     >
       <Icon className={cn("h-4 w-4 mb-1.5", color)} />
       <span className="text-[10px] text-[#6B7280] uppercase tracking-[0.05em] font-medium">{label}</span>
-      <span className={cn("text-[12px] font-semibold mt-0.5", color)}>
+      <span className={cn("text-[12px] font-normal mt-0.5", color)}>
         {isLikely ? "LIKELY" : "UNLIKELY"}
       </span>
       {item.severity && (
@@ -206,10 +206,10 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={cn("text-[11px] font-semibold uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", risk.text, risk.border)}>
+                <span className={cn("text-[11px] font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", risk.text, risk.border)}>
                   {risk.label}
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">
+                <span className="text-[11px] font-normal uppercase tracking-[0.05em] text-[#6B7280]">
                   {data.overall_assessment?.replace(/_/g, " ") || "ROUTINE"}
                 </span>
                 {data.rfi_id && (
@@ -273,7 +273,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                         <span className="text-[12px] text-[#1a1a1a] font-medium flex-1">
                           {key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
-                        <span className={cn("text-[10px] font-semibold uppercase tracking-[0.05em] border rounded-full px-2 py-0.5", sc.text, sc.border)}>
+                        <span className={cn("text-[10px] font-normal uppercase tracking-[0.05em] border rounded-full px-2 py-0.5", sc.text, sc.border)}>
                           {value.status}
                         </span>
                         {dl && (
@@ -306,7 +306,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 <div key={card.label} className="p-3 rounded-[12px] bg-[#f8f9fa] border border-[#e9ecef]">
                   <div className="flex items-center gap-1.5 mb-1">
                     <card.icon className="h-3 w-3 text-[#9CA3AF]" />
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#9CA3AF]">{card.label}</span>
+                    <span className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#9CA3AF]">{card.label}</span>
                   </div>
                   <p className="text-[13px] font-medium text-[#1a1a1a]">{card.value}</p>
                 </div>
@@ -412,7 +412,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
               <div className="grid grid-cols-2 gap-3">
                 {employerRecs.length > 0 && (
                   <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#6c5ce7] mb-2">For Employer</p>
+                    <p className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#6c5ce7] mb-2">For Employer</p>
                     <ul className="space-y-2">
                       {employerRecs.map((rec: string, i: number) => (
                         <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">
@@ -425,7 +425,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 )}
                 {contractorRecs.length > 0 && (
                   <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#9CA3AF] mb-2">For Contractor</p>
+                    <p className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#9CA3AF] mb-2">For Contractor</p>
                     <ul className="space-y-2">
                       {contractorRecs.map((rec: string, i: number) => (
                         <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">
@@ -475,7 +475,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                       <span className="text-[12px] font-medium text-[#1a1a1a]">{flag.title || flag}</span>
                       {flag.severity && (
                         <span className={cn(
-                          "text-[10px] font-semibold uppercase border rounded-full px-2 py-0.5",
+                          "text-[10px] font-normal uppercase border rounded-full px-2 py-0.5",
                           flag.severity === "HIGH" ? "text-[#d63031] border-[#d63031]" : "text-[#e17055] border-[#e17055]"
                         )}>
                           {flag.severity}

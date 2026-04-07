@@ -282,7 +282,7 @@ const Audit = () => {
 
           <div className="bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E5E7EB]">
-              <h3 className="text-sm font-medium text-[#1A1A1A]">Compliance by Document Type</h3>
+              <h3 className="text-sm font-normal text-[#1A1A1A]">Compliance by Document Type</h3>
             </div>
             <Table>
               <TableHeader className="bg-[#FAFAFA]">
@@ -302,7 +302,7 @@ const Audit = () => {
                     <TableRow key={item.type} className="hover:bg-muted border-b border-border last:border-0">
                       <TableCell className="pl-6 py-4">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs font-medium">{item.type}</Badge>
+                          <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs font-normal">{item.type}</Badge>
                           <span className="text-sm text-[#6B7280]">{TASK_TYPE_LABELS[item.type] || item.type}</span>
                         </div>
                       </TableCell>
@@ -351,7 +351,7 @@ const Audit = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-border p-6">
-            <h3 className="text-sm font-medium text-foreground mb-6">Compliance Activity Timeline</h3>
+            <h3 className="text-sm font-normal text-foreground mb-6">Compliance Activity Timeline</h3>
             <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
               {filteredAuditTrail.map((log, i) => (
                 <div key={i} className="relative pl-8">
@@ -363,7 +363,7 @@ const Audit = () => {
                     }`} />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-medium text-foreground">{log.action}</p>
+                      <p className="text-xs font-normal text-foreground">{log.action}</p>
                       {log.taskType && (
                         <Badge className="bg-[#F3F4F6] text-[#6B7280] border-none text-[10px]">{log.taskType}</Badge>
                       )}

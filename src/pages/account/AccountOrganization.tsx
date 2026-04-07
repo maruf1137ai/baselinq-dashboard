@@ -1,26 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { updateProfile } from "@/lib/Api";
+import { useRoles } from "@/hooks/useRoles";
+import { updateProfile, getOrgMembers, orgInviteMember, orgRemoveMember, orgCancelInvitation } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Building2, Save, Loader2, LayoutDashboard } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock } from "lucide-react";
 
-function SectionCard({ title, subtitle, icon, children }: {
-  title: string; subtitle?: string; icon: React.ReactNode; children: React.ReactNode;
+type Member = { id: number; name: string; email: string; role: string | null; role_code: string | null };
+type PendingInvite = { id: number; email: string; name: string; position: string; invited_at: string; expires_at: string };
+
+function SectionCard({ title, subtitle, icon, children, action }: {
+  title: string; subtitle?: string; icon: React.ReactNode; children: React.ReactNode; action?: React.ReactNode;
 }) {
   return (
     <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-5">
       <div className="flex items-center gap-4 px-6 py-4 border-b border-border bg-slate-50/50">
         <div className="w-9 h-9 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">{icon}</div>
-        <div>
+        <div className="flex-1">
           <h3 className="text-sm font-normal text-foreground tracking-tight">{title}</h3>
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
+        {action}
       </div>
       <div className="p-6">{children}</div>
     </div>
@@ -37,16 +41,33 @@ function Field({ label, children, colSpan }: { label: string; children: React.Re
 }
 
 const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
+const MODAL_INPUT_CLS = "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
 
 const AccountOrganization = () => {
   const { data: user, isLoading } = useCurrentUser();
+  const { roles } = useRoles();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+
+  const CLIENT_INVITE_CODES = ["CLIENT", "CPM", "ADMIN", "VIEWER", "LIMITED", "LIMITED_VIEWER"];
+  const inviteRoles = roles.filter(r => r.code && !CLIENT_INVITE_CODES.includes(r.code));
   const [isSaving, setIsSaving] = useState(false);
 
+  // Org details form
   const [formData, setFormData] = useState({
     organization: { name: "", company_reg_number: "", ck_number: "", vat_number: "", company_size: "" },
   });
+
+  // Team state
+  const [members, setMembers] = useState<Member[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteRows, setInviteRows] = useState<{ id: string; name: string; email: string; position: string }[]>([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]);
+  const [inviting, setInviting] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  const isOrg = user?.account_type === "organisation";
 
   useEffect(() => {
     if (user) {
@@ -62,6 +83,22 @@ const AccountOrganization = () => {
     }
   }, [user]);
 
+  const loadTeam = useCallback(async () => {
+    if (!isOrg) return;
+    setTeamLoading(true);
+    try {
+      const data = await getOrgMembers();
+      setMembers(data.members);
+      setPendingInvites(data.pending_invitations);
+    } catch {
+      // silently fail — team section just shows empty
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [isOrg]);
+
+  useEffect(() => { loadTeam(); }, [loadTeam]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -76,6 +113,50 @@ const AccountOrganization = () => {
     }
   };
 
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validRows = inviteRows.filter(r => r.email.trim());
+    if (!validRows.length) return;
+    setInviting(true);
+    try {
+      await Promise.all(validRows.map(r => orgInviteMember({ name: r.name, email: r.email, position: r.position })));
+      toast.success(validRows.length === 1 ? `Invitation sent to ${validRows[0].email}` : `${validRows.length} invitations sent`);
+      setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]);
+      setShowInviteForm(false);
+      loadTeam();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to send invitation.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: number) => {
+    setRemovingId(memberId);
+    try {
+      await orgRemoveMember(memberId);
+      toast.success("Member removed from organisation.");
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to remove member.");
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: number) => {
+    setCancellingId(inviteId);
+    try {
+      await orgCancelInvitation(inviteId);
+      toast.success("Invitation cancelled.");
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to cancel invitation.");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading..." /></div>;
 
   return (
@@ -85,56 +166,199 @@ const AccountOrganization = () => {
           <h2 className="text-2xl font-normal tracking-tight text-foreground">Organization</h2>
           <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
         </div>
-        <div className="flex items-center gap-3">
-          {localStorage.getItem("selectedProjectId") && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="h-9 px-4 rounded-lg text-muted-foreground hover:text-foreground font-normal text-sm flex items-center gap-2 border-border shadow-none"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Button>
-          )}
-          {user?.account_type === "organisation" && (
-            <Button onClick={handleSave} disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          )}
-        </div>
+        {isOrg && (
+          <Button onClick={handleSave} disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        )}
       </div>
 
-      {user?.account_type === "organisation" ? (
-        <form onSubmit={handleSave}>
-          <SectionCard title="Organization & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              <Field label="Company / Entity Name">
-                <Input value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal")} />
-              </Field>
-              <Field label="Company Registration No.">
-                <Input value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={INPUT_CLS} />
-              </Field>
-              <Field label="VAT Registration Number">
-                <Input value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={INPUT_CLS} />
-              </Field>
-              <Field label="CK Number">
-                <Input value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={INPUT_CLS} />
-              </Field>
-              <Field label="Enterprise Size">
-                <select value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3")}>
-                  <option value="">Select Scale...</option>
-                  <option value="1-10">Micro (1–10 people)</option>
-                  <option value="11-50">Small (11–50 people)</option>
-                  <option value="51-200">Medium (51–200 people)</option>
-                  <option value="201-500">Large (201–500 people)</option>
-                  <option value="500+">Enterprise (500+ people)</option>
-                </select>
-              </Field>
-            </div>
+      {isOrg ? (
+        <>
+          {/* Org details */}
+          <form onSubmit={handleSave}>
+            <SectionCard title="Organization & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                <Field label="Company / Entity Name">
+                  <Input value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal")} />
+                </Field>
+                <Field label="Company Registration No.">
+                  <Input value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={INPUT_CLS} />
+                </Field>
+                <Field label="VAT Registration Number">
+                  <Input value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={INPUT_CLS} />
+                </Field>
+                <Field label="CK Number">
+                  <Input value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={INPUT_CLS} />
+                </Field>
+                <Field label="Enterprise Size">
+                  <select value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3")}>
+                    <option value="">Select Scale...</option>
+                    <option value="1-10">Micro (1–10 people)</option>
+                    <option value="11-50">Small (11–50 people)</option>
+                    <option value="51-200">Medium (51–200 people)</option>
+                    <option value="201-500">Large (201–500 people)</option>
+                    <option value="500+">Enterprise (500+ people)</option>
+                  </select>
+                </Field>
+              </div>
+            </SectionCard>
+          </form>
+
+          {/* Team members */}
+          <SectionCard
+            title="Team Members"
+            subtitle="People who have joined your organisation"
+            icon={<Users className="w-4 h-4" />}
+            action={
+              <button
+                type="button"
+                onClick={() => setShowInviteForm(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-normal"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Invite member
+              </button>
+            }
+          >
+            {/* Invite form */}
+            {showInviteForm && (
+              <form onSubmit={handleInvite} className="mb-5">
+                <p className="text-[13px] text-gray-500 mb-3">Invite colleagues to your organisation.</p>
+                <div className="space-y-2">
+                  {inviteRows.map((row) => (
+                    <div key={row.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
+                      <div className="flex-1 grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Full name"
+                          value={row.name}
+                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, name: e.target.value } : r))}
+                          className={MODAL_INPUT_CLS}
+                        />
+                        <input
+                          type="email"
+                          placeholder="Email address"
+                          value={row.email}
+                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, email: e.target.value } : r))}
+                          className={MODAL_INPUT_CLS}
+                        />
+                        <select
+                          value={row.position}
+                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, position: e.target.value } : r))}
+                          className={MODAL_INPUT_CLS}
+                        >
+                          <option value="">Position...</option>
+                          {inviteRoles.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
+                          <option value="admin">Administrator</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      {inviteRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setInviteRows(p => p.filter(r => r.id !== row.id))}
+                          className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInviteRows(p => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
+                  className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add another member
+                </button>
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+                  <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#8081F6] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
+                    {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {inviting ? "Sending..." : "Send Invites"}
+                  </Button>
+                  <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Active members */}
+            {teamLoading ? (
+              <div className="flex items-center justify-center py-8"><AwesomeLoader message="Loading team..." /></div>
+            ) : members.length === 0 && pendingInvites.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No team members yet.</p>
+                <p className="text-xs text-muted-foreground mt-1">Invite someone to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {members.map(member => (
+                  <div key={member.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-white hover:bg-slate-50/50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[12px] font-normal text-primary">
+                      {(member.name || member.email).charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">{member.name || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                    </div>
+                    {member.role && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-slate-100 text-muted-foreground shrink-0">
+                        {member.role}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={removingId === member.id}
+                      className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                      title="Remove member"
+                    >
+                      {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                ))}
+
+                {/* Pending invitations */}
+                {pendingInvites.length > 0 && (
+                  <>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest pt-3 pb-1 px-1">Pending Invitations</p>
+                    {pendingInvites.map(inv => (
+                      <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border bg-slate-50/50">
+                        <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">{inv.name || inv.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{inv.email}{inv.position ? ` · ${inv.position}` : ""}</p>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
+                          Pending
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelInvite(inv.id)}
+                          disabled={cancellingId === inv.id}
+                          className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                          title="Cancel invitation"
+                        >
+                          {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
           </SectionCard>
-        </form>
+        </>
       ) : (
         <div className="border border-border rounded-xl bg-white shadow-sm p-12 text-center flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">

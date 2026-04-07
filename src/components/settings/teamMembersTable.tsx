@@ -50,6 +50,7 @@ import {
   CommandItem,
   CommandList,
 } from "../ui/command";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import FilterBtns from "./filterBtns";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 
@@ -243,7 +244,7 @@ const ActionsCell = ({
             <div className="space-y-2">
               <Label>Team Member</Label>
               <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted">
-                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-medium">
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-normal">
                   {member.user.name?.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -275,7 +276,7 @@ const ActionsCell = ({
               </Select>
             </div>
             <p className="text-sm text-muted-foreground">
-              Current role: <span className="font-medium">{member.roleName}</span>
+              Current role: <span className="font-normal">{member.roleName}</span>
             </p>
           </div>
           <DialogFooter>
@@ -476,34 +477,59 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
     (user) => !teamMembers.some((member: TeamMember) => member.user.id === user.id)
   );
 
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [activeTab, setActiveTab] = useState("add"); // "add" or "invite"
+
   const handleAddMember = async () => {
-    if (!selectedUser || !selectedRole) return;
-
-    setIsSubmitting(true);
-
-    try {
-      await postData({
-        url: `projects/${projectId}/team-members/`,
-        data: {
-          userId: selectedUser.id,
-          roleName: selectedRole.name,
-          roleCode: selectedRole.code,
-        },
-      });
-
-      toast.success("Team member added successfully");
-      setShowAddMemberModal(false);
-      setSelectedUser(null);
-      setSelectedRole(null);
-
-      // Refetch project users to update the table
-      await refetch();
-    } catch (error: any) {
-      console.error("Error adding team member:", error);
-      const errorMessage = error?.response?.data?.error || error?.message || "Failed to add team member. Please try again.";
-      toast.error(errorMessage);
-    } finally {
-      setIsSubmitting(false);
+    if (activeTab === "add") {
+      if (!selectedUser || !selectedRole) return;
+      setIsSubmitting(true);
+      try {
+        await postData({
+          url: `projects/${projectId}/team-members/`,
+          data: {
+            userId: selectedUser.id,
+            roleName: selectedRole.name,
+            roleCode: selectedRole.code,
+          },
+        });
+        toast.success("Team member added successfully");
+        setShowAddMemberModal(false);
+        setSelectedUser(null);
+        setSelectedRole(null);
+        await refetch();
+      } catch (error: any) {
+        console.error("Error adding team member:", error);
+        toast.error(error?.response?.data?.error || "Failed to add member");
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      if (!inviteEmail || !selectedRole) return;
+      setIsSubmitting(true);
+      try {
+        await postData({
+          url: "auth/invite-personnel/",
+          data: {
+            email: inviteEmail,
+            name: inviteName,
+            role_code: selectedRole.code,
+            project_id: projectId,
+          },
+        });
+        toast.success("Invitation sent successfully");
+        setShowAddMemberModal(false);
+        setInviteEmail("");
+        setInviteName("");
+        setSelectedRole(null);
+        await refetch();
+      } catch (error: any) {
+        console.error("Error inviting member:", error);
+        toast.error(error?.response?.data?.error || "Failed to send invitation");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -534,46 +560,49 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
       {/* Add Member Modal */}
       <Dialog open={showAddMemberModal} onOpenChange={setShowAddMemberModal}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-white max-w-md">
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Add a new member to your project team by entering their email and assigning a role.
+              Expand your project team by adding existing users or inviting new members via email.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 space-y-4">
-            {/* User Selection */}
-            <div className="space-y-2">
-              <Label>Select User</Label>
-              <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={userPopoverOpen}
-                    className="w-full justify-between font-normal">
-                    {selectedUser ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-medium">
-                          {selectedUser.name.charAt(0).toUpperCase()}
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="add">Register Member</TabsTrigger>
+              <TabsTrigger value="invite">Invite External</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="add" className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select User</Label>
+                <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={userPopoverOpen}
+                      className="w-full justify-between font-normal h-11">
+                      {selectedUser ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-normal">
+                            {selectedUser.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span>{selectedUser.name}</span>
                         </div>
-                        <span>{selectedUser.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Select a user...
-                      </span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search team members..." />
-                    <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
-                      <CommandGroup>
-                        <div className="">
+                      ) : (
+                        <span className="text-muted-foreground">Select a user...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search team members..." />
+                      <CommandList>
+                        <CommandEmpty>No user found.</CommandEmpty>
+                        <CommandGroup>
                           {availableUsers.map((user) => {
                             const isSelected = selectedUser?.id === user.id;
                             return (
@@ -587,43 +616,65 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                                 className="cursor-pointer">
                                 <div className="flex items-center justify-between w-full">
                                   <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                                    <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal">
                                       {(user.name || user.email).charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex flex-col">
                                       <span className="text-sm font-normal text-foreground">
                                         {user.name || user.email}
                                       </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {user.email}
-                                      </span>
+                                      <span className="text-xs text-muted-foreground">{user.email}</span>
                                     </div>
                                   </div>
                                   <div
                                     className={cn(
                                       "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                      isSelected
-                                        ? "border-primary bg-primary"
-                                        : "border-border bg-white"
+                                      isSelected ? "border-primary bg-primary" : "border-border bg-white"
                                     )}>
-                                    {isSelected && (
-                                      <Check className="h-3 w-3 text-white" />
-                                    )}
+                                    {isSelected && <Check className="h-3 w-3 text-white" />}
                                   </div>
                                 </div>
                               </CommandItem>
                             );
                           })}
-                        </div>
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </TabsContent>
 
-            {/* Role Selection */}
-            <div className="space-y-2">
+            <TabsContent value="invite" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <div className="relative">
+                  <input
+                    id="name"
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-normal placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inviteEmail">Email Address</Label>
+                <div className="relative">
+                  <input
+                    id="inviteEmail"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-normal placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. john@example.com"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <div className="space-y-2 mt-4">
               <Label htmlFor="role">Role</Label>
               <Select
                 value={selectedRole?.code}
@@ -631,7 +682,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   const role = roles.find((r) => r.code === value);
                   setSelectedRole(role || null);
                 }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -643,7 +694,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </Tabs>
           <DialogFooter>
             <DialogClose asChild>
               <button className="px-4 py-2 border border-border rounded-lg text-sm text-foreground bg-white hover:bg-muted">
@@ -652,9 +703,19 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             </DialogClose>
             <button
               onClick={handleAddMember}
-              disabled={!selectedUser || !selectedRole || isSubmitting}
+              disabled={
+                isSubmitting ||
+                !selectedRole ||
+                (activeTab === "add" ? !selectedUser : !inviteEmail || !inviteName)
+              }
               className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isSubmitting ? "Adding..." : "Add Member"}
+              {isSubmitting
+                ? activeTab === "add"
+                  ? "Adding..."
+                  : "Inviting..."
+                : activeTab === "add"
+                  ? "Add Member"
+                  : "Invite Member"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -697,11 +758,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                           className="h-8 w-8 rounded-full"
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium uppercase">
+                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal uppercase">
                           {member.user.name?.charAt(0) || "?"}
                         </div>
                       )} */}
-                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium uppercase">
+                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal uppercase">
                         {member.user.name?.charAt(0) || "?"}
                       </div>
                       {member.user.name}

@@ -19,7 +19,7 @@ const Billing = () => {
           <CreditCard className="w-6 h-6 text-muted-foreground" />
         </div>
         <div>
-          <h3 className="text-sm font-medium text-foreground mb-1">Billing & Subscription</h3>
+          <h3 className="text-sm font-normal text-foreground mb-1">Billing & Subscription</h3>
           <p className="text-xs text-muted-foreground max-w-md">View invoices, manage payment methods, and update your subscription plan, coming soon.</p>
         </div>
       </div>

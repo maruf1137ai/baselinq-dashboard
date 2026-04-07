@@ -116,11 +116,11 @@ const Site = () => {
 
       {/* Site Information */}
       <div className="bg-white rounded-lg border border-border p-6">
-        <h3 className="text-sm font-medium text-foreground mb-6">Site Information</h3>
+        <h3 className="text-sm font-normal text-foreground mb-6">Site Information</h3>
 
         {/* Site Address */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-normal text-foreground mb-2">
             Site Address
           </label>
           <Input
@@ -134,7 +134,7 @@ const Site = () => {
 
         {/* Coordinates */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-normal text-foreground mb-2">
             Coordinates (Lat, Long)
           </label>
           <Input
@@ -149,7 +149,7 @@ const Site = () => {
         {/* Weather Feed Toggle */}
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div>
-            <h4 className="text-sm font-medium text-foreground">Weather Feed</h4>
+            <h4 className="text-sm font-normal text-foreground">Weather Feed</h4>
             <p className="text-sm text-muted-foreground mt-1">
               Show real-time weather data in header
             </p>
