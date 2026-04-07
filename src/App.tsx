@@ -32,6 +32,7 @@ import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
 import AppointedCompanies from "./pages/settings/AppointedCompanies";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import ProjectProtectedRoute from "./components/ProjectProtectedRoute";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
 import DocumentDetail from "./pages/DocumentDetail";
@@ -44,7 +45,6 @@ import AccountProfile from "./pages/account/AccountProfile";
 import AccountOrganization from "./pages/account/AccountOrganization";
 
 const queryClient = new QueryClient();
-// fghfjhjf
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -62,7 +62,9 @@ const App = () => (
             path="/"
             element={
               <ProtectedRoute>
-                <Index />
+                <ProjectProtectedRoute>
+                  <Index />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -70,7 +72,9 @@ const App = () => (
             path="/ai-workspace"
             element={
               <ProtectedRoute>
-                <AiWorkSpace />
+                <ProjectProtectedRoute>
+                  <AiWorkSpace />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -78,7 +82,9 @@ const App = () => (
             path="/ai-workspace/:taskTypeSlug/:taskId"
             element={
               <ProtectedRoute>
-                <AiWorkSpace />
+                <ProjectProtectedRoute>
+                  <AiWorkSpace />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -86,7 +92,9 @@ const App = () => (
             path="/communications"
             element={
               <ProtectedRoute>
-                <Communications />
+                <ProjectProtectedRoute>
+                  <Communications />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -94,7 +102,9 @@ const App = () => (
             path="/finance"
             element={
               <ProtectedRoute>
-                <Finance />
+                <ProjectProtectedRoute>
+                  <Finance />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -102,7 +112,9 @@ const App = () => (
             path="/meetings"
             element={
               <ProtectedRoute>
-                <Meetings />
+                <ProjectProtectedRoute>
+                  <Meetings />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -110,7 +122,9 @@ const App = () => (
             path="/meetings/:id"
             element={
               <ProtectedRoute>
-                <MeetingDetails />
+                <ProjectProtectedRoute>
+                  <MeetingDetails />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -118,7 +132,9 @@ const App = () => (
             path="/programme"
             element={
               <ProtectedRoute>
-                <Programme />
+                <ProjectProtectedRoute>
+                  <Programme />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
@@ -126,22 +142,50 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
           <Route path="/accept-appointed-invitation/:token" element={<AcceptAppointedInvitation />} />
-          <Route path="/tasks" element={<Task />} />
-          <Route path="/tasks/:taskId" element={<TaskDetails />} />
+          <Route path="/tasks" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <Task />
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/tasks/:taskId" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <TaskDetails />
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
           <Route path="/compliance" element={
             <ProtectedRoute>
-              <Compliance />
+              <ProjectProtectedRoute>
+                <Compliance />
+              </ProjectProtectedRoute>
             </ProtectedRoute>
           } />
           <Route path="/audit"
             element={
               <ProtectedRoute>
-                <AuditPage />
+                <ProjectProtectedRoute>
+                  <AuditPage />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/documents/:docId" element={<DocumentDetail />} />
+          <Route path="/documents" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <Documents />
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/documents/:docId" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <DocumentDetail />
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
           <Route
             path="/create-project"
             element={
@@ -154,14 +198,17 @@ const App = () => (
             path="/edit-project"
             element={
               <ProtectedRoute>
-                <EditProject />
+                <ProjectProtectedRoute>
+                  <EditProject />
+                </ProjectProtectedRoute>
               </ProtectedRoute>
             }
           />
-          {/* <Route path="/settings" element={<TeamManagement />} /> */}
           <Route path="/settings" element={
             <ProtectedRoute>
-              <Settings />
+              <ProjectProtectedRoute>
+                <Settings />
+              </ProjectProtectedRoute>
             </ProtectedRoute>
           }>
             <Route index element={<TeamManagement />} />
