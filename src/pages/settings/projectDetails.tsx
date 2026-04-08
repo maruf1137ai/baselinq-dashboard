@@ -22,8 +22,10 @@ import {
   FolderOpen,
   Save,
   Loader2,
+  Lock,
   Calendar as CalendarIcon,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -143,6 +145,7 @@ const DATE_BTN_CLS =
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 const ProjectDetails = () => {
+  const { canEditProject } = usePermissions();
   const [selectedDocument, setSelectedDocument] = useState<ProjectDocument | null>(null);
   const [docToDelete, setDocToDelete] = useState<ProjectDocument | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -243,6 +246,7 @@ const ProjectDetails = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEditProject) return;
     const pId = (selectedProject as any)?._id || (selectedProject as any)?.id;
     if (!pId) return;
 
@@ -324,6 +328,7 @@ const ProjectDetails = () => {
   };
 
   const confirmDelete = async () => {
+    if (!canEditProject) return;
     const pId = (selectedProject as any)?._id || (selectedProject as any)?.id;
     const docId = docToDelete ? getDocId(docToDelete) : null;
     if (!pId || !docId) return;
@@ -368,18 +373,25 @@ const ProjectDetails = () => {
               Configure basic project info, financials and legal framework.
             </p>
           </div>
-          <Button
-            type="submit"
-            disabled={isSaving}
-            className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0 mt-10"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isSaving ? "Saving..." : "Save Details"}
-          </Button>
+          {canEditProject ? (
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0 mt-10"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? "Saving..." : "Save Details"}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs mt-10">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Read-only access</span>
+            </div>
+          )}
         </div>
 
         {/* ── Project Information ── */}
@@ -391,57 +403,64 @@ const ProjectDetails = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Project Name">
               <Input
+                readOnly={!canEditProject}
                 value={formData.name}
                 onChange={(e) => setField("name", e.target.value)}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. Sandton Office Development"
               />
             </Field>
             <Field label="Project Code / Number">
               <Input
+                readOnly={!canEditProject}
                 value={formData.project_number}
                 onChange={(e) => setField("project_number", e.target.value)}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. PRJ-2024-001"
               />
             </Field>
             <Field label="Street / Area" colSpan>
               <Input
+                readOnly={!canEditProject}
                 value={formData.location_fields.street}
                 onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, street: e.target.value } }))}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 12 Main Street, Sandton"
               />
             </Field>
             <Field label="City">
               <Input
+                readOnly={!canEditProject}
                 value={formData.location_fields.city}
                 onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, city: e.target.value } }))}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. Johannesburg"
               />
             </Field>
             <Field label="Province">
               <Input
+                readOnly={!canEditProject}
                 value={formData.location_fields.province}
                 onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, province: e.target.value } }))}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. Gauteng"
               />
             </Field>
             <Field label="Postal Code">
               <Input
+                readOnly={!canEditProject}
                 value={formData.location_fields.postal_code}
                 onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, postal_code: e.target.value } }))}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 2196"
               />
             </Field>
             <Field label="Contract Type">
               <select
+                disabled={!canEditProject}
                 value={formData.contract_type}
                 onChange={(e) => setField("contract_type", e.target.value)}
-                className={SELECT_CLS}
+                className={cn(SELECT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
               >
                 {CONTRACT_TYPES.map((ct) => (
                   <option key={ct} value={ct}>
@@ -455,7 +474,8 @@ const ProjectDetails = () => {
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className={cn(DATE_BTN_CLS, !formData.start_date && "text-muted-foreground")}
+                    disabled={!canEditProject}
+                    className={cn(DATE_BTN_CLS, !formData.start_date && "text-muted-foreground", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   >
                     <CalendarIcon className="w-4 h-4 shrink-0" />
                     {formData.start_date
@@ -480,7 +500,8 @@ const ProjectDetails = () => {
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className={cn(DATE_BTN_CLS, !formData.end_date && "text-muted-foreground")}
+                    disabled={!canEditProject}
+                    className={cn(DATE_BTN_CLS, !formData.end_date && "text-muted-foreground", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   >
                     <CalendarIcon className="w-4 h-4 shrink-0" />
                     {formData.end_date
@@ -503,17 +524,19 @@ const ProjectDetails = () => {
             <Field label="Total Budget">
               <Input
                 type="number"
+                readOnly={!canEditProject}
                 value={formData.total_budget}
                 onChange={(e) => setField("total_budget", e.target.value)}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 5000000"
               />
             </Field>
             <Field label="Currency">
               <select
+                disabled={!canEditProject}
                 value={formData.currency}
                 onChange={(e) => setField("currency", e.target.value)}
-                className={SELECT_CLS}
+                className={cn(SELECT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
@@ -525,26 +548,29 @@ const ProjectDetails = () => {
             <Field label="VAT Rate (%)">
               <Input
                 type="number"
+                readOnly={!canEditProject}
                 value={formData.vat_rate}
                 onChange={(e) => setField("vat_rate", e.target.value)}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 15"
               />
             </Field>
             <Field label="Retention Rate (%)">
               <Input
                 type="number"
+                readOnly={!canEditProject}
                 value={formData.retention_rate}
                 onChange={(e) => setField("retention_rate", e.target.value)}
-                className={INPUT_CLS}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 5"
               />
             </Field>
             <Field label="Description" colSpan>
               <Textarea
+                readOnly={!canEditProject}
                 value={formData.description}
                 onChange={(e) => setField("description", e.target.value)}
-                className={cn(INPUT_CLS, "resize-none h-24 py-3")}
+                className={cn(INPUT_CLS, "resize-none h-24 py-3", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="Brief project description..."
               />
             </Field>
@@ -562,33 +588,37 @@ const ProjectDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <Field label="Client Name or Company">
                 <Input
+                  readOnly={!canEditProject}
                   value={formData.client_details.company_name}
                   onChange={(e) => setClientField("company_name", e.target.value)}
-                  className={INPUT_CLS}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   placeholder="e.g. Acme Holdings (Pty) Ltd"
                 />
               </Field>
               <Field label="Company Registration / ID">
                 <Input
+                  readOnly={!canEditProject}
                   value={formData.client_details.company_registration}
                   onChange={(e) => setClientField("company_registration", e.target.value)}
-                  className={INPUT_CLS}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   placeholder="e.g. 2005/123456/07"
                 />
               </Field>
               <Field label="VAT Number">
                 <Input
+                  readOnly={!canEditProject}
                   value={formData.client_details.vat_number}
                   onChange={(e) => setClientField("vat_number", e.target.value)}
-                  className={INPUT_CLS}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   placeholder="e.g. 4570123456"
                 />
               </Field>
               <Field label="Office Number">
                 <Input
+                  readOnly={!canEditProject}
                   value={formData.client_details.office_number}
                   onChange={(e) => setClientField("office_number", e.target.value)}
-                  className={INPUT_CLS}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   placeholder="+27 11 123 4567"
                 />
               </Field>
@@ -602,39 +632,43 @@ const ProjectDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Street" colSpan>
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.physical_address.street}
                     onChange={(e) =>
                       setAddressField("physical_address", "street", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                     placeholder="Building No., Street Name"
                   />
                 </Field>
                 <Field label="City">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.physical_address.city}
                     onChange={(e) =>
                       setAddressField("physical_address", "city", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Province">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.physical_address.province}
                     onChange={(e) =>
                       setAddressField("physical_address", "province", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Postal Code">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.physical_address.postal_code}
                     onChange={(e) =>
                       setAddressField("physical_address", "postal_code", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
               </div>
@@ -648,39 +682,43 @@ const ProjectDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Street" colSpan>
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.postal_address.street}
                     onChange={(e) =>
                       setAddressField("postal_address", "street", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                     placeholder="Building No., Street Name"
                   />
                 </Field>
                 <Field label="City">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.postal_address.city}
                     onChange={(e) =>
                       setAddressField("postal_address", "city", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Province">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.postal_address.province}
                     onChange={(e) =>
                       setAddressField("postal_address", "province", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Postal Code">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.postal_address.postal_code}
                     onChange={(e) =>
                       setAddressField("postal_address", "postal_code", e.target.value)
                     }
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                   />
                 </Field>
               </div>
@@ -694,25 +732,28 @@ const ProjectDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Bank Name">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.banking_details.bank_name}
                     onChange={(e) => setBankingField("bank_name", e.target.value)}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                     placeholder="e.g. First National Bank"
                   />
                 </Field>
                 <Field label="Account Number">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.banking_details.account_number}
                     onChange={(e) => setBankingField("account_number", e.target.value)}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                     placeholder="e.g. 62012345678"
                   />
                 </Field>
                 <Field label="Branch Code">
                   <Input
+                    readOnly={!canEditProject}
                     value={formData.client_details.banking_details.branch_code}
                     onChange={(e) => setBankingField("branch_code", e.target.value)}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                     placeholder="e.g. 250655"
                   />
                 </Field>
@@ -750,9 +791,10 @@ const ProjectDetails = () => {
         >
           <Field label="Client Brief">
             <Textarea
+              readOnly={!canEditProject}
               value={formData.task_order_brief}
               onChange={(e) => setField("task_order_brief", e.target.value)}
-              className={cn(INPUT_CLS, "resize-none h-36 py-3")}
+              className={cn(INPUT_CLS, "resize-none h-36 py-3", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
               placeholder="Describe the scope of works, client requirements, and deliverables..."
             />
           </Field>
@@ -785,13 +827,15 @@ const ProjectDetails = () => {
                     {getDocDate(doc) ? formatDate(getDocDate(doc)) : "N/A"}
                   </p>
                 </div>
-                <button
-                  onClick={(e) => handleDeleteDocument(e, doc)}
-                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
-                  title="Delete document"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {canEditProject && (
+                  <button
+                    onClick={(e) => handleDeleteDocument(e, doc)}
+                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
+                    title="Delete document"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

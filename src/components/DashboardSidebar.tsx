@@ -201,10 +201,10 @@ export function DashboardSidebar() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {[
-                      { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" /> },
-                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" /> },
-                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" /> },
-                    ].map((item) => {
+                      { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" />, show: true },
+                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" />, show: true },
+                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" />, show: user?.account_type === "organisation" || can("manageSettings") },
+                    ].filter(item => item.show).map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
                         <SidebarMenuItem key={item.title}>

@@ -179,6 +179,7 @@ const OnboardingDashboard = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (activeTab === "organization" && !canEditOrg) return;
     setIsSaving(true);
     try {
       await updateProfile({
@@ -230,7 +231,7 @@ const OnboardingDashboard = () => {
             New Project
           </Button>
         )}
-        {(activeTab === "profile" || activeTab === "organization") && (
+        {activeTab === "profile" && (
           <Button
             onClick={handleSave}
             disabled={isSaving}
@@ -239,6 +240,22 @@ const OnboardingDashboard = () => {
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
+        )}
+        {activeTab === "organization" && canEditOrg && (
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? "Saving..." : "Save Details"}
+          </Button>
+        )}
+        {activeTab === "organization" && !canEditOrg && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Read-only access</span>
+          </div>
         )}
       </div>
 
