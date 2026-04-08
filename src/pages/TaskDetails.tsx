@@ -190,7 +190,7 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
     const causeIdx = desc.indexOf('; cause: ');
     const cleanDesc = causeIdx !== -1 ? desc.slice(0, causeIdx) : desc;
     const cause = causeIdx !== -1 ? desc.slice(causeIdx + 9).trim() : '';
-    const detail = cause ? `action: ${cause}` : undefined;
+    const detail = cause ? `Action: ${cause}` : undefined;
 
     const descLower = cleanDesc.toLowerCase();
     const fromIdx = descLower.indexOf('from ');
@@ -199,15 +199,15 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
       const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
       const newStatus = cleanDesc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return { text: 'status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
+        return { text: 'Status Changed From', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
       }
     }
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return { text: 'status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
+      return { text: 'Status Changed From', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
     }
-    return { text: 'status updated', detail, hideUserName: true };
+    return { text: 'Status Updated', detail, hideUserName: true };
   }
 
   const taskRef = taskCode ? ` ${taskCode}` : '';
@@ -2101,9 +2101,19 @@ export default function TaskDetails() {
                                     </div>
                                     <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">{relTime}</span>
                                   </div>
-                                  {detail && (
-                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{detail}</p>
-                                  )}
+                                  {detail && (() => {
+                                    const byIdx = detail.lastIndexOf(' by ');
+                                    if (byIdx !== -1) {
+                                      const before = detail.slice(0, byIdx + 4);
+                                      const name = detail.slice(byIdx + 4);
+                                      return (
+                                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                          {before}<span className="font-medium text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
+                                        </p>
+                                      );
+                                    }
+                                    return <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{detail}</p>;
+                                  })()}
                                 </div>
                               </div>
                             );
