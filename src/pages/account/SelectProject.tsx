@@ -676,11 +676,11 @@ const SelectProject = () => {
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const isProfileComplete = !userLoading && user && user.role !== null;
+  const isProfileReady = !userLoading && !!user;
 
   const { data: projectsData, isLoading: projectsLoading } = useFetch(
-    user?.id && isProfileComplete ? `projects/?userId=${user.id}` : "",
-    { enabled: !!user?.id && !!isProfileComplete }
+    user?.id && isProfileReady ? `projects/?userId=${user.id}` : "",
+    { enabled: !!user?.id && !!isProfileReady }
   );
   const projects: any[] = projectsData?.results || projectsData || [];
 
@@ -743,7 +743,9 @@ const SelectProject = () => {
   }
 
   // ── Profile incomplete screen ──
-  if (!isProfileComplete) {
+  // Only show when the user hasn't completed onboarding AND has no projects
+  // (team members invited by an owner may have role=null but should see their projects)
+  if (!projectsLoading && projects.length === 0 && user && !user.role) {
     return (
       <>
         <div className="max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">

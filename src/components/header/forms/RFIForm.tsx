@@ -12,21 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const DISCIPLINE_OPTIONS = [
-  "Architectural",
-  "Structural",
-  "Mechanical",
-  "Electrical",
-  "Plumbing",
-  "Civil",
-  "Fire & Safety",
-  "Landscape",
-  "MEP",
-  "Interior",
-  "Facade",
-  "HVAC",
-];
+import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
