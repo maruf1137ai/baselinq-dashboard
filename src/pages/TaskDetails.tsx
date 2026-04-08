@@ -154,9 +154,9 @@ const getStatusBadgeColor = (status: string) => {
     return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
   // In-progress stages - blue
   if (['in progress', 'in review', 'review', 'issued', 'submitted', 'actioned', 'under review',
-       'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
-       'further info required', 'response provided', 'determination made', 'on track / at risk',
-       'scheduled'].includes(s))
+    'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
+    'further info required', 'response provided', 'determination made', 'on track / at risk',
+    'scheduled'].includes(s))
     return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
   // Negative stages - red
   if (['rejected', 'declined'].includes(s))
@@ -219,7 +219,32 @@ export default function TaskDetails() {
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
-  const updateTask = async (_data?: any) => { };
+  const updateTask = async (data: any) => {
+    try {
+      if (!taskId) return;
+      const payload = { ...data };
+      if (payload.status) {
+        const lowerStatus = payload.status.toLowerCase();
+        if (['approved', 'rejected', 'closed', 'completed', 'eot awarded', 'acknowledged'].includes(lowerStatus)) {
+          payload.taskStatus = 'done';
+        } else if (lowerStatus === 'todo') {
+          payload.taskStatus = 'todo';
+        } else {
+          payload.taskStatus = 'in review';
+        }
+      }
+
+      await patchData({
+        url: `tasks/tasks/${taskId}/update-entity/`,
+        data: payload
+      });
+      refetchTask();
+      refetchAuditLogs();
+    } catch (err) {
+      console.error("Update task error:", err);
+      throw err;
+    }
+  };
   const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
@@ -250,6 +275,8 @@ export default function TaskDetails() {
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
+  const [selectedResponse, setSelectedResponse] = useState<any>(null);
+  const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
 
   // Assign user modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -393,10 +420,11 @@ export default function TaskDetails() {
     };
 
     const newResponse = {
-      content,
-      sender: userName,
-      date: new Date().toISOString(),
       id: crypto.randomUUID(),
+      content: editor?.getHTML() || "",
+      sender: user?.name || user?.email || "Unknown User",
+      senderId: user?.id,
+      date: new Date().toISOString(),
       structuredData: getStructuredData()
     };
 
@@ -591,9 +619,8 @@ export default function TaskDetails() {
       id: apiResponse.taskId || task._id,
       type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
       creator: {
-        name: task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || assignedBy?.name || "User",
-        role: assignedBy?.role || "Creator",
         badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
+        id: assignedBy?.userId
       },
       watcher: {
         name: assignedTo[0]?.name || "Watcher",
@@ -601,6 +628,7 @@ export default function TaskDetails() {
       },
       assignedTo: assignedTo,
       actionRequests: mappedActionRequests,
+      responses: apiResponse.responses || [],
       timeline: {
         current: task.status || apiResponse.status || "Pending",
         stages: ["Pending", "In Review", "Approved", "Closed"],
@@ -854,6 +882,7 @@ export default function TaskDetails() {
       default:
         return {
           ...baseData,
+          responses: apiResponse?.responses || [],
           displayId: `#${taskType}-${task._id}`,
           title: task.title || task.subject || task.taskActivityName || "Unknown",
           task_code: task._id,
@@ -1106,7 +1135,6 @@ export default function TaskDetails() {
               </Card>
 
 
-
               {/* Question & Context */}
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
@@ -1142,47 +1170,7 @@ export default function TaskDetails() {
                 </div> */}
               </Card>
 
-              {/* Previous Responses Section */}
-              {currentTask?.responses && currentTask.responses.length > 0 && (
-                <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border mb-4">
-                  <h2 className="text-sm font-medium text-foreground mb-5">
-                    Previous Responses
-                  </h2>
-                  <div className="space-y-3">
-                    {currentTask.responses.map((resp: any) => (
-                      <div
-                        key={resp.id}
-                        className="flex items-start gap-4 p-3 bg-white border rounded-lg">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-indigo-50 text-indigo-600 text-xs">
-                            {resp.sender
-                              ?.split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-foreground capitalize">
-                              {resp.sender}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(resp.date).toLocaleString()}
-                            </span>
-                          </div>
-                          <div
-                            className="text-sm text-muted-foreground prose prose-sm max-w-none mt-2"
-                            dangerouslySetInnerHTML={{ __html: resp.content }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Response Section */}
+              {/* Response Form */}
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
@@ -1546,6 +1534,83 @@ export default function TaskDetails() {
                   </div>
                 </div>
               </Card>
+
+              {/* Recent Responses Section */}
+              {displayTask.responses && displayTask.responses.some((resp: any) =>
+                String(resp.senderId) === String(user?.id) ||
+                String(displayTask.creator.id) === String(user?.id)
+              ) && (
+                  <div className="space-y-3 mb-4 mt-6">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-normal text-foreground">
+                        Recent Responses
+                      </h2>
+                      <span className="text-[10px] bg-primary/10 text-[#8081F6] px-2 py-0.5 rounded-full font-normal">
+                        {displayTask.responses.length} Total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {displayTask.responses
+                        .filter((resp: any) =>
+                          String(resp.senderId) === String(user?.id) ||
+                          String(displayTask.creator.id) === String(user?.id)
+                        )
+                        .slice().reverse().map((resp: any) => (
+                          <Card
+                            key={resp.id}
+                            onClick={() => {
+                              setSelectedResponse(resp);
+                              setIsResponseModalOpen(true);
+                            }}
+                            className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
+                          >
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-border">
+                                <AvatarFallback className="bg-primary/5 text-[#8081F6] text-xs font-normal">
+                                  {resp.sender
+                                    ?.split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")
+                                    .toUpperCase() || "U"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-sm font-normal text-foreground truncate">
+                                    {resp.sender}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {new Date(resp.date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div
+                                  className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2"
+                                  dangerouslySetInnerHTML={{ __html: resp.content }}
+                                />
+                                {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {Object.entries(resp.structuredData).slice(0, 2).map(([key, value]) => {
+                                      if (!value) return null;
+                                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                      return (
+                                        <span key={key} className="text-[9px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground border border-border/50">
+                                          {label}: {String(value)}
+                                        </span>
+                                      )
+                                    })}
+                                    {Object.keys(resp.structuredData).length > 2 && (
+                                      <span className="text-[9px] text-[#8081F6] font-normal">+ more</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
               {/* AI Chatbot Block */}
               <AnimatePresence>
@@ -1979,6 +2044,65 @@ export default function TaskDetails() {
               {isAssigning ? "Assigning..." : "Submit"}
             </button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isResponseModalOpen} onOpenChange={setIsResponseModalOpen}>
+        <DialogContent className="max-w-2xl bg-white p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+          {selectedResponse && (
+            <div className="flex flex-col h-full max-h-[85vh]">
+              {/* Header */}
+              <div className="p-6 border-b bg-muted/30">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                    <AvatarFallback className="bg-primary/10 text-primary font-normal text-lg">
+                      {selectedResponse.sender?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-normal text-foreground">
+                      {selectedResponse.sender}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{new Date(selectedResponse.date).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Structured Data Section */}
+                {selectedResponse.structuredData && Object.keys(selectedResponse.structuredData).some(k => selectedResponse.structuredData[k]) && (
+                  <div className="grid grid-cols-2 gap-4 bg-primary/5 rounded-xl p-4 border border-primary/10">
+                    {Object.entries(selectedResponse.structuredData).map(([key, value]) => {
+                      if (value === undefined || value === null || value === "") return null;
+                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                      return (
+                        <div key={key} className="space-y-1">
+                          <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground/70">
+                            {label}
+                          </span>
+                          <p className="text-sm font-normal text-foreground">
+                            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Content Section */}
+                <div className="prose prose-sm max-w-none prose-slate">
+                  <div
+                    className="text-sm text-foreground leading-relaxed bg-white rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: selectedResponse.content }}
+                  />
+                </div>
+              </div>
+
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Paperclip, Plus, Bell, Calendar } from 'lucide-react';
+import { Paperclip, Plus, Bell, Calendar, MessageSquare } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import useFetch from '@/hooks/useFetch';
@@ -200,7 +200,7 @@ const getStatusDisplayName = (status: string | null) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
-function TaskCard({ task, isDragging }: any) {
+function TaskCard({ task, isDragging, currentUserId }: any) {
   const { userRole } = useUserRoleStore();
 
   const normalizedTaskType = task.type === "CRITICALPATHITEM" ? "CPI" : task.type;
@@ -311,6 +311,18 @@ function TaskCard({ task, isDragging }: any) {
                   {task.discipline}
                 </span>
               )}
+              {(() => {
+                const visibleResponses = (task.responses || []).filter((resp: any) =>
+                  String(resp.senderId) === String(currentUserId) ||
+                  String(task.assignedBy?.userId) === String(currentUserId)
+                );
+                return visibleResponses.length > 0 && (
+                  <span className="flex items-center gap-1 text-[10px] bg-[#8081F6]/10 text-[#8081F6] px-1.5 py-0.5 rounded shrink-0">
+                    <MessageSquare className="h-2.5 w-2.5" />
+                    {visibleResponses.length}
+                  </span>
+                );
+              })()}
               {/* Escalated: replace due date with bell */}
               {!isResolved && escalationLevel >= 2 ? (
                 <span className="flex items-center gap-1 text-xs text-red-600 font-medium shrink-0">
@@ -379,8 +391,8 @@ function TaskCard({ task, isDragging }: any) {
         </div>
 
 
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 
   if (!canDrag) {
@@ -399,7 +411,7 @@ function TaskCard({ task, isDragging }: any) {
   return content;
 }
 
-function Column({ id, title, count, tasks, onAddClick }: any) {
+function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
   const { setNodeRef } = useSortable({ id });
 
   // Only count overdue for non-resolved tasks (resolved items shouldn't show "breached")
@@ -434,7 +446,7 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
             style={{ minHeight: '100px' }}
           >
             {tasks.map((task: any) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} currentUserId={currentUserId} />
             ))}
           </div>
         </SortableContext>
@@ -594,18 +606,19 @@ export default function Task() {
         }
 
         return ({
-          id: item.taskId || item.task?._id,
+          id: item.id || item.taskId || item.task?._id || item.task?.id,
           title: item.task?.subject || item.task?.title || item.task?.taskActivityName || '',
           type,
           status: item.status || item.task?.status || 'todo',
           priority: item.task?.priority || TASK_PRIORITIES[idx % TASK_PRIORITIES.length],
           discipline: item.task?.discipline || TASK_DISCIPLINES[idx % TASK_DISCIPLINES.length],
-          task_code: `${type}-${String(item.taskId).padStart(3, '0')}`,
+          task_code: `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
           due_date: dueDate,
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,
           assignedBy: item.assignedBy,
           attachments: item.task?.attachments || [],
+          responses: item.responses || [],
           chat: [],
         })
       });
@@ -776,9 +789,9 @@ export default function Task() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex gap-6 min-w-min h-full">
-                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
                 </div>
 
                 <DragOverlay>
