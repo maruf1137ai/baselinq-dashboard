@@ -333,7 +333,7 @@ interface CategoryBadgeProps {
 
 const CategoryBadge: React.FC<CategoryBadgeProps> = ({ category }) => {
   return (
-    <span className="px-4 py-1 inline-flex text-sm leading-5 rounded-full bg-muted text-foreground border border-border">
+    <span className="px-4 py-1 inline-flex text-sm leading-5 rounded-full bg-muted text-foreground border border-border capitalize">
       {category}
     </span>
   );
@@ -721,7 +721,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     <div className="my-auto flex items-center gap-5 capitalize">
-                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal uppercase">
+                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal capitalize">
                         {member.user.name?.charAt(0) || "?"}
                       </div>
                       {member.user.name}
@@ -730,7 +730,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     <div>{member.user.email}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm uppercase">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm !capitalize">
                     <CategoryBadge category={member.roleName || "N/A"} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
