@@ -1695,12 +1695,14 @@ export default function TaskDetails() {
                     <span>Powered by Baseline Intelligence</span>
                   </div> */}
                   <div className="flex items-center gap-3">
-                    <Button
-                      className="font-normal"
-                      onClick={() => handleApproveTask('Approved')}
-                      disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
-                      {["Approved", "Completed"].includes(displayTask.timeline.current) ? "Approved" : "Approve"}
-                    </Button>
+                    {canApprove && (
+                      <Button
+                        className="font-normal"
+                        onClick={() => handleApproveTask('Approved')}
+                        disabled={["Approved", "Completed"].includes(displayTask.timeline.current)}>
+                        {["Approved", "Completed"].includes(displayTask.timeline.current) ? "Approved" : "Approve"}
+                      </Button>
+                    )}
 
                     <button
                       onClick={() => setShowAiChat(!showAiChat)}
