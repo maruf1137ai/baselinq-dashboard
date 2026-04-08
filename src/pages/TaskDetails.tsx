@@ -181,7 +181,7 @@ const ENTITY_LABELS: Record<string, string> = {
   generalinstruction: 'General Instruction',
 };
 
-const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean } => {
+const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean } => {
   const action = (log.action || '').toLowerCase();
   const desc = (log.description || '') as string;
 
@@ -210,13 +210,15 @@ const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus
     return { text: 'status updated', detail, hideUserName: true };
   }
 
-  if (action === 'task_created') return { text: 'created this task' };
-  if (action === 'created') return { text: 'created this task' };
+  const taskRef = taskCode ? ` ${taskCode}` : '';
 
-  if (action === 'vo_created') return { text: 'created a Variation Order' };
-  if (action === 'si_created') return { text: 'created a Site Instruction' };
-  if (action === 'rfi_created') return { text: 'created a Request for Information' };
-  if (action === 'dc_created') return { text: 'created a Delay Certificate' };
+  if (action === 'task_created') return { text: `created this task${taskRef}` };
+  if (action === 'created') return { text: `created this task${taskRef}` };
+
+  if (action === 'vo_created') return { text: `created a Variation Order${taskRef}` };
+  if (action === 'si_created') return { text: `created a Site Instruction${taskRef}` };
+  if (action === 'rfi_created') return { text: `created a Request for Information${taskRef}` };
+  if (action === 'dc_created') return { text: `created a Delay Certificate${taskRef}` };
   if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
 
   if (action === 'task_assigned') {
@@ -2071,7 +2073,7 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus, detail, hideUserName } = getActionLabel(log);
+                            const { text, oldStatus, newStatus, detail, hideUserName } = getActionLabel(log, displayTask?.displayId);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
