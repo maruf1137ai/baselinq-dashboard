@@ -5,7 +5,7 @@ import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { hasPermission, canManageMember } from "@/lib/roleUtils";
 import { cn } from "@/lib/utils";
-import { postData, deleteData, patchData } from "@/lib/Api";
+import { postData, deleteData, patchData, orgInviteMember } from "@/lib/Api";
 import { toast } from "sonner";
 // import CategoryBadge from './CategoryBadge';
 import {
@@ -395,6 +395,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             roleCode: selectedRole.code,
           },
         });
+        // Also add to the organisation so they appear in Account > Organisation > Team
+        try {
+          await orgInviteMember({
+            name: selectedUser.name || selectedUser.email,
+            email: selectedUser.email,
+            position: selectedRole.code,
+          });
+        } catch {
+          // silently ignore — project add succeeded
+        }
         toast.success("Team member added successfully");
         setShowAddMemberModal(false);
         setSelectedUser(null);
@@ -419,6 +429,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             project_id: projectId,
           },
         });
+        // Also invite to the organisation so they appear in Account > Organisation > Team
+        try {
+          await orgInviteMember({
+            name: inviteName || inviteEmail,
+            email: inviteEmail,
+            position: selectedRole.code,
+          });
+        } catch {
+          // silently ignore — project invite succeeded
+        }
         toast.success("Invitation sent successfully");
         setShowAddMemberModal(false);
         setInviteEmail("");

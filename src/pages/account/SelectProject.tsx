@@ -572,7 +572,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 {/* ── Step 4: Invite team (org only) ── */}
                 {step === 4 && accountType === "organisation" && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-4">Invite colleagues — you can also do this later from settings.</p>
+                    <p className="text-[13px] text-gray-500 mb-4">Invite colleagues, you can also do this later from settings.</p>
                     <div className="space-y-2">
                       {teamMembers.map((member) => (
                         <div key={member.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
