@@ -181,7 +181,7 @@ const ENTITY_LABELS: Record<string, string> = {
   generalinstruction: 'General Instruction',
 };
 
-const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string; detail?: string } => {
+const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean } => {
   const action = (log.action || '').toLowerCase();
   const desc = (log.description || '') as string;
 
@@ -199,15 +199,15 @@ const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus
       const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
       const newStatus = cleanDesc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return { text: 'status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail };
+        return { text: 'status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
       }
     }
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return { text: 'status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail };
+      return { text: 'status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
     }
-    return { text: 'status updated', detail };
+    return { text: 'status updated', detail, hideUserName: true };
   }
 
   if (action === 'task_created') return { text: 'created this task' };
@@ -514,6 +514,7 @@ export default function TaskDetails() {
       if (displayTask.type === "VO") {
         const isCreator = String(displayTask.creator?.id) === String(user?.id);
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
         if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
           // Any user submits first response → Submitted
           updateData.status = "Submitted";
@@ -521,7 +522,7 @@ export default function TaskDetails() {
         } else if (isCreator && currentStatusNorm === 'underreview') {
           // Creator submits counter-response while Under Review → Priced
           updateData.status = "Priced";
-          updateData.statusCause = "Counter-response submitted by task creator";
+          updateData.statusCause = `Counter-response submitted by ${creatorName}`;
         }
       }
 
@@ -1750,7 +1751,8 @@ export default function TaskDetails() {
                                 const isCreator = String(displayTask.creator?.id) === String(user?.id);
                                 const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
                                 if (isCreator && currentStatusNorm === 'submitted') {
-                                  updateTask({ status: "Under Review", statusCause: "Response reviewed by task creator" });
+                                  const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+                                  updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
                                 }
                               }
                             }}
@@ -2069,7 +2071,7 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus, detail } = getActionLabel(log);
+                            const { text, oldStatus, newStatus, detail, hideUserName } = getActionLabel(log);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
@@ -2083,7 +2085,7 @@ export default function TaskDetails() {
                                 <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-sm font-normal text-foreground">{log.createdByName || 'System'}</span>
+                                      {!hideUserName && <span className="text-sm font-normal text-foreground">{log.createdByName || 'System'}</span>}
                                       <span className="text-sm text-muted-foreground">{text}</span>
                                       {oldStatus && (
                                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(oldStatus)}`}>{oldStatus}</span>
