@@ -2319,38 +2319,35 @@ export default function TaskDetails() {
                 </div>
               </div>
 
-              {/* Footer Actions */}
-              <div className="p-4 border-t bg-muted/20 flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
-                  onClick={() => {
-                    setPricingDecision('approved');
-                    if ((selectedResponse as any).structuredData?.recommendedAmount) {
-                      setRecommendedAmount((selectedResponse as any).structuredData.recommendedAmount);
-                    }
-                    setSelectedResponse(null);
-                    setIsResponseModalOpen(false);
-                    toast.success("Ready to approve.");
-                  }}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Approve Proposal
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
-                  onClick={() => {
-                    setPricingDecision('rejected');
-                    setSelectedResponse(null);
-                    setIsResponseModalOpen(false);
-                    toast.error("Ready to reject.");
-                  }}
-                >
-                  <XCircle className="w-4 h-4" />
-                  Reject Proposal
-                </Button>
-              </div>
+              {/* Footer Actions — only visible to task creator */}
+              {canApprove && (
+                <div className="p-4 border-t bg-muted/20 flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                    onClick={async () => {
+                      setSelectedResponse(null);
+                      setIsResponseModalOpen(false);
+                      await handleApproveTask('Approved');
+                    }}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Approve Proposal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                    onClick={async () => {
+                      setSelectedResponse(null);
+                      setIsResponseModalOpen(false);
+                      await handleApproveTask('Rejected');
+                    }}
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject Proposal
+                  </Button>
+                </div>
+              )}
 
             </div>
           )}
