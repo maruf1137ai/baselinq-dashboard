@@ -186,22 +186,28 @@ const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus
   const desc = (log.description || '') as string;
 
   if (action === 'status_updated') {
-    const descLower = desc.toLowerCase();
+    // Parse cause if present: "Status changed from X to Y; cause: Z"
+    const causeIdx = desc.indexOf('; cause: ');
+    const cleanDesc = causeIdx !== -1 ? desc.slice(0, causeIdx) : desc;
+    const cause = causeIdx !== -1 ? desc.slice(causeIdx + 9).trim() : '';
+    const detail = cause ? `action: ${cause}` : undefined;
+
+    const descLower = cleanDesc.toLowerCase();
     const fromIdx = descLower.indexOf('from ');
     const toIdx = descLower.lastIndexOf(' to ');
     if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 4) {
-      const oldStatus = desc.slice(fromIdx + 5, toIdx).trim();
-      const newStatus = desc.slice(toIdx + 4).trim();
+      const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
+      const newStatus = cleanDesc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return { text: 'changed the status from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus) };
+        return { text: 'status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail };
       }
     }
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return { text: 'changed the status from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined };
+      return { text: 'status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail };
     }
-    return { text: 'updated the status' };
+    return { text: 'status updated', detail };
   }
 
   if (action === 'task_created') return { text: 'created this task' };
@@ -511,9 +517,11 @@ export default function TaskDetails() {
         if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
           // Any user submits first response → Submitted
           updateData.status = "Submitted";
+          updateData.statusCause = "Response submitted";
         } else if (isCreator && currentStatusNorm === 'underreview') {
           // Creator submits counter-response while Under Review → Priced
           updateData.status = "Priced";
+          updateData.statusCause = "Counter-response submitted by task creator";
         }
       }
 
@@ -1742,7 +1750,7 @@ export default function TaskDetails() {
                                 const isCreator = String(displayTask.creator?.id) === String(user?.id);
                                 const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
                                 if (isCreator && currentStatusNorm === 'submitted') {
-                                  updateTask({ status: "Under Review" });
+                                  updateTask({ status: "Under Review", statusCause: "Response reviewed by task creator" });
                                 }
                               }
                             }}
