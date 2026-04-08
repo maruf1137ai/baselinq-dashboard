@@ -19,21 +19,7 @@ import { usePost } from "@/hooks/usePost";
 import { patchData, registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
-
-const DISCIPLINE_OPTIONS = [
-  "Architectural",
-  "Structural",
-  "Mechanical",
-  "Electrical",
-  "Plumbing",
-  "Civil",
-  "Fire & Safety",
-  "Landscape",
-  "MEP",
-  "Interior",
-  "Facade",
-  "HVAC",
-];
+import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
 
 export default function VOForm({ setOpen, initialStatus, initialData, taskId }: any) {
   const [title, setTitle] = useState(initialData?.title || "");

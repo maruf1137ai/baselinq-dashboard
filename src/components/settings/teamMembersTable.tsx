@@ -55,6 +55,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import FilterBtns from "./filterBtns";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
+import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
 
 interface User {
   id: number;
@@ -94,6 +95,7 @@ interface TeamMember {
   roleName: string;
   roleId: string;
   roleInfo: Role;
+  discipline: string;
   isActive: boolean;
   addedBy: {
     userId: string;
@@ -139,6 +141,7 @@ const ActionsCell = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [editDiscipline, setEditDiscipline] = useState(member.discipline || "");
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -171,6 +174,7 @@ const ActionsCell = ({
         url: `projects/${projectId}/team-members/${member._id}/`,
         data: {
           roleName: selectedRole.name,
+          discipline: editDiscipline,
         },
       });
       toast.success("Role updated successfully");
@@ -236,9 +240,9 @@ const ActionsCell = ({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>Edit Role</DialogTitle>
+            <DialogTitle>Edit Member</DialogTitle>
             <DialogDescription>
-              Update the role for this team member
+              Update the role and discipline for this team member
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -280,6 +284,25 @@ const ActionsCell = ({
             <p className="text-sm text-muted-foreground">
               Current role: <span className="font-normal">{member.roleName}</span>
             </p>
+
+            {/* Discipline Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="editDiscipline">Discipline</Label>
+              <Select
+                value={editDiscipline}
+                onValueChange={setEditDiscipline}>
+                <SelectTrigger>
+                  <SelectValue placeholder={member.discipline || "Select a discipline"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISCIPLINE_OPTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -362,6 +385,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedDiscipline, setSelectedDiscipline] = useState("");
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -393,6 +417,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             userId: selectedUser.id,
             roleName: selectedRole.name,
             roleCode: selectedRole.code,
+            discipline: selectedDiscipline,
           },
         });
         // Also add to the organisation so they appear in Account > Organisation > Team
@@ -409,6 +434,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         setShowAddMemberModal(false);
         setSelectedUser(null);
         setSelectedRole(null);
+        setSelectedDiscipline("");
         await refetch();
       } catch (error: any) {
         console.error("Error adding team member:", error);
@@ -427,6 +453,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             name: inviteName,
             role_code: selectedRole.code,
             project_id: projectId,
+            discipline: selectedDiscipline,
           },
         });
         // Also invite to the organisation so they appear in Account > Organisation > Team
@@ -444,6 +471,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         setInviteEmail("");
         setInviteName("");
         setSelectedRole(null);
+        setSelectedDiscipline("");
         await refetch();
       } catch (error: any) {
         console.error("Error inviting member:", error);
@@ -616,6 +644,24 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="discipline">Discipline</Label>
+              <Select
+                value={selectedDiscipline}
+                onValueChange={setSelectedDiscipline}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select a discipline (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISCIPLINE_OPTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </Tabs>
           <DialogFooter>
             <DialogClose asChild>
@@ -689,9 +735,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <div className="flex flex-wrap gap-1">
-                      {member.user?.role?.name ? (
+                      {member.discipline ? (
                         <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                          {member.user.role.name}
+                          {member.discipline}
                         </div>
                       ) : (
                         <span className="text-muted-foreground italic text-xs">Unspecified</span>

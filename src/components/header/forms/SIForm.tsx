@@ -10,21 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-
-const DISCIPLINE_OPTIONS = [
-  "Architectural",
-  "Structural",
-  "Mechanical",
-  "Electrical",
-  "Plumbing",
-  "Civil",
-  "Fire & Safety",
-  "Landscape",
-  "MEP",
-  "Interior",
-  "Facade",
-  "HVAC",
-];
+import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
