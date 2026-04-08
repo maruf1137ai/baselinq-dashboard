@@ -66,6 +66,8 @@ import {
   Circle,
   Clock,
   XCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -133,9 +135,14 @@ const groupLogsByDate = (logs: any[]) => {
 
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
+  if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
   if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
   if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+  if (a === 'task_assigned') return { icon: <UserPlus className="w-3 h-3 text-[#0284c7]" />, bg: '#E0F2FE' };
+  if (a === 'request_info') return { icon: <FileText className="w-3 h-3 text-[#9333ea]" />, bg: '#FDF4FF' };
+  if (a === 'response_added') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
     const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
@@ -165,11 +172,20 @@ const getStatusBadgeColor = (status: string) => {
   return 'bg-muted text-muted-foreground border border-border';
 };
 
-const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string } => {
+const ENTITY_LABELS: Record<string, string> = {
+  variationorder: 'Variation Order',
+  requestforinformation: 'Request for Information',
+  siteinstruction: 'Site Instruction',
+  delaycertificate: 'Delay Certificate',
+  criticalpathitem: 'Critical Path Item',
+  generalinstruction: 'General Instruction',
+};
+
+const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string; detail?: string } => {
   const action = (log.action || '').toLowerCase();
+  const desc = (log.description || '') as string;
+
   if (action === 'status_updated') {
-    // Parse "Status changed from X to Y" — X/Y can be multi-word (e.g. "in review")
-    const desc = (log.description || '') as string;
     const descLower = desc.toLowerCase();
     const fromIdx = descLower.indexOf('from ');
     const toIdx = descLower.lastIndexOf(' to ');
@@ -177,33 +193,58 @@ const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus
       const oldStatus = desc.slice(fromIdx + 5, toIdx).trim();
       const newStatus = desc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return {
-          text: 'changed the status from',
-          oldStatus: displayStatus(oldStatus),
-          newStatus: displayStatus(newStatus),
-        };
+        return { text: 'changed the status from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus) };
       }
     }
-    // Fallback: try explicit old/new value fields
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return {
-        text: 'changed the status from',
-        oldStatus: oldRaw ? displayStatus(oldRaw) : undefined,
-        newStatus: raw ? displayStatus(raw) : undefined,
-      };
+      return { text: 'changed the status from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined };
     }
-    // No parseable status info — show generic text without dangling "from"
     return { text: 'updated the status' };
   }
+
+  if (action === 'task_created') return { text: 'created this task' };
   if (action === 'created') return { text: 'created this task' };
-  if (action === 'assigned') return { text: 'assigned this task' };
+
+  if (action === 'vo_created') return { text: 'created a Variation Order' };
+  if (action === 'si_created') return { text: 'created a Site Instruction' };
+  if (action === 'rfi_created') return { text: 'created a Request for Information' };
+  if (action === 'dc_created') return { text: 'created a Delay Certificate' };
+  if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
+
+  if (action === 'task_assigned') {
+    return { text: 'assigned users to this task', detail: desc || undefined };
+  }
+
+  if (action === 'request_info') {
+    return { text: 'requested additional information', detail: desc || undefined };
+  }
+
+  if (action === 'response_added') {
+    // desc = "Maruf submitted a response on VARIATIONORDER — Approved"
+    // Strip the leading user name from description to avoid duplication
+    const namePrefix = (log.createdByName || '').trim();
+    let detail = desc;
+    if (namePrefix && detail.toLowerCase().startsWith(namePrefix.toLowerCase())) {
+      detail = detail.slice(namePrefix.length).trim();
+    }
+    // Humanise entity type in the detail
+    const lower = detail.toLowerCase();
+    Object.entries(ENTITY_LABELS).forEach(([key, label]) => {
+      detail = detail.replace(new RegExp(key, 'gi'), label);
+    });
+    return { text: 'submitted a response', detail: detail || undefined };
+  }
+
+  if (action === 'comment_added') return { text: 'added a comment' };
+  if (action === 'assigned') return { text: 'was assigned to this task' };
   if (action === 'approved') return { text: 'approved this task' };
   if (action === 'rejected') return { text: 'rejected this task' };
-  if (action === 'comment_added' || action === 'response_added') return { text: 'added a response' };
+
+  // Generic fallback — humanise snake_case
   const humanized = action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-  return { text: humanized };
+  return { text: humanized, detail: desc || undefined };
 };
 
 export default function TaskDetails() {
@@ -288,6 +329,14 @@ export default function TaskDetails() {
   const [recommendedAmount, setRecommendedAmount] = useState<string>("");
   const [pricingDecision, setPricingDecision] = useState<string>("");
   const [pricingConditions, setPricingConditions] = useState<string>("");
+  interface VOLineItem { id: string; description: string; qty: string; rate: string; }
+  const [voLineItems, setVoLineItems] = useState<VOLineItem[]>([{ id: crypto.randomUUID(), description: "", qty: "", rate: "" }]);
+  const voSubtotal = voLineItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0), 0);
+  const voVat = voSubtotal * 0.15;
+  const voTotal = voSubtotal + voVat;
+  const formatVOCurrency = (n: number) => `R ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const updateVoItem = (id: string, field: keyof VOLineItem, value: string) => setVoLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const removeVoItem = (id: string) => setVoLineItems(prev => prev.filter(item => item.id !== id));
 
   // DC (Delay Claim) Response state
   const [dcExtensionGranted, setDcExtensionGranted] = useState<string>("");
@@ -393,7 +442,20 @@ export default function TaskDetails() {
 
     const getStructuredData = () => {
       if (displayTask.type === "VO") {
-        return { recommendedAmount, pricingDecision, pricingConditions };
+        return {
+          recommendedAmount,
+          pricingDecision,
+          pricingConditions,
+          lineItems: voLineItems.filter(i => i.description.trim()).map(i => ({
+            description: i.description,
+            quantity: parseFloat(i.qty) || 0,
+            unitRate: parseFloat(i.rate) || 0,
+            total: (parseFloat(i.qty) || 0) * (parseFloat(i.rate) || 0),
+          })),
+          subTotal: voSubtotal,
+          tax: { type: "VAT", rate: 15, amount: voVat },
+          grandTotal: voTotal,
+        };
       }
       if (displayTask.type === "RFI") {
         return { rfiResponseStatus };
@@ -442,11 +504,17 @@ export default function TaskDetails() {
         responses: updatedResponses,
       };
 
-      // Automate Status Transitions based on Decision
-      if (displayTask.type === "VO" && pricingDecision) {
-        if (pricingDecision === "approved") updateData.status = "Approved";
-        if (pricingDecision === "rejected") updateData.status = "Rejected";
-        if (pricingDecision === "partially_approved") updateData.status = "Priced";
+      // VO Decision Timeline: automatic status transitions
+      if (displayTask.type === "VO") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
+          // Any user submits first response → Submitted
+          updateData.status = "Submitted";
+        } else if (isCreator && currentStatusNorm === 'underreview') {
+          // Creator submits counter-response while Under Review → Priced
+          updateData.status = "Priced";
+        }
       }
 
       if (displayTask.type === "RFI" && rfiResponseStatus) {
@@ -480,9 +548,32 @@ export default function TaskDetails() {
       if (displayTask.type === "GI") {
         if (giAcknowledgeReceipt) {
           updateData.status = "Acknowledged";
+          updateData.isAcknowledged = true;
         } else {
           updateData.status = "Distributed";
         }
+      }
+
+      // Sync pricing and response fields to update the underlying entity
+      if (displayTask.type === "VO") {
+        updateData.recommendedAmount = recommendedAmount;
+        updateData.pricingDecision = pricingDecision;
+        updateData.pricingConditions = pricingConditions;
+        updateData.lineItems = voLineItems.filter(i => i.description.trim()).map(i => ({
+          description: i.description,
+          quantity: parseFloat(i.qty) || 0,
+          unitRate: parseFloat(i.rate) || 0,
+        }));
+      }
+
+      if (displayTask.type === "SI") {
+        updateData.leadsToVariation = siLeadsToVariationResponse;
+        updateData.isAcknowledged = siAcknowledgeReceipt;
+      }
+
+      if (displayTask.type === "DC") {
+        updateData.extensionGranted = parseInt(dcExtensionGranted) || null;
+        updateData.newCompletionDate = dcNewCompletionDate || null;
       }
 
 
@@ -588,6 +679,7 @@ export default function TaskDetails() {
     if (isLoading || !taskDetailsResponse) return;
     setCurrentTask(taskDetailsResponse);
   }, [taskId, taskDetailsResponse, isLoading]);
+
 
   // useEffect(() => {
   //   console.log(isAnalyzeModalOpen, isAnalyzeLoading)
@@ -909,6 +1001,7 @@ export default function TaskDetails() {
     ? (transformTaskData(currentTask, requestInfoResponse?.results) as any)
     : null;
 
+
   // Map API statuses that don't directly match timeline stage names
   const statusToStageMap: Record<string, string> = {
     "Completed": "Approved",
@@ -1050,11 +1143,13 @@ export default function TaskDetails() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
-                      Due: {displayTask.dueDate}
-                    </Badge>
+                    {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
+                        Due: {displayTask.dueDate}
+                      </Badge>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="text-muted-foreground hover:text-foreground">
@@ -1194,54 +1289,135 @@ export default function TaskDetails() {
                 {/* Structured Pricing Response Fields - Only for VO */}
                 {displayTask.type === "VO" && (
                   <div className="space-y-4 mb-6 pb-6 border-b border-border">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {/* Recommended Amount */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Recommended Amount
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R</span>
-                          <input
-                            type="text"
-                            value={recommendedAmount}
-                            onChange={(e) => {
-                              // Allow only numbers and decimal point
-                              const value = e.target.value.replace(/[^\d.]/g, '');
-                              setRecommendedAmount(value);
-                            }}
-                            placeholder="0.00"
-                            className="w-full pl-8 pr-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Your assessed value for this variation</p>
+
+                    {/* Line Items */}
+                    <div>
+                      <label className="text-xs font-normal text-muted-foreground block mb-2">Line Items</label>
+
+                      {/* Desktop table — hidden on mobile */}
+                      <div className="hidden sm:block border border-border rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-muted border-b border-border">
+                            <tr>
+                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-6">#</th>
+                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2">Description</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Qty</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Rate (R)</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Amount</th>
+                              <th className="w-8 px-2 py-2" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {voLineItems.map((item, idx) => {
+                              const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+                              return (
+                                <tr key={item.id} className="border-b border-border last:border-0">
+                                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
+                                  <td className="px-2 py-1">
+                                    <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
+                                  </td>
+                                  <td className="px-2 py-1">
+                                    <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                  </td>
+                                  <td className="px-2 py-1">
+                                    <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                  </td>
+                                  <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
+                                  <td className="px-2 py-1.5">
+                                    {voLineItems.length > 1 && (
+                                      <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-muted/50 border-t border-border">
+                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">Subtotal</td>
+                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voSubtotal)}</td>
+                              <td />
+                            </tr>
+                            <tr className="bg-muted/50">
+                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">VAT (15%)</td>
+                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voVat)}</td>
+                              <td />
+                            </tr>
+                            <tr className="bg-[#1B1C1F]">
+                              <td colSpan={4} className="px-3 py-2 text-xs font-medium text-white text-right">Total</td>
+                              <td className="px-3 py-2 text-sm text-right text-white font-medium">{formatVOCurrency(voTotal)}</td>
+                              <td />
+                            </tr>
+                          </tfoot>
+                        </table>
                       </div>
 
-                      {/* Decision */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Decision
-                        </label>
-                        <select
-                          value={pricingDecision}
-                          onChange={(e) => setPricingDecision(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="">Select decision...</option>
-                          <option value="approved">Approved</option>
-                          <option value="partially_approved">Partially Approved</option>
-                          <option value="rejected">Rejected</option>
-                          <option value="needs_clarification">Needs Clarification</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground mt-1">Your formal assessment</p>
+                      {/* Mobile cards — shown only on small screens */}
+                      <div className="sm:hidden border border-border rounded-lg overflow-hidden divide-y divide-border">
+                        {voLineItems.map((item, idx) => {
+                          const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+                          return (
+                            <div key={item.id} className="p-3 bg-white">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}</span>
+                                <input
+                                  className="flex-1 text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                  placeholder="Item description"
+                                  value={item.description}
+                                  onChange={e => updateVoItem(item.id, "description", e.target.value)}
+                                />
+                                {voLineItems.length > 1 && (
+                                  <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 pl-6">
+                                <div className="flex-1">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
+                                  <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
+                                  <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                </div>
+                                <div className="flex-1 text-right">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
+                                  <p className="text-sm font-medium text-foreground py-1.5">{formatVOCurrency(amount)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                          <span className="text-xs text-muted-foreground">Subtotal</span>
+                          <span className="text-sm text-foreground">{formatVOCurrency(voSubtotal)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                          <span className="text-xs text-muted-foreground">VAT (15%)</span>
+                          <span className="text-sm text-foreground">{formatVOCurrency(voVat)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2.5 bg-[#1B1C1F]">
+                          <span className="text-xs font-medium text-white">Total</span>
+                          <span className="text-sm font-medium text-white">{formatVOCurrency(voTotal)}</span>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setVoLineItems(prev => [...prev, { id: crypto.randomUUID(), description: "", qty: "", rate: "" }])}
+                        className="mt-2 flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add line item
+                      </button>
                     </div>
 
                     {/* Conditions */}
                     <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">
-                        Conditions / Caveats
-                      </label>
+                      <label className="text-xs font-normal text-muted-foreground block mb-2">Conditions / Caveats</label>
                       <textarea
                         value={pricingConditions}
                         onChange={(e) => setPricingConditions(e.target.value)}
@@ -1249,7 +1425,6 @@ export default function TaskDetails() {
                         rows={2}
                         className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Optional notes on conditions for this decision</p>
                     </div>
                   </div>
                 )}
@@ -1562,6 +1737,14 @@ export default function TaskDetails() {
                             onClick={() => {
                               setSelectedResponse(resp);
                               setIsResponseModalOpen(true);
+                              // VO: Creator clicking a response while status is Submitted → Under Review
+                              if (displayTask?.type === "VO") {
+                                const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                                const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                                if (isCreator && currentStatusNorm === 'submitted') {
+                                  updateTask({ status: "Under Review" });
+                                }
+                              }
                             }}
                             className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
                           >
@@ -1596,7 +1779,11 @@ export default function TaskDetails() {
                                       const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                                       return (
                                         <span key={key} className="text-[9px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground border border-border/50">
-                                          {label}: {String(value)}
+                                          {label}: {
+                                            typeof value === 'object' && value !== null
+                                              ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
+                                              : String(value)
+                                          }
                                         </span>
                                       )
                                     })}
@@ -1874,7 +2061,7 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus } = getActionLabel(log);
+                            const { text, oldStatus, newStatus, detail } = getActionLabel(log);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
@@ -1902,6 +2089,9 @@ export default function TaskDetails() {
                                     </div>
                                     <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">{relTime}</span>
                                   </div>
+                                  {detail && (
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{detail}</p>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -2085,7 +2275,10 @@ export default function TaskDetails() {
                             {label}
                           </span>
                           <p className="text-sm font-normal text-foreground">
-                            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
+                              (typeof value === 'object' && value !== null) ?
+                                (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...')) :
+                                String(value)}
                           </p>
                         </div>
                       );
@@ -2100,6 +2293,37 @@ export default function TaskDetails() {
                     dangerouslySetInnerHTML={{ __html: selectedResponse.content }}
                   />
                 </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="p-4 border-t bg-muted/20 flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                  onClick={() => {
+                    setPricingDecision('approved');
+                    if ((selectedResponse as any).structuredData?.recommendedAmount) {
+                      setRecommendedAmount((selectedResponse as any).structuredData.recommendedAmount);
+                    }
+                    setSelectedResponse(null);
+                    toast.success("Ready to approve.");
+                  }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Approve Proposal
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                  onClick={() => {
+                    setPricingDecision('rejected');
+                    setSelectedResponse(null);
+                    toast.error("Ready to reject.");
+                  }}
+                >
+                  <XCircle className="w-4 h-4" />
+                  Reject Proposal
+                </Button>
               </div>
 
             </div>
