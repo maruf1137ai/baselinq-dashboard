@@ -1027,7 +1027,7 @@ export default function TaskDetails() {
     })()
     : 0;
 
-  const canApprove = true;
+  const canApprove = !!user && !!displayTask && String(displayTask.creator?.id) === String(user?.id);
 
   const editor = useEditor({
     extensions: [
