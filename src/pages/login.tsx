@@ -37,11 +37,12 @@ const LoginPage = () => {
           localStorage.setItem("refresh", data.tokens.refresh);
           localStorage.setItem("user", JSON.stringify(data.user));
           const selectedProjectId = localStorage.getItem("selectedProjectId");
-          if (selectedProjectId) {
-            navigate("/");
-          } else {
-            navigate("/account");
-          }
+          navigate("/account");
+          // if (selectedProjectId) {
+          //   navigate("/");
+          // } else {
+          //   navigate("/account");
+          // }
         },
         onError: (err: unknown) => {
           const errorMessage =
