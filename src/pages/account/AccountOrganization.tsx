@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRoles } from "@/hooks/useRoles";
-import { updateProfile, getOrgMembers, orgInviteMember, orgRemoveMember, orgCancelInvitation } from "@/lib/Api";
+import { updateProfile, getOrgMembers, orgInviteMember, orgRemoveMember, orgCancelInvitation, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock } from "lucide-react";
+import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock, Paperclip, ShieldCheck, Lock } from "lucide-react";
+import { hasPermission } from "@/lib/roleUtils";
 
 type Member = { id: number; name: string; email: string; role: string | null; role_code: string | null };
 type PendingInvite = { id: number; email: string; name: string; position: string; invited_at: string; expires_at: string };
@@ -34,7 +35,7 @@ function SectionCard({ title, subtitle, icon, children, action }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">{label}</label>
+      <label className="text-[11px] font-normal text-muted-foreground normal-case ml-0.5">{label}</label>
       {children}
     </div>
   );
@@ -57,6 +58,10 @@ const AccountOrganization = () => {
     organization: { name: "", company_reg_number: "", ck_number: "", vat_number: "", company_size: "" },
   });
 
+  // Insurance certificate
+  const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
+  const [insuranceExpiry, setInsuranceExpiry] = useState("");
+
   // Team state
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -68,6 +73,7 @@ const AccountOrganization = () => {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   const isOrg = user?.account_type === "organisation";
+  const canEdit = isOrg || hasPermission(user?.role?.code, "manageSettings");
 
   useEffect(() => {
     if (user) {
@@ -80,6 +86,7 @@ const AccountOrganization = () => {
           company_size: user.organization?.company_size || "",
         },
       });
+      setInsuranceExpiry(user.insurance_document?.expiry_date || "");
     }
   }, [user]);
 
@@ -103,8 +110,28 @@ const AccountOrganization = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateProfile(formData);
+      let insurance_s3_key: string | undefined;
+      let insurance_file_name: string | undefined;
+      if (insuranceFile) {
+        const { upload_url, key } = await getPresignedUrl({
+          filename: insuranceFile.name,
+          content_type: insuranceFile.type || "application/octet-stream",
+          folder: "projects/insurance",
+        });
+        await uploadFileToPresignedUrl(upload_url, insuranceFile, insuranceFile.type || "application/octet-stream");
+        insurance_s3_key = key;
+        insurance_file_name = insuranceFile.name;
+      }
+      await updateProfile({
+        ...formData,
+        insurance_document: {
+          expiry_date: insuranceExpiry || null,
+          ...(insurance_s3_key && { s3_key: insurance_s3_key }),
+          ...(insurance_file_name && { file_name: insurance_file_name }),
+        },
+      });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setInsuranceFile(null);
       toast.success("Saved successfully");
     } catch {
       toast.error("Failed to save. Please try again.");
@@ -166,11 +193,17 @@ const AccountOrganization = () => {
           <h2 className="text-2xl font-normal tracking-tight text-foreground">Organisation</h2>
           <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
         </div>
-        {isOrg && (
+        {isOrg && canEdit && (
           <Button onClick={handleSave} disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
+        )}
+        {isOrg && !canEdit && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Read-only access</span>
+          </div>
         )}
       </div>
 
@@ -181,19 +214,19 @@ const AccountOrganization = () => {
             <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Company / Entity Name">
-                  <Input value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal")} />
+                  <Input readOnly={!canEdit} value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal", !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
                 </Field>
                 <Field label="Company Registration No.">
-                  <Input value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={INPUT_CLS} />
+                  <Input readOnly={!canEdit} value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
                 </Field>
                 <Field label="VAT Registration Number">
-                  <Input value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={INPUT_CLS} />
+                  <Input readOnly={!canEdit} value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
                 </Field>
                 <Field label="CK Number">
-                  <Input value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={INPUT_CLS} />
+                  <Input readOnly={!canEdit} value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
                 </Field>
                 <Field label="Enterprise Size">
-                  <select value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3")}>
+                  <select disabled={!canEdit} value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3", !canEdit && "bg-slate-50/50 cursor-not-allowed")}>
                     <option value="">Select Scale...</option>
                     <option value="1-10">Micro (1–10 people)</option>
                     <option value="11-50">Small (11–50 people)</option>
@@ -206,12 +239,70 @@ const AccountOrganization = () => {
             </SectionCard>
           </form>
 
+          {/* Insurance Certificate */}
+          <SectionCard
+            title="Insurance Certificate"
+            subtitle="Professional indemnity or public liability certificate"
+            icon={<ShieldCheck className="w-4 h-4" />}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              <Field label="Certificate Document">
+                {!insuranceFile && user?.insurance_document?.file_name && (
+                  <div className="flex items-center gap-2.5 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="truncate flex-1 text-xs">{user.insurance_document.file_name}</span>
+                    <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded shrink-0">Current</span>
+                  </div>
+                )}
+                <label className={cn(
+                  "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
+                  insuranceFile
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-muted-foreground",
+                  canEdit ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
+                )}>
+                  <Paperclip className="w-4 h-4 shrink-0" />
+                  <span className="truncate flex-1 text-xs">
+                    {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
+                  </span>
+                  {canEdit && insuranceFile && (
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
+                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {canEdit && (
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="sr-only"
+                      onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
+                    />
+                  )}
+                </label>
+                <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Saved when you click Save Changes.</p>
+              </Field>
+              <Field label="Expiry Date">
+                <Input
+                  readOnly={!canEdit}
+                  type="date"
+                  value={insuranceExpiry}
+                  onChange={e => setInsuranceExpiry(e.target.value)}
+                  className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")}
+                />
+              </Field>
+            </div>
+          </SectionCard>
+
           {/* Team members */}
           <SectionCard
             title="Team Members"
             subtitle="People who have joined your organisation"
             icon={<Users className="w-4 h-4" />}
-            action={
+            action={canEdit && (
               <button
                 type="button"
                 onClick={() => setShowInviteForm(v => !v)}
@@ -220,7 +311,7 @@ const AccountOrganization = () => {
                 <UserPlus className="w-3.5 h-3.5" />
                 Invite member
               </button>
-            }
+            )}
           >
             {/* Invite form */}
             {showInviteForm && (
@@ -314,22 +405,24 @@ const AccountOrganization = () => {
                         {member.role}
                       </span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(member.id)}
-                      disabled={removingId === member.id}
-                      className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
-                      title="Remove member"
-                    >
-                      {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member.id)}
+                        disabled={removingId === member.id}
+                        className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                        title="Remove member"
+                      >
+                        {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                 ))}
 
                 {/* Pending invitations */}
                 {pendingInvites.length > 0 && (
                   <>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest pt-3 pb-1 px-1">Pending Invitations</p>
+                    <p className="text-[10px] text-muted-foreground normal-case pt-3 pb-1 px-1">Pending Invitations</p>
                     {pendingInvites.map(inv => (
                       <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border bg-slate-50/50">
                         <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
@@ -342,15 +435,17 @@ const AccountOrganization = () => {
                         <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
                           Pending
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCancelInvite(inv.id)}
-                          disabled={cancellingId === inv.id}
-                          className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
-                          title="Cancel invitation"
-                        >
-                          {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelInvite(inv.id)}
+                            disabled={cancellingId === inv.id}
+                            className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                            title="Cancel invitation"
+                          >
+                            {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                          </button>
+                        )}
                       </div>
                     ))}
                   </>

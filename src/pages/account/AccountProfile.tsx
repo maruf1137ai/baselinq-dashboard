@@ -8,7 +8,9 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown } from "lucide-react";
+import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info } from "lucide-react";
+import { hasPermission } from "@/lib/roleUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -52,6 +54,7 @@ const AccountProfile = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
+  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
 
   const [formData, setFormData] = useState({
     name: "",
@@ -151,22 +154,37 @@ const AccountProfile = () => {
         <SectionCard title="Professional Credentials" subtitle="Registrations, discipline, and insurance" icon={<Briefcase className="w-4 h-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Primary Discipline / Role">
-              <Select
-                value={formData.role}
-                onValueChange={(val) => setFormData({ ...formData, role: val })}
-              >
-                <SelectTrigger className={INPUT_CLS}>
-                  <SelectValue placeholder="Select Discipline..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="architect">Architect</SelectItem>
-                  <SelectItem value="client">Client / Owner</SelectItem>
-                  <SelectItem value="cpm">Client Project Manager</SelectItem>
-                  <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
-                  <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
-                  <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={formData.role}
+                  onValueChange={(val) => setFormData({ ...formData, role: val })}
+                  disabled={!isAdmin && !!user?.role?.code}
+                >
+                  <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-slate-50 cursor-not-allowed")}>
+                    <SelectValue placeholder="Select Discipline..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="architect">Architect</SelectItem>
+                    <SelectItem value="client">Client / Owner</SelectItem>
+                    <SelectItem value="cpm">Client Project Manager</SelectItem>
+                    <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
+                    <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
+                    <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!isAdmin && !!user?.role?.code && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Contact your administrator to change your primary role.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </Field>
 
             <Field label="Professional Body">

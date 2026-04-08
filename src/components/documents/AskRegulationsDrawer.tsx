@@ -209,7 +209,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
           {messages.length === 0 ? (
             <div className="space-y-8 max-w-2xl mx-auto pt-4">
               <div className="space-y-4">
-                <h4 className="text-xs font-normal text-gray-400 uppercase tracking-widest pl-1">Suggested Questions</h4>
+                <h4 className="text-xs font-normal text-gray-400 normal-case pl-1">Suggested Questions</h4>
                 <div className="flex flex-wrap gap-2">
                   {initialSuggestedQuestions.map(q => (
                     <button
@@ -292,7 +292,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
 
                     {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
                       <div className="mt-8 space-y-4 pt-6 border-t border-gray-50">
-                        <h4 className="text-xs font-normal text-gray-400 uppercase tracking-widest pl-1">Sources</h4>
+                        <h4 className="text-xs font-normal text-gray-400 normal-case pl-1">Sources</h4>
                         <div className="space-y-3">
                           {msg.citations.map((cite, ci) => (
                             <div key={ci} className="bg-gray-50/50 border border-gray-100/50 rounded-xl p-3 flex items-start justify-between group/source hover:bg-white hover:border-primary/20 transition-all">
@@ -378,7 +378,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
 
                   {msg.followUps && msg.followUps.length > 0 && (
                     <div className="mt-2 space-y-3">
-                      <h4 className="text-xs font-normal text-gray-400 uppercase tracking-widest pl-6">Follow-up Questions</h4>
+                      <h4 className="text-xs font-normal text-gray-400 normal-case pl-6">Follow-up Questions</h4>
                       <div className="flex flex-col gap-2 pl-6">
                         {msg.followUps.map(f => (
                           <button

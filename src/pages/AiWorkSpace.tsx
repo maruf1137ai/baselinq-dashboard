@@ -8,12 +8,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import BaseLinkAI from '@/components/icons/BaseLinkAI';
 import Clip from '@/components/icons/Clip';
 import { fetchData, postData } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import AiIcon from '@/components/icons/AiIcon';
 
 interface ChatSource {
   clause_number: string;
@@ -204,8 +204,8 @@ const AiWorkSpace = () => {
                         </div>
                       ) : (
                         <div className="flex gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center shrink-0 p-1">
-                            <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+                          <div className="w-9 h-9 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
+                            <AiIcon size={16} className="text-[#6366f1]" />
                           </div>
                           <div className="flex-1">
                             <div className="prose prose-sm max-w-none text-justify">
@@ -309,13 +309,8 @@ const AiWorkSpace = () => {
                     </div>
                   ))}
                   {isTyping && (
-                    <div className="mb-6 flex gap-3">
-                      <BaseLinkAI />
-                      <div className="flex-1">
-                        <div className="inline-block rounded-lg bg-sidebar px-4 py-3">
-                          <p className="text-sm text-muted-foreground animate-pulse">Analyzing context...</p>
-                        </div>
-                      </div>
+                    <div className="mb-6">
+                      <AwesomeLoader compact message="Analyzing context" />
                     </div>
                   )}
                   <div ref={messagesEndRef} />
@@ -369,8 +364,8 @@ const AiWorkSpace = () => {
 
                   {/* Greeting heading with inline logo */}
                   <h2 className="text-2xl sm:text-2xl font-normal tracking-tight text-center text-foreground mb-8 flex items-center justify-center gap-3 flex-wrap">
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#1A1A1A] flex items-center justify-center p-1.5 shrink-0">
-                      <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
+                      <AiIcon size={18} className="text-[#6366f1]" />
                     </div>
                     {firstName ? `What can I help with, ${firstName}?` : 'What can I help with?'}
                   </h2>

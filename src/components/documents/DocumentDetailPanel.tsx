@@ -90,7 +90,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
               <div className="flex-1 overflow-y-auto no-scrollbar">
                 <TabsContent value="info" className="m-0 p-6 space-y-8 animate-in fade-in slide-in-from-right-2">
                   <section>
-                    <h4 className="text-xs font-normal text-gray-400 uppercase mb-4">Metadata</h4>
+                    <h4 className="text-xs font-normal text-gray-400 normal-case mb-4">Metadata</h4>
                     <div className="grid grid-cols-2 gap-y-6">
                       <div>
                         <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Uploaded Date</p>
@@ -112,7 +112,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                   </section>
 
                   <section>
-                    <h4 className="text-xs font-normal text-gray-400 uppercase mb-4">Description</h4>
+                    <h4 className="text-xs font-normal text-gray-400 normal-case mb-4">Description</h4>
                     <p className="text-sm text-gray-600 leading-relaxed">
                       Main principal building agreement for the East Wing expansion project.
                       Includes revised contingency clauses and updated payment schedules as agreed in the Q3 meeting.
@@ -137,7 +137,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
                 <TabsContent value="ai" className="m-0 p-6 space-y-6 animate-in fade-in slide-in-from-right-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-normal text-gray-400 uppercase">Findings (4)</h4>
+                    <h4 className="text-xs font-normal text-gray-400 normal-case">Findings (4)</h4>
                     <Button variant="ghost" size="sm" className="h-8 text-xs text-primary font-normal hover:bg-primary/5">
                       <AiIcon size={12} className="mr-1.5" /> Re-run Analysis
                     </Button>
@@ -188,7 +188,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
                 <TabsContent value="versions" className="m-0 p-6 space-y-6 animate-in fade-in slide-in-from-right-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-normal text-gray-400 uppercase">Version History</h4>
+                    <h4 className="text-xs font-normal text-gray-400 normal-case">Version History</h4>
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"
@@ -244,7 +244,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
                 <TabsContent value="links" className="m-0 p-6 space-y-6 animate-in fade-in slide-in-from-right-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-normal text-gray-400 uppercase">Linked Items ({linkedItems.length})</h4>
+                    <h4 className="text-xs font-normal text-gray-400 normal-case">Linked Items ({linkedItems.length})</h4>
                     <Button
                       variant="outline"
                       size="sm"

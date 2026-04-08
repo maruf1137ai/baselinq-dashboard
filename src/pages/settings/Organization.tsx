@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { updateProfile } from "@/lib/Api";
+import { updateProfile, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,9 +18,15 @@ import {
   Save,
   Loader2,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  Paperclip,
+  X,
+  Lock,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hasPermission } from "@/lib/roleUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ── Shared UI Components ──────────────────────────────────────────────────────
 
@@ -65,6 +71,9 @@ const OrganizationPage = () => {
   const { data: user, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
+  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+  const canEditOrg = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
 
   const [formData, setFormData] = useState({
     name: "",
@@ -132,17 +141,33 @@ const OrganizationPage = () => {
     e.preventDefault();
     setIsSaving(true);
 
-    const sanitizedData = {
-      ...formData,
-      insurance_document: {
-        ...formData.insurance_document,
-        expiry_date: formData.insurance_document.expiry_date || null
-      }
-    };
-
     try {
+      let insurance_s3_key: string | undefined;
+      let insurance_file_name: string | undefined;
+      if (insuranceFile) {
+        const { upload_url, key } = await getPresignedUrl({
+          filename: insuranceFile.name,
+          content_type: insuranceFile.type || "application/octet-stream",
+          folder: "projects/insurance",
+        });
+        await uploadFileToPresignedUrl(upload_url, insuranceFile, insuranceFile.type || "application/octet-stream");
+        insurance_s3_key = key;
+        insurance_file_name = insuranceFile.name;
+      }
+
+      const sanitizedData = {
+        ...formData,
+        insurance_document: {
+          ...formData.insurance_document,
+          expiry_date: formData.insurance_document.expiry_date || null,
+          ...(insurance_s3_key && { s3_key: insurance_s3_key }),
+          ...(insurance_file_name && { file_name: insurance_file_name }),
+        }
+      };
+
       await updateProfile(sanitizedData);
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setInsuranceFile(null);
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error(error);
@@ -195,14 +220,21 @@ const OrganizationPage = () => {
               Consolidated view of your personal, professional, and organizational profile details captured during onboarding.
             </p> */}
           </div>
-          <Button
-            onClick={handleUpdate}
-            disabled={isSaving}
-            className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
-          >
-            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
-          </Button>
+          {canEditOrg ? (
+            <Button
+              onClick={handleUpdate}
+              disabled={isSaving}
+              className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Read-only access</span>
+            </div>
+          )}
         </div>
 
         {/* ── Completion Reminder Banner ── */}
@@ -338,14 +370,56 @@ const OrganizationPage = () => {
               </Field>
               <Field label="Professional Insurance Expiry">
                 <Input
+                  readOnly={!canEditOrg}
                   type="date"
                   value={formData.insurance_document.expiry_date}
                   onChange={e => setFormData({
                     ...formData,
                     insurance_document: { ...formData.insurance_document, expiry_date: e.target.value }
                   })}
-                  className={INPUT_CLS}
+                  className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                 />
+              </Field>
+              <Field label="Insurance Certificate" colSpan>
+                {/* Show existing certificate */}
+                {!insuranceFile && user?.insurance_document?.file_name && (
+                  <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="truncate flex-1">{user.insurance_document.file_name}</span>
+                    <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
+                  </div>
+                )}
+                {/* File picker */}
+                <label className={cn(
+                  "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
+                  insuranceFile
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-muted-foreground",
+                  canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
+                )}>
+                  <Paperclip className="w-4 h-4 shrink-0" />
+                  <span className="truncate flex-1 text-xs">
+                    {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
+                  </span>
+                  {canEditOrg && insuranceFile && (
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
+                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {canEditOrg && (
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="sr-only"
+                      onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
+                    />
+                  )}
+                </label>
+                <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Certificate is saved when you click Save Details.</p>
               </Field>
             </div>
           </SectionCard>
@@ -360,52 +434,57 @@ const OrganizationPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Company / Entity Name">
                   <Input
+                    readOnly={!canEditOrg}
                     value={formData.organization.name}
                     onChange={e => setFormData({
                       ...formData,
                       organization: { ...formData.organization, name: e.target.value }
                     })}
-                    className={cn(INPUT_CLS, "font-normal")}
+                    className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Company Registration No.">
                   <Input
+                    readOnly={!canEditOrg}
                     value={formData.organization.company_reg_number}
                     onChange={e => setFormData({
                       ...formData,
                       organization: { ...formData.organization, company_reg_number: e.target.value }
                     })}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="VAT Registration Number">
                   <Input
+                    readOnly={!canEditOrg}
                     value={formData.organization.vat_number}
                     onChange={e => setFormData({
                       ...formData,
                       organization: { ...formData.organization, vat_number: e.target.value }
                     })}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="CK Number">
                   <Input
+                    readOnly={!canEditOrg}
                     value={formData.organization.ck_number}
                     onChange={e => setFormData({
                       ...formData,
                       organization: { ...formData.organization, ck_number: e.target.value }
                     })}
-                    className={INPUT_CLS}
+                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Enterprise Size">
                   <select
+                    disabled={!canEditOrg}
                     value={formData.organization.company_size}
                     onChange={e => setFormData({
                       ...formData,
                       organization: { ...formData.organization, company_size: e.target.value }
                     })}
-                    className={cn(INPUT_CLS, "w-full outline-none px-3")}
+                    className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                   >
                     <option value="">Select Scale...</option>
                     <option value="1-10">Micro (1–10 people)</option>

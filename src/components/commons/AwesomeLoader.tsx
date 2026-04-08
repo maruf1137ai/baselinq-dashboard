@@ -5,14 +5,18 @@ import { Search } from "lucide-react";
 interface AwesomeLoaderProps {
   message?: string;
   fullPage?: boolean;
+  compact?: boolean;
 }
 
 export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
   message = "Analyzing Project Data",
-  fullPage = false
+  fullPage = false,
+  compact = false,
 }) => {
   const containerClasses = fullPage
     ? "fixed inset-0 z-50 flex flex-col items-center justify-center bg-muted dark:bg-[#0B0C10]"
+    : compact
+    ? "flex flex-col items-center justify-center p-6 w-full bg-transparent relative overflow-hidden"
     : "flex flex-col items-center justify-center p-12 w-full min-h-[400px] bg-transparent relative overflow-hidden";
 
   return (
@@ -27,7 +31,7 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
 
       <div className="relative z-10 flex flex-col items-center">
         {/* Core Container: The "Squircy" Round Box */}
-        <div className="relative h-40 w-40 flex items-center justify-center">
+        <div className={`relative flex items-center justify-center ${compact ? "h-20 w-20" : "h-40 w-40"}`}>
 
           {/* Pulsing Outer Boundary */}
           <motion.div
@@ -41,7 +45,7 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
 
           {/* Main "Squery Round Box" */}
           <motion.div
-            className="relative h-24 w-24 bg-white dark:bg-gray-900 border-2 border-primary/40 rounded-full shadow-xl flex items-center justify-center overflow-hidden"
+            className={`relative bg-white dark:bg-gray-900 border-2 border-primary/40 rounded-full shadow-xl flex items-center justify-center overflow-hidden ${compact ? "h-12 w-12" : "h-24 w-24"}`}
             animate={{
               borderRadius: ["28px", "40px", "28px"],
             }}
@@ -60,8 +64,8 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
             <motion.div
               className="relative z-20 text-primary"
               animate={{
-                x: [-15, 15, -15],
-                y: [-10, 10, -10],
+                x: compact ? [-8, 8, -8] : [-15, 15, -15],
+                y: compact ? [-5, 5, -5] : [-10, 10, -10],
                 rotate: [0, 10, -10, 0],
                 scale: [1, 1.1, 1]
               }}
@@ -71,7 +75,7 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
                 ease: "easeInOut"
               }}
             >
-              <Search size={32} strokeWidth={2.5} />
+              <Search size={compact ? 16 : 32} strokeWidth={2.5} />
             </motion.div>
           </motion.div>
 
@@ -97,27 +101,27 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
             >
               <div
                 className="w-1.5 h-1.5 bg-primary rounded-full"
-                style={{ transform: `translate(${70}px)` }}
+                style={{ transform: `translate(${compact ? 35 : 70}px)` }}
               />
             </motion.div>
           ))}
         </div>
 
         {/* AI Status Pill with Integrated Message */}
-        <div className="mt-12 flex flex-col items-center">
+        <div className={`flex flex-col items-center ${compact ? "mt-5" : "mt-12"}`}>
           <motion.div
-            className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-primary/20 bg-primary/5 shadow-sm"
+            className={`inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 shadow-sm ${compact ? "px-3 py-1.5" : "px-5 py-2"}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             {/* Heartbeat / Activity Pulse */}
-            <span className="relative flex h-2.5 w-2.5">
+            <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
 
-            <span className="text-xs font-normal text-primary uppercase tracking-[0.2em] whitespace-nowrap">
+            <span className={`font-normal text-primary uppercase tracking-[0.15em] whitespace-nowrap ${compact ? "text-[10px]" : "text-xs"}`}>
               {message}
             </span>
           </motion.div>

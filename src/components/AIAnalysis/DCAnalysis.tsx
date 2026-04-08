@@ -31,7 +31,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               {Object.entries(data.delay_cause_analysis).map(([key, value]: [string, any]) => (
                 <div key={key} className="p-4 bg-sidebar rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    <span className="text-xs font-medium text-muted-foreground normal-case">
                       {key.replace(/_/g, " ")}
                     </span>
                     <Badge variant="outline" className={`${value.contractual_entitlement === "ENTITLED" || value.is_employer_risk === true || value.applicable === true
@@ -60,7 +60,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white rounded-lg border border-blue-100">
-                <p className="text-xs font-medium text-blue-700 uppercase mb-2">Entitlement</p>
+                <p className="text-xs font-medium text-blue-700 normal-case mb-2">Entitlement</p>
                 <Badge className={`${data.extension_of_time.eot_entitlement.entitled === 'yes' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                   {data.extension_of_time.eot_entitlement.entitled.toUpperCase()}
                 </Badge>
@@ -74,7 +74,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 </div>
               </div>
               <div className="p-4 bg-white rounded-lg border border-blue-100">
-                <p className="text-xs font-medium text-blue-700 uppercase mb-2">Notice Requirements</p>
+                <p className="text-xs font-medium text-blue-700 normal-case mb-2">Notice Requirements</p>
                 <Badge className={`${data.extension_of_time.notice_requirements.status === "COMPLIANT" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                   {data.extension_of_time.notice_requirements.status}
                 </Badge>
@@ -88,11 +88,11 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="p-3 bg-white/50 rounded-lg">
-                <p className="text-xs font-medium text-blue-700 uppercase mb-1">Concurrent Delay</p>
+                <p className="text-xs font-medium text-blue-700 normal-case mb-1">Concurrent Delay</p>
                 <p className="text-xs text-gray-600">{data.extension_of_time.concurrent_delay?.assessment || "None identified"}</p>
               </div>
               <div className="p-3 bg-white/50 rounded-lg">
-                <p className="text-xs font-medium text-blue-700 uppercase mb-1">Mitigation Obligations</p>
+                <p className="text-xs font-medium text-blue-700 normal-case mb-1">Mitigation Obligations</p>
                 <p className="text-xs text-gray-600">{data.extension_of_time.mitigation_obligations?.finding || "Standard obligations apply"}</p>
               </div>
             </div>
@@ -108,7 +108,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Cost Entitlement</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Cost Entitlement</p>
                 <Badge variant="outline" className={`${data.cost_impact_assessment.cost_entitlement.entitled ? 'text-green_dark' : 'text-gray-400'}`}>
                   {data.cost_impact_assessment.cost_entitlement.entitled ? 'YES' : 'NO'}
                 </Badge>
@@ -119,7 +119,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 )}
               </div>
               <div className="p-4 bg-sidebar rounded-lg border-l-2 border-destructive">
-                <p className="text-xs font-medium text-destructive uppercase mb-1">LD Exposure</p>
+                <p className="text-xs font-medium text-destructive normal-case mb-1">LD Exposure</p>
                 <p className="text-sm font-medium text-destructive">{data.cost_impact_assessment.liquidated_damages_exposure.daily_rate}/day</p>
                 <p className="text-xs text-gray-500 mt-1">{data.cost_impact_assessment.liquidated_damages_exposure.assessment}</p>
                 <p className="text-xs text-gray-400 mt-1 italic">{data.cost_impact_assessment.liquidated_damages_exposure.finding}</p>
@@ -128,7 +128,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 )}
               </div>
               <div className="p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Prolongation</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Prolongation</p>
                 <Badge variant="outline" className={`${data.cost_impact_assessment.prolongation_costs.applicable ? 'text-green_dark' : 'text-gray-400'}`}>
                   {data.cost_impact_assessment.prolongation_costs.applicable ? 'YES' : 'NO'}
                 </Badge>
@@ -151,7 +151,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             <div className="grid grid-cols-3 gap-4">
               {Object.entries(data.procedural_compliance).map(([key, value]: [string, any]) => (
                 <div key={key} className="p-4 bg-sidebar rounded-lg">
-                  <p className="text-xs font-medium text-muted-foreground uppercase mb-1">{key.replace(/_/g, " ")}</p>
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-1">{key.replace(/_/g, " ")}</p>
                   <Badge variant="outline" className={`${value.status === "COMPLIANT" ? "text-green_dark" : "text-amber-600"}`}>
                     {value.status || "N/A"}
                   </Badge>

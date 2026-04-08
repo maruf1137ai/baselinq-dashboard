@@ -31,7 +31,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               {Object.entries(data.procedural_compliance).map(([key, value]: [string, any]) => (
                 <div key={key} className="p-4 bg-sidebar rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{key.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-medium text-muted-foreground normal-case">{key.replace(/_/g, " ")}</span>
                     <Badge variant="outline" className={`${value.status === "COMPLIANT" || value.status === "JUSTIFIED"
                       ? "text-green_dark border-green-200"
                       : "text-warning border-warning/30"
@@ -58,7 +58,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="space-y-4">
               <div className="p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Within Contract Scope</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Within Contract Scope</p>
                 <Badge variant="outline" className={`${data.scope_assessment.within_contract_scope.in_scope ? 'text-green_dark' : 'text-destructive'}`}>
                   {data.scope_assessment.within_contract_scope.in_scope ? 'IN SCOPE' : 'OUT OF SCOPE'}
                 </Badge>
@@ -67,7 +67,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-sidebar rounded-lg">
-                  <p className="text-xs font-medium text-muted-foreground uppercase mb-1">VO Triggers</p>
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-1">VO Triggers</p>
                   <p className="text-sm font-medium">{data.scope_assessment.vo_implications.triggers_variation ? 'VARIATION REQUIRED' : 'NO VARIATION'}</p>
                   {data.scope_assessment.vo_implications.clause_reference && (
                     <p className="text-xs text-primary mb-1">Ref: {data.scope_assessment.vo_implications.clause_reference}</p>
@@ -75,7 +75,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs text-gray-500 mt-1">{data.scope_assessment.vo_implications.assessment}</p>
                 </div>
                 <div className="p-4 bg-sidebar rounded-lg border-l-2 border-warning">
-                  <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Estimated Cost Impact</p>
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Estimated Cost Impact</p>
                   <p className="text-sm font-medium text-warning">{data.scope_assessment.cost_impact_assessment.estimated_impact}</p>
                   {data.scope_assessment.cost_impact_assessment.clause_reference && (
                     <p className="text-xs text-warning mb-1">Ref: {data.scope_assessment.cost_impact_assessment.clause_reference}</p>
@@ -96,13 +96,13 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white rounded-lg border border-green-100">
-                <p className="text-xs font-medium text-green-700 uppercase mb-2">Requirements</p>
+                <p className="text-xs font-medium text-green-700 normal-case mb-2">Requirements</p>
                 <p className="text-sm text-green-900 font-medium">{data.safety_and_quality.quality_requirements.assessment}</p>
                 <p className="text-xs text-green-600 mt-1 italic">Ref: {data.safety_and_quality.quality_requirements.clause_reference}</p>
                 <p className="text-xs text-gray-500 mt-1">{data.safety_and_quality.quality_requirements.finding}</p>
               </div>
               <div className="p-4 bg-white rounded-lg border border-green-100">
-                <p className="text-xs font-medium text-green-700 uppercase mb-2">Inspections</p>
+                <p className="text-xs font-medium text-green-700 normal-case mb-2">Inspections</p>
                 <p className="text-sm text-green-900 font-medium">{data.safety_and_quality.inspection_needs.inspection_type}</p>
                 <p className="text-xs text-green-600 mt-1">{data.safety_and_quality.inspection_needs.finding}</p>
                 <Badge variant="outline" className="mt-2 text-green-700 border-green-200">REQUIRED</Badge>
@@ -120,18 +120,18 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Programme Effect</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Programme Effect</p>
                 <p className={`text-sm font-medium ${data.time_impact.programme_effect.affects_programme ? 'text-destructive' : 'text-green_dark'}`}>
                   {data.time_impact.programme_effect.affects_programme ? 'AFFECTS SCHED' : 'NO IMPACT'}
                 </p>
               </div>
               <div className="p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Due Date</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Due Date</p>
                 <p className="text-sm font-medium text-primary">{data.time_impact.due_date_compliance.due_date}</p>
                 <p className="text-xs text-gray-400">Achievable: {data.time_impact.due_date_compliance.achievable ? 'YES' : 'NO'}</p>
               </div>
               <div className="p-4 bg-sidebar rounded-lg border-r-2 border-primary/20">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Urgency</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Urgency</p>
                 <p className="text-sm font-medium">{data.time_impact.urgency_assessment.assessment}</p>
               </div>
             </div>

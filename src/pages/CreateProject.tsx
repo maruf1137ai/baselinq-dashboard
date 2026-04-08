@@ -1560,7 +1560,7 @@ export default function CreateProject() {
                             <div className="mt-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider font-normal mb-1.5 ml-1">Client Name</label>
+                                  <label className="block text-[11px] text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Name</label>
                                   <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
                                     <input
@@ -1572,7 +1572,7 @@ export default function CreateProject() {
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-[11px] text-[#6b7280] uppercase tracking-wider font-normal mb-1.5 ml-1">Client Email</label>
+                                  <label className="block text-[11px] text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Email</label>
                                   <div className="relative">
                                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
                                     <input
@@ -2012,8 +2012,8 @@ export default function CreateProject() {
                             <SectionHeader
                               icon={<User className="w-3.5 h-3.5" />}
                               label="Key Personnel"
-                              iconBg="#f0fdf4"
-                              iconColor="#00b894"
+                              iconBg="#eef2ff"
+                              iconColor="#6366f1"
                             />
                             <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
                               These members will be given predetermined access rights to the project.
@@ -2443,7 +2443,7 @@ export default function CreateProject() {
                         <div
                           className="mt-5 rounded-xl p-4 border"
                           style={{ background: "#f0edff", borderColor: "#e0d9ff" }}>
-                          <p className="text-[11px] font-normal text-[#6c5ce7] uppercase tracking-widest mb-3">
+                          <p className="text-[11px] font-normal text-[#6c5ce7] normal-case mb-3">
                             Budget Summary
                           </p>
                           <div className="space-y-2">

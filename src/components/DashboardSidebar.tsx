@@ -70,6 +70,13 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
+  const { data: channelsData } = useFetch<any[]>(
+    selectedProjectId ? `channels/?projectId=${selectedProjectId}` : "",
+    { refetchInterval: 30000 }
+  )
+  const totalUnread = Array.isArray(channelsData)
+    ? channelsData.reduce((sum: number, ch: any) => sum + (ch.unread_count || 0), 0)
+    : 0
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -185,13 +192,13 @@ export function DashboardSidebar() {
             {location.pathname.startsWith("/account") ? (
               // ── Account nav ──
               <SidebarGroup>
-                <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 uppercase py-2">
+                <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 normal-case py-2">
                   Account
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {[
-                      { title: "Select Project", url: "/account", icon: <FolderOpen className="w-4 h-4" /> },
+                      { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" /> },
                       { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" /> },
                       { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" /> },
                     ].map((item) => {
@@ -217,7 +224,7 @@ export function DashboardSidebar() {
               // ── Normal nav (project selected) ──
               <>
                 <SidebarGroup>
-                  <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 uppercase py-2">
+                  <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 normal-case py-2">
                     Main Menu
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -226,6 +233,7 @@ export function DashboardSidebar() {
                         const isActive = item.url === "/"
                           ? location.pathname === "/"
                           : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                        const badge = item.title === "Communications" && totalUnread > 0 ? totalUnread : 0;
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -233,8 +241,20 @@ export function DashboardSidebar() {
                               isActive={isActive}
                               className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
-                                {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
-                                {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                <span className="relative shrink-0">
+                                  {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                  {!open && badge > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium leading-none">
+                                      {badge > 99 ? "99+" : badge}
+                                    </span>
+                                  )}
+                                </span>
+                                {open && <span className={`text-sm font-normal flex-1 ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                {open && badge > 0 && (
+                                  <span className="h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                                    {badge > 99 ? "99+" : badge}
+                                  </span>
+                                )}
                               </NavLink>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
@@ -245,7 +265,7 @@ export function DashboardSidebar() {
                 </SidebarGroup>
 
                 <SidebarGroup>
-                  <SidebarGroupLabel className="text-xs text-muted-foreground uppercase px-3 py-2">
+                  <SidebarGroupLabel className="text-xs text-muted-foreground normal-case px-3 py-2">
                     Settings
                   </SidebarGroupLabel>
                   <SidebarGroupContent>

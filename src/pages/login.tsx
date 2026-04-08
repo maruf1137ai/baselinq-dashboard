@@ -5,7 +5,7 @@ import { useLogin } from "@/hooks/useLogin";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
-  "w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6] transition-all bg-white";
+  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -113,14 +113,20 @@ const LoginPage = () => {
       </aside>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#f5f5f7]">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-white">
 
-        {/* Mobile logo */}
-        <div className="lg:hidden bg-white border-b border-[#ededed] px-5 py-3 flex items-center gap-2.5">
-          <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
-            <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-8 pt-5 pb-3 shrink-0">
+          <div className="lg:hidden flex items-center gap-2.5">
+            <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
+              <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
           </div>
-          <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
+          <div className="hidden lg:block" />
+          <button onClick={() => navigate("/signup")} className="text-[12px] text-[#8081F6] hover:underline">
+            Create account
+          </button>
         </div>
 
         {/* Form area */}
@@ -128,8 +134,8 @@ const LoginPage = () => {
           <div className="w-full max-w-sm">
 
             <div className="mb-8">
-              <h2 className="text-[22px] font-normal text-foreground tracking-tight">Sign in</h2>
-              <p className="text-sm text-gray-500 mt-1">Enter your credentials to continue</p>
+              <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">Sign in</h2>
+              <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
             </div>
 
             {error && (
@@ -177,7 +183,7 @@ const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de8] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-2 w-full py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </button>

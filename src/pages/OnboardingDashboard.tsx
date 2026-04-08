@@ -24,7 +24,11 @@ import {
   ChevronRight,
   Plus,
   Check,
+  Lock,
+  Info,
 } from "lucide-react";
+import { hasPermission } from "@/lib/roleUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -60,7 +64,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground uppercase tracking-wider ml-0.5">
+      <label className="text-[11px] font-normal text-muted-foreground normal-case ml-0.5">
         {label}
       </label>
       {children}
@@ -80,7 +84,7 @@ const OnboardingDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: user, isLoading: userLoading } = useCurrentUser();
-  const { fetchUserRole } = useUserRoleStore();
+  const { setUserRole } = useUserRoleStore();
   const { data: projectsData, isLoading: projectsLoading } = useFetch(
     user?.id ? `projects/?userId=${user.id}` : "",
     { enabled: !!user?.id }
@@ -90,6 +94,23 @@ const OnboardingDashboard = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>("project");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch user role for the selected project
+  const fetchUserRole = async (projectId: string, userId: number) => {
+    const { fetchData } = await import("@/lib/Api");
+    try {
+      const response = await fetchData(`projects/${projectId}/user-role/?userId=${userId}`);
+      if (response?.roleName) {
+        const raw = response.roleName as string;
+        const normalized = /^(client.?owner|owner)$/i.test(raw.trim()) ? "CLIENT" : raw;
+        setUserRole(normalized);
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+    }
+  };
+  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+  const canEditOrg = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
 
   const [formData, setFormData] = useState({
     name: "",
@@ -386,22 +407,37 @@ const OnboardingDashboard = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Primary Discipline / Role">
-                  <Select
-                    value={formData.role}
-                    onValueChange={(val) => setFormData({ ...formData, role: val })}
-                  >
-                    <SelectTrigger className={INPUT_CLS}>
-                      <SelectValue placeholder="Select Discipline..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="architect">Architect</SelectItem>
-                      <SelectItem value="client">Client / Owner</SelectItem>
-                      <SelectItem value="cpm">Client Project Manager</SelectItem>
-                      <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
-                      <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
-                      <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={formData.role}
+                      onValueChange={(val) => setFormData({ ...formData, role: val })}
+                      disabled={!isAdmin && !!user?.role?.code}
+                    >
+                      <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-slate-100 cursor-not-allowed")}>
+                        <SelectValue placeholder="Select Discipline..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="architect">Architect</SelectItem>
+                        <SelectItem value="client">Client / Owner</SelectItem>
+                        <SelectItem value="cpm">Client Project Manager</SelectItem>
+                        <SelectItem value="cqs">Consultant Quantity Surveyor (CQS)</SelectItem>
+                        <SelectItem value="contracts_mgr">Contracts Manager</SelectItem>
+                        <SelectItem value="cons_planner">Consultant Planning Engineer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!isAdmin && !!user?.role?.code && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Contact your administrator to change your primary role.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </Field>
 
                 <Field label="Professional Body">
@@ -483,37 +519,42 @@ const OnboardingDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Company / Entity Name">
                     <Input
+                      readOnly={!canEditOrg}
                       value={formData.organization.name}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })}
-                      className={cn(INPUT_CLS, "font-normal")}
+                      className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="Company Registration No.">
                     <Input
+                      readOnly={!canEditOrg}
                       value={formData.organization.company_reg_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })}
-                      className={INPUT_CLS}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="VAT Registration Number">
                     <Input
+                      readOnly={!canEditOrg}
                       value={formData.organization.vat_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })}
-                      className={INPUT_CLS}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="CK Number">
                     <Input
+                      readOnly={!canEditOrg}
                       value={formData.organization.ck_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })}
-                      className={INPUT_CLS}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="Enterprise Size">
                     <select
+                      disabled={!canEditOrg}
                       value={formData.organization.company_size}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })}
-                      className={cn(INPUT_CLS, "w-full outline-none px-3")}
+                      className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
                     >
                       <option value="">Select Scale...</option>
                       <option value="1-10">Micro (1–10 people)</option>

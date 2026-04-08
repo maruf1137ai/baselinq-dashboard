@@ -102,7 +102,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
 
         <div className="p-8 space-y-6">
           <div>
-            <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+            <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
               Document Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -114,7 +114,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Document Type</Label>
+              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Document Type</Label>
               <Select value={docType} onValueChange={setDocType}>
                 <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
                   <SelectValue placeholder="Select type" />
@@ -127,7 +127,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
               </Select>
             </div>
             <div>
-              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Discipline</Label>
+              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Discipline</Label>
               <Select value={discipline} onValueChange={setDiscipline}>
                 <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
                   <SelectValue placeholder="Select discipline" />
@@ -142,7 +142,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
           </div>
 
           <div>
-            <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Status</Label>
+            <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Status</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
                 <SelectValue placeholder="Select status" />
@@ -156,7 +156,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
           </div>
 
           <div>
-            <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Description</Label>
+            <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Description</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}

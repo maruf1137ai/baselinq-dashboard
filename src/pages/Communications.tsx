@@ -119,7 +119,7 @@ const Communications = () => {
           </DialogHeader>
           <form onSubmit={handleCreateChannel} className="space-y-4 pt-1">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Channel Name</label>
+              <label className="text-[11px] text-muted-foreground normal-case">Channel Name</label>
               <Input
                 value={newChannelName}
                 onChange={(e) => setNewChannelName(e.target.value)}
@@ -130,7 +130,7 @@ const Communications = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Description <span className="normal-case">(optional)</span></label>
+              <label className="text-[11px] text-muted-foreground normal-case">Description <span className="normal-case">(optional)</span></label>
               <Textarea
                 value={newChannelDesc}
                 onChange={(e) => setNewChannelDesc(e.target.value)}

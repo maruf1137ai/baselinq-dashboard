@@ -237,7 +237,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       {/* Line Items — temporarily hidden */}
       {/* <div className="space-y-4">
         <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-sm text-foreground uppercase tracking-wider">Line Items</h3>
+          <h3 className="text-sm text-foreground normal-case">Line Items</h3>
           <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-8 border-dashed">
             + Add Item
           </Button>

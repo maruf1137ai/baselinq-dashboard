@@ -31,6 +31,7 @@ import InviteMember from "../icons/InviteMember";
 
 import { useNavigate, useParams } from "react-router-dom";
 import useFetch from "@/hooks/useFetch";
+import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import {
   Tooltip,
   TooltipContent,
@@ -133,6 +134,9 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
       <SidebarContent className="flex-1">
         {open && (
           <div className="flex-1 !block" style={{ display: "block !important" }}>
+            {isLoading ? (
+              <AwesomeLoader compact message="Loading chats" />
+            ) : (
             <div className="space-y-6 p-3">
               {groupedSessions.map((group) => (
                 <div key={group.period}>
@@ -188,6 +192,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
       </SidebarContent>

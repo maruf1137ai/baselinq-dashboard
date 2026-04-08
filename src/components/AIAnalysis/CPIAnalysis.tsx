@@ -31,7 +31,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(data.cpi_categorization).map(([key, value]: [string, any]) => (
                 <div key={key} className="p-4 bg-sidebar rounded-lg">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-1">
                     {key.replace(/_/g, " ")}
                   </p>
                   <p className={`text-sm font-medium ${value === 'HIGH' || value === 'On Critical Path' || value === 'None'
@@ -57,7 +57,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
               {Object.entries(data.contract_compliance).map(([key, value]: [string, any]) => (
                 <div key={key} className="p-4 bg-sidebar rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{key.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-medium text-muted-foreground normal-case">{key.replace(/_/g, " ")}</span>
                     <Badge variant="outline" className={`${value.status === "COMPLIANT" ? "text-green_dark border-green-200" : "text-warning border-warning/30"}`}>{value.status}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground font-medium mb-1">{value.finding}</p>
@@ -85,7 +85,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white rounded-lg border border-indigo-100">
-                <p className="text-xs font-medium text-indigo-700 uppercase mb-2">Entitlement</p>
+                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Entitlement</p>
                 <Badge className={`${data.extension_of_time_analysis.eot_entitlement.entitled === 'yes' ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'}`}>
                   {data.extension_of_time_analysis.eot_entitlement.entitled.toUpperCase()}
                 </Badge>
@@ -96,7 +96,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 <p className="text-xs text-gray-500 mt-1 italic">{data.extension_of_time_analysis.eot_entitlement.finding}</p>
               </div>
               <div className="p-4 bg-white rounded-lg border border-indigo-100">
-                <p className="text-xs font-medium text-indigo-700 uppercase mb-2">Notice Requirements</p>
+                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Notice Requirements</p>
                 <p className="text-sm font-medium text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
                 {data.extension_of_time_analysis.notice_requirements.clause_reference && (
                   <p className="text-xs text-indigo-500">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference}</p>
@@ -117,7 +117,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
-                <p className="text-xs font-medium text-red-700 uppercase mb-2">LD Exposure</p>
+                <p className="text-xs font-medium text-red-700 normal-case mb-2">LD Exposure</p>
                 <Badge className="bg-red-600 text-white mb-2">{data.potential_implications.liquidated_damages.exposure ? 'YES' : 'NO'}</Badge>
                 {data.potential_implications.liquidated_damages.clause_reference && (
                   <p className="text-xs text-red-500">Ref: Clause {data.potential_implications.liquidated_damages.clause_reference}</p>
@@ -125,7 +125,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 <p className="text-xs text-red-600">{data.potential_implications.liquidated_damages.assessment}</p>
               </div>
               <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
-                <p className="text-xs font-medium text-indigo-700 uppercase mb-2">Acceleration</p>
+                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Acceleration</p>
                 <Badge className="bg-indigo-600 text-white mb-2">{data.potential_implications.acceleration.applicable ? 'APPLICABLE' : 'N/A'}</Badge>
                 <p className="text-xs text-indigo-600">{data.potential_implications.acceleration.assessment}</p>
               </div>
@@ -133,7 +133,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
             {data.potential_implications.resource_implications && (
               <div className="mt-4 p-4 bg-sidebar rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground uppercase mb-2">Resource Needs</p>
+                <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Resource Needs</p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {data.potential_implications.resource_implications.key_resources.map((res: string, i: number) => (
                     <Badge key={i} variant="secondary">{res}</Badge>
@@ -145,7 +145,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
             {data.potential_implications.knock_on_effects && (
               <div className="mt-4 p-4 border border-warning/20 bg-amber-50/30 rounded-lg">
-                <p className="text-xs font-medium text-warning uppercase mb-2">Knock-on Effects</p>
+                <p className="text-xs font-medium text-warning normal-case mb-2">Knock-on Effects</p>
                 <ul className="text-sm text-gray-600 space-y-1">
                   {data.potential_implications.knock_on_effects.successor_activities_affected.map((act: string, i: number) => (
                     <li key={i} className="flex items-center gap-2">

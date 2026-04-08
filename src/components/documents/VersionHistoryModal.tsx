@@ -121,7 +121,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                         <div className="bg-gray-50/80 rounded-2xl p-5 space-y-4 border border-gray-100/50">
                           {ver.changelog && (
                             <div>
-                              <p className="text-xs font-normal text-gray-400 uppercase tracking-wider mb-2">Changelog</p>
+                              <p className="text-xs font-normal text-gray-400 normal-case mb-2">Changelog</p>
                               <p className="text-sm text-gray-600 italic font-normal leading-relaxed">
                                 "{ver.changelog}"
                               </p>
@@ -130,7 +130,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
                           <div className="flex items-center justify-between pt-2 border-t border-gray-100/50">
                             <div className="flex items-center gap-3">
-                              <p className="text-xs font-normal text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <p className="text-xs font-normal text-gray-400 normal-case flex items-center gap-1.5">
                                 <AiIcon size={12} className="text-amber-500" /> AI Analysis
                               </p>
                               {ver.aiFlags !== undefined && ver.aiFlags > 0 && (

@@ -317,8 +317,8 @@ export default function AcceptInvitation() {
         <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-8 py-10">
           <div className="w-full max-w-md">
 
-            {/* Dot stepper (desktop, inside right panel) */}
-            <div className="hidden lg:flex items-center gap-2 mb-8">
+            {/* Multi-step progress indicator */}
+            <div className="flex items-center gap-2 mb-8">
               {steps.map((s) => (
                 <div
                   key={s.id}
@@ -330,7 +330,7 @@ export default function AcceptInvitation() {
                   }}
                 />
               ))}
-              <span className="ml-2 text-xs text-gray-400">
+              <span className="ml-2 text-xs text-gray-400 font-medium">
                 Step {step} of {totalSteps}
               </span>
             </div>

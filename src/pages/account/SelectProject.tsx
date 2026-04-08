@@ -303,12 +303,25 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
         {/* ── Right white panel ── */}
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
 
-          {/* Mobile close */}
-          <div className="lg:hidden flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-            <span className="text-[14px] text-gray-700">{STEP_LABELS[step - 1]}</span>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
+          {/* Mobile progress bar / header */}
+          <div className="lg:hidden border-b border-gray-100 px-6 py-4 shrink-0 bg-white">
+            <div className="flex gap-1.5 mb-3">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-1 flex-1 rounded-full transition-all duration-300"
+                  style={{ background: (i + 1) <= step ? "#8081F6" : "#e5e7eb" }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-medium text-gray-700">
+                Step {step} of {totalSteps}: {STEP_LABELS[step - 1]}
+              </span>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Step indicator + scrollable content */}
@@ -316,22 +329,22 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
             <div className="min-h-full flex flex-col justify-center">
               <div className="w-full max-w-[480px] mx-auto">
 
-                {/* Dot stepper row */}
-                <div className="flex items-center justify-between mb-8">
-                  <span className="text-[15px] text-gray-700">{STEP_LABELS[step - 1]}</span>
-                  <div className="flex items-center">
-                    {Array.from({ length: totalSteps }).map((_, i) => (
-                      <React.Fragment key={i}>
-                        {i > 0 && <div className="w-8 h-px transition-all duration-300" style={{ background: step > i ? "#8081F6" : "#e5e7eb" }} />}
-                        <div className={cn(
-                          "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                          step > i + 1 || step === i + 1 ? "border-[#8081F6] bg-[#8081F6]" : "border-gray-200 bg-white"
-                        )}>
-                          <div className={cn("rounded-full transition-all", step > i + 1 || step === i + 1 ? "w-2.5 h-2.5 bg-white" : "w-2 h-2 bg-gray-200")} />
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
+                {/* Multi-step progress indicator */}
+                <div className="flex items-center gap-2 mb-8">
+                  {Array.from({ length: totalSteps }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="transition-all duration-300 rounded-full"
+                      style={{
+                        width: (i + 1) === step ? "20px" : "8px",
+                        height: "8px",
+                        background: (i + 1) <= step ? "#8081F6" : "#e5e7eb",
+                      }}
+                    />
+                  ))}
+                  <span className="ml-2 text-xs text-gray-400 font-medium">
+                    Step {step} of {totalSteps}
+                  </span>
                 </div>
 
                 {error && (

@@ -298,7 +298,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
 
             {s3Upload.entries.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-xs font-normal text-gray-400 uppercase">
+                <h4 className="text-xs font-normal text-gray-400 normal-case">
                   Selected Files ({s3Upload.entries.length})
                 </h4>
                 {s3Upload.entries.map((entry) => (
@@ -351,7 +351,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
           {/* Section 2 — Details & AI */}
           <div className="space-y-6 text-left">
             <div>
-              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
                 Document Name <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -364,7 +364,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
                   Document Type <span className="text-red-500">*</span>
                 </Label>
                 <Select value={docType} onValueChange={setDocType}>
@@ -379,7 +379,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">Discipline</Label>
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Discipline</Label>
                 <Select value={discipline} onValueChange={setDiscipline}>
                   <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
                     <SelectValue placeholder="Select discipline" />
@@ -394,7 +394,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             </div>
 
             <div>
-              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
                 Reference Number
               </Label>
               <Input
@@ -406,7 +406,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             </div>
 
             <div>
-              <Label className="text-xs font-normal text-gray-400 uppercase mb-2 block">
+              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
                 Description (Optional)
               </Label>
               <Textarea

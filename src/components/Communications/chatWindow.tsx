@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "../ui/badge";
+import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel: any, projectName?: string, taskDetails?: any }) => {
   const [message, setMessage] = useState("");
@@ -12,6 +13,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const [showContext, setShowContext] = useState(true);
 
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,8 +94,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const contextData = getContextFields();
 
   // Fetch messages from API
-  const fetchMessages = async () => {
+  const fetchMessages = async (showLoader = false) => {
     if (!channel?.id) return;
+    if (showLoader) setIsLoadingMessages(true);
     try {
       const response = await fetchData(`channels/${channel.id}/messages/`);
       if (response) {
@@ -115,15 +118,18 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
       }
     } catch (error) {
       console.error("Failed to fetch messages", error);
+    } finally {
+      if (showLoader) setIsLoadingMessages(false);
     }
   };
 
   useEffect(() => {
-    fetchMessages();
+    setMessages([]);
+    fetchMessages(true);
 
     // Set up polling to refetch messages every 2.5 seconds
     const intervalId = setInterval(() => {
-      fetchMessages();
+      fetchMessages(false);
     }, 2500); // 2.5 seconds
 
     // Cleanup: Clear interval when component unmounts or channel changes
@@ -490,7 +496,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 )}
               </div>
 
-              {messages.length === 0 && (
+              {isLoadingMessages && (
+                <div className="w-full self-center">
+                  <AwesomeLoader compact message="Loading messages" />
+                </div>
+              )}
+              {!isLoadingMessages && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
                   <MessageSquare className="h-8 w-8 stroke-[1.5]" />
                   <p className="text-xs">No messages yet, start the conversation below</p>

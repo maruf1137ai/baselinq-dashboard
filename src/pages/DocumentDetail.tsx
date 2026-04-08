@@ -203,7 +203,7 @@ const DocumentDetail = () => {
     if (!value) return null;
     return (
       <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2 rounded-lg">
-        <span className="text-xs text-gray-500 font-normal uppercase tracking-wider">{label}</span>
+        <span className="text-xs text-gray-500 font-normal tracking-wide">{label}</span>
         <span className={cn(
           "text-sm font-normal",
           isActionable ? "text-[#B45309] hover:underline cursor-pointer" : "text-[#1A1A1A]",
@@ -424,7 +424,7 @@ const DocumentDetail = () => {
             {/* AI Analysis */}
             <TabsContent value="ai" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">
+                <h3 className="text-sm font-normal text-gray-400 normal-case">
                   Findings ({findings.length})
                 </h3>
                 <Button
@@ -506,7 +506,7 @@ const DocumentDetail = () => {
                             </p>
                           )}
                         </div>
-                        {!finding.isResolved && (
+                        {/* {!finding.isResolved && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -515,7 +515,7 @@ const DocumentDetail = () => {
                           >
                             Resolve
                           </Button>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   ))}
@@ -526,7 +526,7 @@ const DocumentDetail = () => {
             {/* Linked */}
             <TabsContent value="linked" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">Linked Items ({links.length})</h3>
+                <h3 className="text-sm font-normal text-gray-400 normal-case">Linked Items ({links.length})</h3>
                 <Button
                   variant="outline"
                   size="sm"
@@ -579,7 +579,7 @@ const DocumentDetail = () => {
             {/* Obligations */}
             <TabsContent value="obligations" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">
+                <h3 className="text-sm font-normal text-gray-400 normal-case">
                   Obligations ({obligations.length})
                 </h3>
                 <div className="flex items-center gap-2">
@@ -740,7 +740,7 @@ const DocumentDetail = () => {
             {/* Versions */}
             <TabsContent value="versions" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">Version History ({versions.length})</h3>
+                <h3 className="text-sm font-normal text-gray-400 normal-case">Version History ({versions.length})</h3>
                 <Button
                   variant="outline"
                   size="sm"

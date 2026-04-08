@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
 import { cn } from "@/lib/utils";
@@ -103,19 +103,26 @@ const SignupPage = () => {
         </div>
       </aside>
 
-      {/* ── Right white panel ── */}
+      {/* ── Right panel ── */}
       <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
 
-        {/* Mobile header */}
-        <div className="lg:hidden bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
+        {/* Mobile progress bar / top bar */}
+        <div className="lg:hidden border-b border-[#ededed] px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
             <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
           </div>
-          <button onClick={() => navigate("/login")} className="text-[13px] text-gray-400 hover:text-gray-700 transition-colors">
+          <button onClick={() => navigate("/login")} className="text-[13px] text-[#8081F6] hover:underline">
             Sign in
+          </button>
+        </div>
+
+        {/* Desktop top bar */}
+        <div className="hidden lg:flex items-center justify-end px-8 pt-5 pb-3 shrink-0">
+          <button onClick={() => navigate("/login")} className="text-[12px] text-[#8081F6] hover:underline">
+            Already have an account? Sign in
           </button>
         </div>
 
@@ -124,7 +131,7 @@ const SignupPage = () => {
           <div className="w-full max-w-[420px]">
 
             <div className="mb-8">
-              <h2 className="text-[22px] font-normal text-gray-800 tracking-tight">Create your account</h2>
+              <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">Create your account</h2>
               <p className="text-sm text-gray-400 mt-1">You'll complete your profile after signing in</p>
             </div>
 

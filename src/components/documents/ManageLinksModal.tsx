@@ -84,7 +84,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="px-8 py-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-normal text-gray-400 uppercase tracking-wider">Linked Items ({links.length})</h4>
+                <h4 className="text-xs font-normal text-gray-400 normal-case">Linked Items ({links.length})</h4>
                 <Button
                   onClick={() => setIsAddLinkModalOpen(true)}
                   variant="outline"

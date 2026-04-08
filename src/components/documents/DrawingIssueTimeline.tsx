@@ -78,7 +78,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
       <div className="grid grid-cols-3 gap-4">
         {/* Current Revision */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)]">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Current Revision</p>
+          <p className="text-xs text-gray-400 normal-case mb-3">Current Revision</p>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium shadow-sm">
               {currentRevision || '—'}
@@ -96,7 +96,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           siteNotUpToDate ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'
         )}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-gray-400 uppercase tracking-widest">Latest Site Copy</p>
+            <p className="text-xs text-gray-400 normal-case">Latest Site Copy</p>
             {siteNotUpToDate && (
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
             )}
@@ -126,7 +126,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
 
         {/* Last Office Copy */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)]">
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Last Office Copy</p>
+          <p className="text-xs text-gray-400 normal-case mb-3">Last Office Copy</p>
           {latestOfficeCopy ? (
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-medium">
@@ -169,7 +169,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
 
       {/* Issue history */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-normal text-gray-400 uppercase tracking-widest">
+        <h3 className="text-sm font-normal text-gray-400 normal-case">
           Issue History ({issues.length})
         </h3>
         <Button
@@ -191,10 +191,10 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           {/* Table header */}
           <div className="grid grid-cols-[2rem_6rem_8rem_1fr_6rem] gap-4 px-4 pb-2 border-b border-gray-100">
             <span />
-            <span className="text-xs text-gray-400 uppercase tracking-wider">Issue Type</span>
-            <span className="text-xs text-gray-400 uppercase tracking-wider">Date Issued</span>
-            <span className="text-xs text-gray-400 uppercase tracking-wider">Notes</span>
-            <span className="text-xs text-gray-400 uppercase tracking-wider text-right">Issued By</span>
+            <span className="text-xs text-gray-400 normal-case">Issue Type</span>
+            <span className="text-xs text-gray-400 normal-case">Date Issued</span>
+            <span className="text-xs text-gray-400 normal-case">Notes</span>
+            <span className="text-xs text-gray-400 normal-case text-right">Issued By</span>
           </div>
 
           {issues.map((issue) => {

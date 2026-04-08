@@ -139,7 +139,7 @@ function ImpactIndicator({ label, item, icon: Icon, defaultOpen }: { label: stri
       className={cn("flex flex-col items-center text-center p-3 rounded-[12px] border border-[#e9ecef] transition-all duration-200 hover:border-[#dee2e6] cursor-pointer w-full", bgColor)}
     >
       <Icon className={cn("h-4 w-4 mb-1.5", color)} />
-      <span className="text-[10px] text-[#6B7280] uppercase tracking-[0.05em] font-medium">{label}</span>
+      <span className="text-[10px] text-[#6B7280] normal-case font-medium">{label}</span>
       <span className={cn("text-[12px] font-normal mt-0.5", color)}>
         {isLikely ? "LIKELY" : "UNLIKELY"}
       </span>
@@ -306,7 +306,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 <div key={card.label} className="p-3 rounded-[12px] bg-[#f8f9fa] border border-[#e9ecef]">
                   <div className="flex items-center gap-1.5 mb-1">
                     <card.icon className="h-3 w-3 text-[#9CA3AF]" />
-                    <span className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#9CA3AF]">{card.label}</span>
+                    <span className="text-[10px] font-normal normal-case text-[#9CA3AF]">{card.label}</span>
                   </div>
                   <p className="text-[13px] font-medium text-[#1a1a1a]">{card.value}</p>
                 </div>
@@ -412,7 +412,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
               <div className="grid grid-cols-2 gap-3">
                 {employerRecs.length > 0 && (
                   <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#6c5ce7] mb-2">For Employer</p>
+                    <p className="text-[10px] font-normal normal-case text-[#6c5ce7] mb-2">For Employer</p>
                     <ul className="space-y-2">
                       {employerRecs.map((rec: string, i: number) => (
                         <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">
@@ -425,7 +425,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 )}
                 {contractorRecs.length > 0 && (
                   <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-normal uppercase tracking-[0.05em] text-[#9CA3AF] mb-2">For Contractor</p>
+                    <p className="text-[10px] font-normal normal-case text-[#9CA3AF] mb-2">For Contractor</p>
                     <ul className="space-y-2">
                       {contractorRecs.map((rec: string, i: number) => (
                         <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">

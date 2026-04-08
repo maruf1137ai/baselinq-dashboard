@@ -229,8 +229,8 @@ const AppointedCompanies = () => {
                           hasInsurance && !isExpired
                             ? "border-green-200"
                             : hasInsurance && isExpired
-                            ? "border-amber-200"
-                            : "border-border"
+                              ? "border-amber-200"
+                              : "border-border"
                         )}>
                           {/* Certificate header stripe */}
                           <div className={cn(
@@ -238,22 +238,22 @@ const AppointedCompanies = () => {
                             hasInsurance && !isExpired
                               ? "bg-green-600"
                               : hasInsurance && isExpired
-                              ? "bg-amber-500"
-                              : "bg-slate-400"
+                                ? "bg-amber-500"
+                                : "bg-slate-400"
                           )}>
                             <div className="flex items-center gap-2 text-white">
                               {hasInsurance && !isExpired
                                 ? <ShieldCheck className="w-3.5 h-3.5" />
                                 : hasInsurance && isExpired
-                                ? <ShieldAlert className="w-3.5 h-3.5" />
-                                : <FileText className="w-3.5 h-3.5" />
+                                  ? <ShieldAlert className="w-3.5 h-3.5" />
+                                  : <FileText className="w-3.5 h-3.5" />
                               }
                               <span className="text-[10px] font-medium uppercase tracking-widest">
                                 {hasInsurance && !isExpired
                                   ? "Certificate of Insurance"
                                   : hasInsurance && isExpired
-                                  ? "Insurance Expired"
-                                  : "No Insurance on File"}
+                                    ? "Insurance Expired"
+                                    : "No Insurance on File"}
                               </span>
                             </div>
                             <span className={cn(
@@ -261,8 +261,8 @@ const AppointedCompanies = () => {
                               hasInsurance && !isExpired
                                 ? "bg-green-500 text-white"
                                 : hasInsurance && isExpired
-                                ? "bg-amber-400 text-white"
-                                : "bg-slate-300 text-slate-600"
+                                  ? "bg-amber-400 text-white"
+                                  : "bg-slate-300 text-slate-600"
                             )}>
                               {hasInsurance && !isExpired ? "VALID" : hasInsurance && isExpired ? "EXPIRED" : "PENDING"}
                             </span>
@@ -274,8 +274,8 @@ const AppointedCompanies = () => {
                             hasInsurance && !isExpired
                               ? "bg-green-50"
                               : hasInsurance && isExpired
-                              ? "bg-amber-50"
-                              : "bg-slate-50"
+                                ? "bg-amber-50"
+                                : "bg-slate-50"
                           )}>
                             <div className="flex items-center gap-3">
                               {/* Certificate icon */}
@@ -284,8 +284,8 @@ const AppointedCompanies = () => {
                                 hasInsurance && !isExpired
                                   ? "bg-green-100 text-green-600"
                                   : hasInsurance && isExpired
-                                  ? "bg-amber-100 text-amber-600"
-                                  : "bg-slate-100 text-slate-400"
+                                    ? "bg-amber-100 text-amber-600"
+                                    : "bg-slate-100 text-slate-400"
                               )}>
                                 <FileText className="w-4 h-4" />
                               </div>
@@ -401,7 +401,7 @@ const AppointedCompanies = () => {
                   </div>
 
                   {/* Insurance Certificate */}
-                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                  {/* <div className="md:col-span-2 flex flex-col gap-1.5">
                     <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Certificate</label>
                     <div className="flex items-center gap-3">
                       <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-border bg-white text-sm text-muted-foreground cursor-pointer hover:bg-slate-50 transition-colors shrink-0">
@@ -430,10 +430,10 @@ const AppointedCompanies = () => {
                         <span className="text-sm text-muted-foreground">PDF, JPG or PNG</span>
                       )}
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Insurance Expiry */}
-                  <div className="flex flex-col gap-1.5">
+                  {/* <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Expiry Date</label>
                     <Input
                       type="date"
@@ -441,7 +441,7 @@ const AppointedCompanies = () => {
                       onChange={(e) => updateInvite(entry.id, { insurance_expiry: e.target.value })}
                       className={INPUT_CLS}
                     />
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ))}
@@ -464,7 +464,7 @@ const AppointedCompanies = () => {
         </div>
 
       </div>
-    </div>
+    </div >
   );
 };
 

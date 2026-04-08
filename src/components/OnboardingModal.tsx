@@ -782,7 +782,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Assigned Personnel</p>
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Personnel</p>
                   {!showClientPersonnel ? (
                     <button
                       type="button"
@@ -864,7 +864,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Assigned Personnel</p>
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Personnel</p>
                   {!showAppointedPersonnel ? (
                     <button
                       type="button"

@@ -48,7 +48,7 @@ export const StatusHeader = ({
           )}
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Overall Status {id && `(${id})`}</p>
+          <p className="text-xs font-medium normal-case text-gray-500">Overall Status {id && `(${id})`}</p>
           <p className={`text-xl font-medium ${status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE"
               ? "text-green_dark"
               : status === "AT_RISK" || status === "WARNING" || status === "PARTIALLY_ENTITLED" || status === "PENDING" || status === "REVIEW_REQUIRED"
@@ -79,7 +79,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
             <div className="grid grid-cols-2 gap-6">
               {data.recommendations.for_employer && (
                 <div>
-                  <p className="text-xs font-medium text-indigo-700 uppercase mb-3">For Employer</p>
+                  <p className="text-xs font-medium text-indigo-700 normal-case mb-3">For Employer</p>
                   <ul className="space-y-2">
                     {data.recommendations.for_employer.map((rec: string, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
@@ -92,7 +92,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
               )}
               {data.recommendations.for_contractor && (
                 <div>
-                  <p className="text-xs font-medium text-purple-700 uppercase mb-3">For Contractor</p>
+                  <p className="text-xs font-medium text-purple-700 normal-case mb-3">For Contractor</p>
                   <ul className="space-y-2">
                     {data.recommendations.for_contractor.map((rec: string, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
