@@ -2328,6 +2328,7 @@ export default function TaskDetails() {
                       setRecommendedAmount((selectedResponse as any).structuredData.recommendedAmount);
                     }
                     setSelectedResponse(null);
+                    setIsResponseModalOpen(false);
                     toast.success("Ready to approve.");
                   }}
                 >
@@ -2340,6 +2341,7 @@ export default function TaskDetails() {
                   onClick={() => {
                     setPricingDecision('rejected');
                     setSelectedResponse(null);
+                    setIsResponseModalOpen(false);
                     toast.error("Ready to reject.");
                   }}
                 >
