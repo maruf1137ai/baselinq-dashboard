@@ -181,7 +181,7 @@ const ENTITY_LABELS: Record<string, string> = {
   generalinstruction: 'General Instruction',
 };
 
-const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean } => {
+const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean; chips?: string[] } => {
   const action = (log.action || '').toLowerCase();
   const desc = (log.description || '') as string;
 
@@ -222,9 +222,9 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
   if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
 
   if (action === 'task_assigned') {
-    // desc = "Assigned to: John, Jane"
-    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : '';
-    return { text: 'assigned this task to', detail: names || desc || undefined };
+    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : desc;
+    const chips = names ? names.split(',').map(n => n.trim()).filter(Boolean) : [];
+    return { text: 'assigned this task to', chips: chips.length > 0 ? chips : undefined };
   }
 
   if (action === 'request_info') {
@@ -2075,7 +2075,7 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus, detail, hideUserName } = getActionLabel(log, displayTask?.displayId);
+                            const { text, oldStatus, newStatus, detail, hideUserName, chips } = getActionLabel(log, displayTask?.displayId);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
@@ -2103,7 +2103,19 @@ export default function TaskDetails() {
                                     </div>
                                     <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">{relTime}</span>
                                   </div>
-                                  {detail && (() => {
+                                  {chips && chips.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {chips.map((name, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-medium">
+                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
+                                            {name.charAt(0).toUpperCase()}
+                                          </span>
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {detail && !chips && (() => {
                                     const byIdx = detail.lastIndexOf(' by ');
                                     if (byIdx !== -1) {
                                       const before = detail.slice(0, byIdx + 4);
