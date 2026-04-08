@@ -38,30 +38,33 @@ import { deleteProject, fetchData } from "@/lib/Api";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
+import { PermissionKey } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 
 
-const navItems = [
+const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
   { title: "Home", url: "/", icon: <Trending />, permission: null },
   { title: "Tasks", url: "/tasks", icon: <Task />, permission: null },
-  { title: "Programme", url: "/programme", icon: <Programme />, permission: null },
+  { title: "Programme", url: "/programme", icon: <Programme />, permission: "viewProgramme" },
   { title: "Meetings", url: "/meetings", icon: <Meetings />, permission: null },
   { title: "Communications", url: "/communications", icon: <Communication />, permission: null },
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: null },
-  { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: null },
+  { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: null },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
-] as const;
+];
 
-const settingsItems = [
-  { title: "Settings", url: "/settings", icon: <Settings />, permission: null },
+const settingsItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
+  { title: "Settings", url: "/settings", icon: <Settings />, permission: "viewSettings" },
   { title: "Help", url: "/help", icon: <Help />, permission: null },
-] as const;
+];
 
 export function DashboardSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser(); // Django auth hook
+  const { can } = usePermissions();
   const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
@@ -229,7 +232,7 @@ export function DashboardSidebar() {
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {navItems.map((item) => {
+                      {navItems.filter((item) => !item.permission || can(item.permission)).map((item) => {
                         const isActive = item.url === "/"
                           ? location.pathname === "/"
                           : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
@@ -270,7 +273,7 @@ export function DashboardSidebar() {
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {settingsItems.map((item) => {
+                      {settingsItems.filter((item) => !item.permission || can(item.permission)).map((item) => {
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                         return (
                           <SidebarMenuItem key={item.title}>

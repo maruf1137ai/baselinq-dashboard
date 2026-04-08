@@ -9,6 +9,7 @@ import Finance from "./pages/finance";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import ProtectedRoute from "./ProtectedRoute";
+import RoleRoute from "./RoleRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
@@ -102,9 +103,11 @@ const App = () => (
             path="/finance"
             element={
               <ProtectedRoute>
-                <ProjectProtectedRoute>
-                  <Finance />
-                </ProjectProtectedRoute>
+                <RoleRoute permission="viewFinance">
+                  <ProjectProtectedRoute>
+                    <Finance />
+                  </ProjectProtectedRoute>
+                </RoleRoute>
               </ProtectedRoute>
             }
           />
@@ -132,9 +135,11 @@ const App = () => (
             path="/programme"
             element={
               <ProtectedRoute>
-                <ProjectProtectedRoute>
-                  <Programme />
-                </ProjectProtectedRoute>
+                <RoleRoute permission="viewProgramme">
+                  <ProjectProtectedRoute>
+                    <Programme />
+                  </ProjectProtectedRoute>
+                </RoleRoute>
               </ProtectedRoute>
             }
           />
@@ -206,9 +211,11 @@ const App = () => (
           />
           <Route path="/settings" element={
             <ProtectedRoute>
-              <ProjectProtectedRoute>
-                <Settings />
-              </ProjectProtectedRoute>
+              <RoleRoute permission="viewSettings">
+                <ProjectProtectedRoute>
+                  <Settings />
+                </ProjectProtectedRoute>
+              </RoleRoute>
             </ProtectedRoute>
           }>
             <Route index element={<TeamManagement />} />
