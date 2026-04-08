@@ -222,7 +222,9 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
   if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
 
   if (action === 'task_assigned') {
-    return { text: 'assigned users to this task', detail: desc || undefined };
+    // desc = "Assigned to: John, Jane"
+    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : '';
+    return { text: 'assigned this task to', detail: names || desc || undefined };
   }
 
   if (action === 'request_info') {
@@ -661,12 +663,10 @@ export default function TaskDetails() {
     // console.log("selectedAssignUsers", selectedAssignUsers);
     setIsAssigning(true);
     try {
-      await patchData({
-        url: `tasks/tasks/${taskId}/`,
+      await postData({
+        url: `tasks/tasks/${taskId}/assign/`,
         data: {
-          assignedTo: selectedAssignUsers.map((u) => {
-            return u.userId
-          }),
+          userIds: selectedAssignUsers.map((u) => u.userId),
         },
       });
 
@@ -674,6 +674,7 @@ export default function TaskDetails() {
       setShowAssignModal(false);
       setSelectedAssignUsers([]);
       await refetchTask();
+      await refetchAuditLogs();
     } catch (error: any) {
       console.error("Error assigning user:", error);
       const errorMessage =
@@ -1738,7 +1739,7 @@ export default function TaskDetails() {
                         {displayTask.responses.length} Total
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       {displayTask.responses
                         .filter((resp: any) =>
                           String(resp.senderId) === String(user?.id) ||
