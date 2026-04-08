@@ -663,11 +663,10 @@ export default function TaskDetails() {
     // console.log("selectedAssignUsers", selectedAssignUsers);
     setIsAssigning(true);
     try {
+      const uniqueUserIds = [...new Set(selectedAssignUsers.map((u) => u.userId))];
       await postData({
         url: `tasks/tasks/${taskId}/assign/`,
-        data: {
-          userIds: selectedAssignUsers.map((u) => u.userId),
-        },
+        data: { userIds: uniqueUserIds },
       });
 
       toast.success("User(s) assigned successfully");
