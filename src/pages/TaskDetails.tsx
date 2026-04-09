@@ -291,11 +291,11 @@ export default function TaskDetails() {
         }
       }
 
-      await patchData({
+      const updatedTask = await patchData({
         url: `tasks/tasks/${taskId}/update-entity/`,
         data: payload
       });
-      refetchTask();
+      if (updatedTask) setCurrentTask(updatedTask);
       refetchAuditLogs();
     } catch (err) {
       console.error("Update task error:", err);
@@ -625,12 +625,6 @@ export default function TaskDetails() {
       setSiAcknowledgeReceipt(false);
       setSiLeadsToVariationResponse(false);
       setGiAcknowledgeReceipt(false);
-
-
-      setCurrentTask((prev: any) => ({
-        ...prev,
-        ...updateData
-      }));
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit reply");
