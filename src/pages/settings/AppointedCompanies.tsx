@@ -37,11 +37,11 @@ const SELECT_CLS =
   "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
 const COMPANY_TYPES = [
-  "Architectural", "Structural Engineering", "Civil Engineering",
-  "Mechanical Engineering", "Electrical Engineering", "Quantity Surveying",
-  "Project Management", "Construction Management", "Interior Design",
-  "Landscape Architecture", "Urban Planning", "Environmental Consulting",
-  "Legal & Compliance", "General Contractor", "Other",
+  "Architectural", "Civil Engineering", "Construction Management",
+  "Electrical Engineering", "Environmental Consulting", "General Contractor",
+  "Interior Design", "Landscape Architecture", "Legal & Compliance",
+  "Mechanical Engineering", "Project Management", "Quantity Surveying",
+  "Structural Engineering", "Urban Planning", "Other",
 ];
 
 interface AppointedInviteEntry {

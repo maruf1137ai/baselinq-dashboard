@@ -38,11 +38,11 @@ const qSelectCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outli
 const qTextareaCls = "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 min-h-[200px] leading-relaxed";
 
 const COMPANY_TYPES = [
-  "Architectural", "Structural Engineering", "Civil Engineering",
-  "Mechanical Engineering", "Electrical Engineering", "Quantity Surveying",
-  "Project Management", "Construction Management", "Interior Design",
-  "Landscape Architecture", "Urban Planning", "Environmental Consulting",
-  "Legal & Compliance", "General Contractor", "Other",
+  "Architectural", "Civil Engineering", "Construction Management",
+  "Electrical Engineering", "Environmental Consulting", "General Contractor",
+  "Interior Design", "Landscape Architecture", "Legal & Compliance",
+  "Mechanical Engineering", "Project Management", "Quantity Surveying",
+  "Structural Engineering", "Urban Planning", "Other",
 ];
 
 const Index = () => {
@@ -180,7 +180,7 @@ const Index = () => {
         await Promise.all(
           s3Upload.entries.map(async (entry) => {
             const key = s3Keys.get(entry.id);
-            if (key) await registerS3Document(projectId, { file_name: entry.file.name, s3_key: key }).catch(() => { });
+            if (key) await registerS3Document(projectId, { file_name: entry.file.name, s3_key: key, name: entry.title || "" }).catch(() => { });
           })
         );
       }
@@ -1331,6 +1331,15 @@ const Index = () => {
                               <div className="flex-1 min-w-0">
                                 <p className="text-[13px] font-normal text-[#111827] truncate">{f.file.name}</p>
                                 <p className="text-[11px] text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                <div className="mt-2">
+                                  <input
+                                    type="text"
+                                    className="w-full h-7 px-2 rounded-lg border border-[#e2e5ea] text-[11px] placeholder:text-[10px] focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                    placeholder="Document title (optional)"
+                                    value={f.title || ""}
+                                    onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
+                                  />
+                                </div>
                               </div>
                               {f.status === "done" && <Check className="w-4 h-4 text-[#00b894] shrink-0" />}
                               <button type="button" onClick={() => s3Upload.removeEntry(f.id)} className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">

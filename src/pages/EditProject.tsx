@@ -1259,7 +1259,7 @@ export default function EditProject() {
               const key = s3Keys.get(entry.id);
               if (!key) { anyFailed = true; return; }
               try {
-                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key });
+                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key, name: entry.title || "" });
               } catch {
                 anyFailed = true;
               }
@@ -1953,19 +1953,19 @@ export default function EditProject() {
                                   >
                                     <option value="">Select type...</option>
                                     <option value="Architectural">Architectural</option>
-                                    <option value="Structural Engineering">Structural Engineering</option>
                                     <option value="Civil Engineering">Civil Engineering</option>
-                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                    <option value="Electrical Engineering">Electrical Engineering</option>
-                                    <option value="Quantity Surveying">Quantity Surveying</option>
-                                    <option value="Project Management">Project Management</option>
                                     <option value="Construction Management">Construction Management</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Environmental Consulting">Environmental Consulting</option>
+                                    <option value="General Contractor">General Contractor</option>
                                     <option value="Interior Design">Interior Design</option>
                                     <option value="Landscape Architecture">Landscape Architecture</option>
-                                    <option value="Urban Planning">Urban Planning</option>
-                                    <option value="Environmental Consulting">Environmental Consulting</option>
                                     <option value="Legal & Compliance">Legal &amp; Compliance</option>
-                                    <option value="General Contractor">General Contractor</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Project Management">Project Management</option>
+                                    <option value="Quantity Surveying">Quantity Surveying</option>
+                                    <option value="Structural Engineering">Structural Engineering</option>
+                                    <option value="Urban Planning">Urban Planning</option>
                                     <option value="Other">Other</option>
                                   </select>
                                 </div>
@@ -2319,6 +2319,17 @@ export default function EditProject() {
                                     className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
                                     <X className="w-4 h-4" />
                                   </button>
+                                </div>
+
+                                <div className="mt-3 px-1">
+                                  <label className="block text-[11px] font-medium text-[#6b7280] mb-1">Document Title</label>
+                                  <input
+                                    type="text"
+                                    className="w-full h-8 px-3 rounded-lg border border-[#e5e7eb] text-[12px] placeholder:text-[11px] focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                    placeholder="e.g. JBCC Contract, Site Plan, etc."
+                                    value={f.title || ""}
+                                    onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
+                                  />
                                 </div>
 
                                 {f.status === "uploading" && (
