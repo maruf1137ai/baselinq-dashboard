@@ -1709,7 +1709,7 @@ export default function TaskDetails() {
                         className="font-normal"
                         onClick={() => handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1])}
                         disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
-                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1] ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1] : "Approve"}
+                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1] ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1] : "Close"}
                       </Button>
                     )}
 
@@ -2362,7 +2362,7 @@ export default function TaskDetails() {
                     }}
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Approve Proposal
+                    Close Proposal
                   </Button>
                   <Button
                     variant="outline"
