@@ -5,6 +5,10 @@ import TiptapUnderline from "@tiptap/extension-underline";
 import TiptapLink from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import BulletList from "@tiptap/extension-bullet-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
@@ -1504,88 +1508,98 @@ export default function TaskDetails() {
 
                 {/* Structured CPI Response Fields */}
                 {displayTask.type === "CPI" && (
-                  <div className="space-y-6 mb-6 pb-6 border-b border-border">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      {/* Progress Slider */}
-                      <div className="md:col-span-2">
-                        <div className="flex justify-between mb-2">
-                          <label className="text-xs font-normal text-muted-foreground">
-                            Current Progress
-                          </label>
-                          <span className="text-xs font-medium text-primary">{cpiProgress}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="5"
-                          value={cpiProgress}
-                          onChange={(e) => setCpiProgress(parseInt(e.target.value))}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
+                  <div className="mb-6 pb-6 border-b border-border space-y-5">
+                    {/* Progress */}
+                    <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium text-foreground">Current Progress</Label>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          cpiProgress === 100 ? 'bg-green-100 text-green-700' :
+                          cpiProgress >= 60 ? 'bg-blue-100 text-blue-700' :
+                          cpiProgress >= 30 ? 'bg-amber-100 text-amber-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>{cpiProgress}%</span>
                       </div>
+                      <Slider
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={[cpiProgress]}
+                        onValueChange={([val]) => setCpiProgress(val)}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                      </div>
+                    </div>
 
-                      {/* Forecast Date */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Expected Finish Date
-                        </label>
+                    {/* Date + Risk row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-foreground">Expected Finish Date</Label>
                         <input
                           type="date"
                           value={cpiForecastDate}
                           onChange={(e) => setCpiForecastDate(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Update the predicted completion date</p>
-                      </div>
-
-                      {/* Risk Level */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Risk Assessment
-                        </label>
-                        <select
-                          value={cpiRiskLevel}
-                          onChange={(e) => setCpiRiskLevel(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="Low">Low Risk (On Track)</option>
-                          <option value="Medium">Medium Risk (Monitoring)</option>
-                          <option value="High">High Risk (At Risk)</option>
-                        </select>
-                      </div>
-
-                      {/* Milestone Impact */}
-                      <div className="md:col-span-2">
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Milestone Impact
-                        </label>
-                        <select
-                          value={cpiMilestoneImpact}
-                          onChange={(e) => setCpiMilestoneImpact(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="">Select affected milestone...</option>
-                          <option value="Practical Completion">Impacts Practical Completion</option>
-                          <option value="Roof Wet">Impacts Roof Wet Milestone</option>
-                          <option value="Handover">Impacts Handover</option>
-                          <option value="None">None / Internal Buffer Used</option>
-                        </select>
-                      </div>
-
-                      {/* Recovery Plan */}
-                      <div className="md:col-span-2">
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Recovery Strategy / Plan
-                        </label>
-                        <textarea
-                          value={cpiRecoveryPlan}
-                          onChange={(e) => setCpiRecoveryPlan(e.target.value)}
-                          placeholder="What steps are being taken to recover the schedule?"
-                          rows={2}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
                         />
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-foreground">Risk Assessment</Label>
+                        <Select value={cpiRiskLevel} onValueChange={setCpiRiskLevel}>
+                          <SelectTrigger className="w-full text-sm">
+                            <SelectValue placeholder="Select risk level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Low">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500" />
+                                Low Risk — On Track
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Medium">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                Medium Risk — Monitoring
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="High">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500" />
+                                High Risk — At Risk
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Milestone Impact */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-foreground">Milestone Impact</Label>
+                      <Select value={cpiMilestoneImpact} onValueChange={setCpiMilestoneImpact}>
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Select affected milestone..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Practical Completion">Impacts Practical Completion</SelectItem>
+                          <SelectItem value="Roof Wet">Impacts Roof Wet Milestone</SelectItem>
+                          <SelectItem value="Handover">Impacts Handover</SelectItem>
+                          <SelectItem value="None">None / Internal Buffer Used</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Recovery Plan */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-foreground">Recovery Strategy / Plan</Label>
+                      <Textarea
+                        value={cpiRecoveryPlan}
+                        onChange={(e) => setCpiRecoveryPlan(e.target.value)}
+                        placeholder="What steps are being taken to recover the schedule?"
+                        rows={3}
+                        className="resize-none text-sm"
+                      />
                     </div>
                   </div>
                 )}
