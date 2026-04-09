@@ -644,27 +644,17 @@ export default function TaskDetails() {
     // console.log({ status, firstStage, lastStage, taskStatus })
 
     try {
-      const boardStatus = taskStatus === "Done" ? "done" : taskStatus === "Todo" ? "todo" : "in review";
-      await Promise.all([
-        patchData({
-          url: `tasks/tasks/${taskId}/update-entity/`,
-          data: { status, taskStatus, project: Number(projectId) },
-        }),
-        // patchData({
-        //   url: `tasks/tasks/${taskId}/`,
-        //   data: { status: boardStatus },
-        // }),
-      ]);
-      toast.success("Task approved successfully");
-      // Optimistically update local state so timeline reflects immediately
-      setCurrentTask((prev: any) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          task: { ...(prev.task || {}), status },
-          status,
-        };
+      const updatedTask = await patchData({
+        url: `tasks/tasks/${taskId}/update-entity/`,
+        data: { status, taskStatus, project: Number(projectId) },
       });
+      toast.success("Task approved successfully");
+      // Use the response directly — it has the freshly saved entity status
+      if (updatedTask) {
+        setCurrentTask(updatedTask);
+      } else {
+        setCurrentTask((prev: any) => prev ? { ...prev, task: { ...(prev.task || {}), status }, status } : prev);
+      }
       await refetchTask();
       await refetchAuditLogs();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
