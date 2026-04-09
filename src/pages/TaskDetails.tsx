@@ -80,6 +80,7 @@ import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRend
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
+import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
@@ -1127,7 +1128,19 @@ export default function TaskDetails() {
                                 : "Details"}
                 </h2>
 
-                <TaskContentRenderer displayTask={displayTask} />
+                <TaskContentRenderer
+                  displayTask={displayTask}
+                  task={currentTask}
+                  onRefresh={() => refetch()}
+                />
+
+                {/* Decision Timeline Workflow Steppers */}
+                {displayTask.type === "VO" && displayTask.formFields?.status && (
+                  <VOWorkflowStepper currentStatus={displayTask.formFields.status} />
+                )}
+                {displayTask.type === "SI" && displayTask.formFields?.decisionTimeline && (
+                  <SIWorkflowStepper currentDecisionTimeline={displayTask.formFields.decisionTimeline} />
+                )}
 
                 {/* <div className="flex gap-2 mt-4 pt-4 border-t">
                   {displayTask.question.tags &&

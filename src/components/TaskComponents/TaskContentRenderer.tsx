@@ -8,16 +8,18 @@ import { TaskGI } from './TaskGI';
 
 interface TaskContentRendererProps {
   displayTask: any;
+  task?: any;
+  onRefresh?: () => void;
 }
 
-export const TaskContentRenderer: React.FC<TaskContentRendererProps> = ({ displayTask }) => {
+export const TaskContentRenderer: React.FC<TaskContentRendererProps> = ({ displayTask, task, onRefresh }) => {
   if (!displayTask || !displayTask.formFields) return null;
 
   switch (displayTask.type) {
     case 'RFI':
       return <TaskRFI formFields={displayTask.formFields} />;
     case 'SI':
-      return <TaskSI formFields={displayTask.formFields} />;
+      return <TaskSI formFields={displayTask.formFields} task={task} onRefresh={onRefresh} />;
     case 'VO':
       return <TaskVO formFields={displayTask.formFields} />;
     case 'DC':
