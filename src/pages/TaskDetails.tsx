@@ -519,7 +519,7 @@ export default function TaskDetails() {
         const isCreator = String(displayTask.creator?.id) === String(user?.id);
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
         const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-        if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
+        if (['draft', 'open', 'todo', '', 'pending'].includes(currentStatusNorm)) {
           // Any user submits first response → Submitted
           updateData.status = "Submitted";
           updateData.statusCause = "Response submitted";
@@ -534,7 +534,7 @@ export default function TaskDetails() {
       if (displayTask.type === "RFI") {
         const isCreator = String(displayTask.creator?.id) === String(user?.id);
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-        if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
+        if (['draft', 'open', '', 'pending'].includes(currentStatusNorm)) {
           // Any user submits first response → Sent for Review
           updateData.status = "Sent for Review";
           updateData.statusCause = "Response submitted";
