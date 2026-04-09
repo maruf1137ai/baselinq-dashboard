@@ -1769,15 +1769,6 @@ export default function TaskDetails() {
                                   updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
                                 }
                               }
-                              // RFI: Creator clicking a response while Sent for Review → Further Info Required
-                              if (displayTask?.type === "RFI") {
-                                const isCreator = String(displayTask.creator?.id) === String(user?.id);
-                                const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-                                if (isCreator && currentStatusNorm === 'sentforreview') {
-                                  const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-                                  updateTask({ status: "Further Info Required", statusCause: `Reviewed by ${creatorName}` });
-                                }
-                              }
                             }}
                             className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
                           >
@@ -1901,7 +1892,16 @@ export default function TaskDetails() {
                     taskType={displayTask.type}
                     taskId={taskId || ''}
                     assignedTo={currentTask?.assignedTo || []}
-                    onSuccess={() => { refetchTask(); refetchRequestInfo(); refetchAuditLogs(); }}
+                    onSuccess={async () => {
+                      // RFI: requesting info → Further Info Required
+                      if (displayTask.type === "RFI") {
+                        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                        if (currentStatusNorm === 'sentforreview') {
+                          await updateTask({ status: "Further Info Required", statusCause: "Additional information requested" });
+                        }
+                      }
+                      refetchTask(); refetchRequestInfo(); refetchAuditLogs();
+                    }}
                   />
                 </div>
               </Card>
