@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { updateProfile } from "@/lib/Api";
+import { updateProfile, postData } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,6 +55,35 @@ const AccountProfile = () => {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+
+  const [pwForm, setPwForm] = useState({ old_password: "", new_password: "", new_password_confirm: "" });
+  const [isSavingPw, setIsSavingPw] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwForm.new_password !== pwForm.new_password_confirm) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (pwForm.new_password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setIsSavingPw(true);
+    try {
+      await postData({ url: "auth/password/change/", data: pwForm });
+      toast.success("Password changed successfully");
+      setPwForm({ old_password: "", new_password: "", new_password_confirm: "" });
+    } catch (err: any) {
+      const msg = err?.response?.data?.old_password?.[0]
+        || err?.response?.data?.new_password?.[0]
+        || err?.response?.data?.error
+        || "Failed to change password";
+      toast.error(msg);
+    } finally {
+      setIsSavingPw(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -213,6 +242,27 @@ const AccountProfile = () => {
             <Field label="Postal / ZIP Code">
               <Input value={formData.profile.postal_code} onChange={e => setFormData({ ...formData, profile: { ...formData.profile, postal_code: e.target.value } })} className={INPUT_CLS} />
             </Field>
+          </div>
+        </SectionCard>
+      </form>
+
+      <form onSubmit={handleChangePassword}>
+        <SectionCard title="Change Password" subtitle="Update your account password" icon={<Lock className="w-4 h-4" />}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <Field label="Current Password" colSpan>
+              <Input type="password" value={pwForm.old_password} onChange={e => setPwForm({ ...pwForm, old_password: e.target.value })} className={INPUT_CLS} placeholder="Enter current password" />
+            </Field>
+            <Field label="New Password">
+              <Input type="password" value={pwForm.new_password} onChange={e => setPwForm({ ...pwForm, new_password: e.target.value })} className={INPUT_CLS} placeholder="At least 8 characters" />
+            </Field>
+            <Field label="Confirm New Password">
+              <Input type="password" value={pwForm.new_password_confirm} onChange={e => setPwForm({ ...pwForm, new_password_confirm: e.target.value })} className={INPUT_CLS} placeholder="Repeat new password" />
+            </Field>
+          </div>
+          <div className="flex justify-end mt-5">
+            <Button type="submit" disabled={isSavingPw || !pwForm.old_password || !pwForm.new_password} className="gap-2 font-normal">
+              {isSavingPw ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Update Password</>}
+            </Button>
           </div>
         </SectionCard>
       </form>
