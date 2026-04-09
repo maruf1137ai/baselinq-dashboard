@@ -2186,7 +2186,7 @@ export default function EditProject() {
                           <div className="space-y-2">
                             {existingDocs.map((doc) => {
                               const docId = doc.id || doc._id;
-                              const docName = doc.file_name || doc.fileName || doc.name || "Unknown";
+                              const docName = doc.name || doc.file_name || doc.fileName || "Unknown";
                               const isDeleting = deletingDocId === docId;
                               return (
                                 <div

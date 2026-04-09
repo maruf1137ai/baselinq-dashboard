@@ -315,7 +315,7 @@ const ProjectDetails = () => {
   // ── Document helpers ────────────────────────────────────────────────────────
   const documents: ProjectDocument[] = (selectedProject as any)?.documents || [];
   const getDocName = (doc: ProjectDocument) =>
-    doc.file_name || doc.fileName || doc.name || "Unknown";
+    doc.name || doc.file_name || doc.fileName || "Unknown";
   const getDocUrl = (doc: ProjectDocument) =>
     (doc as any).streamUrl || (doc as any).stream_url || doc.file_url || doc.fileUrl || "";
   const getDocDate = (doc: ProjectDocument) => doc.uploaded_at || doc.uploadedAt;
