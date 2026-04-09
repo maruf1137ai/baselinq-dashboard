@@ -8,7 +8,7 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info } from "lucide-react";
+import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info, Eye, EyeOff } from "lucide-react";
 import { hasPermission } from "@/lib/roleUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -58,6 +58,7 @@ const AccountProfile = () => {
 
   const [pwForm, setPwForm] = useState({ old_password: "", new_password: "", new_password_confirm: "" });
   const [isSavingPw, setIsSavingPw] = useState(false);
+  const [showPw, setShowPw] = useState({ old: false, new: false, confirm: false });
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,13 +251,28 @@ const AccountProfile = () => {
         <SectionCard title="Change Password" subtitle="Update your account password" icon={<Lock className="w-4 h-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Current Password" colSpan>
-              <Input type="password" value={pwForm.old_password} onChange={e => setPwForm({ ...pwForm, old_password: e.target.value })} className={INPUT_CLS} placeholder="Enter current password" />
+              <div className="relative">
+                <Input type={showPw.old ? "text" : "password"} value={pwForm.old_password} onChange={e => setPwForm({ ...pwForm, old_password: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="Enter current password" />
+                <button type="button" onClick={() => setShowPw(s => ({ ...s, old: !s.old }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPw.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </Field>
             <Field label="New Password">
-              <Input type="password" value={pwForm.new_password} onChange={e => setPwForm({ ...pwForm, new_password: e.target.value })} className={INPUT_CLS} placeholder="At least 8 characters" />
+              <div className="relative">
+                <Input type={showPw.new ? "text" : "password"} value={pwForm.new_password} onChange={e => setPwForm({ ...pwForm, new_password: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="At least 8 characters" />
+                <button type="button" onClick={() => setShowPw(s => ({ ...s, new: !s.new }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPw.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </Field>
             <Field label="Confirm New Password">
-              <Input type="password" value={pwForm.new_password_confirm} onChange={e => setPwForm({ ...pwForm, new_password_confirm: e.target.value })} className={INPUT_CLS} placeholder="Repeat new password" />
+              <div className="relative">
+                <Input type={showPw.confirm ? "text" : "password"} value={pwForm.new_password_confirm} onChange={e => setPwForm({ ...pwForm, new_password_confirm: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="Repeat new password" />
+                <button type="button" onClick={() => setShowPw(s => ({ ...s, confirm: !s.confirm }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPw.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </Field>
           </div>
           <div className="flex justify-end mt-5">
