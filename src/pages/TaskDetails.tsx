@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import BulletList from "@tiptap/extension-bullet-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
@@ -1537,11 +1538,10 @@ export default function TaskDetails() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-foreground">Expected Finish Date</Label>
-                        <input
+                        <Input
                           type="date"
                           value={cpiForecastDate}
                           onChange={(e) => setCpiForecastDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
                         />
                       </div>
                       <div className="space-y-1.5">
