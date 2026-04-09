@@ -471,7 +471,7 @@ export default function TaskDetails() {
       toast.success("Site Instruction acknowledged successfully");
 
       // Refresh task data
-      await refetch();
+      await refetchTask();
 
       // Reset checkbox states
       setSiAcknowledgeReceipt(false);
@@ -1316,7 +1316,7 @@ export default function TaskDetails() {
                 <TaskContentRenderer
                   displayTask={displayTask}
                   task={currentTask}
-                  onRefresh={() => refetch()}
+                  onRefresh={() => refetchTask()}
                 />
 
                 {/* Decision Timeline Workflow Steppers */}
