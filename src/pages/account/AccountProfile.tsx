@@ -47,7 +47,7 @@ function Field({ label, children, colSpan }: { label: string; children: React.Re
   );
 }
 
-const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
+const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm";
 
 const AccountProfile = () => {
   const { data: user, isLoading } = useCurrentUser();
