@@ -78,7 +78,10 @@ const Index = () => {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const fetchAppointedCompanies = async (pid: string) => {
     setIsLoadingCompanies(true);
-    try { setAppointedCompanies((await getAppointedCompanies(pid)) || []); }
+    try {
+      const companies = await getAppointedCompanies(pid);
+      setAppointedCompanies((companies || []).sort((a: any, b: any) => (a.company_name || "").localeCompare(b.company_name || "")));
+    }
     catch { /* silent */ }
     finally { setIsLoadingCompanies(false); }
   };
@@ -722,16 +725,16 @@ const Index = () => {
             {recentDocuments.length > 0 ? (
               <div className="divide-y divide-border/50">
                 {recentDocuments.map((doc: any, i: number) => {
-                  const fileName = doc.file_name || doc.fileName || doc.name || "Document";
+                  const displayName = doc.name || doc.file_name || doc.fileName || "Document";
                   return (
                     <button
                       key={doc.id || doc._id || i}
                       onClick={() => setSelectedDoc(doc)}
                       className="w-full flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-sidebar transition-colors text-left"
                     >
-                      <span className="text-base">{getFileIcon(fileName)}</span>
+                      <span className="text-base">{getFileIcon(doc.file_name || doc.fileName || doc.name || "Doc")}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{fileName}</p>
+                        <p className="text-sm text-foreground truncate">{displayName}</p>
                         <p className="text-xs text-muted-foreground/50">
                           {doc.uploaded_at || doc.uploadedAt
                             ? formatDate(doc.uploaded_at || doc.uploadedAt)
@@ -811,7 +814,7 @@ const Index = () => {
         isOpen={!!selectedDoc}
         onOpenChange={(open) => { if (!open) setSelectedDoc(null); }}
         file={selectedDoc ? {
-          name: selectedDoc.file_name || selectedDoc.fileName || selectedDoc.name || "Document",
+          name: selectedDoc.name || selectedDoc.file_name || selectedDoc.fileName || "Document",
           url: selectedDoc.streamUrl || selectedDoc.stream_url || selectedDoc.file_url || selectedDoc.fileUrl || "",
         } : null}
       />
@@ -1152,20 +1155,6 @@ const Index = () => {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
-                              <div className="relative">
-                                <select
-                                  className={qSelectCls}
-                                  value={entry.company_type}
-                                  onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
-                                >
-                                  <option value="">Select type...</option>
-                                  {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                              </div>
-                            </div>
-                            <div>
                               <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
                               <div className="relative">
                                 <select
@@ -1227,20 +1216,6 @@ const Index = () => {
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
-                          <div className="relative">
-                            <select
-                              className={qSelectCls}
-                              value={quickForm.appointed_company_type}
-                              onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_type: e.target.value }))}
-                            >
-                              <option value="">Select type...</option>
-                              {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                          </div>
-                        </div>
                         <div>
                           <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
                           <div className="relative">

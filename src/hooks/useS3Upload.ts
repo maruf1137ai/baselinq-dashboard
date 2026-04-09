@@ -12,6 +12,7 @@ export interface S3FileEntry {
   progress: number;
   s3Key?: string;
   error?: string;
+  title?: string;
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
@@ -131,8 +132,12 @@ export function useS3Upload(folder = "project-documents/pending") {
     []
   );
 
+  const updateEntry = useCallback((id: string, patch: Partial<S3FileEntry>) => {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+
   const hasUploading = entries.some((e) => e.status === "uploading");
   const allDone = entries.length > 0 && entries.every((e) => e.status === "done" || e.status === "error");
 
-  return { entries, startUpload, retryUpload, removeEntry, waitForAll, hasUploading, allDone };
+  return { entries, startUpload, retryUpload, removeEntry, updateEntry, waitForAll, hasUploading, allDone };
 }

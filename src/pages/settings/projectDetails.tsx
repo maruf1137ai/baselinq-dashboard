@@ -822,7 +822,12 @@ const ProjectDetails = () => {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="overflow-hidden flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{getDocName(doc)}</p>
+                  {doc.name && (
+                    <p className="text-sm text-foreground truncate">{doc.name}</p>
+                  )}
+                  <p className={doc.name ? "text-xs text-muted-foreground truncate" : "text-sm text-foreground truncate"}>
+                    {doc.file_name || doc.fileName || "Unknown"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {getDocDate(doc) ? formatDate(getDocDate(doc)) : "N/A"}
                   </p>

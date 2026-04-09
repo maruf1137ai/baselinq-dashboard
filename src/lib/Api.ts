@@ -584,12 +584,12 @@ export const registerS3TaskAttachment = async (
 /** Register a document that was uploaded to S3 so it appears in project overview. */
 export const registerS3Document = async (
   projectId: string | number,
-  params: { file_name: string; s3_key: string }
+  params: { file_name: string; s3_key: string; name?: string; file_size?: number }
 ): Promise<ProjectDocument> => {
   try {
     const response = await api.post<ProjectDocument>(
       `projects/${projectId}/register_s3_document/`,
-      { file_name: params.file_name, s3_key: params.s3_key }
+      { file_name: params.file_name, s3_key: params.s3_key, name: params.name, file_size: params.file_size ?? 0 }
     );
     return response.data;
   } catch (error) {

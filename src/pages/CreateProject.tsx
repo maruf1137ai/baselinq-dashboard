@@ -1191,7 +1191,7 @@ export default function CreateProject() {
               const key = s3Keys.get(entry.id);
               if (!key) { anyFailed = true; return; }
               try {
-                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key, name: entry.title || "" });
+                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key, name: entry.title || "", file_size: entry.file.size });
               } catch {
                 anyFailed = true;
               }
@@ -1816,17 +1816,7 @@ export default function CreateProject() {
                                     onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
                                   />
                                 </div>
-                                <div>
-                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
-                                  <select
-                                    className={inputCls()}
-                                    value={entry.company_type}
-                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
-                                  >
-                                    <option value="">Select type...</option>
-                                    {COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                  </select>
-                                </div>
+
                                 <div>
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
                                   <select
@@ -1953,19 +1943,7 @@ export default function CreateProject() {
                                   />
                                 </div>
                               </div>
-                              <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
-                                <select
-                                  className={inputCls()}
-                                  value={appointedForm.company_type}
-                                  onChange={(e) => setAppointedForm((p) => ({ ...p, company_type: e.target.value }))}
-                                >
-                                  <option value="">Select type...</option>
-                                  {COMPANY_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                  ))}
-                                </select>
-                              </div>
+
                               <div>
                                 <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
                                 <select
