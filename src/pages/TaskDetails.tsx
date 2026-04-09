@@ -85,7 +85,6 @@ import useFetch from "@/hooks/useFetch";
 import { postData, patchData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
-import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
@@ -552,8 +551,18 @@ export default function TaskDetails() {
         }
       }
 
-      if (displayTask.type === "DC" && dcExtensionGranted) {
-        updateData.status = "EOT Awarded";
+      // DC Decision Timeline: automatic status transitions
+      if (displayTask.type === "DC") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+        if (['draft', 'open', '', 'pending'].includes(currentStatusNorm)) {
+          updateData.status = "Submitted";
+          updateData.statusCause = "Response submitted";
+        } else if (isCreator && currentStatusNorm === 'inreview') {
+          updateData.status = "Approved";
+          updateData.statusCause = `Determination made by ${creatorName}`;
+        }
       }
 
       if (displayTask.type === "CPI") {
@@ -904,8 +913,8 @@ export default function TaskDetails() {
             contractWindow: "28 days",
           },
           timeline: {
-            current: task.status || apiResponse.status || "Delay Identified",
-            stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Submitted", "In Review", "Approved"],
           },
           impact: {
             time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
@@ -1783,13 +1792,14 @@ export default function TaskDetails() {
                             onClick={() => {
                               setSelectedResponse(resp);
                               setIsResponseModalOpen(true);
-                              // VO: Creator clicking a response while Submitted → Under Review
-                              if (displayTask?.type === "VO") {
+                              // VO/DC: Creator clicking a response while Submitted → Under Review / In Review
+                              if (displayTask?.type === "VO" || displayTask?.type === "DC") {
                                 const isCreator = String(displayTask.creator?.id) === String(user?.id);
                                 const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
                                 if (isCreator && currentStatusNorm === 'submitted') {
                                   const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-                                  updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
+                                  const nextStatus = displayTask.type === "DC" ? "In Review" : "Under Review";
+                                  updateTask({ status: nextStatus, statusCause: `Response reviewed by ${creatorName}` });
                                 }
                               }
                             }}
@@ -1931,34 +1941,7 @@ export default function TaskDetails() {
             </div>
 
             {/* Right Column - Sidebar */}
-            {displayTask.creator.badge === "DC" ? (
-              <TaskSidebar
-                taskType={displayTask.creator.badge}
-                canApprove={canApprove && currentStageIndex < displayTask.timeline.stages.length - 1}
-                currentStageIndex={currentStageIndex}
-                auditLogs={auditLogs}
-                taskData={{
-                  ...displayTask,
-                  // Add DC-specific fields
-                  daysRequested: displayTask.formFields?.requestedExtension || "5",
-                  approvedDays: "0",
-                  number: displayTask.id,
-                  createdBy: displayTask.creator.name,
-                  status: displayTask.timeline.current,
-                }}
-                onStageClick={(stage) => handleApproveTask(stage)}
-                onApprove={() => {
-                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                  handleApproveTask(lastStage);
-                }}
-                onReject={() => {
-                  toast.info("Task rejected");
-                }}
-                onRequestInfo={() => {
-                  toast.info("Request info dialog triggered");
-                }}
-              />
-            ) : (
+            {false ? null : (
               <div className="space-y-6 px-6 py-[45px] border-l">
                 {/* Decision Timeline */}
                 <div className="">
