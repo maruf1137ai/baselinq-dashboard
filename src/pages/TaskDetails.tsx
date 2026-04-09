@@ -330,6 +330,7 @@ export default function TaskDetails() {
   });
   const [aiResponse, setAiResponse] = useState<string>("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [isReplySubmitLoading, setIsReplySubmitLoading] = useState(false);
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
@@ -443,6 +444,46 @@ export default function TaskDetails() {
     }
   };
 
+  // Handle SI Approve - updates status to "Acknowledged"
+  const handleSIApprove = async () => {
+    if (!siAcknowledgeReceipt) {
+      toast.error("Please acknowledge receipt of the Site Instruction");
+      return;
+    }
+
+    if (!currentTask?.taskId) {
+      toast.error("Task ID not found. Please refresh and try again.");
+      return;
+    }
+
+    setIsReplySubmitLoading(true);
+    try {
+      // Use update-entity endpoint to update SI status to "Acknowledged"
+      await patchData({
+        url: `/tasks/tasks/${currentTask.taskId}/update-entity/`,
+        data: {
+          status: "Acknowledged",
+          isAcknowledged: true,
+          leadsToVariation: siLeadsToVariationResponse,
+        },
+      });
+
+      toast.success("Site Instruction acknowledged successfully");
+
+      // Refresh task data
+      await refetch();
+
+      // Reset checkbox states
+      setSiAcknowledgeReceipt(false);
+      setSiLeadsToVariationResponse(false);
+    } catch (error: any) {
+      console.error("SI Approve error:", error);
+      toast.error(error?.response?.data?.error || error?.message || "Failed to acknowledge SI");
+    } finally {
+      setIsReplySubmitLoading(false);
+    }
+  };
+
   const handleSubmitReply = async () => {
     if (!editor || !currentTask) return;
 
@@ -517,7 +558,6 @@ export default function TaskDetails() {
 
     try {
       const updateData: any = {
-        id: currentTask.id,
         responses: updatedResponses,
       };
 
@@ -1658,6 +1698,18 @@ export default function TaskDetails() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground italic">Receipt and potential cost impact must be declared as per contract protocols.</p>
+
+                    {/* Approve Button - Bottom Right */}
+                    <div className="flex justify-end items-center pt-3 border-t border-border mt-4">
+                      <Button
+                        onClick={handleSIApprove}
+                        disabled={isReplySubmitLoading || !siAcknowledgeReceipt}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-sm"
+                        size="lg"
+                      >
+                        {isReplySubmitLoading ? "Approving..." : "Approve"}
+                      </Button>
+                    </div>
                   </div>
                 )}
 

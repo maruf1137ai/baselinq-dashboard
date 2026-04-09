@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,8 +39,11 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
     );
   }
 
-  const decisionTimeline = formFields.decisionTimeline || "Issued";
+  const decisionTimeline = formFields.decisionTimeline || "Draft";
   const siId = formFields._id;
+
+  // Get task ID - try from task prop first, then from formFields.task
+  const taskId = task?.id || formFields.task?.id;
 
   // Check if current user is assigned to this task
   const isAssigned = task?.assignedTo?.some((assignee: any) => assignee.userId === user?.id);
@@ -54,46 +57,113 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
     isAssigned,
     isCreator,
     currentUserId: user?.id,
+    taskId,
+    siId,
+    task,
+    formFields,
     assignedUsers: task?.assignedTo?.map((a: any) => a.userId),
     showAcknowledge: decisionTimeline === "Issued" && isAssigned,
   });
 
-  // Handle acknowledge
+  // Auto-transition from Draft to Issued when assignee opens the SI
+  useEffect(() => {
+    const autoTransitionToIssued = async () => {
+      // Only trigger if:
+      // 1. Current status is "Draft"
+      // 2. User is assigned to this task (not the creator)
+      // 3. User is not the creator
+      // 4. Task ID is available
+      if (decisionTimeline === "Draft" && isAssigned && !isCreator && taskId) {
+        try {
+          await postData(`/tasks/tasks/${taskId}/update-entity/`, {
+            status: "Issued",
+          });
+          // Silently update - no toast notification for auto-transition
+          queryClient.invalidateQueries({ queryKey: ["task"] });
+          if (onRefresh) onRefresh();
+        } catch (error) {
+          // Silent fail - don't show error to user for auto-transition
+          console.error("Auto-transition to Issued failed:", error);
+        }
+      }
+    };
+
+    autoTransitionToIssued();
+  }, [decisionTimeline, isAssigned, isCreator, taskId]);
+
+  // Handle acknowledge - updates status to "Acknowledged"
   const handleAcknowledge = async () => {
     if (!receiptChecked) {
       toast.error("Please acknowledge receipt of the Site Instruction");
       return;
     }
 
+    if (!taskId) {
+      toast.error("Task ID not found. Please refresh and try again.");
+      console.error("Task object:", task);
+      console.error("FormFields:", formFields);
+      return;
+    }
+
     setLoading(true);
     try {
-      await postData(`/tasks/site-instructions/${siId}/acknowledge/`, {
-        acknowledgmentCheckboxes: {
-          receipt: receiptChecked,
-          variation: variationChecked,
-        },
+      console.log("Acknowledging SI with task ID:", taskId);
+      console.log("Payload:", {
+        status: "Acknowledged",
+        isAcknowledged: true,
+        leadsToVariation: variationChecked,
       });
+
+      // Use update-entity endpoint to update SI status to "Acknowledged"
+      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
+        status: "Acknowledged",
+        isAcknowledged: true,
+        leadsToVariation: variationChecked,
+      });
+
       toast.success("Site Instruction acknowledged successfully");
       queryClient.invalidateQueries({ queryKey: ["task"] });
       if (onRefresh) onRefresh();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to acknowledge SI");
+      console.error("Acknowledge error:", error);
+      console.error("Error response:", error?.response?.data);
+      toast.error(error?.response?.data?.error || error?.message || "Failed to acknowledge SI");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle provide feedback
+  // Handle provide feedback - updates status to "Actioned" and adds response
   const handleProvideFeedback = async () => {
     if (!feedbackText.trim()) {
       toast.error("Please provide feedback");
       return;
     }
 
+    if (!taskId) {
+      toast.error("Task ID not found. Please refresh and try again.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await postData(`/tasks/site-instructions/${siId}/provide-feedback/`, {
-        feedbackText: feedbackText.trim(),
+      // Create response object
+      const newResponse = {
+        id: Date.now().toString(),
+        content: feedbackText.trim(),
+        sender: user?.name || user?.email || "Unknown",
+        date: new Date().toISOString(),
+        structuredData: {},
+      };
+
+      // Get existing responses and add new one
+      const existingResponses = task?.responses || [];
+      const updatedResponses = [...existingResponses, newResponse];
+
+      // Use update-entity endpoint to update SI status to "Actioned" and add response
+      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
+        status: "Actioned",
+        responses: updatedResponses,
       });
       toast.success("Feedback submitted successfully");
       setFeedbackText("");
@@ -106,11 +176,19 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
     }
   };
 
-  // Handle verify
+  // Handle verify - updates status to "Verified"
   const handleVerify = async () => {
+    if (!taskId) {
+      toast.error("Task ID not found. Please refresh and try again.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await postData(`/tasks/site-instructions/${siId}/verify/`, {});
+      // Use update-entity endpoint to update SI status to "Verified"
+      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
+        status: "Verified",
+      });
       toast.success("Site Instruction verified successfully");
       queryClient.invalidateQueries({ queryKey: ["task"] });
       if (onRefresh) onRefresh();
@@ -187,56 +265,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
         </div>
       </div>
 
-      {/* Acknowledgment Section - Show if Issued and user is assigned */}
-      {decisionTimeline === "Issued" && isAssigned && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-              <h3 className="text-sm font-medium text-blue-900">Acknowledgment & Response</h3>
-            </div>
-
-            <div className="space-y-3 pl-8">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="receipt"
-                  checked={receiptChecked}
-                  onCheckedChange={(checked) => setReceiptChecked(checked as boolean)}
-                  className="mt-0.5"
-                />
-                <label htmlFor="receipt" className="text-sm text-blue-800 cursor-pointer leading-relaxed">
-                  I formally acknowledge receipt of this Site Instruction
-                </label>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="variation"
-                  checked={variationChecked}
-                  onCheckedChange={(checked) => setVariationChecked(checked as boolean)}
-                  className="mt-0.5"
-                />
-                <label htmlFor="variation" className="text-sm text-blue-800 cursor-pointer leading-relaxed">
-                  This instruction will lead to a Variation Order request
-                </label>
-              </div>
-
-              <p className="text-xs text-blue-700 italic mt-2">
-                Receipt and potential cost impact must be declared as per contract protocols.
-              </p>
-
-              <Button
-                onClick={handleAcknowledge}
-                disabled={loading || !receiptChecked}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                size="lg"
-              >
-                {loading ? "Acknowledging..." : "Acknowledge SI"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Acknowledgment section removed - now handled in TaskDetails.tsx page */}
 
       {/* Feedback Section - Show if Acknowledged and user is assigned */}
       {decisionTimeline === "Acknowledged" && isAssigned && (

@@ -7,6 +7,7 @@ interface SIWorkflowStepperProps {
 }
 
 const SI_WORKFLOW_STAGES = [
+  { key: 'draft', label: 'Draft' },
   { key: 'issued', label: 'Issued' },
   { key: 'acknowledged', label: 'Acknowledged' },
   { key: 'actioned', label: 'Actioned' },
@@ -17,17 +18,19 @@ const SI_WORKFLOW_STAGES = [
 const getStageIndex = (decisionTimeline: string): number => {
   const timelineLower = decisionTimeline.toLowerCase().replace(/\s+/g, '');
 
-  if (timelineLower.includes('issued')) {
+  if (timelineLower.includes('draft')) {
     return 0;
-  } else if (timelineLower.includes('acknowledged')) {
+  } else if (timelineLower.includes('issued')) {
     return 1;
-  } else if (timelineLower.includes('actioned')) {
+  } else if (timelineLower.includes('acknowledged')) {
     return 2;
-  } else if (timelineLower.includes('verified')) {
+  } else if (timelineLower.includes('actioned')) {
     return 3;
+  } else if (timelineLower.includes('verified')) {
+    return 4;
   }
 
-  return 0; // Default to issued
+  return 0; // Default to draft
 };
 
 export const SIWorkflowStepper: React.FC<SIWorkflowStepperProps> = ({ currentDecisionTimeline }) => {
