@@ -315,7 +315,7 @@ const ProjectDetails = () => {
   // ── Document helpers ────────────────────────────────────────────────────────
   const documents: ProjectDocument[] = (selectedProject as any)?.documents || [];
   const getDocName = (doc: ProjectDocument) =>
-    doc.file_name || doc.fileName || doc.name || "Unknown";
+    doc.name || doc.file_name || doc.fileName || "Unknown";
   const getDocUrl = (doc: ProjectDocument) =>
     (doc as any).streamUrl || (doc as any).stream_url || doc.file_url || doc.fileUrl || "";
   const getDocDate = (doc: ProjectDocument) => doc.uploaded_at || doc.uploadedAt;
@@ -822,7 +822,12 @@ const ProjectDetails = () => {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="overflow-hidden flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{getDocName(doc)}</p>
+                  {doc.name && (
+                    <p className="text-sm text-foreground truncate">{doc.name}</p>
+                  )}
+                  <p className={doc.name ? "text-xs text-muted-foreground truncate" : "text-sm text-foreground truncate"}>
+                    {doc.file_name || doc.fileName || "Unknown"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {getDocDate(doc) ? formatDate(getDocDate(doc)) : "N/A"}
                   </p>

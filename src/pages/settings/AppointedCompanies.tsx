@@ -37,11 +37,11 @@ const SELECT_CLS =
   "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
 const COMPANY_TYPES = [
-  "Architectural", "Structural Engineering", "Civil Engineering",
-  "Mechanical Engineering", "Electrical Engineering", "Quantity Surveying",
-  "Project Management", "Construction Management", "Interior Design",
-  "Landscape Architecture", "Urban Planning", "Environmental Consulting",
-  "Legal & Compliance", "General Contractor", "Other",
+  "Architectural", "Civil Engineering", "Construction Management",
+  "Electrical Engineering", "Environmental Consulting", "General Contractor",
+  "Interior Design", "Landscape Architecture", "Legal & Compliance",
+  "Mechanical Engineering", "Project Management", "Quantity Surveying",
+  "Structural Engineering", "Urban Planning", "Other",
 ];
 
 interface AppointedInviteEntry {
@@ -145,9 +145,9 @@ const AppointedCompanies = () => {
   const isSaving = updateProjectMutation.isPending;
 
   const CLIENT_ROLES = ["CLIENT", "OWNER", "CLIENT OWNER"];
-  const appointedOnly = appointedCompanies.filter((c) =>
-    !CLIENT_ROLES.includes((c.role || "").toUpperCase().trim())
-  );
+  const appointedOnly = appointedCompanies
+    .filter((c) => !CLIENT_ROLES.includes((c.role || "").toUpperCase().trim()))
+    .sort((a, b) => (a.company_name || "").localeCompare(b.company_name || ""));
 
   return (
     <div className="w-full bg-slate-50/30">
@@ -364,19 +364,7 @@ const AppointedCompanies = () => {
                       placeholder="e.g. Base Architects and Associates"
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
-                    <select
-                      value={entry.company_type}
-                      onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
-                      className={SELECT_CLS}
-                    >
-                      <option value="">Select type...</option>
-                      {COMPANY_TYPES.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
+
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Professional Role</label>
                     <select

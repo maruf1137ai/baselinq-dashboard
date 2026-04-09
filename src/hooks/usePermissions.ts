@@ -29,8 +29,32 @@ export function usePermissions() {
   const can = (permission: PermissionKey): boolean => {
     // While auth is loading, allow everything — RoleRoute handles the gate
     if (isLoading) return true;
+
     const allowed = PERMISSIONS[permission] as readonly string[];
-    return allowed.includes(projectCode) || allowed.includes(globalCode);
+
+    // Categorize permissions
+    const globalOnlyPermissions: PermissionKey[] = [
+      "createProject",
+      "manageSettings",
+      "viewBilling"
+    ];
+
+    // 1. If it's a global-only permission, check against global role only
+    if (globalOnlyPermissions.includes(permission)) {
+      return allowed.includes(globalCode);
+    }
+
+    // 2. For project-level permissions: 
+    //    - If user has a project-specific role, that is the strict source of truth
+    if (projectCode) {
+      return allowed.includes(projectCode);
+    }
+
+    //    - Fallback: If no project role is found (e.g. Org Owner viewing projects), 
+    //      grant full access only if they are a global CLIENT (Owner/Super-Admin)
+    if (globalCode === "CLIENT") return true;
+
+    return false;
   };
 
   return {

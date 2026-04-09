@@ -1259,7 +1259,7 @@ export default function EditProject() {
               const key = s3Keys.get(entry.id);
               if (!key) { anyFailed = true; return; }
               try {
-                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key });
+                await registerS3Document(pId, { file_name: entry.file.name, s3_key: key, name: entry.title || "" });
               } catch {
                 anyFailed = true;
               }
@@ -1944,31 +1944,7 @@ export default function EditProject() {
                                     onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
                                   />
                                 </div>
-                                <div className="text-left">
-                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
-                                  <select
-                                    className={inputCls()}
-                                    value={entry.company_type}
-                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
-                                  >
-                                    <option value="">Select type...</option>
-                                    <option value="Architectural">Architectural</option>
-                                    <option value="Structural Engineering">Structural Engineering</option>
-                                    <option value="Civil Engineering">Civil Engineering</option>
-                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
-                                    <option value="Electrical Engineering">Electrical Engineering</option>
-                                    <option value="Quantity Surveying">Quantity Surveying</option>
-                                    <option value="Project Management">Project Management</option>
-                                    <option value="Construction Management">Construction Management</option>
-                                    <option value="Interior Design">Interior Design</option>
-                                    <option value="Landscape Architecture">Landscape Architecture</option>
-                                    <option value="Urban Planning">Urban Planning</option>
-                                    <option value="Environmental Consulting">Environmental Consulting</option>
-                                    <option value="Legal & Compliance">Legal &amp; Compliance</option>
-                                    <option value="General Contractor">General Contractor</option>
-                                    <option value="Other">Other</option>
-                                  </select>
-                                </div>
+
                                 <div className="text-left">
                                   <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
                                   <select
@@ -2186,7 +2162,7 @@ export default function EditProject() {
                           <div className="space-y-2">
                             {existingDocs.map((doc) => {
                               const docId = doc.id || doc._id;
-                              const docName = doc.file_name || doc.fileName || doc.name || "Unknown";
+                              const actualFileName = doc.file_name || doc.fileName || "Unknown";
                               const isDeleting = deletingDocId === docId;
                               return (
                                 <div
@@ -2195,10 +2171,15 @@ export default function EditProject() {
                                     "flex items-center gap-3 bg-[#f5f6f8] rounded-[10px] px-4 py-3 border border-[#e2e5ea] transition-opacity",
                                     isDeleting && "opacity-50"
                                   )}>
-                                  <FileTypeIcon filename={docName} />
+                                  <FileTypeIcon filename={actualFileName} />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-normal text-[#111827] truncate">
-                                      {docName}
+                                    {doc.name && (
+                                      <p className="text-[13px] font-normal text-[#111827] truncate">
+                                        {doc.name}
+                                      </p>
+                                    )}
+                                    <p className={doc.name ? "text-[11px] text-[#9ca3af] truncate" : "text-[13px] font-normal text-[#111827] truncate"}>
+                                      {actualFileName}
                                     </p>
                                     {doc.uploaded_at || doc.uploadedAt ? (
                                       <p className="text-[11px] text-[#9ca3af]">
@@ -2319,6 +2300,17 @@ export default function EditProject() {
                                     className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
                                     <X className="w-4 h-4" />
                                   </button>
+                                </div>
+
+                                <div className="mt-3 px-1">
+                                  <label className="block text-[11px] font-medium text-[#6b7280] mb-1">Document Title</label>
+                                  <input
+                                    type="text"
+                                    className="w-full h-8 px-3 rounded-lg border border-[#e5e7eb] text-[12px] placeholder:text-[11px] focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                    placeholder="e.g. JBCC Contract, Site Plan, etc."
+                                    value={f.title || ""}
+                                    onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
+                                  />
                                 </div>
 
                                 {f.status === "uploading" && (

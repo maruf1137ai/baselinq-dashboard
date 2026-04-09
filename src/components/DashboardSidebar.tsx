@@ -50,7 +50,7 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Communications", url: "/communications", icon: <Communication />, permission: null },
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: null },
   { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
-  { title: "Compliance", url: "/compliance", icon: <Shield />, permission: null },
+  { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ];
 
@@ -300,7 +300,7 @@ export function DashboardSidebar() {
             <div className="p-4 border-t border-border">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => navigate("/account")}
+                  onClick={() => navigate("/account/profile")}
                   className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
                 >
                   <span className="text-white text-sm font-medium uppercase">
@@ -309,7 +309,7 @@ export function DashboardSidebar() {
                       "U")[0]}
                   </span>
                 </button>
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate("/account")}>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate("/account/profile")}>
                   <p className="text-sm capitalize font-medium text-sidebar-foreground truncate">
                     {user?.name ||
                       user?.email?.split("@")[0] ||
@@ -339,7 +339,7 @@ export function DashboardSidebar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top" className="w-48">
                     <DropdownMenuItem
-                      onClick={() => navigate("/account")}
+                      onClick={() => navigate("/account/profile")}
                       className="cursor-pointer gap-2">
                       <UserCircle className="h-4 w-4" />
                       <span>My Account</span>

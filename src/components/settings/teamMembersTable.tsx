@@ -92,9 +92,10 @@ interface TeamMember {
   projectId: string;
   userId: string;
   user: User;
-  roleName: string;
-  roleId: string;
-  roleInfo: Role;
+  roleName: string;       // Project role (used for permissions)
+  orgRoleName: string;    // Org/user role (display only)
+  orgRoleId: string;
+  orgRoleInfo: Role;
   discipline: string;
   isActive: boolean;
   addedBy: {
@@ -177,6 +178,17 @@ const ActionsCell = ({
           discipline: editDiscipline,
         },
       });
+
+      // Synchronize global role with project role to ensure data consistency
+      if (member.user?.id) {
+        await patchData({
+          url: `auth/users/${member.user.id}/`,
+          data: {
+            role: selectedRole.code
+          }
+        });
+      }
+
       toast.success("Role updated successfully");
       setShowEditDialog(false);
       setSelectedRole(null);
@@ -391,7 +403,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
   const teamMembers = projectUsersData?.teamMembers || [];
   const allUsers = allUsersData?.results || [];
-  const roles = rolesData || [];
+  const roles = (rolesData || []).filter(r => r.code && r.is_active !== false).sort((a, b) => a.name.localeCompare(b.name));
 
   const { data: user } = useCurrentUser();
   const currentMember = teamMembers.find((m) => String(m.user.id) === String(user?.id));
