@@ -137,7 +137,7 @@ const AppointedCompanies = () => {
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-200px)] flex items-center justify-center">
-        <AwesomeLoader message="Fetching Appointed Companies..." />
+        <AwesomeLoader message="Fetching Associated Companies..." />
       </div>
     );
   }
@@ -160,7 +160,7 @@ const AppointedCompanies = () => {
               <Building2 className="w-3 h-3" />
               Project Settings
             </div>
-            <h1 className="text-3xl font-normal text-foreground tracking-tight">Appointed Companies</h1>
+            <h1 className="text-3xl font-normal text-foreground tracking-tight">Associated Companies</h1>
           </div>
           {canManageTeam ? (
             appointedInvites.length > 0 && (
@@ -190,7 +190,7 @@ const AppointedCompanies = () => {
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-normal text-foreground tracking-tight">Appointed Companies</h3>
+              <h3 className="text-sm font-normal text-foreground tracking-tight">Associated Companies</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Professional firms appointed to this project</p>
             </div>
           </div>
@@ -457,7 +457,7 @@ const AppointedCompanies = () => {
                 className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
               >
                 <Plus className="w-4 h-4" />
-                {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+                {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
               </button>
             )}
           </div>

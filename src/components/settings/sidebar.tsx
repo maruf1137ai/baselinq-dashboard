@@ -36,7 +36,7 @@ const navItems = [
       },
       {
         id: 10,
-        title: "Appointed Companies",
+        title: "Associated Companies",
         url: "/settings/appointed-companies",
         icon: <Building2 className="h-4 w-4 text-current" />,
       },

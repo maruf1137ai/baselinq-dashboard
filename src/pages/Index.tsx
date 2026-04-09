@@ -105,7 +105,7 @@ const Index = () => {
   const openQuickFillFor = (section: string) => {
     setQuickFillSection(section);
     setQuickFillOpen(true);
-    if (section === "Appointed Company" && projectId) fetchAppointedCompanies(projectId);
+    if (section === "Associated Company" && projectId) fetchAppointedCompanies(projectId);
   };
   const closeQuickFill = () => {
     setQuickFillOpen(false);
@@ -159,7 +159,7 @@ const Index = () => {
       }
       const validInvites = appointedInvites.filter((e) => e.company_name.trim() && e.email.trim());
       // NON-CLIENT: fill own appointed company details
-      if (missing.includes("Appointed Company") && !isClientOrContractor && quickForm.appointed_company_name.trim()) {
+      if (missing.includes("Associated Company") && !isClientOrContractor && quickForm.appointed_company_name.trim()) {
         payload.appointed_company = {
           company_name: quickForm.appointed_company_name.trim(),
           company_type: quickForm.appointed_company_type,
@@ -207,7 +207,7 @@ const Index = () => {
       }
 
       // CLIENT/CONTRACTOR: send appointed company invitations
-      if (missing.includes("Appointed Company") && isClientOrContractor && validInvites.length > 0) {
+      if (missing.includes("Associated Company") && isClientOrContractor && validInvites.length > 0) {
         await Promise.allSettled(
           validInvites.map((entry) =>
             inviteAppointedCompany({
@@ -409,7 +409,7 @@ const Index = () => {
       { label: "Budget Allocation", value: Number((project.totalBudget ?? project.total_budget) || 0) > 0 ? "yes" : null },
       { label: "Location", value: project.location || null },
       { label: "Project Timeline", value: (project.startDate || project.start_date) && (project.endDate || project.end_date) ? "yes" : null },
-      { label: "Appointed Company", value: (project.appointedCompany || project.appointed_company)?.company_name || null },
+      { label: "Associated Company", value: (project.appointedCompany || project.appointed_company)?.company_name || null },
     ];
     const filledCount = fields.filter(f => !!f.value).length;
     const totalCount = fields.length;
@@ -468,7 +468,7 @@ const Index = () => {
                     "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
                     "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-[#f0f9ff]", iconColor: "text-[#0284c7]", description: "Add the project site address or location." },
                     "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-[#fdf4ff]", iconColor: "text-[#9333ea]", description: "Set the project start and end dates." },
-                    "Appointed Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
+                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
@@ -1090,8 +1090,8 @@ const Index = () => {
                 </div>
               )}
 
-              {/* ── Appointed Company card ── */}
-              {(quickFillSection === null || quickFillSection === "Appointed Company") && projectStats.missing.includes("Appointed Company") && (
+              {/* ── Associated Company card ── */}
+              {(quickFillSection === null || quickFillSection === "Associated Company") && projectStats.missing.includes("Associated Company") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#fefce8] flex items-center justify-center shrink-0">
@@ -1099,7 +1099,7 @@ const Index = () => {
                     </div>
                     <div>
                       <p className="text-[13px] font-normal text-[#111827]">
-                        {isClientOrContractor ? "Appointed Companies" : "Appointed Company Information"}
+                        {isClientOrContractor ? "Associated Companies" : "Associated Company Information"}
                       </p>
                       <p className="text-[11px] text-[#9ca3af]">
                         {isClientOrContractor
@@ -1198,7 +1198,7 @@ const Index = () => {
                         className="w-full py-3.5 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                       >
                         <Plus className="w-4 h-4" />
-                        {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+                        {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
                       </button>
                     </div>
                   ) : (
@@ -1362,5 +1362,3 @@ const Index = () => {
 };
 
 export default Index;
-
-// test

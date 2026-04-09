@@ -41,7 +41,7 @@ export const TaskCPI: React.FC<TaskCPIProps> = ({ formFields }) => {
         </div>
       )}
 
-      {formFields.predecessors && formFields.predecessors.length > 0 && (
+      {Array.isArray(formFields.predecessors) && formFields.predecessors.length > 0 && (
         <div className="space-y-4">
           <label className="text-xs font-medium text-muted-foreground">Blocking Dependencies</label>
           <div className="space-y-2">

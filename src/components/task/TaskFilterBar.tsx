@@ -25,7 +25,7 @@ export const defaultFilters: TaskFilters = {
   docTypes: ['VO', 'RFI', 'SI', 'DC', 'CPI'],
   assignee: 'all',
   dateRange: 'all',
-  myItems: false,
+  myItems: true,
 };
 
 interface TaskFilterBarProps {
@@ -77,16 +77,6 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         {/* My Items / All Items toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
           <button
-            onClick={() => onFiltersChange({ ...filters, myItems: false })}
-            className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${!filters.myItems
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-              }`}
-          >
-            <Users className="h-3.5 w-3.5" />
-            All Tasks
-          </button>
-          <button
             onClick={() => onFiltersChange({ ...filters, myItems: true })}
             className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${filters.myItems
               ? 'bg-white text-foreground shadow-sm'
@@ -95,6 +85,16 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
           >
             <User className="h-3.5 w-3.5" />
             My Tasks
+          </button>
+          <button
+            onClick={() => onFiltersChange({ ...filters, myItems: false })}
+            className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${!filters.myItems
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            All Tasks
           </button>
         </div>
 

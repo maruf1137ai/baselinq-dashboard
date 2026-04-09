@@ -146,7 +146,7 @@ const projectSchema = z.object({
 const STEPS = [
   { id: 1, label: "Project Details" },
   { id: 2, label: "Client Details" },
-  { id: 3, label: "Appointed Company" },
+  { id: 3, label: "Associated Company" },
   { id: 4, label: "Documents" },
   { id: 5, label: "Scope of Works" },
   { id: 6, label: "Financials & Timeline" },
@@ -803,12 +803,12 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               </div>
             )}
 
-            {/* Step 3: Appointed Company */}
+            {/* Step 3: Associated Company */}
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <Briefcase className="w-4 h-4 text-[#f59e0b]" />
-                  <span className="text-sm font-medium text-muted-foreground">Appointed Company</span>
+                  <span className="text-sm font-medium text-muted-foreground">Associated Company</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

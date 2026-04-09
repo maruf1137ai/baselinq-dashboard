@@ -148,7 +148,7 @@ const STEPS = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
   { id: 2, label: "Scope of Works", description: "Description & requirements" },
   { id: 3, label: "Client Details", description: "Client company & contacts" },
-  { id: 4, label: "Appointed Company", description: "Professional firm & contacts" },
+  { id: 4, label: "Associated Company", description: "Professional firm & contacts" },
   { id: 5, label: "Documents", description: "Upload project files" },
   { id: 6, label: "Financials & Timeline", description: "Budget, dates, and rates" },
 ];
@@ -1109,7 +1109,7 @@ export default function EditProject() {
       return Object.keys(next).length === 0;
     }
     if (step === 4) {
-      // Appointed Company
+      // Associated Company
       // For clients/contractors, step 4 is often the invite form — all optional
       if (isClientOrContractor) return true;
       const next: AppointedErrors = {};
@@ -1913,7 +1913,7 @@ export default function EditProject() {
                           <div>
                             <SectionHeader
                               icon={<Building2 className="w-3.5 h-3.5" />}
-                              label="Invite Appointed Companies"
+                              label="Invite Associated Companies"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
@@ -2001,7 +2001,7 @@ export default function EditProject() {
                           <div>
                             <SectionHeader
                               icon={<Building2 className="w-3.5 h-3.5" />}
-                              label="Appointed Company Information"
+                              label="Associated Company Information"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />

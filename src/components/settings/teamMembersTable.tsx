@@ -743,7 +743,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     <div>{member.user.email}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm !capitalize">
-                    <CategoryBadge category={member.roleName || "N/A"} />
+                    <CategoryBadge category={member.roleName === 'CLIENT' ? 'Client' : member.roleName || "N/A"} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <div className="flex flex-wrap gap-1">

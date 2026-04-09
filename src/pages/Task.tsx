@@ -220,11 +220,12 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   const dueDateInfo = getDueDateInfo(task.due_date, task.created_at);
   const docTypeTextColor = DOC_TYPE_TEXT_COLORS[normalizedTaskType] || 'text-muted-foreground';
   const attachmentCount = task?.attachments?.length || 0;
-  // Use assignedTo if available, otherwise fall back to assignedBy
-  const displayAssignees = (task.assignedTo && task.assignedTo.length > 0)
-    ? task.assignedTo
-    : task.assignedBy ? [task.assignedBy] : [];
-  const firstAssigneeName = displayAssignees[0]?.name || 'Assignee';
+  // Slot 1: creator. Slot 2: first assignee who is not the creator (omit if none).
+  const creator = task.assignedBy || null;
+  const firstAssignee = (task.assignedTo || []).find(
+    (a: any) => String(a.userId || a.id) !== String(creator?.userId || creator?.id)
+  ) ?? null;
+  const cardPeople = [creator, firstAssignee].filter(Boolean) as any[];
 
   // Priority config
   const priorityConfig: Record<string, { dot: string; label: string }> = {
@@ -250,11 +251,15 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   // Only apply to non-resolved tasks
   const escalationLevel = isResolved ? 0 : (!dueDateInfo.isOverdue ? 0 : overdueDays <= 3 ? 1 : 2);
 
-  // Pending review: VO task where creator is current user and a response is awaiting review
-  const needsReview = normalizedTaskType === 'VO'
-    && String(task.assignedBy?.userId) === String(currentUserId)
-    && (task.entity_status || '').toLowerCase() === 'submitted'
-    && (task.responses || []).length > 0;
+  // Pending review: task where creator is current user and a response is awaiting their action
+  const entityStatus = (task.entity_status || '').toLowerCase();
+  const needsReview = String(task.assignedBy?.userId) === String(currentUserId)
+    && (task.responses || []).length > 0
+    && (
+      (normalizedTaskType === 'VO' && entityStatus === 'submitted') ||
+      (normalizedTaskType === 'RFI' && (entityStatus === 'response provided' || entityStatus === 'answered')) ||
+      (normalizedTaskType === 'CPI' && entityStatus === 'in review')
+    );
 
   // Card border + background per escalation level (pending review takes priority over warnings)
   const cardBorder = needsReview ? 'border border-amber-400 bg-amber-50/20' :
@@ -369,11 +374,11 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             </div>
             <div className="flex -space-x-1.5 shrink-0">
               <TooltipProvider delayDuration={300}>
-                {displayAssignees.slice(0, 3).map((assignee: any, idx: number) => {
-                  const name = assignee.name || 'Unknown';
+                {cardPeople.map((person: any, idx: number) => {
+                  const name = person.name || 'Unknown';
                   const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
                   return (
-                    <Tooltip key={`${assignee.userId || assignee.id || idx}-${idx}`}>
+                    <Tooltip key={`${person.userId || person.id || idx}-${idx}`}>
                       <TooltipTrigger asChild>
                         <Avatar className="h-6 w-6 border-2 border-white hover:z-20 transition-all cursor-default">
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{initials}</AvatarFallback>
@@ -382,19 +387,14 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                       <TooltipContent side="top" className="bg-[#1B1C1F] text-white border-none py-1.5 px-3">
                         <div className="flex flex-col gap-0.5">
                           <p className="text-xs">{name}</p>
-                          {assignee.role && <p className="text-xs opacity-70">{assignee.role}</p>}
+                          {person.role && <p className="text-xs opacity-70">{person.role}</p>}
                         </div>
                       </TooltipContent>
                     </Tooltip>
                   );
                 })}
               </TooltipProvider>
-              {displayAssignees.length > 3 && (
-                <div className="h-6 w-6 rounded-full bg-muted border-2 border-white flex items-center justify-center z-10">
-                  <span className="text-[10px] text-muted-foreground">+{displayAssignees.length - 3}</span>
-                </div>
-              )}
-              {displayAssignees.length === 0 && (
+              {cardPeople.length === 0 && (
                 <Avatar className="h-6 w-6">
                   <AvatarFallback className="text-xs bg-muted text-muted-foreground">?</AvatarFallback>
                 </Avatar>
