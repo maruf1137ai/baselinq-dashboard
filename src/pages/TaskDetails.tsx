@@ -558,11 +558,12 @@ export default function TaskDetails() {
 
       if (displayTask.type === "CPI") {
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-        if (['pending', 'draft', 'open', '', 'not started'].includes(currentStatusNorm)) {
+        // Move to "In Review" for any status that isn't already at or past that stage
+        const progressedStates = ['inreview', 'approved', 'closed'];
+        if (!progressedStates.includes(currentStatusNorm)) {
           updateData.status = "In Review";
           updateData.statusCause = "Response submitted";
         }
-        // Creator counter-response does not change status — creator uses modal buttons instead
       }
 
       if (displayTask.type === "SI") {
@@ -916,6 +917,7 @@ export default function TaskDetails() {
           },
         };
 
+      case "CPI":
       case "CRITICALPATHITEM":
         return {
           ...baseData,
