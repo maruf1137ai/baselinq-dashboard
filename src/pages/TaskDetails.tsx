@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import BulletList from "@tiptap/extension-bullet-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,7 @@ import {
   XCircle,
   Plus,
   Trash2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -1513,8 +1514,8 @@ export default function TaskDetails() {
                     {/* Progress */}
                     <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs font-medium text-foreground">Current Progress</Label>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        <Label className="text-xs font-normal text-muted-foreground">Current Progress</Label>
+                        <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${
                           cpiProgress === 100 ? 'bg-green-100 text-green-700' :
                           cpiProgress >= 60 ? 'bg-blue-100 text-blue-700' :
                           cpiProgress >= 30 ? 'bg-amber-100 text-amber-700' :
@@ -1537,35 +1538,49 @@ export default function TaskDetails() {
                     {/* Date + Risk row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-foreground">Expected Finish Date</Label>
-                        <Input
-                          type="date"
-                          value={cpiForecastDate}
-                          onChange={(e) => setCpiForecastDate(e.target.value)}
-                        />
+                        <Label className="text-xs font-normal text-muted-foreground">Expected Finish Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className={cn(
+                              "w-full flex items-center justify-between px-3 py-2 border border-border rounded-lg text-sm bg-background hover:bg-muted/50 transition text-left",
+                              !cpiForecastDate && "text-muted-foreground"
+                            )}>
+                              <span>{cpiForecastDate ? new Date(cpiForecastDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "Pick a date"}</span>
+                              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={cpiForecastDate ? new Date(cpiForecastDate) : undefined}
+                              onSelect={(date) => setCpiForecastDate(date ? date.toISOString().split('T')[0] : '')}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-foreground">Risk Assessment</Label>
+                        <Label className="text-xs font-normal text-muted-foreground">Risk Assessment</Label>
                         <Select value={cpiRiskLevel} onValueChange={setCpiRiskLevel}>
-                          <SelectTrigger className="w-full text-sm">
+                          <SelectTrigger className="w-full text-sm font-normal">
                             <SelectValue placeholder="Select risk level" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Low">
                               <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500" />
+                                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                 Low Risk — On Track
                               </div>
                             </SelectItem>
                             <SelectItem value="Medium">
                               <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                                 Medium Risk — Monitoring
                               </div>
                             </SelectItem>
                             <SelectItem value="High">
                               <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
+                                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                                 High Risk — At Risk
                               </div>
                             </SelectItem>
@@ -1576,9 +1591,9 @@ export default function TaskDetails() {
 
                     {/* Milestone Impact */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-foreground">Milestone Impact</Label>
+                      <Label className="text-xs font-normal text-muted-foreground">Milestone Impact</Label>
                       <Select value={cpiMilestoneImpact} onValueChange={setCpiMilestoneImpact}>
-                        <SelectTrigger className="w-full text-sm">
+                        <SelectTrigger className="w-full text-sm font-normal">
                           <SelectValue placeholder="Select affected milestone..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -1592,13 +1607,13 @@ export default function TaskDetails() {
 
                     {/* Recovery Plan */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-foreground">Recovery Strategy / Plan</Label>
+                      <Label className="text-xs font-normal text-muted-foreground">Recovery Strategy / Plan</Label>
                       <Textarea
                         value={cpiRecoveryPlan}
                         onChange={(e) => setCpiRecoveryPlan(e.target.value)}
                         placeholder="What steps are being taken to recover the schedule?"
                         rows={3}
-                        className="resize-none text-sm"
+                        className="resize-none text-sm font-normal"
                       />
                     </div>
                   </div>
