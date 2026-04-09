@@ -52,18 +52,18 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
   const isCreator = formFields.issuedBy?.userId === user?.id;
 
   // Debug logging (temporary)
-  console.log("🔍 SI Debug:", {
-    decisionTimeline,
-    isAssigned,
-    isCreator,
-    currentUserId: user?.id,
-    taskId,
-    siId,
-    task,
-    formFields,
-    assignedUsers: task?.assignedTo?.map((a: any) => a.userId),
-    showAcknowledge: decisionTimeline === "Issued" && isAssigned,
-  });
+  // console.log("🔍 SI Debug:", {
+  //   decisionTimeline,
+  //   isAssigned,
+  //   isCreator,
+  //   currentUserId: user?.id,
+  //   taskId,
+  //   siId,
+  //   task,
+  //   formFields,
+  //   assignedUsers: task?.assignedTo?.map((a: any) => a.userId),
+  //   showAcknowledge: decisionTimeline === "Issued" && isAssigned,
+  // });
 
   // Auto-transition from Draft to Issued when assignee opens the SI
   useEffect(() => {
