@@ -5,6 +5,11 @@ import TiptapUnderline from "@tiptap/extension-underline";
 import TiptapLink from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import BulletList from "@tiptap/extension-bullet-list";
 import ListItem from "@tiptap/extension-list-item";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +71,9 @@ import {
   Circle,
   Clock,
   XCircle,
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -134,9 +142,14 @@ const groupLogsByDate = (logs: any[]) => {
 
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
+  if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
   if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
   if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+  if (a === 'task_assigned') return { icon: <UserPlus className="w-3 h-3 text-[#0284c7]" />, bg: '#E0F2FE' };
+  if (a === 'request_info') return { icon: <FileText className="w-3 h-3 text-[#9333ea]" />, bg: '#FDF4FF' };
+  if (a === 'response_added') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
     const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
@@ -155,9 +168,9 @@ const getStatusBadgeColor = (status: string) => {
     return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
   // In-progress stages - blue
   if (['in progress', 'in review', 'review', 'issued', 'submitted', 'actioned', 'under review',
-       'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
-       'further info required', 'response provided', 'determination made', 'on track / at risk',
-       'scheduled'].includes(s))
+    'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
+    'further info required', 'response provided', 'determination made', 'on track / at risk',
+    'scheduled'].includes(s))
     return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
   // Negative stages - red
   if (['rejected', 'declined'].includes(s))
@@ -166,45 +179,89 @@ const getStatusBadgeColor = (status: string) => {
   return 'bg-muted text-muted-foreground border border-border';
 };
 
-const getActionLabel = (log: any): { text: string; oldStatus?: string; newStatus?: string } => {
+const ENTITY_LABELS: Record<string, string> = {
+  variationorder: 'Variation Order',
+  requestforinformation: 'Request for Information',
+  siteinstruction: 'Site Instruction',
+  delaycertificate: 'Delay Certificate',
+  criticalpathitem: 'Critical Path Item',
+  generalinstruction: 'General Instruction',
+};
+
+const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean; chips?: string[] } => {
   const action = (log.action || '').toLowerCase();
+  const desc = (log.description || '') as string;
+
   if (action === 'status_updated') {
-    // Parse "Status changed from X to Y" — X/Y can be multi-word (e.g. "in review")
-    const desc = (log.description || '') as string;
-    const descLower = desc.toLowerCase();
+    // Parse cause if present: "Status changed from X to Y; cause: Z"
+    const causeIdx = desc.indexOf('; cause: ');
+    const cleanDesc = causeIdx !== -1 ? desc.slice(0, causeIdx) : desc;
+    const cause = causeIdx !== -1 ? desc.slice(causeIdx + 9).trim() : '';
+    const detail = cause ? `Action: ${cause}` : undefined;
+
+    const descLower = cleanDesc.toLowerCase();
     const fromIdx = descLower.indexOf('from ');
     const toIdx = descLower.lastIndexOf(' to ');
     if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 4) {
-      const oldStatus = desc.slice(fromIdx + 5, toIdx).trim();
-      const newStatus = desc.slice(toIdx + 4).trim();
+      const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
+      const newStatus = cleanDesc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return {
-          text: 'changed the status from',
-          oldStatus: displayStatus(oldStatus),
-          newStatus: displayStatus(newStatus),
-        };
+        return { text: 'Status Changed From', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
       }
     }
-    // Fallback: try explicit old/new value fields
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return {
-        text: 'changed the status from',
-        oldStatus: oldRaw ? displayStatus(oldRaw) : undefined,
-        newStatus: raw ? displayStatus(raw) : undefined,
-      };
+      return { text: 'Status Changed From', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
     }
-    // No parseable status info — show generic text without dangling "from"
-    return { text: 'updated the status' };
+    return { text: 'Status Updated', detail, hideUserName: true };
   }
-  if (action === 'created') return { text: 'created this task' };
-  if (action === 'assigned') return { text: 'assigned this task' };
+
+  const taskRef = taskCode ? ` ${taskCode}` : '';
+
+  if (action === 'task_created') return { text: `created this task${taskRef}` };
+  if (action === 'created') return { text: `created this task${taskRef}` };
+
+  if (action === 'vo_created') return { text: `created a Variation Order${taskRef}` };
+  if (action === 'si_created') return { text: `created a Site Instruction${taskRef}` };
+  if (action === 'rfi_created') return { text: `created a Request for Information${taskRef}` };
+  if (action === 'dc_created') return { text: `created a Delay Certificate${taskRef}` };
+  if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
+
+  if (action === 'task_assigned') {
+    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : desc;
+    const chips = names ? names.split(',').map(n => n.trim()).filter(Boolean) : [];
+    return { text: 'assigned this task to', chips: chips.length > 0 ? chips : undefined };
+  }
+
+  if (action === 'request_info') {
+    return { text: 'requested additional information', detail: desc || undefined };
+  }
+
+  if (action === 'response_added') {
+    // desc = "Maruf submitted a response on VARIATIONORDER — Approved"
+    // Strip the leading user name from description to avoid duplication
+    const namePrefix = (log.createdByName || '').trim();
+    let detail = desc;
+    if (namePrefix && detail.toLowerCase().startsWith(namePrefix.toLowerCase())) {
+      detail = detail.slice(namePrefix.length).trim();
+    }
+    // Humanise entity type in the detail
+    const lower = detail.toLowerCase();
+    Object.entries(ENTITY_LABELS).forEach(([key, label]) => {
+      detail = detail.replace(new RegExp(key, 'gi'), label);
+    });
+    return { text: 'submitted a response', detail: detail || undefined };
+  }
+
+  if (action === 'comment_added') return { text: 'added a comment' };
+  if (action === 'assigned') return { text: 'was assigned to this task' };
   if (action === 'approved') return { text: 'approved this task' };
   if (action === 'rejected') return { text: 'rejected this task' };
-  if (action === 'comment_added' || action === 'response_added') return { text: 'added a response' };
+
+  // Generic fallback — humanise snake_case
   const humanized = action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-  return { text: humanized };
+  return { text: humanized, detail: desc || undefined };
 };
 
 export default function TaskDetails() {
@@ -220,7 +277,32 @@ export default function TaskDetails() {
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
-  const updateTask = async (_data?: any) => { };
+  const updateTask = async (data: any) => {
+    try {
+      if (!taskId) return;
+      const payload = { ...data };
+      if (payload.status) {
+        const lowerStatus = payload.status.toLowerCase();
+        if (['approved', 'rejected', 'closed', 'completed', 'eot awarded', 'acknowledged'].includes(lowerStatus)) {
+          payload.taskStatus = 'done';
+        } else if (lowerStatus === 'todo') {
+          payload.taskStatus = 'todo';
+        } else {
+          payload.taskStatus = 'in review';
+        }
+      }
+
+      const updatedTask = await patchData({
+        url: `tasks/tasks/${taskId}/update-entity/`,
+        data: payload
+      });
+      if (updatedTask) setCurrentTask(updatedTask);
+      refetchAuditLogs();
+    } catch (err) {
+      console.error("Update task error:", err);
+      throw err;
+    }
+  };
   const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
@@ -251,6 +333,8 @@ export default function TaskDetails() {
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
+  const [selectedResponse, setSelectedResponse] = useState<any>(null);
+  const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
 
   // Assign user modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -262,6 +346,14 @@ export default function TaskDetails() {
   const [recommendedAmount, setRecommendedAmount] = useState<string>("");
   const [pricingDecision, setPricingDecision] = useState<string>("");
   const [pricingConditions, setPricingConditions] = useState<string>("");
+  interface VOLineItem { id: string; description: string; qty: string; rate: string; }
+  const [voLineItems, setVoLineItems] = useState<VOLineItem[]>([{ id: crypto.randomUUID(), description: "", qty: "", rate: "" }]);
+  const voSubtotal = voLineItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0), 0);
+  const voVat = voSubtotal * 0.15;
+  const voTotal = voSubtotal + voVat;
+  const formatVOCurrency = (n: number) => `R ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const updateVoItem = (id: string, field: keyof VOLineItem, value: string) => setVoLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const removeVoItem = (id: string) => setVoLineItems(prev => prev.filter(item => item.id !== id));
 
   // DC (Delay Claim) Response state
   const [dcExtensionGranted, setDcExtensionGranted] = useState<string>("");
@@ -367,7 +459,20 @@ export default function TaskDetails() {
 
     const getStructuredData = () => {
       if (displayTask.type === "VO") {
-        return { recommendedAmount, pricingDecision, pricingConditions };
+        return {
+          recommendedAmount,
+          pricingDecision,
+          pricingConditions,
+          lineItems: voLineItems.filter(i => i.description.trim()).map(i => ({
+            description: i.description,
+            quantity: parseFloat(i.qty) || 0,
+            unitRate: parseFloat(i.rate) || 0,
+            total: (parseFloat(i.qty) || 0) * (parseFloat(i.rate) || 0),
+          })),
+          subTotal: voSubtotal,
+          tax: { type: "VAT", rate: 15, amount: voVat },
+          grandTotal: voTotal,
+        };
       }
       if (displayTask.type === "RFI") {
         return { rfiResponseStatus };
@@ -392,12 +497,14 @@ export default function TaskDetails() {
       }
       return null;
     };
+    // test
 
     const newResponse = {
-      content,
-      sender: userName,
-      date: new Date().toISOString(),
       id: crypto.randomUUID(),
+      content: editor?.getHTML() || "",
+      sender: user?.name || user?.email || "Unknown User",
+      senderId: user?.id,
+      date: new Date().toISOString(),
       structuredData: getStructuredData()
     };
 
@@ -414,17 +521,36 @@ export default function TaskDetails() {
         responses: updatedResponses,
       };
 
-      // Automate Status Transitions based on Decision
-      if (displayTask.type === "VO" && pricingDecision) {
-        if (pricingDecision === "approved") updateData.status = "Approved";
-        if (pricingDecision === "rejected") updateData.status = "Rejected";
-        if (pricingDecision === "partially_approved") updateData.status = "Priced";
+      // VO Decision Timeline: automatic status transitions
+      if (displayTask.type === "VO") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+        if (['draft', 'open', 'todo', '', 'pending'].includes(currentStatusNorm)) {
+          // Any user submits first response → Submitted
+          updateData.status = "Submitted";
+          updateData.statusCause = "Response submitted";
+        } else if (isCreator && currentStatusNorm === 'underreview') {
+          // Creator submits counter-response while Under Review → Priced
+          updateData.status = "Priced";
+          updateData.statusCause = `Counter-response submitted by ${creatorName}`;
+        }
       }
 
-      if (displayTask.type === "RFI" && rfiResponseStatus) {
-        if (rfiResponseStatus === "clarification_provided") updateData.status = "Response Provided";
-        if (rfiResponseStatus === "further_info_required") updateData.status = "Further Info Required";
-        if (rfiResponseStatus === "as_per_drawing") updateData.status = "Closed";
+      // RFI Decision Timeline: automatic status transitions
+      if (displayTask.type === "RFI") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        if (['draft', 'open', '', 'pending'].includes(currentStatusNorm)) {
+          // Any user submits first response → Sent for Review
+          updateData.status = "Sent for Review";
+          updateData.statusCause = "Response submitted";
+        } else if (isCreator && currentStatusNorm === 'furtherinforequired') {
+          // Creator submits counter-response → Response Provided
+          updateData.status = "Response Provided";
+          const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+          updateData.statusCause = `Response provided by ${creatorName}`;
+        }
       }
 
       if (displayTask.type === "DC" && dcExtensionGranted) {
@@ -432,12 +558,12 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "CPI") {
-        if (cpiProgress === 100) {
-          updateData.status = "Completed";
-        } else if (cpiRiskLevel === "High" || cpiRiskLevel === "Medium") {
-          updateData.status = "On Track / At Risk";
-        } else {
-          updateData.status = "In Progress";
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        // Move to "In Review" for any status that isn't already at or past that stage
+        const progressedStates = ['inreview', 'approved', 'closed'];
+        if (!progressedStates.includes(currentStatusNorm)) {
+          updateData.status = "In Review";
+          updateData.statusCause = "Response submitted";
         }
       }
 
@@ -452,9 +578,32 @@ export default function TaskDetails() {
       if (displayTask.type === "GI") {
         if (giAcknowledgeReceipt) {
           updateData.status = "Acknowledged";
+          updateData.isAcknowledged = true;
         } else {
           updateData.status = "Distributed";
         }
+      }
+
+      // Sync pricing and response fields to update the underlying entity
+      if (displayTask.type === "VO") {
+        updateData.recommendedAmount = recommendedAmount;
+        updateData.pricingDecision = pricingDecision;
+        updateData.pricingConditions = pricingConditions;
+        updateData.lineItems = voLineItems.filter(i => i.description.trim()).map(i => ({
+          description: i.description,
+          quantity: parseFloat(i.qty) || 0,
+          unitRate: parseFloat(i.rate) || 0,
+        }));
+      }
+
+      if (displayTask.type === "SI") {
+        updateData.leadsToVariation = siLeadsToVariationResponse;
+        updateData.isAcknowledged = siAcknowledgeReceipt;
+      }
+
+      if (displayTask.type === "DC") {
+        updateData.extensionGranted = parseInt(dcExtensionGranted) || null;
+        updateData.newCompletionDate = dcNewCompletionDate || null;
       }
 
 
@@ -478,12 +627,6 @@ export default function TaskDetails() {
       setSiAcknowledgeReceipt(false);
       setSiLeadsToVariationResponse(false);
       setGiAcknowledgeReceipt(false);
-
-
-      setCurrentTask((prev: any) => ({
-        ...prev,
-        ...updateData
-      }));
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit reply");
@@ -502,18 +645,17 @@ export default function TaskDetails() {
     // console.log({ status, firstStage, lastStage, taskStatus })
 
     try {
-      const boardStatus = taskStatus === "Done" ? "done" : taskStatus === "Todo" ? "todo" : "in review";
-      await Promise.all([
-        patchData({
-          url: `tasks/tasks/${taskId}/update-entity/`,
-          data: { status, taskStatus, project: Number(projectId) },
-        }),
-        // patchData({
-        //   url: `tasks/tasks/${taskId}/`,
-        //   data: { status: boardStatus },
-        // }),
-      ]);
+      const updatedTask = await patchData({
+        url: `tasks/tasks/${taskId}/update-entity/`,
+        data: { status, taskStatus, project: Number(projectId) },
+      });
       toast.success("Task approved successfully");
+      // Use the response directly — it has the freshly saved entity status
+      if (updatedTask) {
+        setCurrentTask(updatedTask);
+      } else {
+        setCurrentTask((prev: any) => prev ? { ...prev, task: { ...(prev.task || {}), status }, status } : prev);
+      }
       await refetchTask();
       await refetchAuditLogs();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
@@ -531,19 +673,17 @@ export default function TaskDetails() {
     // console.log("selectedAssignUsers", selectedAssignUsers);
     setIsAssigning(true);
     try {
-      await patchData({
-        url: `tasks/tasks/${taskId}/`,
-        data: {
-          assignedTo: selectedAssignUsers.map((u) => {
-            return u.userId
-          }),
-        },
+      const uniqueUserIds = [...new Set(selectedAssignUsers.map((u) => u.userId))];
+      await postData({
+        url: `tasks/tasks/${taskId}/assign/`,
+        data: { userIds: uniqueUserIds },
       });
 
       toast.success("User(s) assigned successfully");
       setShowAssignModal(false);
       setSelectedAssignUsers([]);
       await refetchTask();
+      await refetchAuditLogs();
     } catch (error: any) {
       console.error("Error assigning user:", error);
       const errorMessage =
@@ -560,6 +700,7 @@ export default function TaskDetails() {
     if (isLoading || !taskDetailsResponse) return;
     setCurrentTask(taskDetailsResponse);
   }, [taskId, taskDetailsResponse, isLoading]);
+
 
   // useEffect(() => {
   //   console.log(isAnalyzeModalOpen, isAnalyzeLoading)
@@ -592,9 +733,8 @@ export default function TaskDetails() {
       id: apiResponse.taskId || task._id,
       type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
       creator: {
-        name: task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || assignedBy?.name || "User",
-        role: assignedBy?.role || "Creator",
         badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
+        id: assignedBy?.userId
       },
       watcher: {
         name: assignedTo[0]?.name || "Watcher",
@@ -602,6 +742,7 @@ export default function TaskDetails() {
       },
       assignedTo: assignedTo,
       actionRequests: mappedActionRequests,
+      responses: apiResponse.responses || [],
       timeline: {
         current: task.status || apiResponse.status || "Pending",
         stages: ["Pending", "In Review", "Approved", "Closed"],
@@ -777,6 +918,7 @@ export default function TaskDetails() {
           },
         };
 
+      case "CPI":
       case "CRITICALPATHITEM":
         return {
           ...baseData,
@@ -803,8 +945,8 @@ export default function TaskDetails() {
             contractWindow: "7 days",
           },
           timeline: {
-            current: task.status || apiResponse.status || "Scheduled",
-            stages: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
+            current: task.status || apiResponse.status || "Pending",
+            stages: ["Pending", "In Review", "Approved", "Closed"],
           },
           impact: {
             time: task.duration ? `${task.duration} days` : "N/A",
@@ -855,6 +997,7 @@ export default function TaskDetails() {
       default:
         return {
           ...baseData,
+          responses: apiResponse?.responses || [],
           displayId: `#${taskType}-${task._id}`,
           title: task.title || task.subject || task.taskActivityName || "Unknown",
           task_code: task._id,
@@ -880,6 +1023,7 @@ export default function TaskDetails() {
     ? (transformTaskData(currentTask, requestInfoResponse?.results) as any)
     : null;
 
+
   // Map API statuses that don't directly match timeline stage names
   const statusToStageMap: Record<string, string> = {
     "Completed": "Approved",
@@ -894,7 +1038,7 @@ export default function TaskDetails() {
     })()
     : 0;
 
-  const canApprove = true;
+  const canApprove = !!user && !!displayTask && String(displayTask.creator?.id) === String(user?.id);
 
   const editor = useEditor({
     extensions: [
@@ -1021,11 +1165,13 @@ export default function TaskDetails() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
-                      Due: {displayTask.dueDate}
-                    </Badge>
+                    {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
+                        Due: {displayTask.dueDate}
+                      </Badge>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="text-muted-foreground hover:text-foreground">
@@ -1107,7 +1253,6 @@ export default function TaskDetails() {
               </Card>
 
 
-
               {/* Question & Context */}
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
@@ -1155,51 +1300,11 @@ export default function TaskDetails() {
                 </div> */}
               </Card>
 
-              {/* Previous Responses Section */}
-              {currentTask?.responses && currentTask.responses.length > 0 && (
-                <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border mb-4">
-                  <h2 className="text-sm font-medium text-foreground mb-5">
-                    Previous Responses
-                  </h2>
-                  <div className="space-y-3">
-                    {currentTask.responses.map((resp: any) => (
-                      <div
-                        key={resp.id}
-                        className="flex items-start gap-4 p-3 bg-white border rounded-lg">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-indigo-50 text-indigo-600 text-xs">
-                            {resp.sender
-                              ?.split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-foreground capitalize">
-                              {resp.sender}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(resp.date).toLocaleString()}
-                            </span>
-                          </div>
-                          <div
-                            className="text-sm text-muted-foreground prose prose-sm max-w-none mt-2"
-                            dangerouslySetInnerHTML={{ __html: resp.content }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Response Section */}
+              {/* Response Form */}
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
-                    ? "Answer Composer"
+                    ? "Response"
                     : displayTask.type === "SI"
                       ? "Acknowledgment & Response"
                       : displayTask.type === "VO"
@@ -1218,54 +1323,135 @@ export default function TaskDetails() {
                 {/* Structured Pricing Response Fields - Only for VO */}
                 {displayTask.type === "VO" && (
                   <div className="space-y-4 mb-6 pb-6 border-b border-border">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {/* Recommended Amount */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Recommended Amount
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R</span>
-                          <input
-                            type="text"
-                            value={recommendedAmount}
-                            onChange={(e) => {
-                              // Allow only numbers and decimal point
-                              const value = e.target.value.replace(/[^\d.]/g, '');
-                              setRecommendedAmount(value);
-                            }}
-                            placeholder="0.00"
-                            className="w-full pl-8 pr-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Your assessed value for this variation</p>
+
+                    {/* Line Items */}
+                    <div>
+                      <label className="text-xs font-normal text-muted-foreground block mb-2">Line Items</label>
+
+                      {/* Desktop table — hidden on mobile */}
+                      <div className="hidden sm:block border border-border rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-muted border-b border-border">
+                            <tr>
+                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-6">#</th>
+                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2">Description</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Qty</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Rate (R)</th>
+                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Amount</th>
+                              <th className="w-8 px-2 py-2" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {voLineItems.map((item, idx) => {
+                              const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+                              return (
+                                <tr key={item.id} className="border-b border-border last:border-0">
+                                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
+                                  <td className="px-2 py-1">
+                                    <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
+                                  </td>
+                                  <td className="px-2 py-1">
+                                    <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                  </td>
+                                  <td className="px-2 py-1">
+                                    <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                  </td>
+                                  <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
+                                  <td className="px-2 py-1.5">
+                                    {voLineItems.length > 1 && (
+                                      <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-muted/50 border-t border-border">
+                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">Subtotal</td>
+                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voSubtotal)}</td>
+                              <td />
+                            </tr>
+                            <tr className="bg-muted/50">
+                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">VAT (15%)</td>
+                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voVat)}</td>
+                              <td />
+                            </tr>
+                            <tr className="bg-[#1B1C1F]">
+                              <td colSpan={4} className="px-3 py-2 text-xs font-medium text-white text-right">Total</td>
+                              <td className="px-3 py-2 text-sm text-right text-white font-medium">{formatVOCurrency(voTotal)}</td>
+                              <td />
+                            </tr>
+                          </tfoot>
+                        </table>
                       </div>
 
-                      {/* Decision */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Decision
-                        </label>
-                        <select
-                          value={pricingDecision}
-                          onChange={(e) => setPricingDecision(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="">Select decision...</option>
-                          <option value="approved">Approved</option>
-                          <option value="partially_approved">Partially Approved</option>
-                          <option value="rejected">Rejected</option>
-                          <option value="needs_clarification">Needs Clarification</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground mt-1">Your formal assessment</p>
+                      {/* Mobile cards — shown only on small screens */}
+                      <div className="sm:hidden border border-border rounded-lg overflow-hidden divide-y divide-border">
+                        {voLineItems.map((item, idx) => {
+                          const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+                          return (
+                            <div key={item.id} className="p-3 bg-white">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}</span>
+                                <input
+                                  className="flex-1 text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                  placeholder="Item description"
+                                  value={item.description}
+                                  onChange={e => updateVoItem(item.id, "description", e.target.value)}
+                                />
+                                {voLineItems.length > 1 && (
+                                  <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 pl-6">
+                                <div className="flex-1">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
+                                  <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
+                                  <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                </div>
+                                <div className="flex-1 text-right">
+                                  <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
+                                  <p className="text-sm font-medium text-foreground py-1.5">{formatVOCurrency(amount)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                          <span className="text-xs text-muted-foreground">Subtotal</span>
+                          <span className="text-sm text-foreground">{formatVOCurrency(voSubtotal)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                          <span className="text-xs text-muted-foreground">VAT (15%)</span>
+                          <span className="text-sm text-foreground">{formatVOCurrency(voVat)}</span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2.5 bg-[#1B1C1F]">
+                          <span className="text-xs font-medium text-white">Total</span>
+                          <span className="text-sm font-medium text-white">{formatVOCurrency(voTotal)}</span>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setVoLineItems(prev => [...prev, { id: crypto.randomUUID(), description: "", qty: "", rate: "" }])}
+                        className="mt-2 flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add line item
+                      </button>
                     </div>
 
                     {/* Conditions */}
                     <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">
-                        Conditions / Caveats
-                      </label>
+                      <label className="text-xs font-normal text-muted-foreground block mb-2">Conditions / Caveats</label>
                       <textarea
                         value={pricingConditions}
                         onChange={(e) => setPricingConditions(e.target.value)}
@@ -1273,7 +1459,6 @@ export default function TaskDetails() {
                         rows={2}
                         className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Optional notes on conditions for this decision</p>
                     </div>
                   </div>
                 )}
@@ -1333,88 +1518,111 @@ export default function TaskDetails() {
 
                 {/* Structured CPI Response Fields */}
                 {displayTask.type === "CPI" && (
-                  <div className="space-y-6 mb-6 pb-6 border-b border-border">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      {/* Progress Slider */}
-                      <div className="md:col-span-2">
-                        <div className="flex justify-between mb-2">
-                          <label className="text-xs font-normal text-muted-foreground">
-                            Current Progress
-                          </label>
-                          <span className="text-xs font-medium text-primary">{cpiProgress}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="5"
-                          value={cpiProgress}
-                          onChange={(e) => setCpiProgress(parseInt(e.target.value))}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
+                  <div className="mb-6 pb-6 border-b border-border space-y-5">
+                    {/* Progress */}
+                    <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-normal text-muted-foreground">Current Progress</Label>
+                        <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${
+                          cpiProgress === 100 ? 'bg-green-100 text-green-700' :
+                          cpiProgress >= 60 ? 'bg-blue-100 text-blue-700' :
+                          cpiProgress >= 30 ? 'bg-amber-100 text-amber-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>{cpiProgress}%</span>
                       </div>
+                      <Slider
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={[cpiProgress]}
+                        onValueChange={([val]) => setCpiProgress(val)}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                      </div>
+                    </div>
 
-                      {/* Forecast Date */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Expected Finish Date
-                        </label>
-                        <input
-                          type="date"
-                          value={cpiForecastDate}
-                          onChange={(e) => setCpiForecastDate(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Update the predicted completion date</p>
+                    {/* Date + Risk row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-normal text-muted-foreground">Expected Finish Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className={cn(
+                              "w-full flex items-center justify-between px-3 py-2 border border-border rounded-lg text-sm bg-background hover:bg-muted/50 transition text-left",
+                              !cpiForecastDate && "text-muted-foreground"
+                            )}>
+                              <span>{cpiForecastDate ? new Date(cpiForecastDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "Pick a date"}</span>
+                              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={cpiForecastDate ? new Date(cpiForecastDate) : undefined}
+                              onSelect={(date) => setCpiForecastDate(date ? date.toISOString().split('T')[0] : '')}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-normal text-muted-foreground">Risk Assessment</Label>
+                        <Select value={cpiRiskLevel} onValueChange={setCpiRiskLevel}>
+                          <SelectTrigger className="w-full text-sm font-normal">
+                            <SelectValue placeholder="Select risk level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Low">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                Low Risk — On Track
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="Medium">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                Medium Risk — Monitoring
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="High">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                                High Risk — At Risk
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-                      {/* Risk Level */}
-                      <div>
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Risk Assessment
-                        </label>
-                        <select
-                          value={cpiRiskLevel}
-                          onChange={(e) => setCpiRiskLevel(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="Low">Low Risk (On Track)</option>
-                          <option value="Medium">Medium Risk (Monitoring)</option>
-                          <option value="High">High Risk (At Risk)</option>
-                        </select>
-                      </div>
+                    {/* Milestone Impact */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-normal text-muted-foreground">Milestone Impact</Label>
+                      <Select value={cpiMilestoneImpact} onValueChange={setCpiMilestoneImpact}>
+                        <SelectTrigger className="w-full text-sm font-normal">
+                          <SelectValue placeholder="Select affected milestone..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Practical Completion">Impacts Practical Completion</SelectItem>
+                          <SelectItem value="Roof Wet">Impacts Roof Wet Milestone</SelectItem>
+                          <SelectItem value="Handover">Impacts Handover</SelectItem>
+                          <SelectItem value="None">None / Internal Buffer Used</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                      {/* Milestone Impact */}
-                      <div className="md:col-span-2">
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Milestone Impact
-                        </label>
-                        <select
-                          value={cpiMilestoneImpact}
-                          onChange={(e) => setCpiMilestoneImpact(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                          <option value="">Select affected milestone...</option>
-                          <option value="Practical Completion">Impacts Practical Completion</option>
-                          <option value="Roof Wet">Impacts Roof Wet Milestone</option>
-                          <option value="Handover">Impacts Handover</option>
-                          <option value="None">None / Internal Buffer Used</option>
-                        </select>
-                      </div>
-
-                      {/* Recovery Plan */}
-                      <div className="md:col-span-2">
-                        <label className="text-xs font-normal text-muted-foreground block mb-2">
-                          Recovery Strategy / Plan
-                        </label>
-                        <textarea
-                          value={cpiRecoveryPlan}
-                          onChange={(e) => setCpiRecoveryPlan(e.target.value)}
-                          placeholder="What steps are being taken to recover the schedule?"
-                          rows={2}
-                          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                        />
-                      </div>
+                    {/* Recovery Plan */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-normal text-muted-foreground">Recovery Strategy / Plan</Label>
+                      <Textarea
+                        value={cpiRecoveryPlan}
+                        onChange={(e) => setCpiRecoveryPlan(e.target.value)}
+                        placeholder="What steps are being taken to recover the schedule?"
+                        rows={3}
+                        className="resize-none text-sm font-normal"
+                      />
                     </div>
                   </div>
                 )}
@@ -1533,12 +1741,14 @@ export default function TaskDetails() {
                     <span>Powered by Baseline Intelligence</span>
                   </div> */}
                   <div className="flex items-center gap-3">
-                    <Button
-                      className="font-normal"
-                      onClick={() => handleApproveTask('Approved')}
-                      disabled={!canApprove || ["Approved", "Completed"].includes(displayTask.timeline.current)}>
-                      {["Approved", "Completed"].includes(displayTask.timeline.current) ? "Approved" : "Approve"}
-                    </Button>
+                    {canApprove && (
+                      <Button
+                        className="font-normal"
+                        onClick={() => handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1])}
+                        disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
+                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1] ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1] : "Close"}
+                      </Button>
+                    )}
 
                     <button
                       onClick={() => setShowAiChat(!showAiChat)}
@@ -1559,6 +1769,96 @@ export default function TaskDetails() {
                   </div>
                 </div>
               </Card>
+
+              {/* Recent Responses Section */}
+              {displayTask.responses && displayTask.responses.some((resp: any) =>
+                String(resp.senderId) === String(user?.id) ||
+                String(displayTask.creator.id) === String(user?.id)
+              ) && (
+                  <div className="space-y-3 mb-4 mt-6">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-normal text-foreground">
+                        Recent Responses
+                      </h2>
+                      <span className="text-[10px] bg-primary/10 text-[#8081F6] px-2 py-0.5 rounded-full font-normal">
+                        {displayTask.responses.length} Total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {displayTask.responses
+                        .filter((resp: any) =>
+                          String(resp.senderId) === String(user?.id) ||
+                          String(displayTask.creator.id) === String(user?.id)
+                        )
+                        .slice().reverse().map((resp: any) => (
+                          <Card
+                            key={resp.id}
+                            onClick={() => {
+                              setSelectedResponse(resp);
+                              setIsResponseModalOpen(true);
+                              // VO: Creator clicking a response while Submitted → Under Review
+                              if (displayTask?.type === "VO") {
+                                const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                                const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                                if (isCreator && currentStatusNorm === 'submitted') {
+                                  const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+                                  updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
+                                }
+                              }
+                            }}
+                            className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
+                          >
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-border">
+                                <AvatarFallback className="bg-primary/5 text-[#8081F6] text-xs font-normal">
+                                  {resp.sender
+                                    ?.split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")
+                                    .toUpperCase() || "U"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-sm font-normal text-foreground truncate">
+                                    {resp.sender}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {new Date(resp.date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div
+                                  className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2"
+                                  dangerouslySetInnerHTML={{ __html: resp.content }}
+                                />
+                                {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {Object.entries(resp.structuredData).slice(0, 2).map(([key, value]) => {
+                                      if (!value) return null;
+                                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                      return (
+                                        <span key={key} className="text-[9px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground border border-border/50">
+                                          {label}: {
+                                            typeof value === 'object' && value !== null
+                                              ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
+                                              : String(value)
+                                          }
+                                        </span>
+                                      )
+                                    })}
+                                    {Object.keys(resp.structuredData).length > 2 && (
+                                      <span className="text-[9px] text-[#8081F6] font-normal">+ more</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
               {/* AI Chatbot Block */}
               <AnimatePresence>
@@ -1628,7 +1928,16 @@ export default function TaskDetails() {
                     taskType={displayTask.type}
                     taskId={taskId || ''}
                     assignedTo={currentTask?.assignedTo || []}
-                    onSuccess={() => { refetchTask(); refetchRequestInfo(); refetchAuditLogs(); }}
+                    onSuccess={async () => {
+                      // RFI: requesting info → Further Info Required
+                      if (displayTask.type === "RFI") {
+                        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                        if (currentStatusNorm === 'sentforreview') {
+                          await updateTask({ status: "Further Info Required", statusCause: "Additional information requested" });
+                        }
+                      }
+                      refetchTask(); refetchRequestInfo(); refetchAuditLogs();
+                    }}
                   />
                 </div>
               </Card>
@@ -1821,7 +2130,7 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus } = getActionLabel(log);
+                            const { text, oldStatus, newStatus, detail, hideUserName, chips } = getActionLabel(log, displayTask?.displayId);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
@@ -1835,7 +2144,7 @@ export default function TaskDetails() {
                                 <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-sm font-normal text-foreground">{log.createdByName || 'System'}</span>
+                                      {!hideUserName && <span className="text-sm font-normal text-foreground">{log.createdByName || 'System'}</span>}
                                       <span className="text-sm text-muted-foreground">{text}</span>
                                       {oldStatus && (
                                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(oldStatus)}`}>{oldStatus}</span>
@@ -1849,6 +2158,31 @@ export default function TaskDetails() {
                                     </div>
                                     <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">{relTime}</span>
                                   </div>
+                                  {chips && chips.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {chips.map((name, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-medium">
+                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
+                                            {name.charAt(0).toUpperCase()}
+                                          </span>
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {detail && !chips && (() => {
+                                    const byIdx = detail.lastIndexOf(' by ');
+                                    if (byIdx !== -1) {
+                                      const before = detail.slice(0, byIdx + 4);
+                                      const name = detail.slice(byIdx + 4);
+                                      return (
+                                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                          {before}<span className="font-medium text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
+                                        </p>
+                                      );
+                                    }
+                                    return <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{detail}</p>;
+                                  })()}
                                 </div>
                               </div>
                             );
@@ -1992,6 +2326,129 @@ export default function TaskDetails() {
               {isAssigning ? "Assigning..." : "Submit"}
             </button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isResponseModalOpen} onOpenChange={setIsResponseModalOpen}>
+        <DialogContent className="max-w-2xl bg-white p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+          {selectedResponse && (
+            <div className="flex flex-col h-full max-h-[85vh]">
+              {/* Header */}
+              <div className="p-6 border-b bg-muted/30">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                    <AvatarFallback className="bg-primary/10 text-primary font-normal text-lg">
+                      {selectedResponse.sender?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-normal text-foreground">
+                      {selectedResponse.sender}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{new Date(selectedResponse.date).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Structured Data Section */}
+                {selectedResponse.structuredData && Object.keys(selectedResponse.structuredData).some(k => selectedResponse.structuredData[k]) && (
+                  <div className="grid grid-cols-2 gap-4 bg-primary/5 rounded-xl p-4 border border-primary/10">
+                    {Object.entries(selectedResponse.structuredData).map(([key, value]) => {
+                      if (value === undefined || value === null || value === "") return null;
+                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                      return (
+                        <div key={key} className="space-y-1">
+                          <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground/70">
+                            {label}
+                          </span>
+                          <p className="text-sm font-normal text-foreground">
+                            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
+                              (typeof value === 'object' && value !== null) ?
+                                (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...')) :
+                                String(value)}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Content Section */}
+                <div className="prose prose-sm max-w-none prose-slate">
+                  <div
+                    className="text-sm text-foreground leading-relaxed bg-white rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: selectedResponse.content }}
+                  />
+                </div>
+              </div>
+
+              {/* Footer Actions — only visible to task creator */}
+              {canApprove && (
+                <div className="p-4 border-t bg-muted/20 flex gap-3">
+                  {displayTask.type === "CPI" ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Approved');
+                        }}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Closed');
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Close
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1]);
+                        }}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Close Proposal
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Rejected');
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject Proposal
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

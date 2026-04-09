@@ -188,7 +188,7 @@ export default function AcceptAppointedInvitation() {
       localStorage.setItem("refresh", res.data.tokens.refresh);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       toast.success("Account created and details submitted!");
-      navigate("/");
+      navigate("/account");
     } catch (err: any) {
       const msg = err?.response?.data?.error;
       toast.error(Array.isArray(msg) ? msg.join(" ") : msg || "Submission failed. Please try again.");

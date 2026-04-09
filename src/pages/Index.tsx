@@ -28,6 +28,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
 import { hasPermission } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigate } from "react-router-dom";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useRoles } from "@/hooks/useRoles";
@@ -124,19 +125,21 @@ const Index = () => {
   };
 
   const submitQuickFill = async (missing: string[]) => {
-    if (!projectId) return;
+    if (!projectId || !canEditProject) return;
     setIsSaving(true);
     try {
       const payload: Record<string, any> = {};
       if (missing.includes("Scope of Work") && quickForm.brief.trim()) {
         payload.task_order_brief = quickForm.brief.trim();
       }
-      if (missing.includes("Client Details") && quickForm.company_name.trim()) {
+      // CLIENT/CONTRACTOR: fill own client company details
+      if (missing.includes("Client Details") && isClientOrContractor && quickForm.company_name.trim()) {
         payload.client_details = {
           company_name: quickForm.company_name.trim(),
           client: { name: quickForm.client_name.trim(), email: quickForm.client_email.trim(), position: "" },
         };
       }
+      // NON-CLIENT: just invite the client (handled after patch via inviteClient)
       if (missing.includes("Budget Allocation")) {
         const num = parseFloat(quickForm.total_budget.replace(/,/g, ""));
         if (!num || num <= 0) { toast.error("Please enter a valid budget amount"); setIsSaving(false); return; }
@@ -152,15 +155,16 @@ const Index = () => {
         payload.end_date = quickForm.end_date;
       }
       const validInvites = appointedInvites.filter((e) => e.company_name.trim() && e.email.trim());
-      if (missing.includes("Appointed Company") && validInvites.length > 0) {
-        const first = validInvites[0];
+      // NON-CLIENT: fill own appointed company details
+      if (missing.includes("Appointed Company") && !isClientOrContractor && quickForm.appointed_company_name.trim()) {
         payload.appointed_company = {
-          company_name: first.company_name.trim(),
-          company_type: first.company_type,
-          role_as_per_appointment: first.position,
-          contact: { name: first.contact_name.trim(), email: first.email.trim() },
+          company_name: quickForm.appointed_company_name.trim(),
+          company_type: quickForm.appointed_company_type,
+          role_as_per_appointment: quickForm.appointed_position,
+          contact: { name: quickForm.appointed_contact_name.trim(), email: quickForm.appointed_contact_email.trim() },
         };
       }
+      // CLIENT/CONTRACTOR: invite companies (handled after patch via inviteAppointedCompany)
 
       if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0) {
         toast.error("Please fill in at least one field");
@@ -184,7 +188,8 @@ const Index = () => {
       toast.success("Project updated successfully");
       queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("projects") });
 
-      // Send invitations if emails provided
+      // CLIENT/CONTRACTOR: invite client if email provided
+      // NON-CLIENT: invite client (that's the only action for Client Details)
       if (missing.includes("Client Details") && quickForm.client_email.trim()) {
         try {
           await inviteClient({
@@ -198,7 +203,8 @@ const Index = () => {
         }
       }
 
-      if (missing.includes("Appointed Company") && validInvites.length > 0) {
+      // CLIENT/CONTRACTOR: send appointed company invitations
+      if (missing.includes("Appointed Company") && isClientOrContractor && validInvites.length > 0) {
         await Promise.allSettled(
           validInvites.map((entry) =>
             inviteAppointedCompany({
@@ -226,6 +232,9 @@ const Index = () => {
     { enabled: !!projectId }
   );
   const { data: currentUser } = useCurrentUser();
+  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
+  const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
+  const { canEditProject } = usePermissions();
   const { data: projectListData } = useFetch(
     currentUser?.id ? `projects/?userId=${currentUser.id}` : "",
     { enabled: !!currentUser?.id }
@@ -415,7 +424,7 @@ const Index = () => {
   );
 
 
-  const showCompletionCard = (projectStats && projectStats.percentage < 100) || draftProjects.length > 0;
+  const showCompletionCard = canEditProject && ((projectStats && projectStats.percentage < 100) || draftProjects.length > 0);
 
   return (
     <DashboardLayout>
@@ -434,7 +443,7 @@ const Index = () => {
                     : "Finish setting up your draft projects to start collaborating with your team."}
                 </p>
               </div>
-              {projectStats && projectStats.percentage < 100 && (
+              {projectStats && projectStats.percentage < 100 && canEditProject && (
                 <Button
                   onClick={() => openQuickFill()}
                   className="h-8 px-4 bg-primary text-white text-[11px] rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
@@ -451,16 +460,16 @@ const Index = () => {
                 {projectStats.missing.map((item) => {
                   const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
                     "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-[#f0edff]", iconColor: "text-[#6c5ce7]", description: "Describe the full construction scope." },
-                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-[#eef2ff]", iconColor: "text-[#6c5ce7]", description: "Add client company and contact info." },
+                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-[#eef2ff]", iconColor: "text-[#6c5ce7]", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
                     "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-[#f0fdf4]", iconColor: "text-[#16a34a]", description: "Set the total project budget." },
                     "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
                     "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-[#f0f9ff]", iconColor: "text-[#0284c7]", description: "Add the project site address or location." },
                     "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-[#fdf4ff]", iconColor: "text-[#9333ea]", description: "Set the project start and end dates." },
-                    "Appointed Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: "Add the appointed professional firm details." },
+                    "Appointed Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
-                  return (
+                  return canEditProject ? (
                     <button
                       key={item}
                       onClick={() => openQuickFillFor(item)}
@@ -477,6 +486,21 @@ const Index = () => {
                         <ArrowRight className="w-3.5 h-3.5 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
                     </button>
+                  ) : (
+                    <div
+                      key={item}
+                      className="text-left bg-slate-50/60 border border-[#e2e5ea] rounded-xl px-4 py-3.5 opacity-60 cursor-not-allowed"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
+                          {cfg.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-normal text-[#111827]">{item}</p>
+                          <p className="text-[11px] text-[#9ca3af] mt-0.5">{cfg.description}</p>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -837,43 +861,80 @@ const Index = () => {
                     </div>
                     <div>
                       <p className="text-[13px] font-normal text-[#111827]">Client Details</p>
-                      <p className="text-[11px] text-[#9ca3af]">Fill once — auto-populates into all contracts and appointment letters</p>
+                      <p className="text-[11px] text-[#9ca3af]">
+                        {isClientOrContractor
+                          ? "Fill once — auto-populates into all contracts and appointment letters"
+                          : "Invite your client to fill in their company details"}
+                      </p>
                     </div>
                   </div>
-                  <div className="p-5 space-y-4">
-                    <div>
-                      <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                        Client Name or Company <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        className={qInputCls}
-                        placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
-                        value={quickForm.company_name}
-                        onChange={(e) => setQuickForm((v) => ({ ...v, company_name: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                  {isClientOrContractor ? (
+                    // CLIENT/CONTRACTOR: fill own client company details
+                    <div className="p-5 space-y-4">
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                          Client Name or Company <span className="text-red-500">*</span>
+                        </label>
                         <input
                           className={qInputCls}
-                          placeholder="Full name"
-                          value={quickForm.client_name}
-                          onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
+                          placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
+                          value={quickForm.company_name}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, company_name: e.target.value }))}
                         />
                       </div>
-                      <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
-                        <input
-                          type="email"
-                          className={qInputCls}
-                          placeholder="client@company.com"
-                          value={quickForm.client_email}
-                          onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                          <input
+                            className={qInputCls}
+                            placeholder="Full name"
+                            value={quickForm.client_name}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                          <input
+                            type="email"
+                            className={qInputCls}
+                            placeholder="client@company.com"
+                            value={quickForm.client_email}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    // NON-CLIENT: invite client by email
+                    <div className="p-5 space-y-4">
+                      <p className="text-[12px] text-[#6b7280]">
+                        We'll send an email invitation for the client to complete their company details.
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Client Name</label>
+                          <input
+                            className={qInputCls}
+                            placeholder="e.g. John Smith"
+                            value={quickForm.client_name}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                            Client Email <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            className={qInputCls}
+                            placeholder="client@company.com"
+                            value={quickForm.client_email}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1034,119 +1095,190 @@ const Index = () => {
                       <Building2 className="w-4 h-4 text-[#ca8a04]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Appointed Companies</p>
-                      <p className="text-[11px] text-[#9ca3af]">Invite professional firms appointed to this project</p>
+                      <p className="text-[13px] font-normal text-[#111827]">
+                        {isClientOrContractor ? "Appointed Companies" : "Appointed Company Information"}
+                      </p>
+                      <p className="text-[11px] text-[#9ca3af]">
+                        {isClientOrContractor
+                          ? "Invite professional firms appointed to this project"
+                          : "Fill in your company details — auto-populates into contracts and appointment letters"}
+                      </p>
                     </div>
                   </div>
-                  <div className="p-5 space-y-3">
-                    {/* Existing companies */}
-                    {isLoadingCompanies ? (
-                      <p className="text-sm text-muted-foreground py-2">Loading...</p>
-                    ) : appointedCompanies.filter(c => !["CLIENT","OWNER","CLIENT OWNER"].includes((c.role||"").toUpperCase().trim())).length > 0 && (
-                      <div className="space-y-2">
-                        {appointedCompanies
-                          .filter(c => !["CLIENT","OWNER","CLIENT OWNER"].includes((c.role||"").toUpperCase().trim()))
-                          .map((comp) => (
-                            <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e2e5ea] bg-slate-50/50">
-                              <div className="w-8 h-8 rounded-lg bg-white border border-[#e2e5ea] flex items-center justify-center shrink-0">
-                                <Building2 className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-normal text-[#111827] truncate">{comp.company_name}</p>
-                                <p className="text-[11px] text-muted-foreground">{comp.role || "Partner"}</p>
-                              </div>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#e2e5ea] bg-white text-muted-foreground shrink-0">{comp.status}</span>
-                            </div>
-                          ))}
-                        <div className="h-px bg-[#e2e5ea]" />
-                      </div>
-                    )}
 
-                    {/* Invite forms */}
-                    {appointedInvites.map((entry) => (
-                      <div key={entry.id} className="border border-[#e2e5ea] rounded-xl p-4 space-y-3 bg-slate-50/50">
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
-                            className="text-muted-foreground hover:text-red-500 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                  {isClientOrContractor ? (
+                    // CLIENT/CONTRACTOR: multi-invite form
+                    <div className="p-5 space-y-3">
+                      {isLoadingCompanies ? (
+                        <p className="text-sm text-muted-foreground py-2">Loading...</p>
+                      ) : appointedCompanies.filter(c => !["CLIENT", "OWNER", "CLIENT OWNER"].includes((c.role || "").toUpperCase().trim())).length > 0 && (
+                        <div className="space-y-2">
+                          {appointedCompanies
+                            .filter(c => !["CLIENT", "OWNER", "CLIENT OWNER"].includes((c.role || "").toUpperCase().trim()))
+                            .map((comp) => (
+                              <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e2e5ea] bg-slate-50/50">
+                                <div className="w-8 h-8 rounded-lg bg-white border border-[#e2e5ea] flex items-center justify-center shrink-0">
+                                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-normal text-[#111827] truncate">{comp.company_name}</p>
+                                  <p className="text-[11px] text-muted-foreground">{comp.role || "Partner"}</p>
+                                </div>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#e2e5ea] bg-white text-muted-foreground shrink-0">{comp.status}</span>
+                              </div>
+                            ))}
+                          <div className="h-px bg-[#e2e5ea]" />
+                        </div>
+                      )}
+                      {appointedInvites.map((entry) => (
+                        <div key={entry.id} className="border border-[#e2e5ea] rounded-xl p-4 space-y-3 bg-slate-50/50">
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
+                              className="text-muted-foreground hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div>
+                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
+                            <input
+                              className={qInputCls}
+                              placeholder="e.g. Smith Architects (Pty) Ltd"
+                              value={entry.company_name}
+                              onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                              <div className="relative">
+                                <select
+                                  className={qSelectCls}
+                                  value={entry.company_type}
+                                  onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
+                                >
+                                  <option value="">Select type...</option>
+                                  {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
+                              <div className="relative">
+                                <select
+                                  className={qSelectCls}
+                                  value={entry.position}
+                                  onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, position: e.target.value } : x))}
+                                >
+                                  <option value="">Select role...</option>
+                                  {appRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                              <input
+                                className={qInputCls}
+                                placeholder="e.g. John Smith"
+                                value={entry.contact_name}
+                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Email Address <span className="text-red-500">*</span></label>
+                              <input
+                                type="email"
+                                className={qInputCls}
+                                placeholder="contact@firm.co.za"
+                                value={entry.email}
+                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, email: e.target.value } : x))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setAppointedInvites((prev) => [...prev, { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" }])}
+                        className="w-full py-3.5 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+                      </button>
+                    </div>
+                  ) : (
+                    // NON-CLIENT: fill own company details
+                    <div className="p-5 space-y-4">
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                          Company Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          className={qInputCls}
+                          placeholder="e.g. Base Architects and Associates"
+                          value={quickForm.appointed_company_name}
+                          onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_name: e.target.value }))}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                          <div className="relative">
+                            <select
+                              className={qSelectCls}
+                              value={quickForm.appointed_company_type}
+                              onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_type: e.target.value }))}
+                            >
+                              <option value="">Select type...</option>
+                              {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          </div>
                         </div>
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
-                          <input
-                            className={qInputCls}
-                            placeholder="e.g. Smith Architects (Pty) Ltd"
-                            value={entry.company_name}
-                            onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
-                            <div className="relative">
-                              <select
-                                className={qSelectCls}
-                                value={entry.company_type}
-                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
-                              >
-                                <option value="">Select type...</option>
-                                {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
-                            <div className="relative">
-                              <select
-                                className={qSelectCls}
-                                value={entry.position}
-                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, position: e.target.value } : x))}
-                              >
-                                <option value="">Select role...</option>
-                                {appRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
-                            <input
-                              className={qInputCls}
-                              placeholder="e.g. John Smith"
-                              value={entry.contact_name}
-                              onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Email Address <span className="text-red-500">*</span></label>
-                            <input
-                              type="email"
-                              className={qInputCls}
-                              placeholder="contact@firm.co.za"
-                              value={entry.email}
-                              onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, email: e.target.value } : x))}
-                            />
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
+                          <div className="relative">
+                            <select
+                              className={qSelectCls}
+                              value={quickForm.appointed_position}
+                              onChange={(e) => setQuickForm((v) => ({ ...v, appointed_position: e.target.value }))}
+                            >
+                              <option value="">Select role...</option>
+                              {appRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                           </div>
                         </div>
                       </div>
-                    ))}
-
-                    {/* Add button */}
-                    <button
-                      type="button"
-                      onClick={() => setAppointedInvites((prev) => [...prev, { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" }])}
-                      className="w-full py-3.5 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
-                    </button>
-                  </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                          <input
+                            className={qInputCls}
+                            placeholder="e.g. John Smith"
+                            value={quickForm.appointed_contact_name}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_name: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                          <input
+                            type="email"
+                            className={qInputCls}
+                            placeholder="contact@firm.co.za"
+                            value={quickForm.appointed_contact_email}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_email: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1232,8 +1364,8 @@ const Index = () => {
               </button>
               <Button
                 onClick={() => submitQuickFill(quickFillSection ? [quickFillSection] : projectStats.missing)}
-                disabled={isSaving}
-                className="h-10 px-6 bg-[#6c5ce7] text-white text-[13px] rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal"
+                disabled={isSaving || !canEditProject}
+                className="h-10 px-6 bg-[#6c5ce7] text-white text-[13px] rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>

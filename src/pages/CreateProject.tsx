@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -687,6 +687,7 @@ export default function CreateProject() {
   const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { mutate: createProject, isPending } = useCreateProject();
   const s3Upload = useS3Upload("project-documents/pending");
@@ -1381,10 +1382,10 @@ export default function CreateProject() {
           {/* Back to Dashboard / Logout */}
           <div className="flex justify-between px-8 pt-5 pb-1 shrink-0">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => location.key !== "default" ? navigate(-1) : navigate("/")}
               className="flex items-center gap-1.5 text-[13px] text-[#9ca3af] hover:text-[#374151] transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Dashboard
+              Back
             </button>
             <button
               onClick={() => { localStorage.clear(); navigate("/login"); }}
@@ -2020,11 +2021,13 @@ export default function CreateProject() {
                             </p>
                             <div className="space-y-3">
                               {appointedPersonnelList.map((entry) => (
-                                <PersonnelEntryCard
+                                <OrgPersonnelSelectCard
                                   key={entry.id}
                                   entry={entry}
                                   roleOptions={APPOINTED_ROLE_OPTIONS}
                                   takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                  orgUsers={orgUsers}
+                                  allRoles={appRoles}
                                   onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
                                   onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                   canRemove={true}

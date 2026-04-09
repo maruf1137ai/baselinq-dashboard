@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -91,7 +92,6 @@ const AccountOrganization = () => {
   }, [user]);
 
   const loadTeam = useCallback(async () => {
-    if (!isOrg) return;
     setTeamLoading(true);
     try {
       const data = await getOrgMembers();
@@ -108,6 +108,7 @@ const AccountOrganization = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     setIsSaving(true);
     try {
       let insurance_s3_key: string | undefined;
@@ -186,6 +187,9 @@ const AccountOrganization = () => {
 
   if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading..." /></div>;
 
+  // Redirect users who can't do anything on this page
+  if (!isOrg && !canEdit) return <Navigate to="/account" replace />;
+
   return (
     <div className="max-w-4xl mx-auto p-8">
       <div className="flex items-start justify-between gap-4 mb-8">
@@ -207,266 +211,252 @@ const AccountOrganization = () => {
         )}
       </div>
 
-      {isOrg ? (
-        <>
-          {/* Org details */}
-          <form onSubmit={handleSave}>
-            <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <Field label="Company / Entity Name">
-                  <Input readOnly={!canEdit} value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal", !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
-                </Field>
-                <Field label="Company Registration No.">
-                  <Input readOnly={!canEdit} value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
-                </Field>
-                <Field label="VAT Registration Number">
-                  <Input readOnly={!canEdit} value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
-                </Field>
-                <Field label="CK Number">
-                  <Input readOnly={!canEdit} value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
-                </Field>
-                <Field label="Enterprise Size">
-                  <select disabled={!canEdit} value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3", !canEdit && "bg-slate-50/50 cursor-not-allowed")}>
-                    <option value="">Select Scale...</option>
-                    <option value="1-10">Micro (1–10 people)</option>
-                    <option value="11-50">Small (11–50 people)</option>
-                    <option value="51-200">Medium (51–200 people)</option>
-                    <option value="201-500">Large (201–500 people)</option>
-                    <option value="500+">Enterprise (500+ people)</option>
-                  </select>
-                </Field>
-              </div>
-            </SectionCard>
-          </form>
-
-          {/* Insurance Certificate */}
-          <SectionCard
-            title="Insurance Certificate"
-            subtitle="Professional indemnity or public liability certificate"
-            icon={<ShieldCheck className="w-4 h-4" />}
-          >
+      <>
+        {/* Org details */}
+        <form onSubmit={handleSave}>
+          <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              <Field label="Certificate Document">
-                {!insuranceFile && user?.insurance_document?.file_name && (
-                  <div className="flex items-center gap-2.5 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
-                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
-                    <span className="truncate flex-1 text-xs">{user.insurance_document.file_name}</span>
-                    <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded shrink-0">Current</span>
-                  </div>
-                )}
-                <label className={cn(
-                  "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
-                  insuranceFile
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground",
-                  canEdit ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
-                )}>
-                  <Paperclip className="w-4 h-4 shrink-0" />
-                  <span className="truncate flex-1 text-xs">
-                    {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
-                  </span>
-                  {canEdit && insuranceFile && (
-                    <button
-                      type="button"
-                      onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
-                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {canEdit && (
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="sr-only"
-                      onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
-                    />
-                  )}
-                </label>
-                <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Saved when you click Save Changes.</p>
+              <Field label="Company / Entity Name">
+                <Input readOnly={!canEdit} value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal", !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
               </Field>
-              <Field label="Expiry Date">
-                <Input
-                  readOnly={!canEdit}
-                  type="date"
-                  value={insuranceExpiry}
-                  onChange={e => setInsuranceExpiry(e.target.value)}
-                  className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")}
-                />
+              <Field label="Company Registration No.">
+                <Input readOnly={!canEdit} value={formData.organization.company_reg_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
+              </Field>
+              <Field label="VAT Registration Number">
+                <Input readOnly={!canEdit} value={formData.organization.vat_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
+              </Field>
+              <Field label="CK Number">
+                <Input readOnly={!canEdit} value={formData.organization.ck_number} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} />
+              </Field>
+              <Field label="Enterprise Size">
+                <select disabled={!canEdit} value={formData.organization.company_size} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })} className={cn(INPUT_CLS, "w-full outline-none px-3", !canEdit && "bg-slate-50/50 cursor-not-allowed")}>
+                  <option value="">Select Scale...</option>
+                  <option value="1-10">Micro (1–10 people)</option>
+                  <option value="11-50">Small (11–50 people)</option>
+                  <option value="51-200">Medium (51–200 people)</option>
+                  <option value="201-500">Large (201–500 people)</option>
+                  <option value="500+">Enterprise (500+ people)</option>
+                </select>
               </Field>
             </div>
           </SectionCard>
+        </form>
 
-          {/* Team members */}
-          <SectionCard
-            title="Team Members"
-            subtitle="People who have joined your organisation"
-            icon={<Users className="w-4 h-4" />}
-            action={canEdit && (
-              <button
-                type="button"
-                onClick={() => setShowInviteForm(v => !v)}
-                className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-normal"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                Invite member
-              </button>
-            )}
-          >
-            {/* Invite form */}
-            {showInviteForm && (
-              <form onSubmit={handleInvite} className="mb-5">
-                <p className="text-[13px] text-gray-500 mb-3">Invite colleagues to your organisation.</p>
-                <div className="space-y-2">
-                  {inviteRows.map((row) => (
-                    <div key={row.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Full name"
-                          value={row.name}
-                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, name: e.target.value } : r))}
-                          className={MODAL_INPUT_CLS}
-                        />
-                        <input
-                          type="email"
-                          placeholder="Email address"
-                          value={row.email}
-                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, email: e.target.value } : r))}
-                          className={MODAL_INPUT_CLS}
-                        />
-                        <select
-                          value={row.position}
-                          onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, position: e.target.value } : r))}
-                          className={MODAL_INPUT_CLS}
-                        >
-                          <option value="">Position...</option>
-                          {inviteRoles.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
-                          <option value="admin">Administrator</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      {inviteRows.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setInviteRows(p => p.filter(r => r.id !== row.id))}
-                          className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+        {/* Insurance Certificate */}
+        <SectionCard
+          title="Insurance Certificate"
+          subtitle="Professional indemnity or public liability certificate"
+          icon={<ShieldCheck className="w-4 h-4" />}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <Field label="Certificate Document">
+              {!insuranceFile && user?.insurance_document?.file_name && (
+                <div className="flex items-center gap-2.5 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
+                  <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                  <span className="truncate flex-1 text-xs">{user.insurance_document.file_name}</span>
+                  <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded shrink-0">Current</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setInviteRows(p => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
-                  className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  Add another member
-                </button>
-                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-                  <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#8081F6] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
-                    {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {inviting ? "Sending..." : "Send Invites"}
-                  </Button>
-                  <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors">
-                    Cancel
+              )}
+              <label className={cn(
+                "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
+                insuranceFile
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border text-muted-foreground",
+                canEdit ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
+              )}>
+                <Paperclip className="w-4 h-4 shrink-0" />
+                <span className="truncate flex-1 text-xs">
+                  {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
+                </span>
+                {canEdit && insuranceFile && (
+                  <button
+                    type="button"
+                    onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
+                    className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                </div>
-              </form>
-            )}
+                )}
+                {canEdit && (
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="sr-only"
+                    onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
+                  />
+                )}
+              </label>
+              <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Saved when you click Save Changes.</p>
+            </Field>
+            <Field label="Expiry Date">
+              <Input
+                readOnly={!canEdit}
+                type="date"
+                value={insuranceExpiry}
+                onChange={e => setInsuranceExpiry(e.target.value)}
+                className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")}
+              />
+            </Field>
+          </div>
+        </SectionCard>
 
-            {/* Active members */}
-            {teamLoading ? (
-              <div className="flex items-center justify-center py-8"><AwesomeLoader message="Loading team..." /></div>
-            ) : members.length === 0 && pendingInvites.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">No team members yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Invite someone to get started.</p>
-              </div>
-            ) : (
+        {/* Team members */}
+        <SectionCard
+          title="Team Members"
+          subtitle="People who have joined your organisation"
+          icon={<Users className="w-4 h-4" />}
+          action={canEdit && (
+            <button
+              type="button"
+              onClick={() => setShowInviteForm(v => !v)}
+              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-normal"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Invite member
+            </button>
+          )}
+        >
+          {/* Invite form */}
+          {showInviteForm && (
+            <form onSubmit={handleInvite} className="mb-5">
+              <p className="text-[13px] text-gray-500 mb-3">Invite colleagues to your organisation.</p>
               <div className="space-y-2">
-                {members.map(member => (
-                  <div key={member.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-white hover:bg-slate-50/50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[12px] font-normal text-primary">
-                      {(member.name || member.email).charAt(0).toUpperCase()}
+                {inviteRows.map((row) => (
+                  <div key={row.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
+                    <div className="flex-1 grid grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Full name"
+                        value={row.name}
+                        onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, name: e.target.value } : r))}
+                        className={MODAL_INPUT_CLS}
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email address"
+                        value={row.email}
+                        onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, email: e.target.value } : r))}
+                        className={MODAL_INPUT_CLS}
+                      />
+                      <select
+                        value={row.position}
+                        onChange={e => setInviteRows(p => p.map(r => r.id === row.id ? { ...r, position: e.target.value } : r))}
+                        className={MODAL_INPUT_CLS}
+                      >
+                        <option value="">Position...</option>
+                        {inviteRoles.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
+                        <option value="admin">Administrator</option>
+                        <option value="other">Other</option>
+                      </select>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{member.name || "—"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                    </div>
-                    {member.role && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-slate-100 text-muted-foreground shrink-0">
-                        {member.role}
-                      </span>
-                    )}
-                    {canEdit && (
+                    {inviteRows.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveMember(member.id)}
-                        disabled={removingId === member.id}
-                        className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
-                        title="Remove member"
+                        onClick={() => setInviteRows(p => p.filter(r => r.id !== row.id))}
+                        className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
                       >
-                        {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 ))}
-
-                {/* Pending invitations */}
-                {pendingInvites.length > 0 && (
-                  <>
-                    <p className="text-[10px] text-muted-foreground normal-case pt-3 pb-1 px-1">Pending Invitations</p>
-                    {pendingInvites.map(inv => (
-                      <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border bg-slate-50/50">
-                        <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-                          <Clock className="w-3.5 h-3.5 text-amber-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">{inv.name || inv.email}</p>
-                          <p className="text-xs text-muted-foreground truncate">{inv.email}{inv.position ? ` · ${inv.position}` : ""}</p>
-                        </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
-                          Pending
-                        </span>
-                        {canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancelInvite(inv.id)}
-                            disabled={cancellingId === inv.id}
-                            className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
-                            title="Cancel invitation"
-                          >
-                            {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </>
-                )}
               </div>
-            )}
-          </SectionCard>
-        </>
-      ) : (
-        <div className="border border-border rounded-xl bg-white shadow-sm p-12 text-center flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-            <Building2 className="w-7 h-7 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="text-sm font-normal text-foreground">Organisation account required</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto leading-relaxed">
-              Organisation details are only available for organisation accounts. Contact support to upgrade.
-            </p>
-          </div>
-        </div>
-      )}
+              <button
+                type="button"
+                onClick={() => setInviteRows(p => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
+                className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Add another member
+              </button>
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+                <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#8081F6] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
+                  {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {inviting ? "Sending..." : "Send Invites"}
+                </Button>
+                <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Active members */}
+          {teamLoading ? (
+            <div className="flex items-center justify-center py-8"><AwesomeLoader message="Loading team..." /></div>
+          ) : members.length === 0 && pendingInvites.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <Users className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No team members yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Invite someone to get started.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {members.map(member => (
+                <div key={member.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-white hover:bg-slate-50/50 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[12px] font-normal text-primary">
+                    {(member.name || member.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{member.name || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                  </div>
+                  {member.role && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-slate-100 text-muted-foreground shrink-0">
+                      {member.role}
+                    </span>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={removingId === member.id}
+                      className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                      title="Remove member"
+                    >
+                      {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Pending invitations */}
+              {pendingInvites.length > 0 && (
+                <>
+                  <p className="text-[10px] text-muted-foreground normal-case pt-3 pb-1 px-1">Pending Invitations</p>
+                  {pendingInvites.map(inv => (
+                    <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border bg-slate-50/50">
+                      <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground truncate">{inv.name || inv.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{inv.email}{inv.position ? ` · ${inv.position}` : ""}</p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
+                        Pending
+                      </span>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelInvite(inv.id)}
+                          disabled={cancellingId === inv.id}
+                          className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
+                          title="Cancel invitation"
+                        >
+                          {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </SectionCard>
+      </>
     </div>
   );
 };

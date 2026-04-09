@@ -11,14 +11,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, LinkIcon, PlusIcon } from "lucide-react";
+import { CalendarIcon, LinkIcon, PlusIcon, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { TimePicker } from "../commons/TimePicker";
 import { usePost } from "@/hooks/usePost";
+import useFetch from "@/hooks/useFetch";
 import { toast } from "sonner";
+import { Check, User, X } from "lucide-react";
 
 const priorityBtns = [
   { id: 1, title: "Low" },
@@ -33,6 +43,15 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
   const [time, setTime] = useState("");
   const [priorityBtn, setPriorityBtn] = useState("Low");
   const [meetingLink, setMeetingLink] = useState("");
+  const [selectedAttendees, setSelectedAttendees] = useState<number[]>([]);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const projectId = localStorage.getItem("selectedProjectId");
+  const { data: teamData } = useFetch<{ teamMembers: any[] }>(
+    projectId ? `projects/${projectId}/team-members/` : "",
+    { enabled: !!projectId }
+  );
+  const teamMembers = teamData?.teamMembers || [];
 
   const { mutateAsync: postRequest, isPending } = usePost();
 
@@ -55,6 +74,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
           priority: priorityBtn,
           status: "scheduled",
           location: meetingLink.trim() ? "Virtual — Video Call" : "",
+          attendees: selectedAttendees,
         },
       });
       toast.success("Meeting scheduled.");
@@ -64,6 +84,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
       setTime("");
       setPriorityBtn("Low");
       setMeetingLink("");
+      setSelectedAttendees([]);
       onCreated?.();
     } catch {
       toast.error("Failed to schedule meeting.");
@@ -154,14 +175,105 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                   <button
                     key={id}
                     onClick={() => setPriorityBtn(t)}
-                    className={`border py-3 px-4 rounded-lg text-left w-full ${
-                      t === priorityBtn ? "bg-primary/10 border-primary" : "border-border"
-                    }`}
+                    className={`border py-3 px-4 rounded-lg text-left w-full ${t === priorityBtn ? "bg-primary/10 border-primary" : "border-border"
+                      }`}
                   >
                     {t}
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex flex-col">
+              <Label className="text-sm text-foreground mb-2">Participants</Label>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={popoverOpen}
+                    className="w-full justify-between font-normal min-h-[44px] h-auto p-2"
+                  >
+                    {selectedAttendees.length > 0 ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {teamMembers
+                          .filter((m) => selectedAttendees.includes(parseInt(m.userId)))
+                          .map((member) => (
+                            <span
+                              key={member._id}
+                              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[12px] px-2 py-1 rounded-md"
+                            >
+                              {member.user?.name || member.user?.email}
+                              <X
+                                className="w-3 h-3 cursor-pointer hover:text-primary/70"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedAttendees((prev) =>
+                                    prev.filter((id) => id !== parseInt(member.userId))
+                                  );
+                                }}
+                              />
+                            </span>
+                          ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Select participants...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search team members..." />
+                    <CommandList>
+                      <CommandEmpty>No team member found.</CommandEmpty>
+                      <CommandGroup>
+                        {teamMembers.map((member) => {
+                          const u = member.user;
+                          const name = u?.name || u?.email || "User";
+                          const email = u?.email;
+                          const isSelected = selectedAttendees.includes(parseInt(member.userId));
+                          return (
+                            <CommandItem
+                              key={member._id}
+                              onSelect={() => {
+                                setSelectedAttendees((prev) =>
+                                  isSelected
+                                    ? prev.filter((id) => id !== parseInt(member.userId))
+                                    : [...prev, parseInt(member.userId)]
+                                );
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium uppercase">
+                                    {name.charAt(0)}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{name}</span>
+                                    {email && name !== email && (
+                                      <span className="text-[11px] text-muted-foreground">{email}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div
+                                  className={cn(
+                                    "h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                                    isSelected ? "border-primary bg-primary" : "border-border bg-white"
+                                  )}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -180,3 +292,4 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
     </Dialog>
   );
 }
+

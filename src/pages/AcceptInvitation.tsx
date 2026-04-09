@@ -111,7 +111,7 @@ export default function AcceptInvitation() {
       localStorage.setItem("access", tokens.access);
       localStorage.setItem("refresh", tokens.refresh);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/");
+      navigate("/account");
     },
     onError: (err: unknown) => {
       const msg =

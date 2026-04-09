@@ -51,6 +51,30 @@ export const NEW_ROLE_DISPLAY_TO_CODE: Record<string, string> = {
 };
 
 /**
+ * Backbone role display names → backbone code.
+ * Handles cases where roleName is stored as the full display name
+ * (e.g. "Client Project Manager") instead of the code ("CPM").
+ */
+export const BACKBONE_DISPLAY_TO_CODE: Record<string, string> = {
+  "Client / Owner": "CLIENT",
+  "Client/Owner": "CLIENT",
+  "Client Owner": "CLIENT",
+  "Owner": "CLIENT",
+  "Client Project Manager": "CPM",
+  "Project Manager": "PM",
+  "Construction Manager": "CM",
+  "Contracts Manager": "CONTRACTS_MGR",
+  "Contract Manager": "CONTRACTS_MGR",
+  "Architect": "ARCH",
+  "Consultant Quantity Surveyor": "CQS",
+  "Consultant Planning Engineer": "CONS_PLANNER",
+  "Planning Engineer": "PLANNER",
+  "Site Engineer": "SE",
+  "Site Supervisor": "SS",
+  "Foreman": "FOREMAN",
+};
+
+/**
  * Feature permission definitions.
  * Each key maps to the backbone role codes that are allowed to access it.
  * VIEWER / LIMITED / FOREMAN are read-only — not listed in write/manage permissions.
@@ -60,7 +84,8 @@ export const PERMISSIONS = {
   viewCompliance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER"],
   viewFinance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
   viewAudit: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS"],
+  viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  viewSettings: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
   // Settings actions
   editTeamRoles: ["CLIENT", "CPM", "PM", "CM"],
   manageTeam: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
@@ -89,14 +114,18 @@ export function resolvePermissionCode(role: string): string {
   const trimmed = role.trim();
   const upper = trimmed.toUpperCase();
 
-  // Direct code lookup (e.g. "ADMIN" → "CLIENT")
+  // Direct code lookup (e.g. "ADMIN" → "CLIENT", "CPM" → "CPM")
   if (NEW_ROLE_PERMISSION_MAP[upper]) return NEW_ROLE_PERMISSION_MAP[upper];
 
-  // Display name lookup (e.g. "Quantity Surveyor" → code "QS" → "CQS")
-  const code = NEW_ROLE_DISPLAY_TO_CODE[trimmed];
-  if (code) return NEW_ROLE_PERMISSION_MAP[code] ?? code;
+  // New role display name lookup (e.g. "Quantity Surveyor" → "QS" → "CQS")
+  const newCode = NEW_ROLE_DISPLAY_TO_CODE[trimmed];
+  if (newCode) return NEW_ROLE_PERMISSION_MAP[newCode] ?? newCode;
 
-  // Unknown / backbone roles pass through uppercased
+  // Backbone role display name lookup (e.g. "Client Project Manager" → "CPM")
+  const backboneCode = BACKBONE_DISPLAY_TO_CODE[trimmed];
+  if (backboneCode) return backboneCode;
+
+  // Unknown / backbone codes pass through uppercased (e.g. "CPM" → "CPM")
   return upper;
 }
 

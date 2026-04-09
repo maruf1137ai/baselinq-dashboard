@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Paperclip, Plus, Bell, Calendar } from 'lucide-react';
+import { Paperclip, Plus, Bell, Calendar, MessageSquare } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import useFetch from '@/hooks/useFetch';
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
+import { resolvePermissionCode } from "@/lib/roleUtils";
 import TaskFilterBar, { TaskFilters, defaultFilters } from '@/components/task/TaskFilterBar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
@@ -70,26 +71,20 @@ const btns = [
 
 const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
 
-// Role to document type mapping - keys are normalized to Title Case for simpler lookup
+// Role to document type mapping - keys are standardized backbone codes
 const rolePermissions: Record<string, string[]> = {
-  "Client": ALL_TASK_TYPES,
-  "Owner": ALL_TASK_TYPES,
-  "CLIENT": ALL_TASK_TYPES,
-  "OWNER": ALL_TASK_TYPES,
-  "CLIENT/OWNER": ALL_TASK_TYPES,
-  "Client/Owner": ALL_TASK_TYPES,
-  "Client / Owner": ALL_TASK_TYPES,
-  "Client Project Manager": ALL_TASK_TYPES,
-  "Architect": ["VO", "SI"],
-  "Consultant Quantity Surveyor": ["VO"],
-  "Consultant Planning Engineer": ["CPI", "DC"],
-  "Construction Manager": ["RFI", "SI", "DC", "CPI"],
-  "Contracts Manager": ["VO", "DC"],
-  "Planning Engineer": ["CPI", "DC"],
-  "Site Engineer": ["RFI"],
-  "Site Supervisor": ["RFI", "SI"],
-  "Foreman": ["RFI"],
-  "Project Manager": ["SI", "DC", "CPI"],
+  CLIENT: ALL_TASK_TYPES,
+  CPM: ALL_TASK_TYPES,
+  ARCH: ["VO", "SI"],
+  CQS: ["VO"],
+  CONS_PLANNER: ["CPI", "DC"],
+  CM: ["RFI", "SI", "DC", "CPI"],
+  CONTRACTS_MGR: ["VO", "DC"],
+  PLANNER: ["CPI", "DC"],
+  SE: ["RFI"],
+  SS: ["RFI", "SI"],
+  FOREMAN: ["RFI"],
+  PM: ["SI", "DC", "CPI"],
 };
 
 // Timeline stages per task type — used to map board columns to entity status
@@ -200,7 +195,7 @@ const getStatusDisplayName = (status: string | null) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
-function TaskCard({ task, isDragging }: any) {
+function TaskCard({ task, isDragging, currentUserId }: any) {
   const { userRole } = useUserRoleStore();
 
   const normalizedTaskType = task.type === "CRITICALPATHITEM" ? "CPI" : task.type;
@@ -255,12 +250,19 @@ function TaskCard({ task, isDragging }: any) {
   // Only apply to non-resolved tasks
   const escalationLevel = isResolved ? 0 : (!dueDateInfo.isOverdue ? 0 : overdueDays <= 3 ? 1 : 2);
 
-  // Card border + background per escalation level
-  const cardBorder = isResolved ? 'border border-border' :
-    escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
-      escalationLevel === 1 ? 'border border-red-200 bg-red-50/20' :
-        isWarning ? 'border border-amber-200' :
-          'border border-border';
+  // Pending review: VO task where creator is current user and a response is awaiting review
+  const needsReview = normalizedTaskType === 'VO'
+    && String(task.assignedBy?.userId) === String(currentUserId)
+    && (task.entity_status || '').toLowerCase() === 'submitted'
+    && (task.responses || []).length > 0;
+
+  // Card border + background per escalation level (pending review takes priority over warnings)
+  const cardBorder = needsReview ? 'border border-amber-400 bg-amber-50/20' :
+    isResolved ? 'border border-border' :
+      escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
+        escalationLevel === 1 ? 'border border-red-200 bg-red-50/20' :
+          isWarning ? 'border border-amber-200' :
+            'border border-border';
 
   const content = (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-3">
@@ -283,15 +285,26 @@ function TaskCard({ task, isDragging }: any) {
                   }`}>{priorityInfo.label}</span>
               )}
             </div>
-            {isResolved && dueDateInfo.isOverdue ? (
+            {needsReview && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
+                  </span>
+                  Awaiting Review
+                </span>
+              </div>
+            )}
+            {!needsReview && isResolved && dueDateInfo.isOverdue ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
                 Closed {overdueDays}d late
               </span>
-            ) : !isResolved && dueDateInfo.isOverdue ? (
+            ) : !needsReview && !isResolved && dueDateInfo.isOverdue ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium shrink-0">
                 {overdueDays}d late
               </span>
-            ) : !isResolved && isWarning ? (
+            ) : !needsReview && !isResolved && isWarning ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 shrink-0">
                 Due soon
               </span>
@@ -311,6 +324,18 @@ function TaskCard({ task, isDragging }: any) {
                   {task.discipline}
                 </span>
               )}
+              {(() => {
+                const visibleResponses = (task.responses || []).filter((resp: any) =>
+                  String(resp.senderId) === String(currentUserId) ||
+                  String(task.assignedBy?.userId) === String(currentUserId)
+                );
+                return visibleResponses.length > 0 && (
+                  <span className="flex items-center gap-1 text-[10px] bg-[#8081F6]/10 text-[#8081F6] px-1.5 py-0.5 rounded shrink-0">
+                    <MessageSquare className="h-2.5 w-2.5" />
+                    {visibleResponses.length}
+                  </span>
+                );
+              })()}
               {/* Escalated: replace due date with bell */}
               {!isResolved && escalationLevel >= 2 ? (
                 <span className="flex items-center gap-1 text-xs text-red-600 font-medium shrink-0">
@@ -379,8 +404,8 @@ function TaskCard({ task, isDragging }: any) {
         </div>
 
 
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 
   if (!canDrag) {
@@ -399,7 +424,7 @@ function TaskCard({ task, isDragging }: any) {
   return content;
 }
 
-function Column({ id, title, count, tasks, onAddClick }: any) {
+function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
   const { setNodeRef } = useSortable({ id });
 
   // Only count overdue for non-resolved tasks (resolved items shouldn't show "breached")
@@ -434,7 +459,7 @@ function Column({ id, title, count, tasks, onAddClick }: any) {
             style={{ minHeight: '100px' }}
           >
             {tasks.map((task: any) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} currentUserId={currentUserId} />
             ))}
           </div>
         </SortableContext>
@@ -514,11 +539,28 @@ export default function Task() {
 
   const { mutateAsync: updateTask } = usePatch();
 
-  // Check if user has permission to create any task type
-  const canCreateTask = true;
-
   // Filter buttons based on user role
-  const filteredBtns = btns;
+  const filteredBtns = useMemo(() => {
+    if (!userRole) return [];
+
+    // Support composite roles like "Client / Owner"
+    const roles = userRole.split(/\s*\/\s*/).map((r) => r.trim());
+
+    // Collect all allowed task types across all roles
+    const allowedTypes = new Set<string>();
+
+    roles.forEach((role) => {
+      // Standardize the project-level role to its backbone permission code
+      const backbone = resolvePermissionCode(role);
+      const typesForRole = rolePermissions[backbone] || [];
+      typesForRole.forEach((type) => allowedTypes.add(type));
+    });
+
+    return btns.filter((btn) => allowedTypes.has(btn.code));
+  }, [userRole]);
+
+  // Check if user has permission to create any task type
+  const canCreateTask = filteredBtns.length > 0;
 
   /* State */
   const [tasks, setTasks] = useState<{ todo: any[], inReview: any[], done: any[] }>({
@@ -594,18 +636,20 @@ export default function Task() {
         }
 
         return ({
-          id: item.taskId || item.task?._id,
+          id: item.id || item.taskId || item.task?._id || item.task?.id,
           title: item.task?.subject || item.task?.title || item.task?.taskActivityName || '',
           type,
           status: item.status || item.task?.status || 'todo',
+          entity_status: item.task?.status || '',
           priority: item.task?.priority || TASK_PRIORITIES[idx % TASK_PRIORITIES.length],
           discipline: item.task?.discipline || TASK_DISCIPLINES[idx % TASK_DISCIPLINES.length],
-          task_code: `${type}-${String(item.taskId).padStart(3, '0')}`,
+          task_code: `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
           due_date: dueDate,
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,
           assignedBy: item.assignedBy,
           attachments: item.task?.attachments || [],
+          responses: item.responses || [],
           chat: [],
         })
       });
@@ -776,9 +820,9 @@ export default function Task() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex gap-6 min-w-min h-full">
-                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
                 </div>
 
                 <DragOverlay>
@@ -834,3 +878,4 @@ export default function Task() {
     </DashboardLayout>
   );
 }
+

@@ -24,7 +24,7 @@ export function usePermissions() {
   const { data: user, isLoading } = useCurrentUser();
 
   const projectCode = resolvePermissionCode(userRole ?? "");
-  const globalCode  = resolvePermissionCode(user?.role?.code ?? "");
+  const globalCode = resolvePermissionCode(user?.role?.code ?? "");
 
   const can = (permission: PermissionKey): boolean => {
     // While auth is loading, allow everything — RoleRoute handles the gate
@@ -36,17 +36,18 @@ export function usePermissions() {
   return {
     isLoading,
     can,
-    canViewCompliance:     can("viewCompliance"),
-    canViewFinance:        can("viewFinance"),
-    canViewAudit:          can("viewAudit"),
-    canViewProgramme:      can("viewProgramme"),
-    canEditTeamRoles:      can("editTeamRoles"),
-    canManageTeam:         can("manageTeam"),
-    canManageSettings:     can("manageSettings"),
-    canViewBilling:        can("viewBilling"),
+    canViewCompliance: can("viewCompliance"),
+    canViewFinance: can("viewFinance"),
+    canViewAudit: can("viewAudit"),
+    canViewProgramme: can("viewProgramme"),
+    canViewSettings: can("viewSettings"),
+    canEditTeamRoles: can("editTeamRoles"),
+    canManageTeam: can("manageTeam"),
+    canManageSettings: can("manageSettings"),
+    canViewBilling: can("viewBilling"),
     canManageIntegrations: can("manageIntegrations"),
-    canCreateProject:      can("createProject"),
-    canEditProject:        can("editProject"),
-    canCreateTasks:        can("createTasks"),
+    canCreateProject: can("createProject"),
+    canEditProject: can("editProject"),
+    canCreateTasks: can("createTasks"),
   };
 }

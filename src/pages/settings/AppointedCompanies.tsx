@@ -20,11 +20,13 @@ import {
   ShieldCheck,
   ShieldAlert,
   Paperclip,
+  Lock,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRoles } from "@/hooks/useRoles";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,7 @@ interface AppointedInviteEntry {
 }
 
 const AppointedCompanies = () => {
+  const { canManageTeam } = usePermissions();
   const queryClient = useQueryClient();
   const updateProjectMutation = useUpdateProject();
   const { roles: appRoles } = useRoles();
@@ -83,7 +86,7 @@ const AppointedCompanies = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId || !canManageTeam) return;
     const toInvite = appointedInvites.filter((e) => e.email.trim() && e.company_name.trim());
     if (toInvite.length === 0) {
       toast.info("No new companies to invite.");
@@ -159,15 +162,22 @@ const AppointedCompanies = () => {
             </div>
             <h1 className="text-3xl font-normal text-foreground tracking-tight">Appointed Companies</h1>
           </div>
-          {appointedInvites.length > 0 && (
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              <span className="font-normal">{isSaving ? "Inviting..." : "Send Invitations"}</span>
-            </Button>
+          {canManageTeam ? (
+            appointedInvites.length > 0 && (
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                <span className="font-normal">{isSaving ? "Inviting..." : "Send Invitations"}</span>
+              </Button>
+            )
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Read-only access</span>
+            </div>
           )}
         </div>
 
@@ -332,8 +342,8 @@ const AppointedCompanies = () => {
               </>
             ) : null}
 
-            {/* Invite forms */}
-            {appointedInvites.map((entry) => (
+            {/* Invite forms — only shown to users who can manage team */}
+            {canManageTeam && appointedInvites.map((entry) => (
               <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
                 <div className="flex items-center justify-end">
                   <button
@@ -446,20 +456,22 @@ const AppointedCompanies = () => {
               </div>
             ))}
 
-            {/* Add button */}
-            <button
-              type="button"
-              onClick={() =>
-                setAppointedInvites((prev) => [
-                  ...prev,
-                  { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "", insurance_file: null, insurance_expiry: "" },
-                ])
-              }
-              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
-            </button>
+            {/* Add button — only shown to users who can manage team */}
+            {canManageTeam && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAppointedInvites((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "", insurance_file: null, insurance_expiry: "" },
+                  ])
+                }
+                className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                {appointedInvites.length === 0 ? "Add Appointed Company" : "Add Another Company"}
+              </button>
+            )}
           </div>
         </div>
 

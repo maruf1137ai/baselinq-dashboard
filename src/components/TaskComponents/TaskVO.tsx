@@ -1,6 +1,6 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import CashIcon from "@/components/icons/CashIcon";
+// import { Card, CardContent } from "@/components/ui/card";
+// import CashIcon from "@/components/icons/CashIcon";
 
 interface TaskVOProps {
   formFields: any;
@@ -25,56 +25,76 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-border">
-        {/* Origin & Cause Section */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-medium text-foreground">Origin & Cause</h3>
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Discipline</label>
-              <p className="text-sm text-foreground">{formFields.discipline || "General"}</p>
+      {(formFields.discipline || formFields.cause || formFields.originatingDoc || formFields.impactDays || formFields.clauseRef || formFields.submittedDate) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-border">
+          {/* Origin & Cause Section */}
+          {(formFields.discipline || formFields.cause || formFields.originatingDoc) && (
+            <div className="space-y-4">
+              <h3 className="text-xs font-medium text-foreground">Origin & Cause</h3>
+              <div className="grid grid-cols-1 gap-3">
+                {formFields.discipline && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Discipline</label>
+                    <p className="text-sm text-foreground">{formFields.discipline}</p>
+                  </div>
+                )}
+                {formFields.cause && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Variation Cause</label>
+                    <p className="text-sm text-foreground">{formFields.cause}</p>
+                  </div>
+                )}
+                {formFields.originatingDoc && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Originating Document</label>
+                    <p className="text-sm text-primary cursor-pointer flex items-center gap-1">
+                      {formFields.originatingDoc}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Variation Cause</label>
-              <p className="text-sm text-foreground">{formFields.cause || "Client Instruction"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Originating Document</label>
-              <p className="text-sm text-primary cursor-pointer flex items-center gap-1">
-                {formFields.originatingDoc || "SI-042 (Structural Changes)"}
-              </p>
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* Impact Assessment Section */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-medium text-foreground">Impact Assessment</h3>
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Programme Impact</label>
-              <p className="text-sm text-foreground">{formFields.impactDays ? `${formFields.impactDays} days` : "5 days (Estimated)"}</p>
+          {/* Impact Assessment Section */}
+          {(formFields.impactDays || formFields.clauseRef || formFields.submittedDate) && (
+            <div className="space-y-4">
+              <h3 className="text-xs font-medium text-foreground">Impact Assessment</h3>
+              <div className="grid grid-cols-1 gap-3">
+                {formFields.impactDays && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Programme Impact</label>
+                    <p className="text-sm text-foreground">{formFields.impactDays} days</p>
+                  </div>
+                )}
+                {formFields.clauseRef && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Contract Clause Reference</label>
+                    <p className="text-sm text-foreground">{formFields.clauseRef}</p>
+                  </div>
+                )}
+                {formFields.submittedDate && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Submission Status</label>
+                    <p className="text-sm text-foreground">Submitted: {formFields.submittedDate}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Contract Clause Reference</label>
-              <p className="text-sm text-foreground">{formFields.clauseRef || "JBCC Clause 26.1"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground ">Submission Status</label>
-              <p className="text-sm text-foreground">Submitted: {formFields.submittedDate || "2024-02-15"}</p>
-            </div>
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
-      <div className="pt-4">
-        <label className="text-xs font-medium text-muted-foreground">
-          Full Description
-        </label>
-        <p className="text-sm text-muted-foreground leading-relaxed mt-2 whitespace-pre-wrap bg-muted p-4 rounded-lg border border-border">
-          {formFields.description}
-        </p>
-      </div>
+      {formFields.description && (
+        <div className="pt-4">
+          <label className="text-xs font-medium text-muted-foreground">
+            Full Description
+          </label>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-2 whitespace-pre-wrap bg-muted p-4 rounded-lg border border-border">
+            {formFields.description}
+          </p>
+        </div>
+      )}
 
       {lineItems.length > 0 && <>
         <h2 className="text-sm text-foreground mb-4 mt-8">Financial Breakdown</h2>
