@@ -636,61 +636,46 @@ export const uploadFileToPresignedUrl = async (
 };
 
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  res => res,
+  async error => {
     const originalRequest = error.config;
 
-    // If the refresh endpoint itself returned 401 → token is dead, logout immediately
-    if (
-      error.response?.status === 401 &&
-      originalRequest.url?.includes("auth/token/refresh/")
-    ) {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
-      window.location.href = "/login";
+    // If the request that failed WAS the refresh token request → logout immediately
+    if (originalRequest.url.includes('auth/token/refresh/')) {
+      localStorage.clear();
+      window.location.href = '/login';
       return Promise.reject(error);
     }
 
-    // If 401 and not retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle expired access → try refresh ONCE
+    // Skip for login endpoint - 401 there means wrong credentials, not expired token
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/user/login/')) {
       originalRequest._retry = true;
 
-      const refresh = localStorage.getItem("refresh");
-
-      // If no refresh → logout + redirect immediately
+      const refresh = localStorage.getItem('refresh');
       if (!refresh) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        window.location.href = "/login";
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(error);
       }
 
       try {
-        // Attempt refresh
-        const res = await api.post("auth/token/refresh/", { refresh });
+        const res = await api.post('auth/token/refresh/', { refresh });
         const newAccess = res.data.access;
 
-        if (!newAccess) {
-          localStorage.removeItem("access");
-          localStorage.removeItem("refresh");
-          window.location.href = "/login";
-          return Promise.reject(error);
-        }
-        // Save new access token
-        localStorage.setItem("access", newAccess);
+        localStorage.setItem('access', newAccess);
+        originalRequest.headers['Authorization'] = 'Bearer ' + newAccess;
 
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
         return api(originalRequest);
+
       } catch (refreshError) {
-        // Refresh failed → force logout + redirect
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        window.location.href = "/login";
+        // If refresh fails → logout gracefully
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
-  },
+  }
 );
