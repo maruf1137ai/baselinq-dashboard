@@ -40,10 +40,6 @@ export function DashboardHeader() {
     if (!item.isRead) {
       await markAsRead(item._id);
     }
-    if (item.link) {
-      setOpen(false);
-      navigate(item.link);
-    }
   };
 
   const handleMarkAllAsRead = async () => {
