@@ -92,9 +92,10 @@ interface TeamMember {
   projectId: string;
   userId: string;
   user: User;
-  roleName: string;
-  roleId: string;
-  roleInfo: Role;
+  roleName: string;       // Project role (used for permissions)
+  orgRoleName: string;    // Org/user role (display only)
+  orgRoleId: string;
+  orgRoleInfo: Role;
   discipline: string;
   isActive: boolean;
   addedBy: {
