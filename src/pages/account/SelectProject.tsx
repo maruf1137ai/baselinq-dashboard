@@ -117,7 +117,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
       if (seenCodes.has(r.code)) return false;
       seenCodes.add(r.code);
       return true;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   })();
 
   const totalSteps = accountType === "organisation" ? 4 : 3;
