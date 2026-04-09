@@ -557,13 +557,12 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "CPI") {
-        if (cpiProgress === 100) {
-          updateData.status = "Completed";
-        } else if (cpiRiskLevel === "High" || cpiRiskLevel === "Medium") {
-          updateData.status = "On Track / At Risk";
-        } else {
-          updateData.status = "In Progress";
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        if (['pending', 'draft', 'open', '', 'not started'].includes(currentStatusNorm)) {
+          updateData.status = "In Review";
+          updateData.statusCause = "Response submitted";
         }
+        // Creator counter-response does not change status — creator uses modal buttons instead
       }
 
       if (displayTask.type === "SI") {
@@ -949,8 +948,8 @@ export default function TaskDetails() {
             contractWindow: "7 days",
           },
           timeline: {
-            current: task.status || apiResponse.status || "Scheduled",
-            stages: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
+            current: task.status || apiResponse.status || "Pending",
+            stages: ["Pending", "In Review", "Approved", "Closed"],
           },
           impact: {
             time: task.duration ? `${task.duration} days` : "N/A",
@@ -2381,30 +2380,61 @@ export default function TaskDetails() {
               {/* Footer Actions — only visible to task creator */}
               {canApprove && (
                 <div className="p-4 border-t bg-muted/20 flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
-                    onClick={async () => {
-                      setSelectedResponse(null);
-                      setIsResponseModalOpen(false);
-                      await handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1]);
-                    }}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Close Proposal
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
-                    onClick={async () => {
-                      setSelectedResponse(null);
-                      setIsResponseModalOpen(false);
-                      await handleApproveTask('Rejected');
-                    }}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Reject Proposal
-                  </Button>
+                  {displayTask.type === "CPI" ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Approved');
+                        }}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Closed');
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Close
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1]);
+                        }}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Close Proposal
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all font-normal gap-2"
+                        onClick={async () => {
+                          setSelectedResponse(null);
+                          setIsResponseModalOpen(false);
+                          await handleApproveTask('Rejected');
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject Proposal
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
 
