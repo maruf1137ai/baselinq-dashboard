@@ -20,6 +20,6 @@ export function useRoles() {
     seenCodes.add(r.code);
     seenNames.add(nameKey);
     return true;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
   return { roles, isLoading };
 }
