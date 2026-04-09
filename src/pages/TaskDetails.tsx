@@ -1707,9 +1707,9 @@ export default function TaskDetails() {
                     {canApprove && (
                       <Button
                         className="font-normal"
-                        onClick={() => handleApproveTask('Approved')}
-                        disabled={["Approved", "Completed"].includes(displayTask.timeline.current)}>
-                        {["Approved", "Completed"].includes(displayTask.timeline.current) ? "Approved" : "Approve"}
+                        onClick={() => handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1])}
+                        disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
+                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1] ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1] : "Approve"}
                       </Button>
                     )}
 
@@ -2358,7 +2358,7 @@ export default function TaskDetails() {
                     onClick={async () => {
                       setSelectedResponse(null);
                       setIsResponseModalOpen(false);
-                      await handleApproveTask('Approved');
+                      await handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1]);
                     }}
                   >
                     <CheckCircle2 className="w-4 h-4" />
