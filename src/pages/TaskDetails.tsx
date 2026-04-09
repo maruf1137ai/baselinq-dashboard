@@ -530,10 +530,20 @@ export default function TaskDetails() {
         }
       }
 
-      if (displayTask.type === "RFI" && rfiResponseStatus) {
-        if (rfiResponseStatus === "clarification_provided") updateData.status = "Response Provided";
-        if (rfiResponseStatus === "further_info_required") updateData.status = "Further Info Required";
-        if (rfiResponseStatus === "as_per_drawing") updateData.status = "Closed";
+      // RFI Decision Timeline: automatic status transitions
+      if (displayTask.type === "RFI") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        if (currentStatusNorm === 'draft' || currentStatusNorm === '' || currentStatusNorm === 'pending') {
+          // Any user submits first response → Sent for Review
+          updateData.status = "Sent for Review";
+          updateData.statusCause = "Response submitted";
+        } else if (isCreator && currentStatusNorm === 'furtherinforequired') {
+          // Creator submits counter-response → Response Provided
+          updateData.status = "Response Provided";
+          const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+          updateData.statusCause = `Response provided by ${creatorName}`;
+        }
       }
 
       if (displayTask.type === "DC" && dcExtensionGranted) {
@@ -1281,7 +1291,7 @@ export default function TaskDetails() {
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
-                    ? "Answer Composer"
+                    ? "Response"
                     : displayTask.type === "SI"
                       ? "Acknowledgment & Response"
                       : displayTask.type === "VO"
@@ -1750,13 +1760,22 @@ export default function TaskDetails() {
                             onClick={() => {
                               setSelectedResponse(resp);
                               setIsResponseModalOpen(true);
-                              // VO: Creator clicking a response while status is Submitted → Under Review
+                              // VO: Creator clicking a response while Submitted → Under Review
                               if (displayTask?.type === "VO") {
                                 const isCreator = String(displayTask.creator?.id) === String(user?.id);
                                 const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
                                 if (isCreator && currentStatusNorm === 'submitted') {
                                   const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
                                   updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
+                                }
+                              }
+                              // RFI: Creator clicking a response while Sent for Review → Further Info Required
+                              if (displayTask?.type === "RFI") {
+                                const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                                const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                                if (isCreator && currentStatusNorm === 'sentforreview') {
+                                  const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+                                  updateTask({ status: "Further Info Required", statusCause: `Reviewed by ${creatorName}` });
                                 }
                               }
                             }}
