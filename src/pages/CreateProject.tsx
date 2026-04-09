@@ -1740,24 +1740,6 @@ export default function CreateProject() {
                             These members will be given predetermined access rights to the project.
                           </p>
                           <div className="space-y-3">
-                            {invitedPersonnelList.map((person, i) => (
-                              <div key={i} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
-                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center shrink-0">
-                                  <User className="w-4 h-4 text-[#6c5ce7]" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[13px] font-normal text-[#111827] truncate">{person.name || person.email}</p>
-                                  <p className="text-[11px] text-[#9ca3af] truncate">{person.email}</p>
-                                </div>
-                                <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0">Invited</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
-                                  className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
                             {clientPersonnelList.map((entry) => (
                               <OrgPersonnelSelectCard
                                 key={entry.id}
@@ -1782,6 +1764,24 @@ export default function CreateProject() {
                                 <span className="font-normal">Add User</span>
                               </button>
                             )}
+                            {invitedPersonnelList.map((person, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
+                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center shrink-0">
+                                  <User className="w-4 h-4 text-[#6c5ce7]" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] font-normal text-[#111827] truncate">{person.name || person.email}</p>
+                                  <p className="text-[11px] text-[#9ca3af] truncate">{person.email}</p>
+                                </div>
+                                <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0">Invited</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
+                                  className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
                             <button
                               type="button"
                               onClick={() => setShowInvitePersonnelModal(true)}
