@@ -656,6 +656,15 @@ export default function TaskDetails() {
         // }),
       ]);
       toast.success("Task approved successfully");
+      // Optimistically update local state so timeline reflects immediately
+      setCurrentTask((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          task: { ...(prev.task || {}), status },
+          status,
+        };
+      });
       await refetchTask();
       await refetchAuditLogs();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
