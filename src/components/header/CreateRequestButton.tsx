@@ -61,19 +61,26 @@ const btns = [
 const ALL_TASK_TYPES = ["SI", "VO", "RFI", "CPI", "GI", "DC"];
 
 // Role to document type mapping - keys are standardized backbone codes
+// Exact match with backend permission matrix
 const rolePermissions: Record<string, string[]> = {
-  CLIENT: ALL_TASK_TYPES,
-  CPM: ALL_TASK_TYPES,
-  ARCH: ["VO", "SI"],
-  CQS: ["VO"],
-  CONS_PLANNER: ["CPI", "DC"],
-  CM: ["RFI", "SI", "DC", "CPI"],
-  CONTRACTS_MGR: ["VO", "DC"],
-  PLANNER: ["CPI", "DC"],
-  SE: ["RFI"],
-  SS: ["RFI", "SI"],
-  FOREMAN: ["RFI"],
-  PM: ["SI", "DC", "CPI"],
+  CLIENT: ALL_TASK_TYPES,                      // Client/Owner - can create all tasks
+  CPM: ["VO"],                                 // Client Project Manager - VO only
+  ARCH: ["SI", "VO"],                          // Architect - SI, VO
+  PM: ["SI", "RFI", "CPI", "DC"],              // Project Manager - SI, RFI, CPI, DC
+  PRINCIPAL_PM: ["SI", "CPI", "DC"],           // Principal/PM - SI, CPI, DC
+  CM: ["SI", "RFI", "CPI", "DC"],              // Construction Manager - SI, RFI, CPI, DC
+  CONTRACTS_MGR: ["SI", "DC"],                 // Contracts Manager - SI, DC
+  SE: ["SI", "RFI"],                           // Site Engineer - SI, RFI
+  SS: ["RFI"],                                 // Site Supervisor - RFI only
+  FOREMAN: ["RFI"],                            // Foreman - RFI only
+  CQS: ["DC"],                                 // Consultant QS - DC only
+  QS: ["DC"],                                  // Quantity Surveyor - DC only
+  PLANNER: ["CPI", "DC"],                      // Planning Engineer - CPI, DC
+  CONS_PLANNER: ["CPI"],                       // Consultant Planning Engineer - CPI only
+  MECH_ENG: ["RFI"],                           // Mechanical Engineer - RFI only
+  ELEC_ENG: ["RFI"],                           // Electrical Engineer - RFI only
+  STRUCT_ENG: ["RFI"],                         // Structural Engineer - RFI only
+  ADMIN: ALL_TASK_TYPES,                       // Administrator - can create all tasks (resolves to CLIENT)
 };
 
 
