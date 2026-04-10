@@ -72,9 +72,9 @@ const btns = [
 const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
 
 // Role to document type mapping - keys are standardized backbone codes
-// Exact match with backend permission matrix
+// Exact match with provided permission matrix
 const rolePermissions: Record<string, string[]> = {
-  CLIENT: ALL_TASK_TYPES,                      // Client/Owner - can create all tasks
+  CLIENT: ["SI", "VO", "RFI"],                 // Client/Owner - can create SI, VO, RFI only
   CPM: ["VO"],                                 // Client Project Manager - VO only
   ARCH: ["SI", "VO"],                          // Architect - SI, VO
   PM: ["SI", "RFI", "CPI", "DC"],              // Project Manager - SI, RFI, CPI, DC
@@ -83,7 +83,7 @@ const rolePermissions: Record<string, string[]> = {
   CONTRACTS_MGR: ["SI", "DC"],                 // Contracts Manager - SI, DC
   SE: ["SI", "RFI"],                           // Site Engineer - SI, RFI
   SS: ["RFI"],                                 // Site Supervisor - RFI only
-  FOREMAN: ["RFI"],                            // RFI only
+  FOREMAN: ["RFI"],                            // Foreman - RFI only
   CQS: ["DC"],                                 // Consultant QS - DC only
   QS: ["DC"],                                  // Quantity Surveyor - DC only
   PLANNER: ["CPI", "DC"],                      // Planning Engineer - CPI, DC
@@ -91,7 +91,7 @@ const rolePermissions: Record<string, string[]> = {
   MECH_ENG: ["RFI"],                           // Mechanical Engineer - RFI only
   ELEC_ENG: ["RFI"],                           // Electrical Engineer - RFI only
   STRUCT_ENG: ["RFI"],                         // Structural Engineer - RFI only
-  ADMIN: ALL_TASK_TYPES,                       // Administrator - can create all tasks (resolves to CLIENT)
+  ADMIN: ALL_TASK_TYPES,                       // Administrator - can create all tasks
 };
 
 // Timeline stages per task type — used to map board columns to entity status
