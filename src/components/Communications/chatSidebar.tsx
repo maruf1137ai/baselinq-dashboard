@@ -41,7 +41,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
       <div className="p-3">
         {open && (
           <>
-            <button className="w-full rounded-lg flex items-center justify-center h-10 bg-white border border-border text-foreground text-sm font-medium gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
+            <button className="w-full rounded-lg flex items-center justify-center h-10 bg-white border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
               <Plus className="h-4 w-4" />New Message
             </button>
             <div className="relative mb-4">
@@ -85,10 +85,10 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                   >
                     {/* Header Row: ID/Title and Status */}
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-medium text-primary">
+                      <span className="text-xs font-normal text-primary">
                         {displayId || "--"}
                       </span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${status === 'Done' ? 'bg-green-50 text-green-700' : 'bg-muted text-muted-foreground'
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${['Done', 'Approved', 'Completed', 'Closed', 'Verified', 'Acknowledged', 'EOT Awarded'].includes(status) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
                         }`}>
                         {status}
                       </span>
@@ -106,7 +106,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                       </div>
 
                       {count > 0 && (
-                        <div className="absolute top-2 right-2 flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-primary rounded-full text-white text-xs font-medium">
+                        <div className="absolute top-2 right-2 flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-primary rounded-full text-white text-xs font-normal">
                           {count}
                         </div>
                       )}

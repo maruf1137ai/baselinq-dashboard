@@ -198,6 +198,14 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
               </tbody>
             </table>
           </div>
+
+          {/* Time Impact */}
+          {formFields.voTimeImpact != null && formFields.voTimeImpact !== "" && (
+            <div className="flex items-center justify-between mt-3 px-4 py-3 bg-muted/50 rounded-lg border border-border">
+              <span className="text-xs font-medium text-muted-foreground">Time Impact</span>
+              <span className="text-sm text-foreground">{formFields.voTimeImpact} {Number(formFields.voTimeImpact) === 1 ? "day" : "days"}</span>
+            </div>
+          )}
         </div>
       </>}
 

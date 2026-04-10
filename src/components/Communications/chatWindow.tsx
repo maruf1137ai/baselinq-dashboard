@@ -396,12 +396,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         {/* Breadcrumb & Header */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
-            <div className="text-xs text-gray-500 font-medium breadcrumb flex items-center gap-1">
+            <div className="text-xs text-gray-500 font-normal breadcrumb flex items-center gap-1">
               <span>{projectName}</span>
               <ChevronRight className="w-3 h-3 text-gray-400" />
               <span>Communications</span>
               <ChevronRight className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-900 font-medium">{displayId}</span>
+              <span className="text-gray-900 font-normal">{displayId}</span>
             </div>
           </div>
           {contextData && (
@@ -419,7 +419,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         {showContext && contextData && (
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-sm font-medium text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
+              <h3 className="text-sm font-normal text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
                 {contextData.title}
               </h3>
               <div className="flex gap-2 shrink-0">
@@ -442,7 +442,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 <div className="flex items-start gap-2">
                   <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-[10px] text-gray-500 font-medium">Due Date</p>
+                    <p className="text-[10px] text-gray-500 font-normal">Due Date</p>
                     <p className="text-xs text-gray-900">{formatDate(contextData.dueDate)}</p>
                   </div>
                 </div>
@@ -452,8 +452,8 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 <div className="flex items-start gap-2">
                   <DollarSign className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-[10px] text-gray-500 font-medium">Cost Impact</p>
-                    <p className="text-xs text-gray-900 font-medium">{(contextData as any).cost}</p>
+                    <p className="text-[10px] text-gray-500 font-normal">Cost Impact</p>
+                    <p className="text-xs text-gray-900 font-normal">{(contextData as any).cost}</p>
                   </div>
                 </div>
               )}
@@ -462,7 +462,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 <div key={i} className={`flex items-start gap-2 ${detail.fullWidth ? 'col-span-2' : ''}`}>
                   <div className="w-3.5 shrink-0" /> {/* Spacer for alignment */}
                   <div>
-                    <p className="text-[10px] text-gray-500 font-medium">{detail.label}</p>
+                    <p className="text-[10px] text-gray-500 font-normal">{detail.label}</p>
                     <p className="text-xs text-gray-900 line-clamp-1" title={detail.value}>{detail.value}</p>
                   </div>
                 </div>
@@ -473,13 +473,13 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
 
         {/* Task Completed Banner */}
         {isTaskCompleted && (
-          <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 animate-in slide-in-from-top-1 duration-300">
-            <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
+          <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-in slide-in-from-top-1 duration-300">
+            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-[12px] font-semibold text-green-800 leading-none">Task Completed</p>
-              <p className="text-[11px] text-green-600 mt-0.5">This task has been marked as complete.</p>
+              <p className="text-[12px] font-normal text-primary leading-none">Task Completed</p>
+              <p className="text-[11px] text-primary/70 mt-0.5">This task has been marked as complete.</p>
             </div>
           </div>
         )}
@@ -503,7 +503,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                   <MessageSquare className="h-7 w-7 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium text-[#101828] text-center">
+                <p className="text-sm font-normal text-[#101828] text-center">
                   {channel.name || displayId}
                 </p>
                 <p className="text-xs text-[#9CA3AF] mt-1">
@@ -535,14 +535,14 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                   if (isCompletion) {
                     return (
                       <div key={msg.id} className="w-full self-center py-2 px-2">
-                        <div className="mx-auto max-w-sm rounded-xl border border-green-200 bg-green-50 overflow-hidden shadow-sm">
-                          <div className="flex items-center gap-2 bg-green-600 px-4 py-2">
+                        <div className="mx-auto max-w-sm rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm">
+                          <div className="flex items-center gap-2 bg-primary px-4 py-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
-                            <span className="text-[11px] font-semibold text-white uppercase tracking-wider">Task Completed</span>
+                            <span className="text-[11px] font-normal text-white uppercase tracking-wider">Task Completed</span>
                           </div>
                           <div className="px-4 py-3 text-center">
-                            <p className="text-[12px] text-green-800 leading-relaxed">{cleanContent}</p>
-                            <p className="text-[10px] text-green-500 mt-1.5">{msg.timestamp}</p>
+                            <p className="text-[12px] text-foreground leading-relaxed">{cleanContent}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">{msg.timestamp}</p>
                           </div>
                         </div>
                       </div>
@@ -614,14 +614,14 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                           {isAI ? (
                             <Sparkles className="w-4 h-4 text-primary" />
                           ) : (
-                            <span className="text-white text-sm font-medium">{senderInitial}</span>
+                            <span className="text-white text-sm font-normal"> {senderInitial} </span>
                           )}
                         </div>
                         <div className="flex-1">
                           {/* Sender Name */}
                           <p className="text-muted-foreground text-xs mb-1 capitalize flex items-center gap-1.5">
                             {msg.sender_name}
-                            {isAI && <span className="text-primary text-[10px] font-medium">AI</span>}
+                            {isAI && <span className="text-primary text-[10px] font-normal">AI</span>}
                           </p>
                           {/* Message Box */}
                           <div className={`relative rounded-xl py-2.5 px-4 ${isAI ? 'bg-primary/5 border-l-2 border-primary/30' : 'bg-sidebar'}`}>

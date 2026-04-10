@@ -271,7 +271,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       <span
                         className={cn(
                           "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                          i === currentStageIndex && "text-foreground font-medium"
+                          i === currentStageIndex && "text-foreground font-normal"
                         )}>
                         {stage}
                       </span>
@@ -285,18 +285,18 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
         {/* Impact Summary */}
         {/* <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-          <h3 className="text-xs font-medium text-muted-foreground mb-4">
+          <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Impact Summary
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Clock className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs text-blue-700 font-medium">
+                <span className="text-xs text-blue-700 font-normal">
                   Requested
                 </span>
               </div>
-              <div className="text-2xl font-medium text-blue-900">
+              <div className="text-2xl font-normal text-blue-900">
                 {taskData?.daysRequested || "5"}
                 <span className="text-sm font-normal">d</span>
               </div>
@@ -304,11 +304,11 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-                <span className="text-xs text-green-700 font-medium">
+                <span className="text-xs text-green-700 font-normal">
                   Approved
                 </span>
               </div>
-              <div className="text-2xl font-medium text-green-900">
+              <div className="text-2xl font-normal text-green-900">
                 {taskData?.approvedDays || "0"}
                 <span className="text-sm font-normal">d</span>
               </div>
@@ -318,7 +318,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
         {/* Claim Details */}
         {/* <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-          <h3 className="text-xs font-medium text-muted-foreground mb-4">
+          <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Claim Details
           </h3>
           <div className="space-y-5">
@@ -348,12 +348,12 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
         {/* Status & Actions */}
         <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-          <h3 className="text-xs font-medium text-muted-foreground mb-4">
+          <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Actions
           </h3>
           <div className="space-y-3">
             {/* <Badge
-            className={`${getStatusColor(taskData?.status || "Under Review")} border px-3 py-1.5 text-xs font-medium w-full justify-center`}>
+            className={`${getStatusColor(taskData?.status || "Under Review")} border px-3 py-1.5 text-xs font-normal w-full justify-center`}>
             {taskData?.status || "Under Review"}
           </Badge> */}
 
@@ -400,7 +400,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   const renderRFIContent = () => (
     <>
       <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-        <h3 className="text-xs font-medium text-muted-foreground mb-4">
+        <h3 className="text-xs font-normal text-muted-foreground mb-4">
           RFI Information
         </h3>
         <div className="space-y-3">
@@ -420,7 +420,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
       </Card>
 
       <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-        <h3 className="text-xs font-medium text-muted-foreground mb-4">
+        <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Response Status
         </h3>
         <div className="space-y-2">
@@ -445,7 +445,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   const renderSIContent = () => (
     <>
       <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-        <h3 className="text-xs font-medium text-muted-foreground mb-4">
+        <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Instruction Details
         </h3>
         <div className="space-y-3">
@@ -480,7 +480,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   const renderVOContent = () => (
     <>
       <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
-        <h3 className="text-xs font-medium text-muted-foreground mb-4">
+        <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Variation Order Summary
         </h3>
         <div className="space-y-3">
@@ -492,13 +492,13 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-700 mb-1">Cost Impact</p>
-            <p className="text-xl font-medium text-blue-900">
+            <p className="text-xl font-normal text-blue-900">
               {taskData?.impact?.cost || "R 0"}
             </p>
           </div>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
             <p className="text-xs text-amber-700 mb-1">Time Impact</p>
-            <p className="text-xl font-medium text-amber-900">
+            <p className="text-xl font-normal text-amber-900">
               {taskData?.impact?.time || "0 days"}
             </p>
           </div>
@@ -553,8 +553,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                         {chips && chips.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {chips.map((name, idx) => (
-                              <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-medium">
-                                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
+                              <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
+                                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-normal shrink-0">
                                   {name.charAt(0).toUpperCase()}
                                 </span>
                                 {name}
@@ -569,7 +569,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                             const name = detail.slice(byIdx + 4);
                             return (
                               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                {before}<span className="font-medium text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
+                                {before}<span className="font-normal text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
                               </p>
                             );
                           }

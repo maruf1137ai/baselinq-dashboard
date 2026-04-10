@@ -89,9 +89,9 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="py-4 px-6 border-b border-[#DEDEDE]">
-        <h2 className="text-base font-medium text-[#101828]">Task Context</h2>
+        <h2 className="text-base font-normal text-[#101828]">Task Context</h2>
         <div className="flex items-center gap-2 mt-2">
-          <Badge variant="outline" className={`${getStatusColor(status)} border px-2.5 py-0.5 rounded-full text-xs font-medium`}>
+          <Badge variant="outline" className={`${getStatusColor(status)} border px-2.5 py-0.5 rounded-full text-xs font-normal`}>
             {status}
           </Badge>
           <span className="text-xs text-gray-500 flex items-center gap-1">
@@ -108,7 +108,7 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
             <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
               <Tag className="w-3 h-3" /> Priority
             </div>
-            <div className="text-sm font-medium text-gray-900">{priority || "Normal"}</div>
+            <div className="text-sm font-normal text-gray-900">{priority || "Normal"}</div>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
             <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
@@ -127,7 +127,7 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
 
         {/* Description */}
         <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
+          <h3 className="text-sm font-normal text-gray-900 mb-2">Description</h3>
           <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
             {isLoading ? "Loading details..." : description}
           </p>

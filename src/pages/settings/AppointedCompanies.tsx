@@ -29,8 +29,8 @@ import {
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRoles } from "@/hooks/useRoles";
 import { usePermissions } from "@/hooks/usePermissions";
+import { COMPANY_TYPES } from "@/lib/roleUtils";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,6 @@ const AppointedCompanies = () => {
   const { canManageTeam } = usePermissions();
   const queryClient = useQueryClient();
   const updateProjectMutation = useUpdateProject();
-  const { roles: appRoles } = useRoles();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { isLoading } = useProject(selectedProjectId ?? undefined);
 
@@ -117,9 +116,10 @@ const AppointedCompanies = () => {
           return inviteAppointedCompany({
             project_id: selectedProjectId,
             company_name: entry.company_name,
+            company_type: entry.company_type,
             contact_name: entry.contact_name,
             contact_email: entry.email,
-            position: entry.position || "architect",
+            position: entry.position || '',
             insurance_s3_key,
             insurance_file_name,
             insurance_expiry: entry.insurance_expiry || undefined,
@@ -476,15 +476,15 @@ const AppointedCompanies = () => {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Professional Role</label>
+                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
                     <select
-                      value={entry.position}
-                      onChange={(e) => updateInvite(entry.id, { position: e.target.value })}
+                      value={entry.company_type}
+                      onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
                       className={SELECT_CLS}
                     >
-                      <option value="">Select role...</option>
-                      {appRoles.map((r) => (
-                        <option key={r.code} value={r.code}>{r.name}</option>
+                      <option value="">Select type...</option>
+                      {COMPANY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
                   </div>

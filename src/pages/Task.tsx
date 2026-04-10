@@ -202,11 +202,17 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
   const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
   const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
-  const canDrag = true;
+
+  // Tasks in a terminal state are locked — not draggable
+  const TERMINAL_STATUSES = ['approved', 'closed', 'eot awarded', 'completed', 'acknowledged', 'done'];
+  const taskStatusNorm = (task.status || '').toLowerCase().trim();
+  const entityStatusNorm = (task.entityStatus || task.entity_status || '').toLowerCase().trim();
+  const isLocked = TERMINAL_STATUSES.includes(taskStatusNorm) || TERMINAL_STATUSES.includes(entityStatusNorm);
+  const canDrag = !isLocked;
 
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: task.id,
-    disabled: false,
+    disabled: isLocked,
   });
   const navigate = useNavigate();
 
@@ -271,12 +277,12 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             'border border-border';
 
   const content = (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-3">
+    <div ref={setNodeRef} style={style} {...attributes} {...(isLocked ? {} : listeners)} className="mb-3">
       <Card
         onClick={() => navigate(`/tasks/${task.id}`)}
         className={`bg-sidebar rounded-xl shadow-none transition-shadow overflow-hidden
           ${cardBorder}
-          ${canDrag ? 'cursor-move hover:shadow-md' : 'cursor-default hover:shadow-sm'}`}
+          ${canDrag ? 'cursor-move hover:shadow-md' : 'cursor-default hover:shadow-sm opacity-80'}`}
       >
         <div className="p-3 space-y-2">
           {/* Row 1: doc type ID + priority badge + status */}
@@ -734,6 +740,13 @@ export default function Task() {
 
     const activeContainer = findContainer(active.id);
     const overContainer = findContainer(over.id);
+
+    // Prevent dragging out of the "done" column — locked tasks stay locked
+    if (activeContainer === 'done') {
+      setActiveId(null);
+      setActiveStartContainer(null);
+      return;
+    }
 
     if (!activeContainer || !overContainer) {
       setActiveId(null);

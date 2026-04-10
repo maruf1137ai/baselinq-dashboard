@@ -74,6 +74,9 @@ import {
   Plus,
   Trash2,
   Calendar as CalendarIcon,
+  Lock as LockIcon,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -377,6 +380,7 @@ export default function TaskDetails() {
   const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
   const [showAiChat, setShowAiChat] = useState<boolean>(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showPricingResponse, setShowPricingResponse] = useState(false);
 
 
   // Fetch project team members for assign modal
@@ -1143,6 +1147,13 @@ export default function TaskDetails() {
 
   const canApprove = !!user && !!displayTask && String(displayTask.creator?.id) === String(user?.id);
 
+  // Task is locked (read-only) once it reaches the final stage — no further responses or edits allowed
+  const isTaskLocked = !!displayTask && (() => {
+    const stages: string[] = displayTask.timeline?.stages || [];
+    const current: string = displayTask.timeline?.current || '';
+    return stages.length > 0 && current === stages[stages.length - 1];
+  })();
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -1237,62 +1248,53 @@ export default function TaskDetails() {
     <DashboardLayout padding="p-0">
 
       {/* ── VO Approve Confirmation Modal ── */}
-      {showApproveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            {/* Header */}
-            <div className="bg-primary px-6 py-5">
-              <h2 className="text-base font-semibold text-white">Approve Variation Order</h2>
-              <p className="text-[12px] text-white/70 mt-0.5">{displayTask?.title || "Variation Order"}</p>
-            </div>
+      <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
+        <DialogContent className="bg-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-normal">Approve Variation Order</DialogTitle>
+            <DialogDescription>{displayTask?.title || "Variation Order"}</DialogDescription>
+          </DialogHeader>
 
-            {/* Body */}
-            <div className="px-6 py-5 space-y-4">
-              <p className="text-sm text-foreground leading-relaxed">
-                You are about to <strong>approve</strong> this Variation Order. Once approved:
-              </p>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  The agreed amount will be recorded in the project cost ledger.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  The Variation Order status will be set to <strong>Approved</strong> and closed.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  All assigned parties will be notified of the approval.
-                </li>
-              </ul>
-              <p className="text-[12px] text-muted-foreground border border-border rounded-lg px-3 py-2 bg-muted">
-                This action cannot be undone. Please confirm you have reviewed the priced response before proceeding.
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="flex gap-3 px-6 pb-6">
-              <Button
-                variant="outline"
-                className="flex-1 font-normal"
-                onClick={() => setShowApproveModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 font-normal bg-primary text-white hover:bg-primary/90"
-                onClick={async () => {
-                  setShowApproveModal(false);
-                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                  await handleApproveTask(lastStage);
-                }}
-              >
-                Approve VO
-              </Button>
-            </div>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-foreground leading-relaxed">
+              You are about to approve this Variation Order. Once approved:
+            </p>
+            <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2.5">
+                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                The agreed amount will be recorded in the project cost ledger.
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                The Variation Order status will be set to Approved.
+              </li>
+              {/* <li className="flex items-start gap-2.5">
+                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                All assigned parties will be notified of the approval.
+              </li> */}
+            </ul>
+            <p className="text-xs text-muted-foreground border border-border rounded-lg px-3 py-2.5 bg-muted">
+              This action cannot be undone. Please confirm you have reviewed the priced response before proceeding.
+            </p>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="font-normal" onClick={() => setShowApproveModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="font-normal bg-primary text-white hover:bg-primary/90"
+              onClick={async () => {
+                setShowApproveModal(false);
+                const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
+                await handleApproveTask(lastStage);
+              }}
+            >
+              Approve VO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="min-h-screen">
         <div className="">
@@ -1396,7 +1398,7 @@ export default function TaskDetails() {
                             <Tooltip key={assignee.userId || index}>
                               <TooltipTrigger asChild>
                                 <div
-                                  className="h-8 w-8 rounded-full bg-[#8081F6] border-2 border-white flex items-center justify-center text-white text-xs font-medium cursor-pointer"
+                                  className="h-8 w-8 rounded-full bg-[#8081F6] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer"
                                   style={{ marginLeft: index > 0 ? "-8px" : "0" }}
                                 >
                                   {assignee.name?.charAt(0).toUpperCase() || "U"}
@@ -1462,8 +1464,23 @@ export default function TaskDetails() {
                 </div> */}
               </Card>
 
+              {/* Locked banner — shown when task is at final stage */}
+              {isTaskLocked && (
+                <Card className="p-6 shadow-none bg-white rounded-lg border-border">
+                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <LockIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-normal text-foreground">Task Locked</p>
+                      <p className="text-xs text-muted-foreground mt-1">This task has been approved and is now closed. No further responses or edits are allowed.</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Creator status card — no responses yet */}
-              {canApprove && !(displayTask.responses?.length > 0) && (
+              {!isTaskLocked && canApprove && !(displayTask.responses?.length > 0) && (
                 <Card className="p-6 shadow-none bg-white rounded-lg border-border">
                   <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
                     <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
@@ -1471,15 +1488,15 @@ export default function TaskDetails() {
                     </div>
                     <div>
                       <p className="text-sm font-normal text-foreground">Awaiting Response</p>
-                      <p className="text-xs text-muted-foreground mt-1">The assigned team member hasn't submitted a response yet. You'll be notified once they do.</p>
+                      <p className="text-xs text-muted-foreground mt-1">The assigned member has not submitted a response yet. You will be notified once they do.</p>
                     </div>
                   </div>
                 </Card>
               )}
 
 
-              {/* Response Form — hidden for creator until a response exists */}
-              {(!canApprove || displayTask.responses?.length > 0) && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
+              {/* Response Form — hidden when locked, hidden for creator until a response exists */}
+              {!isTaskLocked && (!canApprove || displayTask.responses?.length > 0) && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
                     ? "Response"
@@ -1500,157 +1517,172 @@ export default function TaskDetails() {
 
                 {/* Structured Pricing Response Fields - Only for VO non-creators */}
                 {displayTask.type === "VO" && !canApprove && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border">
+                  <div className="mb-6 pb-6 border-b border-border">
+                    {(displayTask.responses?.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPricingResponse(!showPricingResponse)}
+                        className="w-full flex items-center justify-between py-2 text-sm font-normal text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <span>{showPricingResponse ? "Hide Pricing Response" : "Add Pricing Response"}</span>
+                        {showPricingResponse ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    )}
 
-                    {/* Line Items */}
-                    <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">Line Items</label>
+                    {(!displayTask.responses?.length || showPricingResponse) && (
+                      <div className="space-y-4 mt-3">
 
-                      {/* Desktop table — hidden on mobile */}
-                      <div className="hidden sm:block border border-border rounded-lg overflow-hidden">
-                        <table className="w-full">
-                          <thead className="bg-muted border-b border-border">
-                            <tr>
-                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2 w-6">#</th>
-                              <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2">Description</th>
-                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Qty</th>
-                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Rate (R)</th>
-                              <th className="text-right text-xs font-medium text-muted-foreground px-3 py-2 w-24">Amount</th>
-                              <th className="w-8 px-2 py-2" />
-                            </tr>
-                          </thead>
-                          <tbody>
+                        {/* Line Items */}
+                        <div>
+                          <label className="text-xs font-normal text-muted-foreground block mb-2">Line Items</label>
+
+                          {/* Desktop table — hidden on mobile */}
+                          <div className="hidden sm:block border border-border rounded-lg overflow-hidden">
+                            <table className="w-full">
+                              <thead className="bg-muted border-b border-border">
+                                <tr>
+                                  <th className="text-left text-xs font-normal text-muted-foreground px-3 py-2 w-6">#</th>
+                                  <th className="text-left text-xs font-normal text-muted-foreground px-3 py-2">Description</th>
+                                  <th className="text-right text-xs font-normal text-muted-foreground px-3 py-2 w-24">Qty</th>
+                                  <th className="text-right text-xs font-normal text-muted-foreground px-3 py-2 w-24">Rate (R)</th>
+                                  <th className="text-right text-xs font-normal text-muted-foreground px-3 py-2 w-24">Amount</th>
+                                  <th className="w-8 px-2 py-2" />
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {voLineItems.map((item, idx) => {
+                                  const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+                                  return (
+                                    <tr key={item.id} className="border-b border-border last:border-0">
+                                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
+                                      <td className="px-2 py-1">
+                                        <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
+                                      </td>
+                                      <td className="px-2 py-1">
+                                        <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                      </td>
+                                      <td className="px-2 py-1">
+                                        <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                      </td>
+                                      <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
+                                      <td className="px-2 py-1.5">
+                                        {voLineItems.length > 1 && (
+                                          <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-muted/50 border-t border-border">
+                                  <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">Subtotal</td>
+                                  <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voSubtotal)}</td>
+                                  <td />
+                                </tr>
+                                <tr className="bg-muted/50">
+                                  <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">VAT (15%)</td>
+                                  <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voVat)}</td>
+                                  <td />
+                                </tr>
+                                <tr className="bg-[#1B1C1F]">
+                                  <td colSpan={4} className="px-3 py-2 text-xs font-normal text-white text-right">Total</td>
+                                  <td className="px-3 py-2 text-sm text-right text-white font-normal">{formatVOCurrency(voTotal)}</td>
+                                  <td />
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+
+                          {/* Mobile cards — shown only on small screens */}
+                          <div className="sm:hidden border border-border rounded-lg overflow-hidden divide-y divide-border">
                             {voLineItems.map((item, idx) => {
                               const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
                               return (
-                                <tr key={item.id} className="border-b border-border last:border-0">
-                                  <td className="px-3 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
-                                  <td className="px-2 py-1">
-                                    <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
-                                  </td>
-                                  <td className="px-2 py-1">
-                                    <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
-                                  </td>
-                                  <td className="px-2 py-1">
-                                    <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
-                                  </td>
-                                  <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
-                                  <td className="px-2 py-1.5">
+                                <div key={item.id} className="p-3 bg-white">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}</span>
+                                    <input
+                                      className="flex-1 text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                      placeholder="Item description"
+                                      value={item.description}
+                                      onChange={e => updateVoItem(item.id, "description", e.target.value)}
+                                    />
                                     {voLineItems.length > 1 && (
-                                      <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                                      <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     )}
-                                  </td>
-                                </tr>
+                                  </div>
+                                  <div className="flex items-center gap-2 pl-6">
+                                    <div className="flex-1">
+                                      <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
+                                      <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
+                                      <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                    </div>
+                                    <div className="flex-1 text-right">
+                                      <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
+                                      <p className="text-sm font-normal text-foreground py-1.5">{formatVOCurrency(amount)}</p>
+                                    </div>
+                                  </div>
+                                </div>
                               );
                             })}
-                          </tbody>
-                          <tfoot>
-                            <tr className="bg-muted/50 border-t border-border">
-                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">Subtotal</td>
-                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voSubtotal)}</td>
-                              <td />
-                            </tr>
-                            <tr className="bg-muted/50">
-                              <td colSpan={4} className="px-3 py-2 text-xs text-muted-foreground text-right">VAT (15%)</td>
-                              <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voVat)}</td>
-                              <td />
-                            </tr>
-                            <tr className="bg-[#1B1C1F]">
-                              <td colSpan={4} className="px-3 py-2 text-xs font-medium text-white text-right">Total</td>
-                              <td className="px-3 py-2 text-sm text-right text-white font-medium">{formatVOCurrency(voTotal)}</td>
-                              <td />
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-
-                      {/* Mobile cards — shown only on small screens */}
-                      <div className="sm:hidden border border-border rounded-lg overflow-hidden divide-y divide-border">
-                        {voLineItems.map((item, idx) => {
-                          const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
-                          return (
-                            <div key={item.id} className="p-3 bg-white">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}</span>
-                                <input
-                                  className="flex-1 text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                                  placeholder="Item description"
-                                  value={item.description}
-                                  onChange={e => updateVoItem(item.id, "description", e.target.value)}
-                                />
-                                {voLineItems.length > 1 && (
-                                  <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 pl-6">
-                                <div className="flex-1">
-                                  <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
-                                  <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
-                                  <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
-                                </div>
-                                <div className="flex-1 text-right">
-                                  <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
-                                  <p className="text-sm font-medium text-foreground py-1.5">{formatVOCurrency(amount)}</p>
-                                </div>
-                              </div>
+                            <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                              <span className="text-xs text-muted-foreground">Subtotal</span>
+                              <span className="text-sm text-foreground">{formatVOCurrency(voSubtotal)}</span>
                             </div>
-                          );
-                        })}
-                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
-                          <span className="text-xs text-muted-foreground">Subtotal</span>
-                          <span className="text-sm text-foreground">{formatVOCurrency(voSubtotal)}</span>
+                            <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
+                              <span className="text-xs text-muted-foreground">VAT (15%)</span>
+                              <span className="text-sm text-foreground">{formatVOCurrency(voVat)}</span>
+                            </div>
+                            <div className="flex justify-between items-center px-4 py-2.5 bg-[#1B1C1F]">
+                              <span className="text-xs font-normal text-white">Total</span>
+                              <span className="text-sm font-normal text-white">{formatVOCurrency(voTotal)}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setVoLineItems(prev => [...prev, { id: crypto.randomUUID(), description: "", qty: "", rate: "" }])}
+                            className="mt-2 flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Add line item
+                          </button>
                         </div>
-                        <div className="flex justify-between items-center px-4 py-2 bg-muted/50">
-                          <span className="text-xs text-muted-foreground">VAT (15%)</span>
-                          <span className="text-sm text-foreground">{formatVOCurrency(voVat)}</span>
+
+                        {/* Conditions */}
+                        <div>
+                          <label className="text-xs font-normal text-muted-foreground block mb-2">Conditions / Caveats</label>
+                          <textarea
+                            value={pricingConditions}
+                            onChange={(e) => setPricingConditions(e.target.value)}
+                            placeholder="Any conditions or caveats on your approval/rejection..."
+                            rows={2}
+                            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          />
                         </div>
-                        <div className="flex justify-between items-center px-4 py-2.5 bg-[#1B1C1F]">
-                          <span className="text-xs font-medium text-white">Total</span>
-                          <span className="text-sm font-medium text-white">{formatVOCurrency(voTotal)}</span>
+
+                        {/* Time Impact */}
+                        <div>
+                          <label className="text-xs font-normal text-muted-foreground block mb-2">Time Impact (Days)</label>
+                          <input
+                            type="number"
+                            value={voTimeImpact}
+                            onChange={(e) => setVoTimeImpact(e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          />
                         </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setVoLineItems(prev => [...prev, { id: crypto.randomUUID(), description: "", qty: "", rate: "" }])}
-                        className="mt-2 flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Add line item
-                      </button>
-                    </div>
-
-                    {/* Conditions */}
-                    <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">Conditions / Caveats</label>
-                      <textarea
-                        value={pricingConditions}
-                        onChange={(e) => setPricingConditions(e.target.value)}
-                        placeholder="Any conditions or caveats on your approval/rejection..."
-                        rows={2}
-                        className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                      />
-                    </div>
-
-                    {/* Time Impact */}
-                    <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">Time Impact (Days)</label>
-                      <input
-                        type="number"
-                        value={voTimeImpact}
-                        onChange={(e) => setVoTimeImpact(e.target.value)}
-                        placeholder="0"
-                        min="0"
-                        className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -1714,12 +1746,11 @@ export default function TaskDetails() {
                     <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-normal text-muted-foreground">Current Progress</Label>
-                        <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${
-                          cpiProgress === 100 ? 'bg-green-100 text-green-700' :
+                        <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${cpiProgress === 100 ? 'bg-green-100 text-green-700' :
                           cpiProgress >= 60 ? 'bg-blue-100 text-blue-700' :
-                          cpiProgress >= 30 ? 'bg-amber-100 text-amber-700' :
-                          'bg-muted text-muted-foreground'
-                        }`}>{cpiProgress}%</span>
+                            cpiProgress >= 30 ? 'bg-amber-100 text-amber-700' :
+                              'bg-muted text-muted-foreground'
+                          }`}>{cpiProgress}%</span>
                       </div>
                       <Slider
                         min={0}
@@ -2171,7 +2202,7 @@ export default function TaskDetails() {
                   createdBy: displayTask.creator.name,
                   status: displayTask.timeline.current,
                 }}
-                onStageClick={(stage) => handleApproveTask(stage)}
+                onStageClick={(stage) => { if (!isTaskLocked) handleApproveTask(stage); }}
                 onApprove={() => {
                   const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
                   handleApproveTask(lastStage);
@@ -2224,7 +2255,7 @@ export default function TaskDetails() {
                             <span
                               className={cn(
                                 "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                                i === currentStageIndex && "text-foreground font-medium"
+                                i === currentStageIndex && "text-foreground font-normal"
                               )}>
                               {stage}
                             </span>
@@ -2237,7 +2268,7 @@ export default function TaskDetails() {
 
                 {/* Deadlines */}
                 {/* <Card className="p-[17px] shadow-none rounded-lg bg-sidebar border-0">
-                  <h3 className="text-xs font-medium text-muted-foreground mb-3">
+                  <h3 className="text-xs font-normal text-muted-foreground mb-3">
                     Deadlines
                   </h3>
                   <div className="space-y-2">
@@ -2303,7 +2334,7 @@ export default function TaskDetails() {
                 {/* Linked Documents - Phase 3 enhancement */}
                 {/* <Card className="p-[17px] mt-4 rounded-lg bg-white shadow-none border-border">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-medium text-muted-foreground">
+                    <h3 className="text-xs font-normal text-muted-foreground">
                       Linked Documents
                     </h3>
                     <Button variant="ghost" className="h-6 w-6 p-0 text-[#8081F6] hover:bg-transparent">
@@ -2374,8 +2405,8 @@ export default function TaskDetails() {
                                   {chips && chips.length > 0 && (
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                                       {chips.map((name, idx) => (
-                                        <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-medium">
-                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold shrink-0">
+                                        <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
+                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-normal shrink-0">
                                             {name.charAt(0).toUpperCase()}
                                           </span>
                                           {name}
@@ -2390,7 +2421,7 @@ export default function TaskDetails() {
                                       const name = detail.slice(byIdx + 4);
                                       return (
                                         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                          {before}<span className="font-medium text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
+                                          {before}<span className="font-normal text-foreground bg-primary/10 px-1 py-0.5 rounded">{name}</span>
                                         </p>
                                       );
                                     }
@@ -2496,7 +2527,7 @@ export default function TaskDetails() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-[#8081F6] text-white flex items-center justify-center text-sm font-medium">
+                                  <div className="h-8 w-8 rounded-full bg-[#8081F6] text-white flex items-center justify-center text-sm font-normal">
                                     {(memberName || memberEmail).charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">

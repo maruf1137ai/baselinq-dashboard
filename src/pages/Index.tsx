@@ -27,7 +27,7 @@ import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
-import { hasPermission } from "@/lib/roleUtils";
+import { hasPermission, COMPANY_TYPES } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigate } from "react-router-dom";
 import { useS3Upload } from "@/hooks/useS3Upload";
@@ -37,13 +37,7 @@ const qInputCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outlin
 const qSelectCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 appearance-none";
 const qTextareaCls = "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 min-h-[200px] leading-relaxed";
 
-const COMPANY_TYPES = [
-  "Architectural", "Civil Engineering", "Construction Management",
-  "Electrical Engineering", "Environmental Consulting", "General Contractor",
-  "Interior Design", "Landscape Architecture", "Legal & Compliance",
-  "Mechanical Engineering", "Project Management", "Quantity Surveying",
-  "Structural Engineering", "Urban Planning", "Other",
-];
+// COMPANY_TYPES imported from @/lib/roleUtils
 
 const Index = () => {
   const navigate = useNavigate();
@@ -213,9 +207,10 @@ const Index = () => {
             inviteAppointedCompany({
               project_id: projectId,
               company_name: entry.company_name.trim(),
+              company_type: entry.company_type,
               contact_name: entry.contact_name.trim(),
               contact_email: entry.email.trim(),
-              position: entry.position || "architect",
+              position: entry.position || '',
             })
           )
         );
@@ -1153,20 +1148,18 @@ const Index = () => {
                               onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
-                              <div className="relative">
-                                <select
-                                  className={qSelectCls}
-                                  value={entry.position}
-                                  onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, position: e.target.value } : x))}
-                                >
-                                  <option value="">Select role...</option>
-                                  {appRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                              </div>
+                          <div>
+                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                            <div className="relative">
+                              <select
+                                className={qSelectCls}
+                                value={entry.company_type}
+                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
+                              >
+                                <option value="">Select type...</option>
+                                {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
@@ -1215,20 +1208,18 @@ const Index = () => {
                           onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_name: e.target.value }))}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
-                          <div className="relative">
-                            <select
-                              className={qSelectCls}
-                              value={quickForm.appointed_position}
-                              onChange={(e) => setQuickForm((v) => ({ ...v, appointed_position: e.target.value }))}
-                            >
-                              <option value="">Select role...</option>
-                              {appRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                          </div>
+                      <div>
+                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                        <div className="relative">
+                          <select
+                            className={qSelectCls}
+                            value={quickForm.appointed_company_type}
+                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_type: e.target.value }))}
+                          >
+                            <option value="">Select type...</option>
+                            {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">

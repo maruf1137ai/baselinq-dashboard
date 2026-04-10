@@ -139,6 +139,53 @@ export function hasPermission(role: string | undefined | null, permission: Permi
   return (PERMISSIONS[permission] as readonly string[]).includes(backbone);
 }
 
+// ── Company Types & Role Filtering ───────────────────────────────────────────
+
+export const COMPANY_TYPES = [
+  "Architectural", "Civil Engineering", "Construction Management",
+  "Electrical Engineering", "Environmental Consulting", "General Contractor",
+  "Interior Design", "Landscape Architecture", "Legal & Compliance",
+  "Mechanical Engineering", "Project Management", "Quantity Surveying",
+  "Structural Engineering", "Urban Planning", "Other",
+];
+
+/**
+ * Maps each company type to the role codes that are relevant to it.
+ * When a company type is selected, only the roles listed here should appear
+ * in the Professional Role dropdown. "Other" / empty → show all roles.
+ */
+export const COMPANY_TYPE_ROLE_CODES: Record<string, string[]> = {
+  "Architectural":            ["ARCH"],
+  "Civil Engineering":        ["CE", "SE"],
+  "Construction Management":  ["CM", "CONTRACTS_MGR", "SM", "SS", "FOREMAN"],
+  "Electrical Engineering":   ["ELEC_ENG", "MEP"],
+  "Environmental Consulting": ["SO", "OTHER"],
+  "General Contractor":       ["CIDB", "SM", "SS", "FOREMAN", "SE"],
+  "Interior Design":          ["ARCH", "OTHER"],
+  "Landscape Architecture":   ["ARCH", "OTHER"],
+  "Legal & Compliance":       ["LEGAL", "OTHER"],
+  "Mechanical Engineering":   ["MECH_ENG", "MEP"],
+  "Project Management":       ["PM", "CPM", "CONS_PLANNER", "PLANNER"],
+  "Quantity Surveying":       ["QS", "CQS"],
+  "Structural Engineering":   ["STRUCT_ENG"],
+  "Urban Planning":           ["PLANNER", "OTHER"],
+  "Other":                    [], // empty = show all roles
+};
+
+/**
+ * Filter a list of roles by company type.
+ * Returns all roles if the company type is empty, "Other", or not found.
+ */
+export function filterRolesByCompanyType(
+  roles: { code: string; name: string }[],
+  companyType: string,
+): { code: string; name: string }[] {
+  if (!companyType || companyType === "Other") return roles;
+  const allowed = COMPANY_TYPE_ROLE_CODES[companyType];
+  if (!allowed || allowed.length === 0) return roles;
+  return roles.filter((r) => allowed.includes(r.code));
+}
+
 // Hierarchy level (higher = more authority)
 export const ROLE_HIERARCHY: Record<string, number> = {
   CLIENT: 100,

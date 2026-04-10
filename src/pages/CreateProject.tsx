@@ -44,6 +44,7 @@ import {
   differenceInMonths,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { COMPANY_TYPES } from "@/lib/roleUtils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
 import {
@@ -130,13 +131,7 @@ interface TaskOrderState {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const COMPANY_TYPES = [
-  "Architectural", "Civil Engineering", "Construction Management",
-  "Electrical Engineering", "Environmental Consulting", "General Contractor",
-  "Interior Design", "Landscape Architecture", "Legal & Compliance",
-  "Mechanical Engineering", "Project Management", "Quantity Surveying",
-  "Structural Engineering", "Urban Planning", "Other",
-];
+// COMPANY_TYPES imported from @/lib/roleUtils
 
 const STEPS = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
@@ -724,7 +719,7 @@ export default function CreateProject() {
     position: string; // professional role key e.g. 'architect','contractor','qs','pm'
   }
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([
-    { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }
+    { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: '' }
   ]);
 
   const CLIENT_ROLE_OPTIONS = [
@@ -806,10 +801,11 @@ export default function CreateProject() {
       try {
         await inviteAppointedCompany({
           company_name: entry.company_name,
+          company_type: entry.company_type,
           contact_name: entry.contact_name,
           contact_email: entry.email,
           project_id: projectId,
-          position: entry.position || 'architect',
+          position: entry.position || '',
         });
       } catch (err: any) {
         toast.warning(`Failed to invite ${entry.email}: ${err?.response?.data?.error || err.message}`);
@@ -1838,15 +1834,15 @@ export default function CreateProject() {
                                 </div>
 
                                 <div>
-                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Professional Role</label>
+                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
                                   <select
                                     className={inputCls()}
-                                    value={entry.position}
-                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, position: e.target.value } : x))}
+                                    value={entry.company_type}
+                                    onChange={e => setAppointedInvites(prev => prev.map(x => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
                                   >
-                                    <option value="">Select role...</option>
-                                    {appRoles.map(r => (
-                                      <option key={r.code} value={r.code}>{r.name}</option>
+                                    <option value="">Select type...</option>
+                                    {COMPANY_TYPES.map(t => (
+                                      <option key={t} value={t}>{t}</option>
                                     ))}
                                   </select>
                                 </div>
@@ -1875,7 +1871,7 @@ export default function CreateProject() {
                             ))}
                             <button
                               type="button"
-                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }])}
+                              onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: '' }])}
                               className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
                             >
                               <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
@@ -1951,6 +1947,19 @@ export default function CreateProject() {
 
                             <div className="grid grid-cols-2 gap-4">
                               <div>
+                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                                <select
+                                  className={inputCls()}
+                                  value={appointedForm.company_type}
+                                  onChange={(e) => setAppointedForm((p) => ({ ...p, company_type: e.target.value }))}
+                                >
+                                  <option value="">Select type...</option>
+                                  {COMPANY_TYPES.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
                                 <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Office Number</label>
                                 <div className="relative">
                                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
@@ -1962,20 +1971,6 @@ export default function CreateProject() {
                                     onChange={(e) => setAppointedForm((p) => ({ ...p, office_number: e.target.value }))}
                                   />
                                 </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Professional Role</label>
-                                <select
-                                  className={inputCls()}
-                                  value={appointedForm.role_as_per_appointment}
-                                  onChange={(e) => setAppointedForm((p) => ({ ...p, role_as_per_appointment: e.target.value }))}
-                                >
-                                  <option value="">Select role...</option>
-                                  {appRoles.map((r) => (
-                                    <option key={r.code} value={r.code}>{r.name}</option>
-                                  ))}
-                                </select>
                               </div>
                             </div>
 
