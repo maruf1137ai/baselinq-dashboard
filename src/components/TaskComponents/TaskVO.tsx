@@ -96,7 +96,7 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
         </div>
       )}
 
-      <>
+      {lineItems.length > 0 && <>
         <h2 className="text-sm text-foreground mb-4 mt-8">Financial Breakdown</h2>
 
         {/* Line Items Table - Now Primary */}
@@ -199,7 +199,7 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
             </table>
           </div>
         </div>
-      </>
+      </>}
 
       {/* Financial Summary - Now Secondary Compact Row */}
       {/* <div className="grid grid-cols-3 gap-3 mt-4">

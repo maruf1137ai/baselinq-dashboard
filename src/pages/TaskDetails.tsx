@@ -347,6 +347,7 @@ export default function TaskDetails() {
   const [recommendedAmount, setRecommendedAmount] = useState<string>("");
   const [pricingDecision, setPricingDecision] = useState<string>("");
   const [pricingConditions, setPricingConditions] = useState<string>("");
+  const [voTimeImpact, setVoTimeImpact] = useState<string>("");
   interface VOLineItem { id: string; description: string; qty: string; rate: string; }
   const [voLineItems, setVoLineItems] = useState<VOLineItem[]>([{ id: crypto.randomUUID(), description: "", qty: "", rate: "" }]);
   const voSubtotal = voLineItems.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0), 0);
@@ -504,6 +505,7 @@ export default function TaskDetails() {
           recommendedAmount,
           pricingDecision,
           pricingConditions,
+          voTimeImpact,
           lineItems: voLineItems.filter(i => i.description.trim()).map(i => ({
             description: i.description,
             quantity: parseFloat(i.qty) || 0,
@@ -654,6 +656,7 @@ export default function TaskDetails() {
         updateData.recommendedAmount = recommendedAmount;
         updateData.pricingDecision = pricingDecision;
         updateData.pricingConditions = pricingConditions;
+        updateData.voTimeImpact = voTimeImpact;
         updateData.lineItems = voLineItems.filter(i => i.description.trim()).map(i => ({
           description: i.description,
           quantity: parseFloat(i.qty) || 0,
@@ -681,6 +684,7 @@ export default function TaskDetails() {
       setRecommendedAmount("");
       setPricingDecision("");
       setPricingConditions("");
+      setVoTimeImpact("");
       setRfiResponseStatus("");
       setDcExtensionGranted("");
       setDcNewCompletionDate("");
@@ -1550,6 +1554,19 @@ export default function TaskDetails() {
                         placeholder="Any conditions or caveats on your approval/rejection..."
                         rows={2}
                         className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                      />
+                    </div>
+
+                    {/* Time Impact */}
+                    <div>
+                      <label className="text-xs font-normal text-muted-foreground block mb-2">Time Impact (Days)</label>
+                      <input
+                        type="number"
+                        value={voTimeImpact}
+                        onChange={(e) => setVoTimeImpact(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
                   </div>
