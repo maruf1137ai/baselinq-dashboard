@@ -258,7 +258,8 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     && (
       (normalizedTaskType === 'VO' && entityStatus === 'submitted') ||
       (normalizedTaskType === 'RFI' && (entityStatus === 'response provided' || entityStatus === 'answered')) ||
-      (normalizedTaskType === 'CPI' && entityStatus === 'in review')
+      (normalizedTaskType === 'CPI' && entityStatus === 'in review') ||
+      (normalizedTaskType === 'DC' && (entityStatus === 'notice issued' || entityStatus === 'submitted'))
     );
 
   // Card border + background per escalation level (pending review takes priority over warnings)

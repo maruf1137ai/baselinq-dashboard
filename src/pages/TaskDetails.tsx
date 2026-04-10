@@ -593,8 +593,33 @@ export default function TaskDetails() {
         }
       }
 
-      if (displayTask.type === "DC" && dcExtensionGranted) {
-        updateData.status = "EOT Awarded";
+      if (displayTask.type === "DC") {
+        const isCreator = String(displayTask.creator?.id) === String(user?.id);
+        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+        const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+
+        if (['delayidentified', 'draft', 'submitted', '', 'pending'].includes(currentStatusNorm) && !isCreator) {
+          // Assignee submits the formal delay notice
+          updateData.status = "Notice Issued";
+          updateData.statusCause = "Delay notice submitted";
+        } else if (isCreator && ['noticeissued', 'delayidentified', 'draft', 'submitted', '', 'pending'].includes(currentStatusNorm)) {
+          // Creator acknowledges the notice and begins review
+          updateData.status = "Under Assessment";
+          updateData.statusCause = `Claim under assessment by ${creatorName}`;
+        } else if (isCreator && ['underassessment', 'determinationmade'].includes(currentStatusNorm)) {
+          // Creator submits their determination
+          if (dcExtensionGranted) {
+            updateData.status = "EOT Awarded";
+            updateData.statusCause = `EOT of ${dcExtensionGranted} days granted by ${creatorName}`;
+          } else {
+            updateData.status = "Determination Made";
+            updateData.statusCause = `Determination submitted by ${creatorName}`;
+          }
+        } else if (dcExtensionGranted) {
+          // Fallback: if extension is granted at any other stage, award EOT
+          updateData.status = "EOT Awarded";
+          updateData.statusCause = `EOT of ${dcExtensionGranted} days granted by ${creatorName}`;
+        }
       }
 
       if (displayTask.type === "CPI") {
@@ -945,7 +970,18 @@ export default function TaskDetails() {
             contractWindow: "28 days",
           },
           timeline: {
-            current: task.status || apiResponse.status || "Delay Identified",
+            current: (() => {
+              const s = task.status || apiResponse.status || "Delay Identified";
+              const legacyMap: Record<string, string> = {
+                "Draft": "Delay Identified",
+                "Submitted": "Notice Issued",
+                "In Review": "Under Assessment",
+                "Approved": "EOT Awarded",
+                "Rejected": "Determination Made",
+                "Closed": "EOT Awarded",
+              };
+              return legacyMap[s] ?? s;
+            })(),
             stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
           },
           impact: {
