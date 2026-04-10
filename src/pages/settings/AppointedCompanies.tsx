@@ -7,7 +7,6 @@ import {
   inviteAppointedCompany,
   getAppointedCompanies,
   removeAppointedCompany,
-  inviteCompanyMember,
   getPresignedUrl,
   uploadFileToPresignedUrl,
 } from "@/lib/Api";
@@ -25,9 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
-  UserPlus,
   User,
-  Mail,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -54,11 +51,6 @@ interface AppointedInviteEntry {
   insurance_expiry: string;
 }
 
-interface InviteMemberForm {
-  contact_email: string;
-  contact_name: string;
-  position: string;
-}
 
 const AppointedCompanies = () => {
   const { canManageTeam } = usePermissions();
@@ -75,11 +67,6 @@ const AppointedCompanies = () => {
 
   // Per-company expanded members panel
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string | number>>(new Set());
-
-  // Per-company invite-member modal state
-  const [inviteMemberFor, setInviteMemberFor] = useState<{ companyId: string | number; companyName: string } | null>(null);
-  const [inviteMemberForm, setInviteMemberForm] = useState<InviteMemberForm>({ contact_email: "", contact_name: "", position: "" });
-  const [inviteMemberLoading, setInviteMemberLoading] = useState(false);
 
   // Remove confirmation
   const [removeConfirmId, setRemoveConfirmId] = useState<string | number | null>(null);
@@ -163,30 +150,6 @@ const AppointedCompanies = () => {
     }
   };
 
-  const handleInviteMember = async () => {
-    if (!selectedProjectId || !inviteMemberFor) return;
-    if (!inviteMemberForm.contact_email.trim()) {
-      toast.error("Email is required.");
-      return;
-    }
-    setInviteMemberLoading(true);
-    try {
-      await inviteCompanyMember(selectedProjectId, inviteMemberFor.companyId, {
-        contact_email: inviteMemberForm.contact_email.trim(),
-        contact_name: inviteMemberForm.contact_name.trim(),
-        position: inviteMemberForm.position || "architect",
-      });
-      toast.success(`Invitation sent to ${inviteMemberForm.contact_email}`);
-      setInviteMemberFor(null);
-      setInviteMemberForm({ contact_email: "", contact_name: "", position: "" });
-      fetchCompanies();
-    } catch {
-      toast.error("Failed to send invitation.");
-    } finally {
-      setInviteMemberLoading(false);
-    }
-  };
-
   const toggleExpand = (id: string | number) => {
     setExpandedCompanies((prev) => {
       const next = new Set(prev);
@@ -216,80 +179,6 @@ const AppointedCompanies = () => {
 
   return (
     <div className="w-full bg-slate-50/30">
-      {/* Invite Member Modal */}
-      {inviteMemberFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-normal text-foreground">Invite Member</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{inviteMemberFor.companyName}</p>
-              </div>
-              <button
-                onClick={() => { setInviteMemberFor(null); setInviteMemberForm({ contact_email: "", contact_name: "", position: "" }); }}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Email Address *</label>
-                <Input
-                  type="email"
-                  value={inviteMemberForm.contact_email}
-                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, contact_email: e.target.value }))}
-                  className={INPUT_CLS}
-                  placeholder="member@company.co.za"
-                  autoFocus
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Name</label>
-                <Input
-                  value={inviteMemberForm.contact_name}
-                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, contact_name: e.target.value }))}
-                  className={INPUT_CLS}
-                  placeholder="e.g. Jane Doe"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Role</label>
-                <select
-                  value={inviteMemberForm.position}
-                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, position: e.target.value }))}
-                  className={SELECT_CLS}
-                >
-                  <option value="">Select role...</option>
-                  {appRoles.map((r) => (
-                    <option key={r.code} value={r.code}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => { setInviteMemberFor(null); setInviteMemberForm({ contact_email: "", contact_name: "", position: "" }); }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-primary text-white hover:bg-primary/90"
-                onClick={handleInviteMember}
-                disabled={inviteMemberLoading}
-              >
-                {inviteMemberLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
-                Send Invite
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-5xl mx-auto p-8 pb-20">
 
         {/* ── Page Header ── */}
@@ -386,17 +275,6 @@ const AppointedCompanies = () => {
                               </button>
                             )}
 
-                            {/* Invite member */}
-                            {canManageTeam && isNumericId && (
-                              <button
-                                onClick={() => setInviteMemberFor({ companyId: comp.id, companyName: comp.company_name })}
-                                className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-lg hover:bg-primary/5"
-                                title="Invite member"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
                             {/* Remove company */}
                             {canManageTeam && isNumericId && (
                               removeConfirmId === comp.id ? (
@@ -466,8 +344,8 @@ const AppointedCompanies = () => {
                           </div>
                         )}
 
-                        {/* Insurance Certificate Card */}
-                        <div className={cn(
+                        {/* Insurance Certificate Card — only shown when insurance exists */}
+                        {hasInsurance && <div className={cn(
                           "mx-4 mb-4 rounded-xl border overflow-hidden",
                           hasInsurance && !isExpired
                             ? "border-green-200"
@@ -565,7 +443,7 @@ const AppointedCompanies = () => {
                               </a>
                             )}
                           </div>
-                        </div>
+                        </div>}
                       </div>
                     );
                   })}
