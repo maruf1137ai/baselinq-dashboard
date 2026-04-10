@@ -97,6 +97,7 @@ interface TeamMember {
   orgRoleId: string;
   orgRoleInfo: Role;
   discipline: string;
+  companyName: string;
   isActive: boolean;
   addedBy: {
     userId: string;
@@ -710,7 +711,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   "Name",
                   "Email",
                   "Project Role",
-                  "Discipline",
+                  "Company",
                   "Status",
                   canManageTeam ? "Actions" : null,
                 ]
@@ -747,12 +748,12 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <div className="flex flex-wrap gap-1">
-                      {member.discipline ? (
+                      {member.companyName ? (
                         <div className="text-xs text-primary py-[2px] px-2 rounded bg-primary/10">
-                          {member.discipline}
+                          {member.companyName}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground italic text-xs">Unspecified</span>
+                        <span className="text-muted-foreground italic text-xs">—</span>
                       )}
                     </div>
                   </td>
