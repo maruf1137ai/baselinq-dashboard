@@ -376,6 +376,7 @@ export default function TaskDetails() {
   const [siLeadsToVariationResponse, setSiLeadsToVariationResponse] = useState<boolean>(false);
   const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
   const [showAiChat, setShowAiChat] = useState<boolean>(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
 
 
   // Fetch project team members for assign modal
@@ -703,6 +704,26 @@ export default function TaskDetails() {
   };
 
 
+  // Check whether the VO has at least one response with line items and a recommended amount
+  const hasPricedResponse = () => {
+    const responses: any[] = displayTask?.responses || [];
+    return responses.some((r) => {
+      const sd = r?.structuredData || {};
+      const lineItems: any[] = sd.lineItems || [];
+      const amount = Number(sd.recommendedAmount || sd.grandTotal || 0);
+      return lineItems.length > 0 && amount > 0;
+    });
+  };
+
+  // Called when the Approve button is clicked — gate-checks before opening modal
+  const handleVOApproveClick = () => {
+    if (!hasPricedResponse()) {
+      toast.error("A priced response with line items and amount is required before approving this Variation Order.");
+      return;
+    }
+    setShowApproveModal(true);
+  };
+
   const handleApproveTask = async (status: string) => {
     if (!currentTask || !taskId) return;
 
@@ -857,6 +878,8 @@ export default function TaskDetails() {
             grandTotal: task.grandTotal || 0,
             tax: task.tax || { type: "VAT", rate: 15, amount: 0 },
             lineItems: task.lineItems || [],
+            voTimeImpact: task.voTimeImpact
+              ?? apiResponse.responses?.slice(-1)?.[0]?.structuredData?.voTimeImpact,
           },
           question: {
             text: task.description || "",
@@ -1212,6 +1235,65 @@ export default function TaskDetails() {
 
   return (
     <DashboardLayout padding="p-0">
+
+      {/* ── VO Approve Confirmation Modal ── */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-primary px-6 py-5">
+              <h2 className="text-base font-semibold text-white">Approve Variation Order</h2>
+              <p className="text-[12px] text-white/70 mt-0.5">{displayTask?.title || "Variation Order"}</p>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-foreground leading-relaxed">
+                You are about to <strong>approve</strong> this Variation Order. Once approved:
+              </p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  The agreed amount will be recorded in the project cost ledger.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  The Variation Order status will be set to <strong>Approved</strong> and closed.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  All assigned parties will be notified of the approval.
+                </li>
+              </ul>
+              <p className="text-[12px] text-muted-foreground border border-border rounded-lg px-3 py-2 bg-muted">
+                This action cannot be undone. Please confirm you have reviewed the priced response before proceeding.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 px-6 pb-6">
+              <Button
+                variant="outline"
+                className="flex-1 font-normal"
+                onClick={() => setShowApproveModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 font-normal bg-primary text-white hover:bg-primary/90"
+                onClick={async () => {
+                  setShowApproveModal(false);
+                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
+                  await handleApproveTask(lastStage);
+                }}
+              >
+                Approve VO
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen">
         <div className="">
           <div className="grid grid-cols-3">
@@ -1865,7 +1947,14 @@ export default function TaskDetails() {
                     {canApprove && (
                       <Button
                         className="font-normal"
-                        onClick={() => handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1])}
+                        onClick={() => {
+                          const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
+                          if (displayTask.type === "VO") {
+                            handleVOApproveClick();
+                          } else {
+                            handleApproveTask(lastStage);
+                          }
+                        }}
                         disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
                         {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
                           ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
