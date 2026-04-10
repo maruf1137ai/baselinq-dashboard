@@ -2218,7 +2218,8 @@ export default function TaskDetails() {
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const { text, oldStatus, newStatus, detail, hideUserName, chips } = getActionLabel(log, displayTask?.displayId);
+                            const taskNumber = currentTask ? `#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}` : displayTask?.displayId;
+                            const { text, oldStatus, newStatus, detail, hideUserName, chips } = getActionLabel(log, taskNumber);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
                             return (
