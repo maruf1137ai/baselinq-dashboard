@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2 } from "lucide-react";
 const uploadFile = async (_file: File, _id: string): Promise<string> => "";
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
@@ -92,6 +92,11 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   };
 
   const contextData = getContextFields();
+
+  // Determine if the linked task is in a completed/terminal state
+  const COMPLETED_STATUSES = ['done', 'approved', 'completed', 'closed', 'verified', 'acknowledged', 'eot awarded'];
+  const taskStatus = (taskDetails?.task?.status || channel?.task?.status || channel?.status || '').toLowerCase();
+  const isTaskCompleted = !!channel?.taskId && COMPLETED_STATUSES.includes(taskStatus);
 
   // Fetch messages from API
   const fetchMessages = async (showLoader = false) => {
@@ -466,6 +471,19 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
           </div>
         )}
 
+        {/* Task Completed Banner */}
+        {isTaskCompleted && (
+          <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 animate-in slide-in-from-top-1 duration-300">
+            <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-[12px] font-semibold text-green-800 leading-none">Task Completed</p>
+              <p className="text-[11px] text-green-600 mt-0.5">This task has been marked as complete.</p>
+            </div>
+          </div>
+        )}
+
         {channel.description && !showContext && (
           <p className="text text-sm text-[#6A7282] mt-1">
             {channel.description}
@@ -508,12 +526,36 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                 </div>
               )}
               {messages.map((msg) => {
-                // System / status-change messages render as a centered pill
+                // System / status-change messages render as centered elements
                 if (msg.message_type === 'status_change' || msg.is_system) {
+                  // Completion messages get a prominent green banner
+                  const isCompletion = msg.content?.includes('is now complete') || msg.content?.includes('✅');
+                  // Strip emoji prefix from backend content
+                  const cleanContent = (msg.content || '').replace(/^[✅📋]\s*/, '').trim();
+                  if (isCompletion) {
+                    return (
+                      <div key={msg.id} className="w-full self-center py-2 px-2">
+                        <div className="mx-auto max-w-sm rounded-xl border border-green-200 bg-green-50 overflow-hidden shadow-sm">
+                          <div className="flex items-center gap-2 bg-green-600 px-4 py-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
+                            <span className="text-[11px] font-semibold text-white uppercase tracking-wider">Task Completed</span>
+                          </div>
+                          <div className="px-4 py-3 text-center">
+                            <p className="text-[12px] text-green-800 leading-relaxed">{cleanContent}</p>
+                            <p className="text-[10px] text-green-500 mt-1.5">{msg.timestamp}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Regular status changes render as a centered pill with dividers
                   return (
-                    <div key={msg.id} className="flex items-center gap-2 w-full justify-center py-1 self-center">
+                    <div key={msg.id} className="flex items-center gap-3 w-full justify-center py-1.5 self-center px-2">
                       <div className="h-px flex-1 bg-[#EBEBEB]" />
-                      <span className="text-[11px] text-[#9CA3AF] px-2 whitespace-nowrap">{msg.content}</span>
+                      <div className="flex items-center gap-1.5 bg-[#F7F7F8] border border-[#EBEBEB] rounded-full px-3 py-1 shrink-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
+                        <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">{cleanContent}</span>
+                      </div>
                       <div className="h-px flex-1 bg-[#EBEBEB]" />
                     </div>
                   );
@@ -673,112 +715,112 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
       </div>
 
       {/* Search - Input Area */}
-        <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
-          {/* Attached Files Preview */}
-          {attachedFiles.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              {attachedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="bg-white inline-flex items-center gap-1 rounded-[4px] py-1 px-2 border border-[#DEDEDE]">
-                  <FileIcon type={file.type} />
-                  <div className="text-[#364153] text-[12px]">
-                    <p className="leading-[16px]">{file.name}</p>
-                  </div>
-                  <button
-                    onClick={() => removeAttachedFile(index)}
-                    className="text-[#6A7282] hover:text-[#101828] ml-1">
-                    ×
-                  </button>
+      <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
+        {/* Attached Files Preview */}
+        {attachedFiles.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            {attachedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="bg-white inline-flex items-center gap-1 rounded-[4px] py-1 px-2 border border-[#DEDEDE]">
+                <FileIcon type={file.type} />
+                <div className="text-[#364153] text-[12px]">
+                  <p className="leading-[16px]">{file.name}</p>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Input bar */}
-          <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
-            {/* Hidden file input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileAttach}
-              className="hidden"
-              multiple
-            />
-
-            {/* Attachment Icon */}
-            <button
-              onClick={triggerFileInput}
-              className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
-              <svg
-                className="w-6 h-6"
-                viewBox="0 0 16 22"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M9.90245 7.34739V13.4168C9.90245 14.6518 8.90131 15.6529 7.66634 15.6529C6.43137 15.6529 5.43023 14.6518 5.43023 13.4168V5.43072C5.43023 2.96078 7.43251 0.958496 9.90245 0.958496C12.3724 0.958496 14.3747 2.96078 14.3747 5.43072V13.4168C14.3747 17.1217 11.3713 20.1252 7.66634 20.1252C3.96143 20.1252 0.958008 17.1217 0.958008 13.4168V7.34739"
-                  stroke="currentColor"
-                  strokeWidth="1.91667"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-
-            {/* Voice Icon */}
-            <button
-              onClick={handleVoiceRecord}
-              className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
-                }`}>
-              {isRecording && !isPaused ? (
-                <Pause className="w-6 h-6" />
-              ) : (
-                <Mic className="w-6 h-6" />
-              )}
-            </button>
-
-            {/* Input or Recording UI */}
-            {isRecording ? (
-              <div className="flex-grow flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full bg-red-500 ${!isPaused && "animate-pulse"}`} />
-                <span className="text-[#676767] text-[16px]">
-                  {isPaused ? "Recording Paused" : "Recording..."}
-                </span>
                 <button
-                  onClick={() => {
-                    stopRecording(true);
-                  }}
-                  className="ml-auto p-1 hover:bg-gray-200 rounded-full"
-                >
-                  <X className="w-4 h-4 text-[#676767]" />
+                  onClick={() => removeAttachedFile(index)}
+                  className="text-[#6A7282] hover:text-[#101828] ml-1">
+                  ×
                 </button>
               </div>
-            ) : (
-              <input
-                type="text"
-                placeholder="Type a message…"
-                className="flex-grow bg-transparent outline-none text-[16px] text-[#676767]"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-              />
-            )}
-
-            {/* Send Button */}
-            <button
-              onClick={handleSend}
-              disabled={((message.trim() === "" && attachedFiles.length === 0) && !isRecording) || isUploading}
-              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${((message.trim() || attachedFiles.length > 0) || isRecording) && !isUploading
-                ? "bg-[#101828] cursor-pointer"
-                : "bg-[#e0e0e0] cursor-not-allowed"
-                }`}>
-              {isUploading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 text-white" />
-              )}
-            </button>
+            ))}
           </div>
+        )}
+
+        {/* Input bar */}
+        <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileAttach}
+            className="hidden"
+            multiple
+          />
+
+          {/* Attachment Icon */}
+          <button
+            onClick={triggerFileInput}
+            className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
+            <svg
+              className="w-6 h-6"
+              viewBox="0 0 16 22"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M9.90245 7.34739V13.4168C9.90245 14.6518 8.90131 15.6529 7.66634 15.6529C6.43137 15.6529 5.43023 14.6518 5.43023 13.4168V5.43072C5.43023 2.96078 7.43251 0.958496 9.90245 0.958496C12.3724 0.958496 14.3747 2.96078 14.3747 5.43072V13.4168C14.3747 17.1217 11.3713 20.1252 7.66634 20.1252C3.96143 20.1252 0.958008 17.1217 0.958008 13.4168V7.34739"
+                stroke="currentColor"
+                strokeWidth="1.91667"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+
+          {/* Voice Icon */}
+          <button
+            onClick={handleVoiceRecord}
+            className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
+              }`}>
+            {isRecording && !isPaused ? (
+              <Pause className="w-6 h-6" />
+            ) : (
+              <Mic className="w-6 h-6" />
+            )}
+          </button>
+
+          {/* Input or Recording UI */}
+          {isRecording ? (
+            <div className="flex-grow flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full bg-red-500 ${!isPaused && "animate-pulse"}`} />
+              <span className="text-[#676767] text-[16px]">
+                {isPaused ? "Recording Paused" : "Recording..."}
+              </span>
+              <button
+                onClick={() => {
+                  stopRecording(true);
+                }}
+                className="ml-auto p-1 hover:bg-gray-200 rounded-full"
+              >
+                <X className="w-4 h-4 text-[#676767]" />
+              </button>
+            </div>
+          ) : (
+            <input
+              type="text"
+              placeholder="Type a message…"
+              className="flex-grow bg-transparent outline-none text-[16px] text-[#676767]"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyPress}
+            />
+          )}
+
+          {/* Send Button */}
+          <button
+            onClick={handleSend}
+            disabled={((message.trim() === "" && attachedFiles.length === 0) && !isRecording) || isUploading}
+            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${((message.trim() || attachedFiles.length > 0) || isRecording) && !isUploading
+              ? "bg-[#101828] cursor-pointer"
+              : "bg-[#e0e0e0] cursor-not-allowed"
+              }`}>
+            {isUploading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 text-white" />
+            )}
+          </button>
         </div>
+      </div>
     </div >
   );
 };
