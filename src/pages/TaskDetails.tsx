@@ -1867,7 +1867,9 @@ export default function TaskDetails() {
                         className="font-normal"
                         onClick={() => handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1])}
                         disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
-                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1] ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1] : "Close"}
+                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
+                          ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
+                          : displayTask.type === "VO" ? "Approve" : "Close"}
                       </Button>
                     )}
 
