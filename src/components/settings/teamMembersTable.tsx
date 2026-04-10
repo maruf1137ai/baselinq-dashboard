@@ -55,7 +55,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import FilterBtns from "./filterBtns";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
-import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
+
 
 interface User {
   id: number;
@@ -143,7 +143,6 @@ const ActionsCell = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [editDiscipline, setEditDiscipline] = useState(member.discipline || "");
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -176,7 +175,6 @@ const ActionsCell = ({
         url: `projects/${projectId}/team-members/${member._id}/`,
         data: {
           roleName: selectedRole.name,
-          discipline: editDiscipline,
         },
       });
 
@@ -298,24 +296,6 @@ const ActionsCell = ({
               Current role: <span className="font-normal">{member.roleName}</span>
             </p>
 
-            {/* Discipline Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="editDiscipline">Discipline</Label>
-              <Select
-                value={editDiscipline}
-                onValueChange={setEditDiscipline}>
-                <SelectTrigger>
-                  <SelectValue placeholder={member.discipline || "Select a discipline"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {DISCIPLINE_OPTIONS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <DialogFooter>
             <Button
@@ -398,7 +378,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [selectedDiscipline, setSelectedDiscipline] = useState("");
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -430,7 +409,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             userId: selectedUser.id,
             roleName: selectedRole.name,
             roleCode: selectedRole.code,
-            discipline: selectedDiscipline,
           },
         });
         // Also add to the organisation so they appear in Account > Organisation > Team
@@ -447,7 +425,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         setShowAddMemberModal(false);
         setSelectedUser(null);
         setSelectedRole(null);
-        setSelectedDiscipline("");
         await refetch();
       } catch (error: any) {
         console.error("Error adding team member:", error);
@@ -466,7 +443,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             name: inviteName,
             role_code: selectedRole.code,
             project_id: projectId,
-            discipline: selectedDiscipline,
           },
         });
         // Also invite to the organisation so they appear in Account > Organisation > Team
@@ -484,7 +460,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         setInviteEmail("");
         setInviteName("");
         setSelectedRole(null);
-        setSelectedDiscipline("");
         await refetch();
       } catch (error: any) {
         console.error("Error inviting member:", error);
@@ -658,23 +633,6 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
               </Select>
             </div>
 
-            <div className="space-y-2 mt-4">
-              <Label htmlFor="discipline">Discipline</Label>
-              <Select
-                value={selectedDiscipline}
-                onValueChange={setSelectedDiscipline}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select a discipline (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DISCIPLINE_OPTIONS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </Tabs>
           <DialogFooter>
             <DialogClose asChild>
