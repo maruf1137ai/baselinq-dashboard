@@ -206,15 +206,15 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
       const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
       const newStatus = cleanDesc.slice(toIdx + 4).trim();
       if (oldStatus && newStatus) {
-        return { text: 'Status Changed From', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
+        return { text: 'Status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
       }
     }
     const raw = log.newValue || log.new_value || log.to || log.value || '';
     const oldRaw = log.oldValue || log.old_value || log.from || '';
     if (raw || oldRaw) {
-      return { text: 'Status Changed From', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
+      return { text: 'Status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
     }
-    return { text: 'Status Updated', detail, hideUserName: true };
+    return { text: 'Status updated', detail, hideUserName: true };
   }
 
   const taskRef = taskCode ? ` ${taskCode}` : '';
@@ -1376,8 +1376,24 @@ export default function TaskDetails() {
                 </div> */}
               </Card>
 
-              {/* Response Form */}
-              <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
+              {/* Creator status card — no responses yet */}
+              {canApprove && !(displayTask.responses?.length > 0) && (
+                <Card className="p-6 shadow-none bg-white rounded-lg border-border">
+                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-normal text-foreground">Awaiting Response</p>
+                      <p className="text-xs text-muted-foreground mt-1">The assigned team member hasn't submitted a response yet. You'll be notified once they do.</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+
+              {/* Response Form — hidden for creator until a response exists */}
+              {(!canApprove || displayTask.responses?.length > 0) && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
                     ? "Response"
@@ -1396,8 +1412,8 @@ export default function TaskDetails() {
                                 : "Response"}
                 </h2>
 
-                {/* Structured Pricing Response Fields - Only for VO */}
-                {displayTask.type === "VO" && (
+                {/* Structured Pricing Response Fields - Only for VO non-creators */}
+                {displayTask.type === "VO" && !canApprove && (
                   <div className="space-y-4 mb-6 pb-6 border-b border-border">
 
                     {/* Line Items */}
@@ -1856,7 +1872,7 @@ export default function TaskDetails() {
                     </Button>
                   </div>
                 </div>
-              </Card>
+              </Card>}
 
               {/* Recent Responses Section */}
               {displayTask.responses && displayTask.responses.some((resp: any) =>
