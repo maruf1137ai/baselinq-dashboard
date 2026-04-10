@@ -225,10 +225,34 @@ export const getAppointedCompanies = async (projectId: string | number) => {
     status: string;
     contact_name: string;
     email: string;
+    members: {
+      id: string | number;
+      name: string;
+      email: string;
+      role: string;
+      status?: string;
+      insurance_file_name?: string | null;
+      insurance_expiry?: string | null;
+      insurance_url?: string | null;
+    }[];
     insurance_file_name: string | null;
     insurance_expiry: string | null;
     insurance_url: string | null;
   }[];
+};
+
+export const removeAppointedCompany = async (projectId: string | number, companyId: string | number) => {
+  const res = await api.delete(`projects/${projectId}/appointed-companies/${companyId}/remove/`);
+  return res.data;
+};
+
+export const inviteCompanyMember = async (
+  projectId: string | number,
+  companyId: string | number,
+  data: { contact_email: string; contact_name?: string; position?: string }
+) => {
+  const res = await api.post(`projects/${projectId}/appointed-companies/${companyId}/invite-member/`, data);
+  return res.data;
 };
 
 export const getProfile = async () => {

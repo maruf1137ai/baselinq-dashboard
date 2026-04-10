@@ -6,6 +6,8 @@ import React, { useState, useEffect } from "react";
 import {
   inviteAppointedCompany,
   getAppointedCompanies,
+  removeAppointedCompany,
+  inviteCompanyMember,
   getPresignedUrl,
   uploadFileToPresignedUrl,
 } from "@/lib/Api";
@@ -19,8 +21,13 @@ import {
   Download,
   ShieldCheck,
   ShieldAlert,
-  Paperclip,
   Lock,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  UserPlus,
+  User,
+  Mail,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -36,14 +43,6 @@ const INPUT_CLS =
 const SELECT_CLS =
   "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
-const COMPANY_TYPES = [
-  "Architectural", "Civil Engineering", "Construction Management",
-  "Electrical Engineering", "Environmental Consulting", "General Contractor",
-  "Interior Design", "Landscape Architecture", "Legal & Compliance",
-  "Mechanical Engineering", "Project Management", "Quantity Surveying",
-  "Structural Engineering", "Urban Planning", "Other",
-];
-
 interface AppointedInviteEntry {
   id: string;
   company_name: string;
@@ -53,6 +52,12 @@ interface AppointedInviteEntry {
   position: string;
   insurance_file: File | null;
   insurance_expiry: string;
+}
+
+interface InviteMemberForm {
+  contact_email: string;
+  contact_name: string;
+  position: string;
 }
 
 const AppointedCompanies = () => {
@@ -67,6 +72,18 @@ const AppointedCompanies = () => {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
+
+  // Per-company expanded members panel
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string | number>>(new Set());
+
+  // Per-company invite-member modal state
+  const [inviteMemberFor, setInviteMemberFor] = useState<{ companyId: string | number; companyName: string } | null>(null);
+  const [inviteMemberForm, setInviteMemberForm] = useState<InviteMemberForm>({ contact_email: "", contact_name: "", position: "" });
+  const [inviteMemberLoading, setInviteMemberLoading] = useState(false);
+
+  // Remove confirmation
+  const [removeConfirmId, setRemoveConfirmId] = useState<string | number | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   useEffect(() => {
     if (selectedProjectId) fetchCompanies();
@@ -131,6 +148,54 @@ const AppointedCompanies = () => {
     }
   };
 
+  const handleRemoveCompany = async (companyId: string | number) => {
+    if (!selectedProjectId) return;
+    setRemoveLoading(true);
+    try {
+      await removeAppointedCompany(selectedProjectId, companyId);
+      toast.success("Company removed from project.");
+      setRemoveConfirmId(null);
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to remove company.");
+    } finally {
+      setRemoveLoading(false);
+    }
+  };
+
+  const handleInviteMember = async () => {
+    if (!selectedProjectId || !inviteMemberFor) return;
+    if (!inviteMemberForm.contact_email.trim()) {
+      toast.error("Email is required.");
+      return;
+    }
+    setInviteMemberLoading(true);
+    try {
+      await inviteCompanyMember(selectedProjectId, inviteMemberFor.companyId, {
+        contact_email: inviteMemberForm.contact_email.trim(),
+        contact_name: inviteMemberForm.contact_name.trim(),
+        position: inviteMemberForm.position || "architect",
+      });
+      toast.success(`Invitation sent to ${inviteMemberForm.contact_email}`);
+      setInviteMemberFor(null);
+      setInviteMemberForm({ contact_email: "", contact_name: "", position: "" });
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to send invitation.");
+    } finally {
+      setInviteMemberLoading(false);
+    }
+  };
+
+  const toggleExpand = (id: string | number) => {
+    setExpandedCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const updateInvite = (id: string, patch: Partial<AppointedInviteEntry>) =>
     setAppointedInvites((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
 
@@ -151,6 +216,80 @@ const AppointedCompanies = () => {
 
   return (
     <div className="w-full bg-slate-50/30">
+      {/* Invite Member Modal */}
+      {inviteMemberFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-normal text-foreground">Invite Member</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{inviteMemberFor.companyName}</p>
+              </div>
+              <button
+                onClick={() => { setInviteMemberFor(null); setInviteMemberForm({ contact_email: "", contact_name: "", position: "" }); }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Email Address *</label>
+                <Input
+                  type="email"
+                  value={inviteMemberForm.contact_email}
+                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, contact_email: e.target.value }))}
+                  className={INPUT_CLS}
+                  placeholder="member@company.co.za"
+                  autoFocus
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Name</label>
+                <Input
+                  value={inviteMemberForm.contact_name}
+                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, contact_name: e.target.value }))}
+                  className={INPUT_CLS}
+                  placeholder="e.g. Jane Doe"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-normal text-muted-foreground tracking-wider">Role</label>
+                <select
+                  value={inviteMemberForm.position}
+                  onChange={(e) => setInviteMemberForm((f) => ({ ...f, position: e.target.value }))}
+                  className={SELECT_CLS}
+                >
+                  <option value="">Select role...</option>
+                  {appRoles.map((r) => (
+                    <option key={r.code} value={r.code}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setInviteMemberFor(null); setInviteMemberForm({ contact_email: "", contact_name: "", position: "" }); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-primary text-white hover:bg-primary/90"
+                onClick={handleInviteMember}
+                disabled={inviteMemberLoading}
+              >
+                {inviteMemberLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                Send Invite
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto p-8 pb-20">
 
         {/* ── Page Header ── */}
@@ -207,10 +346,14 @@ const AppointedCompanies = () => {
                     const isExpired = comp.insurance_expiry
                       ? new Date(comp.insurance_expiry) < new Date()
                       : false;
+                    const isExpanded = expandedCompanies.has(comp.id);
+                    const members: any[] = comp.members || [];
+                    const isNumericId = typeof comp.id === "number" || /^\d+$/.test(String(comp.id));
+
                     return (
-                      <div key={comp.id} className="p-4 rounded-lg border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all space-y-3">
-                        {/* Top row: company info + status */}
-                        <div className="flex items-center justify-between">
+                      <div key={comp.id} className="rounded-lg border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all">
+                        {/* Top row: company info + actions */}
+                        <div className="flex items-center justify-between p-4">
                           <div className="flex gap-3 items-center">
                             <div className="w-9 h-9 rounded-lg bg-white border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
                               <Building2 className="w-4 h-4" />
@@ -220,7 +363,7 @@ const AppointedCompanies = () => {
                               <p className="text-[11px] text-muted-foreground uppercase tracking-tighter mt-0.5">{comp.role || "Partner"}</p>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="flex items-center gap-2">
                             <span className={cn(
                               "text-[10px] px-2 py-0.5 rounded-full border",
                               comp.status === "Joined"
@@ -229,13 +372,103 @@ const AppointedCompanies = () => {
                             )}>
                               {comp.status}
                             </span>
-                            <p className="text-[10px] text-muted-foreground mt-1.5">{comp.contact_name}</p>
+
+                            {/* Members toggle */}
+                            {isNumericId && (
+                              <button
+                                onClick={() => toggleExpand(comp.id)}
+                                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-slate-100"
+                                title={isExpanded ? "Hide members" : "Show members"}
+                              >
+                                <User className="w-3.5 h-3.5" />
+                                <span>{members.length}</span>
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            )}
+
+                            {/* Invite member */}
+                            {canManageTeam && isNumericId && (
+                              <button
+                                onClick={() => setInviteMemberFor({ companyId: comp.id, companyName: comp.company_name })}
+                                className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-lg hover:bg-primary/5"
+                                title="Invite member"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Remove company */}
+                            {canManageTeam && isNumericId && (
+                              removeConfirmId === comp.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleRemoveCompany(comp.id)}
+                                    disabled={removeLoading}
+                                    className="text-[11px] px-2 py-1 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors flex items-center gap-1"
+                                  >
+                                    {removeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => setRemoveConfirmId(null)}
+                                    className="text-[11px] px-2 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRemoveConfirmId(comp.id)}
+                                  className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10"
+                                  title="Remove company"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
 
+                        {/* Members panel */}
+                        {isExpanded && (
+                          <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Members</p>
+                            {members.length === 0 ? (
+                              <p className="text-xs text-muted-foreground py-2">No members yet.</p>
+                            ) : (
+                              members.map((m: any) => (
+                                <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-border">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
+                                      {(m.name || m.email || "?")[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-normal text-foreground">{m.name || m.email}</p>
+                                      <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-muted-foreground">{m.role}</span>
+                                    {m.status && (
+                                      <span className={cn(
+                                        "text-[9px] px-1.5 py-0.5 rounded-full",
+                                        m.status === "Invited" ? "bg-amber-100 text-amber-700" :
+                                        m.status === "Expired" ? "bg-red-100 text-red-700" :
+                                        "bg-green-100 text-green-700"
+                                      )}>
+                                        {m.status}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+
                         {/* Insurance Certificate Card */}
                         <div className={cn(
-                          "rounded-xl border overflow-hidden",
+                          "mx-4 mb-4 rounded-xl border overflow-hidden",
                           hasInsurance && !isExpired
                             ? "border-green-200"
                             : hasInsurance && isExpired
@@ -288,7 +521,6 @@ const AppointedCompanies = () => {
                                 : "bg-slate-50"
                           )}>
                             <div className="flex items-center gap-3">
-                              {/* Certificate icon */}
                               <div className={cn(
                                 "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                                 hasInsurance && !isExpired
@@ -397,49 +629,6 @@ const AppointedCompanies = () => {
                       placeholder="e.g. john@firm.co.za"
                     />
                   </div>
-
-                  {/* Insurance Certificate */}
-                  {/* <div className="md:col-span-2 flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Certificate</label>
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-border bg-white text-sm text-muted-foreground cursor-pointer hover:bg-slate-50 transition-colors shrink-0">
-                        <Paperclip className="w-4 h-4" />
-                        <span>{entry.insurance_file ? "Replace file" : "Attach file"}</span>
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          className="hidden"
-                          onChange={(e) => updateInvite(entry.id, { insurance_file: e.target.files?.[0] ?? null })}
-                        />
-                      </label>
-                      {entry.insurance_file ? (
-                        <div className="flex items-center gap-2 flex-1 min-w-0 h-10 px-3 rounded-lg border border-border bg-slate-50">
-                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm text-foreground truncate">{entry.insurance_file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => updateInvite(entry.id, { insurance_file: null })}
-                            className="ml-auto text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">PDF, JPG or PNG</span>
-                      )}
-                    </div>
-                  </div> */}
-
-                  {/* Insurance Expiry */}
-                  {/* <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Insurance Expiry Date</label>
-                    <Input
-                      type="date"
-                      value={entry.insurance_expiry}
-                      onChange={(e) => updateInvite(entry.id, { insurance_expiry: e.target.value })}
-                      className={INPUT_CLS}
-                    />
-                  </div> */}
                 </div>
               </div>
             ))}
@@ -464,7 +653,7 @@ const AppointedCompanies = () => {
         </div>
 
       </div>
-    </div >
+    </div>
   );
 };
 
