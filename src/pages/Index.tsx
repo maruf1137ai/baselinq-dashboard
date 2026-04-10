@@ -161,14 +161,18 @@ const Index = () => {
           contact: { name: quickForm.appointed_contact_name.trim(), email: quickForm.appointed_contact_email.trim() },
         };
       }
+      // NON-CLIENT: inviting a client counts as a valid action even without a patch payload
+      const hasClientInvite = missing.includes("Client Details") && !isClientOrContractor && quickForm.client_email.trim();
       // CLIENT/CONTRACTOR: invite companies (handled after patch via inviteAppointedCompany)
 
-      if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0) {
+      if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0 && !hasClientInvite && validInvites.length === 0) {
         toast.error("Please fill in at least one field");
         setIsSaving(false);
         return;
       }
-      await patchData({ url: `projects/${projectId}/`, data: payload });
+      if (Object.keys(payload).length > 0) {
+        await patchData({ url: `projects/${projectId}/`, data: payload });
+      }
 
       // Register S3 documents if any uploaded
       if (s3Upload.entries.length > 0) {

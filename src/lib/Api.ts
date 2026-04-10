@@ -204,6 +204,7 @@ export const invitePersonnel = async (data: {
 
 export const inviteAppointedCompany = async (data: {
   company_name: string;
+  company_type?: string;
   contact_name: string;
   contact_email: string;
   project_id: number | string;
