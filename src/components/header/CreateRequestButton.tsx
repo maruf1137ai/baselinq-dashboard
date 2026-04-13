@@ -64,7 +64,7 @@ const ALL_TASK_TYPES = ["SI", "VO", "RFI", "CPI", "GI", "DC"];
 // Exact match with provided permission matrix
 const rolePermissions: Record<string, string[]> = {
   CLIENT: ["SI", "VO", "RFI"],                 // Client/Owner - can create SI, VO, RFI only
-  CPM: ["VO"],                                 // Client Project Manager - VO only
+  CPM: ["VO", "SI"],                           // Client Project Manager - VO, SI (includes Project Administrator)
   ARCH: ["SI", "VO"],                          // Architect - SI, VO
   PM: ["SI", "RFI", "CPI", "DC"],              // Project Manager - SI, RFI, CPI, DC
   PRINCIPAL_PM: ["SI", "CPI", "DC"],           // Principal/PM - SI, CPI, DC
