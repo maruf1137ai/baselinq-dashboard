@@ -18,9 +18,8 @@ export const NEW_ROLE_PERMISSION_MAP: Record<string, string> = {
   SUPER_USER: "CPM",
   QS: "CQS",
   STANDARD: "SE",
-  STRUCT_ENG: "SE",
-  MECH_ENG: "SE",
-  ELEC_ENG: "SE",
+  // STRUCT_ENG, MECH_ENG, ELEC_ENG are now separate backbone roles (not mapped to SE)
+  // This prevents them from inheriting SE's SI creation permission
   SPECIAL_USER: "PM",
   LIMITED: "FOREMAN",
   VIEWER: "FOREMAN",
@@ -198,6 +197,10 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   CONS_PLANNER: 44,
   PLANNER: 40,
   SE: 30,
+  // Engineer roles (separate from SE)
+  STRUCT_ENG: 30,
+  MECH_ENG: 30,
+  ELEC_ENG: 30,
   SS: 25,
   FOREMAN: 20,
 };
