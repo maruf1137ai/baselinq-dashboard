@@ -53,6 +53,15 @@ const Documents = () => {
     enabled: !!projectId,
   });
 
+  // Fetch user's upload capabilities
+  const { data: capabilities } = useQuery({
+    queryKey: ['document-capabilities', projectId],
+    queryFn: () => fetchData(`documents/user-capabilities/?project_id=${projectId}`),
+    enabled: !!projectId,
+  });
+
+  const canUploadAny = (capabilities?.documentTypes?.length || 0) > 0;
+
   const { mutate: handleDeleteDoc, isPending: isDeletingDoc } = useMutation({
     mutationFn: (docId: string) =>
       deleteData({ url: `documents/${docId}/?project_id=${projectId}`, data: undefined }),
@@ -186,13 +195,15 @@ const Documents = () => {
             >
               Ask AI
             </Button>
-            <Button
-              className="bg-primary text-white hover:opacity-90 transition-all rounded-lg h-9 px-4 font-normal"
-              onClick={() => setIsUploadDocumentModalOpen(true)}
-            >
-              <Plus className="w-5 h-5 mr-1" />
-              Upload
-            </Button>
+            {canUploadAny && (
+              <Button
+                className="bg-primary text-white hover:opacity-90 transition-all rounded-lg h-9 px-4 font-normal"
+                onClick={() => setIsUploadDocumentModalOpen(true)}
+              >
+                <Plus className="w-5 h-5 mr-1" />
+                Upload
+              </Button>
+            )}
           </div>
         </div>
 

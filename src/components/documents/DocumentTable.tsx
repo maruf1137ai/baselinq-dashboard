@@ -51,6 +51,13 @@ export interface ApiDocument {
   uploadedBy: { userId: string; name: string };
   createdAt: string;
   updatedAt: string;
+  userPermissions?: {
+    canEdit: boolean;
+    canDelete: boolean;
+    canDownload: boolean;
+    canUploadVersion: boolean;
+    canChat: boolean;
+  };
 }
 
 interface TooltipWrapperProps {
@@ -255,18 +262,18 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                           <DropdownMenuItem onClick={() => onRowClick(doc._id)} className="gap-2 text-sm font-normal">
                             <Eye className="w-4 h-4" /> View Details
                           </DropdownMenuItem>
-                          {doc.downloadUrl && (
+                          {doc.downloadUrl && doc.userPermissions?.canDownload !== false && (
                             <DropdownMenuItem onClick={() => window.open(doc.downloadUrl, '_blank')} className="gap-2 text-sm font-normal">
                               <Download className="w-4 h-4" /> Download
                             </DropdownMenuItem>
                           )}
-                          {onVersionUpload && (
+                          {onVersionUpload && doc.userPermissions?.canUploadVersion !== false && (
                             <DropdownMenuItem onClick={() => onVersionUpload(doc)} className="gap-2 text-sm font-normal">
                               <Upload className="w-4 h-4" /> Upload Version
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuSeparator />
-                          {onDelete && (
+                          {(doc.userPermissions?.canDelete !== false || doc.userPermissions?.canUploadVersion !== false) && <DropdownMenuSeparator />}
+                          {onDelete && doc.userPermissions?.canDelete !== false && (
                             <DropdownMenuItem onClick={() => onDelete(doc)} className="gap-2 text-sm font-normal text-red-600 focus:text-red-600">
                               <Trash2 className="w-4 h-4" /> Delete
                             </DropdownMenuItem>

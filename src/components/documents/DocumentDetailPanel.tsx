@@ -129,9 +129,11 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                         <p className="text-xs text-gray-500">PDF Document • 12 Pages</p>
                       </div>
                     </div>
-                    <Button size="sm" variant="outline" className="h-9 px-4 gap-2 border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm font-normal">
-                      <Download className="h-4 w-4" /> Download
-                    </Button>
+                    {document.userPermissions?.canDownload !== false && (
+                      <Button size="sm" variant="outline" className="h-9 px-4 gap-2 border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm font-normal">
+                        <Download className="h-4 w-4" /> Download
+                      </Button>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -198,14 +200,16 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                       >
                         View full history
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs font-normal gap-1.5 border-gray-200"
-                        onClick={() => setIsVersionUploadOpen(true)}
-                      >
-                        Upload New Version
-                      </Button>
+                      {document.userPermissions?.canUploadVersion !== false && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs font-normal gap-1.5 border-gray-200"
+                          onClick={() => setIsVersionUploadOpen(true)}
+                        >
+                          Upload New Version
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-4">
