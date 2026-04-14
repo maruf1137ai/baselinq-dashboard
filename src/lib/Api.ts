@@ -256,6 +256,15 @@ export const inviteCompanyMember = async (
   return res.data;
 };
 
+export const revokeCompanyInvite = async (
+  projectId: string | number,
+  companyId: string | number,
+  invitationId: string | number
+) => {
+  const res = await api.delete(`projects/${projectId}/appointed-companies/${companyId}/revoke-invite/${invitationId}/`);
+  return res.data;
+};
+
 export const updateCompanyMemberRole = async (
   projectId: string | number,
   teamMemberId: string | number,

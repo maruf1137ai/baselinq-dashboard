@@ -12,6 +12,7 @@ import {
   inviteCompanyMember,
   updateCompanyMemberRole,
   removeCompanyMember,
+  revokeCompanyInvite,
 } from "@/lib/Api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -85,6 +86,10 @@ const AppointedCompanies = () => {
   // Member removal
   const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
   const [isRemovingMember, setIsRemovingMember] = useState(false);
+
+  // Invitation revoke
+  const [revokingInviteId, setRevokingInviteId] = useState<number | null>(null);
+  const [isRevokingInvite, setIsRevokingInvite] = useState(false);
 
   const { data: currentUser } = useCurrentUser();
   const { data: rolesData } = useFetch<{ code: string; name: string }[]>("auth/roles/");
@@ -224,6 +229,21 @@ const AppointedCompanies = () => {
       toast.error("Failed to remove member.");
     } finally {
       setIsRemovingMember(false);
+    }
+  };
+
+  const handleRevokeInvite = async (companyId: string | number, invitationId: number) => {
+    if (!selectedProjectId) return;
+    setIsRevokingInvite(true);
+    try {
+      await revokeCompanyInvite(selectedProjectId, companyId, invitationId);
+      toast.success("Invitation revoked.");
+      setRevokingInviteId(null);
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to revoke invitation.");
+    } finally {
+      setIsRevokingInvite(false);
     }
   };
 
@@ -440,7 +460,7 @@ const AppointedCompanies = () => {
                                             {m.status}
                                           </span>
                                         )}
-                                        {/* Remove member */}
+                                        {/* Remove active member */}
                                         {canManageCompany && m.team_member_id && String(m.id) !== String(currentUser?.id) && (
                                           removingMemberId === m.team_member_id ? (
                                             <div className="flex items-center gap-1">
@@ -461,6 +481,32 @@ const AppointedCompanies = () => {
                                               onClick={() => setRemovingMemberId(m.team_member_id)}
                                               className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
                                               title="Remove member"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                          )
+                                        )}
+                                        {/* Revoke pending invitation */}
+                                        {canManageCompany && m.invitation_id && (
+                                          revokingInviteId === m.invitation_id ? (
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                disabled={isRevokingInvite}
+                                                onClick={() => handleRevokeInvite(comp.id, m.invitation_id)}
+                                                className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
+                                              >
+                                                {isRevokingInvite ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                Confirm
+                                              </button>
+                                              <button onClick={() => setRevokingInviteId(null)} className="text-[10px] text-muted-foreground hover:text-foreground px-1">
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              onClick={() => setRevokingInviteId(m.invitation_id)}
+                                              className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
+                                              title="Revoke invitation"
                                             >
                                               <Trash2 className="w-3 h-3" />
                                             </button>
