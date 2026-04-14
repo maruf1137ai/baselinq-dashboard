@@ -179,9 +179,11 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                               </Badge>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="h-8 text-xs font-normal opacity-0 group-hover:opacity-100 transition-opacity">
-                            Resolve
-                          </Button>
+                          {document.userPermissions?.canResolve !== false && (
+                            <Button variant="ghost" size="sm" className="h-8 text-xs font-normal opacity-0 group-hover:opacity-100 transition-opacity">
+                              Resolve
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

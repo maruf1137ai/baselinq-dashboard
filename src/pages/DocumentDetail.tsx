@@ -303,37 +303,45 @@ const DocumentDetail = () => {
 
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                <Pencil className="w-4 h-4" /> Edit
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
-                onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
-                disabled={!doc.downloadUrl}
-              >
-                <Download className="w-4 h-4" /> Download
-              </Button>
+              {doc.userPermissions?.canEdit !== false && (
+                <Button
+                  variant="outline"
+                  className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  onClick={() => setIsEditModalOpen(true)}
+                >
+                  <Pencil className="w-4 h-4" /> Edit
+                </Button>
+              )}
+              {doc.userPermissions?.canDownload !== false && (
+                <Button
+                  variant="outline"
+                  className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
+                  disabled={!doc.downloadUrl}
+                >
+                  <Download className="w-4 h-4" /> Download
+                </Button>
+              )}
               <Button variant="outline" className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2">
                 <Share2 className="w-4 h-4" /> Share
               </Button>
-              <Button
-                variant="outline"
-                className="bg-white border-red-200 text-red-600 hover:bg-red-50 h-9 px-4 rounded-lg transition-all flex gap-2"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </Button>
-              <Button
-                className="bg-primary text-white hover:opacity-90 h-9 px-4 rounded-lg transition-all font-normal"
-                onClick={() => setIsVersionUploadOpen(true)}
-              >
-                Upload revision
-              </Button>
+              {doc.userPermissions?.canDelete !== false && (
+                <Button
+                  variant="outline"
+                  className="bg-white border-red-200 text-red-600 hover:bg-red-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </Button>
+              )}
+              {doc.userPermissions?.canUploadVersion !== false && (
+                <Button
+                  className="bg-primary text-white hover:opacity-90 h-9 px-4 rounded-lg transition-all font-normal"
+                  onClick={() => setIsVersionUploadOpen(true)}
+                >
+                  Upload revision
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
