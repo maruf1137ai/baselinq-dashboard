@@ -74,6 +74,19 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const projectId = localStorage.getItem('selectedProjectId');
+  const [certificateSubtype, setCertificateSubtype] = useState<string>('');
+
+  // Fetch user's uploadable document types
+  const { data: capabilities } = useFetch<{
+    documentTypes: string[];
+    certificateSubtypes: string[];
+  }>(
+    projectId ? `documents/user-capabilities/?project_id=${projectId}` : '',
+    { enabled: !!projectId && isOpen },
+  );
+
+  const uploadableDocTypes = capabilities?.documentTypes || [];
+  const uploadableCertSubtypes = capabilities?.certificateSubtypes || [];
 
   const DONE_STATUSES = ['done', 'Done', 'DONE', 'Closed', 'closed', 'CLOSED', 'Approved', 'approved'];
   const TYPE_FILTERS = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'];
@@ -147,6 +160,10 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
       toast.error('Document type is required');
       return;
     }
+    if (docType === 'Certificate' && !certificateSubtype) {
+      toast.error('Certificate type is required');
+      return;
+    }
     if (s3Upload.entries.length === 0) {
       toast.error('Please select a file to upload');
       return;
@@ -189,6 +206,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             projectId: parseInt(projectId),
             files,
             type: docType,
+            certificateSubtype: certificateSubtype || undefined,
             discipline: discipline || '',
             reference: reference || '',
             description: description || '',
@@ -211,6 +229,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
             project_id: parseInt(projectId),
             name: name.trim(),
             type: docType,
+            certificate_subtype: certificateSubtype || undefined,
             discipline: discipline || '',
             description: description || '',
             reference: reference || '',
@@ -242,6 +261,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
     setShowLinking(false);
     setName('');
     setDocType('');
+    setCertificateSubtype('');
     setDiscipline('');
     setReference('');
     setReferenceEdited(false);
@@ -252,6 +272,13 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
     setActiveFilter('All');
     onClose();
   };
+
+  // Reset certificate subtype when document type changes
+  useEffect(() => {
+    if (docType !== 'Certificate') {
+      setCertificateSubtype('');
+    }
+  }, [docType]);
 
   const canProceedStep1 = s3Upload.entries.length > 0 && !s3Upload.hasUploading;
 
@@ -348,7 +375,24 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
 
           <div className="h-px bg-gray-100 w-full" />
 
+          {/* No Permission Message */}
+          {uploadableDocTypes.length === 0 && (
+            <div className="p-6 bg-amber-50 rounded-xl border border-amber-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900 mb-1">No Upload Permission</p>
+                  <p className="text-xs text-amber-700">
+                    You do not have permission to upload any document types in this project.
+                    Please contact your project manager for access.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section 2 — Details & AI */}
+          {uploadableDocTypes.length > 0 && (
           <div className="space-y-6 text-left">
             <div>
               <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
@@ -372,7 +416,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DOCUMENT_TYPES.map((t) => (
+                    {DOCUMENT_TYPES.filter(t => uploadableDocTypes.includes(t)).map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
@@ -392,6 +436,24 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                 </Select>
               </div>
             </div>
+
+            {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
+              <div>
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                  Certificate Type <span className="text-red-500">*</span>
+                </Label>
+                <Select value={certificateSubtype} onValueChange={setCertificateSubtype}>
+                  <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
+                    <SelectValue placeholder="Select certificate type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uploadableCertSubtypes.map((subtype) => (
+                      <SelectItem key={subtype} value={subtype}>{subtype} Certificate</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
@@ -438,6 +500,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
               />
             </div>
           </div>
+          )}
 
           <div className="h-px bg-gray-100 w-full" />
 
