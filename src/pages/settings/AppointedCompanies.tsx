@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useProject, useUpdateProject } from "@/hooks/useProjects";
+import { useProject } from "@/hooks/useProjects";
 import React, { useState, useEffect } from "react";
 import {
   inviteAppointedCompany,
@@ -9,7 +9,11 @@ import {
   removeAppointedCompany,
   getPresignedUrl,
   uploadFileToPresignedUrl,
+  inviteCompanyMember,
+  updateCompanyMemberRole,
+  removeCompanyMember,
 } from "@/lib/Api";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Building2,
   Save,
@@ -30,7 +34,8 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
-import { COMPANY_TYPES } from "@/lib/roleUtils";
+import { COMPANY_TYPES, filterRolesByCompanyType } from "@/lib/roleUtils";
+import useFetch from "@/hooks/useFetch";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -55,7 +60,6 @@ interface AppointedInviteEntry {
 const AppointedCompanies = () => {
   const { canManageTeam } = usePermissions();
   const queryClient = useQueryClient();
-  const updateProjectMutation = useUpdateProject();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { isLoading } = useProject(selectedProjectId ?? undefined);
 
@@ -63,9 +67,28 @@ const AppointedCompanies = () => {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
+  const [isSendingInvites, setIsSendingInvites] = useState(false);
 
   // Per-company expanded members panel
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string | number>>(new Set());
+
+  // Per-company inline invite form
+  const [invitingForCompany, setInvitingForCompany] = useState<string | number | null>(null);
+  const [memberInviteForm, setMemberInviteForm] = useState({ name: "", email: "", position: "" });
+  const [isMemberInviting, setIsMemberInviting] = useState(false);
+
+  // Member role editing
+  const [editingMember, setEditingMember] = useState<{ teamMemberId: number; currentRole: string } | null>(null);
+  const [editingMemberRole, setEditingMemberRole] = useState("");
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+
+  // Member removal
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
+  const [isRemovingMember, setIsRemovingMember] = useState(false);
+
+  const { data: currentUser } = useCurrentUser();
+  const { data: rolesData } = useFetch<{ code: string; name: string }[]>("auth/roles/");
+  const allRoles = (rolesData || []).filter((r: any) => r.is_active !== false);
 
   // Remove confirmation
   const [removeConfirmId, setRemoveConfirmId] = useState<string | number | null>(null);
@@ -96,6 +119,7 @@ const AppointedCompanies = () => {
       return;
     }
 
+    setIsSendingInvites(true);
     try {
       await Promise.allSettled(
         toInvite.map(async (entry) => {
@@ -132,6 +156,8 @@ const AppointedCompanies = () => {
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
     } catch {
       toast.error("Failed to send invitations.");
+    } finally {
+      setIsSendingInvites(false);
     }
   };
 
@@ -147,6 +173,57 @@ const AppointedCompanies = () => {
       toast.error("Failed to remove company.");
     } finally {
       setRemoveLoading(false);
+    }
+  };
+
+  const handleInviteMember = async (companyId: string | number) => {
+    if (!selectedProjectId || !memberInviteForm.email.trim()) return;
+    setIsMemberInviting(true);
+    try {
+      await inviteCompanyMember(selectedProjectId, companyId, {
+        contact_email: memberInviteForm.email.trim(),
+        contact_name: memberInviteForm.name.trim() || undefined,
+        position: memberInviteForm.position || undefined,
+      });
+      toast.success("Member invitation sent.");
+      setMemberInviteForm({ name: "", email: "", position: "" });
+      setInvitingForCompany(null);
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to send invitation.");
+    } finally {
+      setIsMemberInviting(false);
+    }
+  };
+
+  const handleUpdateMemberRole = async (teamMemberId: number) => {
+    if (!selectedProjectId || !editingMemberRole.trim()) return;
+    setIsUpdatingRole(true);
+    try {
+      await updateCompanyMemberRole(selectedProjectId, teamMemberId, editingMemberRole.trim());
+      toast.success("Role updated.");
+      setEditingMember(null);
+      setEditingMemberRole("");
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to update role.");
+    } finally {
+      setIsUpdatingRole(false);
+    }
+  };
+
+  const handleRemoveMember = async (teamMemberId: number) => {
+    if (!selectedProjectId) return;
+    setIsRemovingMember(true);
+    try {
+      await removeCompanyMember(selectedProjectId, teamMemberId);
+      toast.success("Member removed.");
+      setRemovingMemberId(null);
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to remove member.");
+    } finally {
+      setIsRemovingMember(false);
     }
   };
 
@@ -170,7 +247,6 @@ const AppointedCompanies = () => {
     );
   }
 
-  const isSaving = updateProjectMutation.isPending;
 
   const CLIENT_ROLES = ["CLIENT", "OWNER", "CLIENT OWNER"];
   const appointedOnly = appointedCompanies
@@ -190,18 +266,7 @@ const AppointedCompanies = () => {
             </div>
             <h1 className="text-3xl font-normal text-foreground tracking-tight">Associated Companies</h1>
           </div>
-          {canManageTeam ? (
-            appointedInvites.length > 0 && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                <span className="font-normal">{isSaving ? "Inviting..." : "Send Invitations"}</span>
-              </Button>
-            )
-          ) : (
+          {!canManageTeam && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
               <Lock className="w-3.5 h-3.5" />
               <span>Read-only access</span>
@@ -308,41 +373,176 @@ const AppointedCompanies = () => {
                         </div>
 
                         {/* Members panel */}
-                        {isExpanded && (
-                          <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Members</p>
-                            {members.length === 0 ? (
-                              <p className="text-xs text-muted-foreground py-2">No members yet.</p>
-                            ) : (
-                              members.map((m: any) => (
-                                <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-border">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
-                                      {(m.name || m.email || "?")[0].toUpperCase()}
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-normal text-foreground">{m.name || m.email}</p>
-                                      <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                        {isExpanded && (() => {
+                          const isCompanyMember = members.some((m: any) => String(m.id) === String(currentUser?.id));
+                          const canManageCompany = isCompanyMember;
+                          return (
+                            <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
+                              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Members</p>
+                              {members.length === 0 ? (
+                                <p className="text-xs text-muted-foreground py-2">No members yet.</p>
+                              ) : (
+                                members.map((m: any) => (
+                                  <div key={m.id} className="rounded-lg bg-slate-50 border border-border overflow-hidden">
+                                    <div className="flex items-center justify-between py-2 px-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
+                                          {(m.name || m.email || "?")[0].toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-normal text-foreground">{m.name || m.email}</p>
+                                          <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {/* Role display or inline edit */}
+                                        {canManageCompany && m.team_member_id && editingMember?.teamMemberId === m.team_member_id ? (
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              autoFocus
+                                              className="h-6 px-2 text-[11px] rounded border border-border bg-white focus:outline-none focus:border-primary w-28"
+                                              value={editingMemberRole}
+                                              onChange={(e) => setEditingMemberRole(e.target.value)}
+                                              onKeyDown={(e) => { if (e.key === "Enter") handleUpdateMemberRole(m.team_member_id); if (e.key === "Escape") { setEditingMember(null); setEditingMemberRole(""); }}}
+                                            />
+                                            <button
+                                              disabled={isUpdatingRole || !editingMemberRole.trim()}
+                                              onClick={() => handleUpdateMemberRole(m.team_member_id)}
+                                              className="text-[10px] px-2 py-0.5 rounded bg-primary text-white disabled:opacity-50"
+                                            >
+                                              {isUpdatingRole ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                                            </button>
+                                            <button onClick={() => { setEditingMember(null); setEditingMemberRole(""); }} className="text-[10px] text-muted-foreground hover:text-foreground">
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span
+                                            className={cn("text-[10px] text-muted-foreground", canManageCompany && m.team_member_id && "cursor-pointer hover:text-primary hover:underline")}
+                                            title={canManageCompany && m.team_member_id ? "Click to edit role" : undefined}
+                                            onClick={() => {
+                                              if (canManageCompany && m.team_member_id) {
+                                                setEditingMember({ teamMemberId: m.team_member_id, currentRole: m.role });
+                                                setEditingMemberRole(m.role || "");
+                                              }
+                                            }}
+                                          >
+                                            {m.role}
+                                          </span>
+                                        )}
+                                        {m.status && (
+                                          <span className={cn(
+                                            "text-[9px] px-1.5 py-0.5 rounded-full",
+                                            m.status === "Invited" ? "bg-amber-100 text-amber-700" :
+                                            m.status === "Expired" ? "bg-red-100 text-red-700" :
+                                            "bg-green-100 text-green-700"
+                                          )}>
+                                            {m.status}
+                                          </span>
+                                        )}
+                                        {/* Remove member */}
+                                        {canManageCompany && m.team_member_id && String(m.id) !== String(currentUser?.id) && (
+                                          removingMemberId === m.team_member_id ? (
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                disabled={isRemovingMember}
+                                                onClick={() => handleRemoveMember(m.team_member_id)}
+                                                className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
+                                              >
+                                                {isRemovingMember ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                Confirm
+                                              </button>
+                                              <button onClick={() => setRemovingMemberId(null)} className="text-[10px] text-muted-foreground hover:text-foreground px-1">
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              onClick={() => setRemovingMemberId(m.team_member_id)}
+                                              className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
+                                              title="Remove member"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                          )
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-muted-foreground">{m.role}</span>
-                                    {m.status && (
-                                      <span className={cn(
-                                        "text-[9px] px-1.5 py-0.5 rounded-full",
-                                        m.status === "Invited" ? "bg-amber-100 text-amber-700" :
-                                        m.status === "Expired" ? "bg-red-100 text-red-700" :
-                                        "bg-green-100 text-green-700"
-                                      )}>
-                                        {m.status}
-                                      </span>
-                                    )}
+                                ))
+                              )}
+
+                              {/* Inline invite form */}
+                              {canManageCompany && invitingForCompany === comp.id ? (
+                                <div className="mt-3 pt-3 border-t border-border space-y-3">
+                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Invite Member</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[11px] text-muted-foreground">Full Name</label>
+                                      <Input
+                                        value={memberInviteForm.name}
+                                        onChange={(e) => setMemberInviteForm((p) => ({ ...p, name: e.target.value }))}
+                                        className={INPUT_CLS}
+                                        placeholder="e.g. John Smith"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[11px] text-muted-foreground">Email Address <span className="text-red-400">*</span></label>
+                                      <Input
+                                        type="email"
+                                        value={memberInviteForm.email}
+                                        onChange={(e) => setMemberInviteForm((p) => ({ ...p, email: e.target.value }))}
+                                        className={INPUT_CLS}
+                                        placeholder="e.g. john@firm.co.za"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-1 md:col-span-2">
+                                      <label className="text-[11px] text-muted-foreground">Role <span className="text-red-400">*</span></label>
+                                      <select
+                                        className={SELECT_CLS}
+                                        value={memberInviteForm.position}
+                                        onChange={(e) => setMemberInviteForm((p) => ({ ...p, position: e.target.value }))}
+                                      >
+                                        <option value="">Select role…</option>
+                                        {filterRolesByCompanyType(allRoles, comp.company_type).map((r) => (
+                                          <option key={r.code} value={r.code}>{r.name}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => { setInvitingForCompany(null); setMemberInviteForm({ name: "", email: "", position: "" }); }}
+                                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-all"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={!memberInviteForm.email.trim() || !memberInviteForm.position || isMemberInviting}
+                                      onClick={() => handleInviteMember(comp.id)}
+                                      className="px-4 py-1.5 text-xs text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                      style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}
+                                    >
+                                      {isMemberInviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                      Send Invite
+                                    </button>
                                   </div>
                                 </div>
-                              ))
-                            )}
-                          </div>
-                        )}
+                              ) : canManageCompany && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setInvitingForCompany(comp.id); setMemberInviteForm({ name: "", email: "", position: "" }); }}
+                                  className="mt-2 w-full py-2 border border-dashed border-border rounded-lg flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  Invite Member
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Insurance Certificate Card — only shown when insurance exists */}
                         {hasInsurance && <div className={cn(
@@ -510,6 +710,20 @@ const AppointedCompanies = () => {
                 </div>
               </div>
             ))}
+
+            {/* Send Invitations button — shown inline after the forms */}
+            {canManageTeam && appointedInvites.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSendingInvites}
+                  className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm transition-all flex items-center gap-2"
+                >
+                  {isSendingInvites ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span className="font-normal">{isSendingInvites ? "Inviting..." : "Send Invitations"}</span>
+                </Button>
+              </div>
+            )}
 
             {/* Add button — only shown to users who can manage team */}
             {canManageTeam && (

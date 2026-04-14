@@ -11,6 +11,7 @@ const VO_WORKFLOW_STAGES = [
   { key: 'submitted', label: 'Submitted' },
   { key: 'underreview', label: 'Under Review' },
   { key: 'priced', label: 'Priced' },
+  { key: 'recommended', label: 'Recommended' },
   { key: 'approved', label: 'Approved' },
 ];
 
@@ -26,8 +27,10 @@ const getStageIndex = (status: string): number => {
     return 2;
   } else if (statusLower.includes('priced') || statusLower.includes('quoted')) {
     return 3;
-  } else if (statusLower.includes('approved') || statusLower.includes('done') || statusLower.includes('closed')) {
+  } else if (statusLower.includes('recommended')) {
     return 4;
+  } else if (statusLower.includes('approved') || statusLower.includes('done') || statusLower.includes('closed')) {
+    return 5;
   }
 
   return 0; // Default to draft

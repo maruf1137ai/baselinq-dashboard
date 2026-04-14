@@ -676,10 +676,13 @@ export default function CreateProject() {
   const [inviteClientData, setInviteClientData] = useState({ name: "", email: "" });
   const [isInvited, setIsInvited] = useState(false);
 
-  // Invite Personnel modal
-  const [showInvitePersonnelModal, setShowInvitePersonnelModal] = useState(false);
+  // Add Member modal (unified)
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [addMemberTab, setAddMemberTab] = useState<"existing" | "invite">("existing");
+  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<OrgUser | null>(null);
+  const [selectedMemberRole, setSelectedMemberRole] = useState("");
+  const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
   const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
-  const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
   const [invitedPersonnelList, setInvitedPersonnelList] = useState<{ name: string; email: string; role_code: string }[]>([]);
 
   const navigate = useNavigate();
@@ -812,26 +815,6 @@ export default function CreateProject() {
       }
     }));
     if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
-  };
-
-  const handleInvitePersonnelSubmit = async () => {
-    if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
-    setInvitePersonnelSubmitting(true);
-    try {
-      await invitePersonnel({
-        name: invitePersonnelForm.name,
-        email: invitePersonnelForm.email,
-        role_code: invitePersonnelForm.role_code,
-      });
-      toast.success(`Invitation sent to ${invitePersonnelForm.email}`);
-      setInvitedPersonnelList((prev) => [...prev, { ...invitePersonnelForm }]);
-      setShowInvitePersonnelModal(false);
-      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to send invitation.");
-    } finally {
-      setInvitePersonnelSubmitting(false);
-    }
   };
 
   const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
@@ -1108,6 +1091,7 @@ export default function CreateProject() {
     setIsSubmitting(true);
     // Snapshot mutable state so onSuccess closure always has the latest values
     const personnelSnapshot = [...clientPersonnelList];
+    const invitedPersonnelSnapshot = [...invitedPersonnelList];
 
     const b = parseBudget(form.total_budget);
     const fx = parseFloat(form.fx_rate) || 1;
@@ -1214,6 +1198,17 @@ export default function CreateProject() {
         }
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
         if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
+
+        // Send personnel invites now that we have a project_id
+        if (pId && invitedPersonnelSnapshot.length > 0) {
+          await Promise.all(invitedPersonnelSnapshot.map(async (p) => {
+            try {
+              await invitePersonnel({ name: p.name, email: p.email, role_code: p.role_code, project_id: pId });
+            } catch (err: any) {
+              toast.warning(`Could not invite ${p.email}: ${err?.response?.data?.error || err?.message}`);
+            }
+          }));
+        }
 
         setIsSubmitting(false);
         navigate("/");
@@ -1736,40 +1731,39 @@ export default function CreateProject() {
                             These members will be given predetermined access rights to the project.
                           </p>
                           <div className="space-y-3">
-                            {clientPersonnelList.map((entry) => (
-                              <OrgPersonnelSelectCard
-                                key={entry.id}
-                                entry={entry}
-                                roleOptions={CLIENT_ROLE_OPTIONS}
-                                takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
-                                orgUsers={orgUsers}
-                                allRoles={appRoles}
-                                onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                                onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
-                                canRemove={true}
-                              />
-                            ))}
-                            {clientPersonnelList.length < CLIENT_ROLE_OPTIONS.length && (
-                              <button
-                                type="button"
-                                onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
-                                className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                  <Plus className="w-3.5 h-3.5" />
+                            {/* Existing org users added */}
+                            {clientPersonnelList.map((entry) => {
+                              const roleName = entry.position || entry.role || "Member";
+                              return (
+                                <div key={entry.id} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
+                                  <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] font-normal shrink-0">
+                                    {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
+                                    <p className="text-[11px] text-[#9ca3af] truncate">{entry.email}</p>
+                                  </div>
+                                  <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                    className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
+                                    <X className="w-4 h-4" />
+                                  </button>
                                 </div>
-                                <span className="font-normal">Add User</span>
-                              </button>
-                            )}
+                              );
+                            })}
+                            {/* Invited external users */}
                             {invitedPersonnelList.map((person, i) => (
                               <div key={i} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
-                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center shrink-0">
-                                  <User className="w-4 h-4 text-[#6c5ce7]" />
+                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6c5ce7] text-[11px] font-normal shrink-0">
+                                  {(person.name || person.email || "U").charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[13px] font-normal text-[#111827] truncate">{person.name || person.email}</p>
                                   <p className="text-[11px] text-[#9ca3af] truncate">{person.email}</p>
                                 </div>
-                                <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0">Invited</span>
+                                <span className="text-[11px] text-[#9ca3af] bg-[#f3f4f6] border border-[#e2e5ea] px-2 py-0.5 rounded-full shrink-0">Invited</span>
                                 <button
                                   type="button"
                                   onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
@@ -1778,12 +1772,22 @@ export default function CreateProject() {
                                 </button>
                               </div>
                             ))}
+                            {/* Single "Add Member" button */}
                             <button
                               type="button"
-                              onClick={() => setShowInvitePersonnelModal(true)}
-                              className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
-                              <Mail className="w-3.5 h-3.5" />
-                              <span className="font-normal">Invite User</span>
+                              onClick={() => {
+                                setAddMemberTab("existing");
+                                setSelectedMemberToAdd(null);
+                                setSelectedMemberRole("");
+                                setMemberPopoverOpen(false);
+                                setInvitePersonnelForm({ name: "", email: "", role_code: "" });
+                                setShowAddMemberModal(true);
+                              }}
+                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
+                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                <Plus className="w-3.5 h-3.5" />
+                              </div>
+                              <span className="font-normal">Add Member</span>
                             </button>
                           </div>
                         </div>
@@ -2537,96 +2541,236 @@ export default function CreateProject() {
         </div >
       </div >
 
-      {/* ── Invite Personnel Modal ── */}
-      {showInvitePersonnelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f0fdf4" }}>
-                  <Mail className="w-4 h-4" style={{ color: "#00b894" }} />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Invite User</h3>
-                  <p className="text-[12px] text-[#9ca3af]">Send an invitation email with a role</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* ── Add Member Modal (unified) ── */}
+      {showAddMemberModal && (() => {
+        const alreadyAddedIds = new Set(clientPersonnelList.map(e => e.userId).filter(Boolean));
+        const alreadyInvitedEmails = new Set(invitedPersonnelList.map(e => e.email));
+        const filteredOrgUsers = orgUsers.filter(u => !alreadyAddedIds.has(u.id));
+        const canAddExisting = !!selectedMemberToAdd;
+        const canAddInvite = !!invitePersonnelForm.email.trim() && !!invitePersonnelForm.role_code;
 
-            {/* Body */}
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-                  <input
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                    placeholder="e.g. John Smith"
-                    value={invitePersonnelForm.name}
-                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
-                  />
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#f0fdf4] flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#00b894]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Member</h3>
+                    <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
-                  <input
-                    type="email"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                    placeholder="e.g. john@company.com"
-                    value={invitePersonnelForm.email}
-                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
-                  />
-                </div>
+              {/* Tabs */}
+              <div className="flex border-b border-[#f3f4f6] shrink-0">
+                {(["existing", "invite"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setAddMemberTab(tab)}
+                    className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${addMemberTab === tab
+                      ? "border-[#6c5ce7] text-[#6c5ce7]"
+                      : "border-transparent text-[#6b7280] hover:text-[#374151]"
+                    }`}>
+                    {tab === "existing" ? "Existing Users" : "Invite External"}
+                  </button>
+                ))}
               </div>
 
-              <div>
-                <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
-                <select
-                  className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                  value={invitePersonnelForm.role_code}
-                  onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
-                  <option value="">Select role...</option>
-                  {appRoles.map((r) => (
-                    <option key={r.code} value={r.code}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                {addMemberTab === "existing" ? (
+                  <div className="space-y-4">
+                    {/* Combobox — same pattern as team management settings */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
+                      <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+                            {selectedMemberToAdd ? (
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                  {(selectedMemberToAdd.name || selectedMemberToAdd.email).charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-[13px] text-[#374151]">{selectedMemberToAdd.name || selectedMemberToAdd.email}</p>
+                                  <p className="text-[11px] text-[#9ca3af]">{selectedMemberToAdd.email}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-[13px] text-[#9ca3af]">Select a user...</span>
+                            )}
+                            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+                            <CommandList>
+                              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
+                              <CommandGroup>
+                                {filteredOrgUsers.map((u) => {
+                                  const isSelected = selectedMemberToAdd?.id === u.id;
+                                  return (
+                                    <CommandItem
+                                      key={u.id}
+                                      value={u.name || u.email}
+                                      onSelect={() => {
+                                        setSelectedMemberToAdd(u);
+                                        setMemberPopoverOpen(false);
+                                      }}
+                                      className="cursor-pointer px-3 py-2.5">
+                                      <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                            {(u.name || u.email).charAt(0).toUpperCase()}
+                                          </div>
+                                          <div>
+                                            <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
+                                            <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
+                                          </div>
+                                        </div>
+                                        <div className={cn(
+                                          "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
+                                          isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-[#e2e5ea] bg-white"
+                                        )}>
+                                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                                        </div>
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6]">
-              <button
-                type="button"
-                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
-                className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code || invitePersonnelSubmitting}
-                onClick={handleInvitePersonnelSubmit}
-                className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                {invitePersonnelSubmitting ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                    {/* Role select — shown when a user is selected */}
+                    {selectedMemberToAdd && (
+                      <div className="space-y-1.5">
+                        <label className="block text-[12px] font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
+                        <select
+                          className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          value={selectedMemberRole}
+                          onChange={(e) => setSelectedMemberRole(e.target.value)}>
+                          <option value="">Select role…</option>
+                          {appRoles.map((r) => (
+                            <option key={r.code} value={r.code}>{r.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <><Mail className="w-3.5 h-3.5" /> Send Invite</>
+                  /* ── Invite External tab ── */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <input
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          placeholder="e.g. John Smith"
+                          value={invitePersonnelForm.name}
+                          onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <input
+                          type="email"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          placeholder="e.g. john@company.com"
+                          value={invitePersonnelForm.email}
+                          onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
+                      <select
+                        className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                        value={invitePersonnelForm.role_code}
+                        onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
+                        <option value="">Select role…</option>
+                        {appRoles.map((r) => (
+                          <option key={r.code} value={r.code}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  Cancel
+                </button>
+                {addMemberTab === "existing" ? (
+                  <button
+                    type="button"
+                    disabled={!canAddExisting || !selectedMemberRole}
+                    onClick={() => {
+                      if (!selectedMemberToAdd || !selectedMemberRole) return;
+                      const roleName = appRoles.find(r => r.code === selectedMemberRole)?.name || selectedMemberRole;
+                      setClientPersonnelList((prev) => [...prev, {
+                        id: crypto.randomUUID(),
+                        name: selectedMemberToAdd.name || selectedMemberToAdd.email,
+                        email: selectedMemberToAdd.email,
+                        position: roleName,
+                        role: roleName,
+                        userId: selectedMemberToAdd.id,
+                      }]);
+                      setSelectedMemberToAdd(null);
+                      setSelectedMemberRole("");
+                      setMemberSearch("");
+                      setShowAddMemberModal(false);
+                    }}
+                    className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
+                    <Check className="w-3.5 h-3.5" /> Add Member
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!canAddInvite || alreadyInvitedEmails.has(invitePersonnelForm.email.trim())}
+                    onClick={() => {
+                      if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
+                      setInvitedPersonnelList((prev) => [...prev, { ...invitePersonnelForm }]);
+                      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
+                      setShowAddMemberModal(false);
+                    }}
+                    className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
+                    <Mail className="w-3.5 h-3.5" /> Send Invite
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

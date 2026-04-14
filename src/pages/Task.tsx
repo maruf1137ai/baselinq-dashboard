@@ -74,9 +74,9 @@ const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
 // Role to document type mapping - keys are standardized backbone codes
 // Exact match with provided permission matrix
 const rolePermissions: Record<string, string[]> = {
-  CLIENT: ["SI", "VO", "RFI"],                 // Client/Owner - can create SI, VO, RFI only
-  CPM: ["VO"],                                 // Client Project Manager - VO only
-  ARCH: ["SI", "VO"],                          // Architect - SI, VO
+  CLIENT: ALL_TASK_TYPES,                      // Client/Owner - can create any task
+  CPM: ALL_TASK_TYPES,                         // Client Project Manager - can create any task
+  ARCH: ["SI", "VO", "RFI"],                   // Architect - SI, VO, RFI
   PM: ["SI", "RFI", "CPI", "DC"],              // Project Manager - SI, RFI, CPI, DC
   PRINCIPAL_PM: ["SI", "CPI", "DC"],           // Principal/PM - SI, CPI, DC
   CM: ["SI", "RFI", "CPI", "DC"],              // Construction Manager - SI, RFI, CPI, DC
@@ -96,7 +96,7 @@ const rolePermissions: Record<string, string[]> = {
 
 // Timeline stages per task type — used to map board columns to entity status
 const taskTypeStages: Record<string, string[]> = {
-  VO: ["Draft", "Submitted", "Under Review", "Priced", "Approved"],
+  VO: ["Draft", "Priced", "Under Review", "Recommended", "Approved"],
   RFI: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
   SI: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
   DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
@@ -275,13 +275,20 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
       (normalizedTaskType === 'DC' && (entityStatus === 'notice issued' || entityStatus === 'submitted'))
     );
 
+  // Sign-off required: Recommended VO and current user is a Client role
+  const clientRolesForSignOff = ["CLIENT", "OWNER", "CPM"];
+  const needsSignOff = normalizedTaskType === 'VO'
+    && entityStatus === 'recommended'
+    && userRoles.some(r => clientRolesForSignOff.includes(r));
+
   // Card border + background per escalation level (pending review takes priority over warnings)
-  const cardBorder = needsReview ? 'border border-amber-400 bg-amber-50/20' :
-    isResolved ? 'border border-border' :
-      escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
-        escalationLevel === 1 ? 'border border-red-200 bg-red-50/20' :
-          isWarning ? 'border border-amber-200' :
-            'border border-border';
+  const cardBorder = needsSignOff ? 'border border-[#8081F6] bg-[#8081F6]/5 ring-1 ring-[#8081F6]/20' :
+    needsReview ? 'border border-amber-400 bg-amber-50/20' :
+      isResolved ? 'border border-border' :
+        escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
+          escalationLevel === 1 ? 'border border-red-200 bg-red-50/20' :
+            isWarning ? 'border border-amber-200' :
+              'border border-border';
 
   const content = (
     <div ref={setNodeRef} style={style} {...attributes} {...(isLocked ? {} : listeners)} className="mb-3">
@@ -304,7 +311,18 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   }`}>{priorityInfo.label}</span>
               )}
             </div>
-            {needsReview && (
+            {needsSignOff && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-medium text-[#8081F6] bg-[#8081F6]/10 border border-[#8081F6] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8081F6] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#8081F6]" />
+                  </span>
+                  Awaiting Sign-off
+                </span>
+              </div>
+            )}
+            {!needsSignOff && needsReview && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                   <span className="relative flex h-1.5 w-1.5">
@@ -315,7 +333,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                 </span>
               </div>
             )}
-            {!needsReview && isResolved && dueDateInfo.isOverdue ? (
+            {!needsSignOff && !needsReview && isResolved && dueDateInfo.isOverdue ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
                 Closed {overdueDays}d late
               </span>
@@ -672,7 +690,7 @@ export default function Task() {
       setTasks({
         todo: transformedTasks.filter((t: any) => !t.status || t.status === 'todo' || t.status === 'Todo' || t.status === 'Open' || t.status === 'Draft'),
 
-        inReview: transformedTasks.filter((t: any) => t.status === 'in review' || t.status === 'In Review' || t.status === 'inReview' || t.status === 'Pending' || t.status === 'Answered' || t.status === 'IN_REVIEW'),
+        inReview: transformedTasks.filter((t: any) => t.status === 'in review' || t.status === 'In Review' || t.status === 'inReview' || t.status === 'Pending' || t.status === 'Answered' || t.status === 'IN_REVIEW' || t.status === 'Recommended'),
 
         done: transformedTasks.filter((t: any) => t.status === 'done' || t.status === 'Done' || t.status === 'Closed'),
       });

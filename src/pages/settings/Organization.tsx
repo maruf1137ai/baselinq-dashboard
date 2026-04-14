@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import OrgTeamTable from "@/components/settings/OrgTeamTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,7 @@ import {
   X,
   Lock,
   Info,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasPermission } from "@/lib/roleUtils";
@@ -71,6 +73,7 @@ const OrganizationPage = () => {
   const { data: user, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "team">("details");
   const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
   const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
   const canEditOrg = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
@@ -215,340 +218,369 @@ const OrganizationPage = () => {
               <ShieldCheck className="w-3 h-3" />
               Organisation Settings
             </div>
-            <h1 className="text-3xl font-normal text-foreground tracking-tight">Organisation</h1>
-            {/* <p className="text-muted-foreground text-sm mt-1 max-w-xl">
-              Consolidated view of your personal, professional, and organizational profile details captured during onboarding.
-            </p> */}
+            <h1 className="text-3xl font-regular text-foreground tracking-tight">Organisation</h1>
           </div>
-          {canEditOrg ? (
-            <Button
-              onClick={handleUpdate}
-              disabled={isSaving}
-              className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Read-only access</span>
-            </div>
+          {activeTab === "details" && (
+            canEditOrg ? (
+              <Button
+                onClick={handleUpdate}
+                disabled={isSaving}
+                className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+                <Lock className="w-3.5 h-3.5" />
+                <span>Read-only access</span>
+              </div>
+            )
           )}
         </div>
 
-        {/* ── Completion Reminder Banner ── */}
-        {stats.percentage < 100 && (
-          <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex-1 text-center md:text-left">
-              <h4 className="text-sm font-normal text-foreground">Complete your profile</h4>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                You've completed <span className="font-normal text-primary">{stats.filledCount} of {stats.totalCount}</span> essential fields.
-                Keep your profile updated to ensure compliance and smooth collaboration on projects.
-              </p>
-              {stats.missing.length > 0 && (
-                <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
-                  {stats.missing.slice(0, 3).map(f => (
-                    <span key={f} className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-[9px] text-muted-foreground border border-border">
-                      Missing {f}
-                    </span>
-                  ))}
-                  {stats.missing.length > 3 && (
-                    <span className="text-[9px] text-muted-foreground self-center">+{stats.missing.length - 3} more</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="shrink-0">
-              <button
-                onClick={() => {
-                  const firstMissing = document.querySelector(`input[value=""], select[value=""]`);
-                  firstMissing?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-                className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] rounded-lg transition-all border border-primary/10"
-              >
-                Review Missing Fields
-              </button>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleUpdate} className="space-y-2">
-
-          {/* ── Personal Info ── */}
-          <SectionCard
-            title="Personal Information"
-            subtitle="Your basic account identity and contact details"
-            icon={<UserIcon className="w-5 h-5" />}
+        {/* ── Tabs ── */}
+        <div className="flex items-center gap-6 mb-8 border-b border-border">
+          <button
+            onClick={() => setActiveTab("details")}
+            className={cn(
+              "pb-4 text-sm font-normal transition-all relative",
+              activeTab === "details" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <Field label="Full Name">
-                <Input
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className={cn(INPUT_CLS, "font-normal")}
-                />
-              </Field>
-              <Field label="Work Email Address">
-                <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
-                  <Mail className="w-4 h-4" />
-                  {user?.email}
-                  <span className="ml-auto text-[10px] bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
-                </div>
-              </Field>
-              <Field label="Phone Number">
-                <Input
-                  value={formData.profile.phone_number}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, phone_number: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                  placeholder="+27 12 345 6789"
-                />
-              </Field>
-              {user?.account_type === 'individual' && (
-                <Field label="Identity Number (ID)">
-                  <Input
-                    value={formData.profile.id_number}
-                    onChange={e => setFormData({
-                      ...formData,
-                      profile: { ...formData.profile, id_number: e.target.value }
-                    })}
-                    className={INPUT_CLS}
-                  />
-                </Field>
-              )}
-              <Field label="Professional Biography / Bio" colSpan>
-                <Textarea
-                  value={formData.profile.bio}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, bio: e.target.value }
-                  })}
-                  className={cn(INPUT_CLS, "resize-none h-28 py-3")}
-                  placeholder="Brief professional summary..."
-                />
-              </Field>
-            </div>
-          </SectionCard>
-
-          {/* ── Professional Info ── */}
-          <SectionCard
-            title="Professional Credentials"
-            subtitle="Professional body registrations and discipline details"
-            icon={<Briefcase className="w-5 h-5" />}
+            General Details
+            {activeTab === "details" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary animate-in fade-in slide-in-from-bottom-1" />}
+          </button>
+          <button
+            onClick={() => setActiveTab("team")}
+            className={cn(
+              "pb-4 text-sm font-normal transition-all relative flex items-center gap-2",
+              activeTab === "team" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <Field label="Primary Discipline / Role">
-                <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
-                  <Briefcase className="w-4 h-4 text-primary" />
-                  {user?.role?.name || "Architect"}
-                </div>
-              </Field>
-              <Field label="Professional Body">
-                <Input
-                  value={formData.profile.professional_body}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, professional_body: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                  placeholder="e.g. SACAP, ECSA, ASAQS"
-                />
-              </Field>
-              <Field label="Professional Registration No.">
-                <Input
-                  value={formData.profile.professional_reg_number}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, professional_reg_number: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                  placeholder="e.g. REG-123456"
-                />
-              </Field>
-              <Field label="Professional Insurance Expiry">
-                <Input
-                  readOnly={!canEditOrg}
-                  type="date"
-                  value={formData.insurance_document.expiry_date}
-                  onChange={e => setFormData({
-                    ...formData,
-                    insurance_document: { ...formData.insurance_document, expiry_date: e.target.value }
-                  })}
-                  className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
-                />
-              </Field>
-              <Field label="Insurance Certificate" colSpan>
-                {/* Show existing certificate */}
-                {!insuranceFile && user?.insurance_document?.file_name && (
-                  <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
-                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
-                    <span className="truncate flex-1">{user.insurance_document.file_name}</span>
-                    <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
-                  </div>
-                )}
-                {/* File picker */}
-                <label className={cn(
-                  "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
-                  insuranceFile
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground",
-                  canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
-                )}>
-                  <Paperclip className="w-4 h-4 shrink-0" />
-                  <span className="truncate flex-1 text-xs">
-                    {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
-                  </span>
-                  {canEditOrg && insuranceFile && (
-                    <button
-                      type="button"
-                      onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
-                      className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  {canEditOrg && (
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="sr-only"
-                      onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
-                    />
-                  )}
-                </label>
-                <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Certificate is saved when you click Save Details.</p>
-              </Field>
-            </div>
-          </SectionCard>
+            Org Team
+            {activeTab === "team" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary animate-in fade-in slide-in-from-bottom-1" />}
+          </button>
+        </div>
 
-          {/* ── Organisation Details ── */}
-          {user?.account_type === 'organisation' && (
-            <SectionCard
-              title="Organisation & Entity Details"
-              subtitle="Corporate profile and registration information"
-              icon={<Building2 className="w-5 h-5" />}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <Field label="Company / Entity Name">
-                  <Input
-                    readOnly={!canEditOrg}
-                    value={formData.organization.name}
-                    onChange={e => setFormData({
-                      ...formData,
-                      organization: { ...formData.organization, name: e.target.value }
-                    })}
-                    className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
-                  />
-                </Field>
-                <Field label="Company Registration No.">
-                  <Input
-                    readOnly={!canEditOrg}
-                    value={formData.organization.company_reg_number}
-                    onChange={e => setFormData({
-                      ...formData,
-                      organization: { ...formData.organization, company_reg_number: e.target.value }
-                    })}
-                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
-                  />
-                </Field>
-                <Field label="VAT Registration Number">
-                  <Input
-                    readOnly={!canEditOrg}
-                    value={formData.organization.vat_number}
-                    onChange={e => setFormData({
-                      ...formData,
-                      organization: { ...formData.organization, vat_number: e.target.value }
-                    })}
-                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
-                  />
-                </Field>
-                <Field label="CK Number">
-                  <Input
-                    readOnly={!canEditOrg}
-                    value={formData.organization.ck_number}
-                    onChange={e => setFormData({
-                      ...formData,
-                      organization: { ...formData.organization, ck_number: e.target.value }
-                    })}
-                    className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
-                  />
-                </Field>
-                <Field label="Enterprise Size">
-                  <select
-                    disabled={!canEditOrg}
-                    value={formData.organization.company_size}
-                    onChange={e => setFormData({
-                      ...formData,
-                      organization: { ...formData.organization, company_size: e.target.value }
-                    })}
-                    className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+        {activeTab === "details" ? (
+          <>
+            {/* ── Completion Reminder Banner ── */}
+            {stats.percentage < 100 && (
+              <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex-1 text-center md:text-left">
+                  <h4 className="text-sm font-normal text-foreground">Complete your profile</h4>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    You've completed <span className="font-normal text-primary">{stats.filledCount} of {stats.totalCount}</span> essential fields.
+                    Keep your profile updated to ensure compliance and smooth collaboration on projects.
+                  </p>
+                  {stats.missing.length > 0 && (
+                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
+                      {stats.missing.slice(0, 3).map(f => (
+                        <span key={f} className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-[9px] text-muted-foreground border border-border">
+                          Missing {f}
+                        </span>
+                      ))}
+                      {stats.missing.length > 3 && (
+                        <span className="text-[9px] text-muted-foreground self-center">+{stats.missing.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0">
+                  <button
+                    onClick={() => {
+                      const firstMissing = document.querySelector(`input[value=""], select[value=""]`);
+                      firstMissing?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] rounded-lg transition-all border border-primary/10"
                   >
-                    <option value="">Select Scale...</option>
-                    <option value="1-10">Micro (1–10 people)</option>
-                    <option value="11-50">Small (11–50 people)</option>
-                    <option value="51-200">Medium (51–200 people)</option>
-                    <option value="201-500">Large (201–500 people)</option>
-                    <option value="500+">Enterprise (500+ people)</option>
-                  </select>
-                </Field>
+                    Review Missing Fields
+                  </button>
+                </div>
               </div>
-            </SectionCard>
-          )}
+            )}
 
-          {/* ── Address ── */}
-          <SectionCard
-            title="Physical Address"
-            subtitle="Registered entity or personal physical location"
-            icon={<MapPin className="w-5 h-5" />}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <Field label="Street Address" colSpan>
-                <Input
-                  value={formData.profile.address}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, address: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                  placeholder="Building Number, Street Name..."
-                />
-              </Field>
-              <Field label="City">
-                <Input
-                  value={formData.profile.city}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, city: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                />
-              </Field>
-              <Field label="Province / State">
-                <Input
-                  value={formData.profile.state}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, state: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                />
-              </Field>
-              <Field label="Postal / ZIP Code">
-                <Input
-                  value={formData.profile.postal_code}
-                  onChange={e => setFormData({
-                    ...formData,
-                    profile: { ...formData.profile, postal_code: e.target.value }
-                  })}
-                  className={INPUT_CLS}
-                />
-              </Field>
-            </div>
-          </SectionCard>
-        </form>
+            <form onSubmit={handleUpdate} className="space-y-2">
+
+              {/* ── Personal Info ── */}
+              <SectionCard
+                title="Personal Information"
+                subtitle="Your basic account identity and contact details"
+                icon={<UserIcon className="w-5 h-5" />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <Field label="Full Name">
+                    <Input
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className={cn(INPUT_CLS, "font-normal")}
+                    />
+                  </Field>
+                  <Field label="Work Email Address">
+                    <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
+                      <Mail className="w-4 h-4" />
+                      {user?.email}
+                      <span className="ml-auto text-[10px] bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
+                    </div>
+                  </Field>
+                  <Field label="Phone Number">
+                    <Input
+                      value={formData.profile.phone_number}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, phone_number: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                      placeholder="+27 12 345 6789"
+                    />
+                  </Field>
+                  {user?.account_type === 'individual' && (
+                    <Field label="Identity Number (ID)">
+                      <Input
+                        value={formData.profile.id_number}
+                        onChange={e => setFormData({
+                          ...formData,
+                          profile: { ...formData.profile, id_number: e.target.value }
+                        })}
+                        className={INPUT_CLS}
+                      />
+                    </Field>
+                  )}
+                  <Field label="Professional Biography / Bio" colSpan>
+                    <Textarea
+                      value={formData.profile.bio}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, bio: e.target.value }
+                      })}
+                      className={cn(INPUT_CLS, "resize-none h-28 py-3")}
+                      placeholder="Brief professional summary..."
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
+
+              {/* ── Professional Info ── */}
+              <SectionCard
+                title="Professional Credentials"
+                subtitle="Professional body registrations and discipline details"
+                icon={<Briefcase className="w-5 h-5" />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <Field label="Primary Discipline / Role">
+                    <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
+                      <Briefcase className="w-4 h-4 text-primary" />
+                      {user?.role?.name || "Architect"}
+                    </div>
+                  </Field>
+                  <Field label="Professional Body">
+                    <Input
+                      value={formData.profile.professional_body}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, professional_body: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. SACAP, ECSA, ASAQS"
+                    />
+                  </Field>
+                  <Field label="Professional Registration No.">
+                    <Input
+                      value={formData.profile.professional_reg_number}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, professional_reg_number: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                      placeholder="e.g. REG-123456"
+                    />
+                  </Field>
+                  <Field label="Professional Insurance Expiry">
+                    <Input
+                      readOnly={!canEditOrg}
+                      type="date"
+                      value={formData.insurance_document.expiry_date}
+                      onChange={e => setFormData({
+                        ...formData,
+                        insurance_document: { ...formData.insurance_document, expiry_date: e.target.value }
+                      })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                    />
+                  </Field>
+                  <Field label="Insurance Certificate" colSpan>
+                    {/* Show existing certificate */}
+                    {!insuranceFile && user?.insurance_document?.file_name && (
+                      <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
+                        <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate flex-1">{user.insurance_document.file_name}</span>
+                        <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
+                      </div>
+                    )}
+                    {/* File picker */}
+                    <label className={cn(
+                      "flex items-center gap-2.5 px-3.5 h-10 border border-dashed rounded-lg text-sm transition-all",
+                      insuranceFile
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground",
+                      canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
+                    )}>
+                      <Paperclip className="w-4 h-4 shrink-0" />
+                      <span className="truncate flex-1 text-xs">
+                        {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
+                      </span>
+                      {canEditOrg && insuranceFile && (
+                        <button
+                          type="button"
+                          onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
+                          className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {canEditOrg && (
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="sr-only"
+                          onChange={e => setInsuranceFile(e.target.files?.[0] ?? null)}
+                        />
+                      )}
+                    </label>
+                    <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Certificate is saved when you click Save Details.</p>
+                  </Field>
+                </div>
+              </SectionCard>
+
+              {/* ── Organisation Details ── */}
+              {user?.account_type === 'organisation' && (
+                <SectionCard
+                  title="Organisation & Entity Details"
+                  subtitle="Corporate profile and registration information"
+                  icon={<Building2 className="w-5 h-5" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <Field label="Company / Entity Name">
+                      <Input
+                        readOnly={!canEditOrg}
+                        value={formData.organization.name}
+                        onChange={e => setFormData({
+                          ...formData,
+                          organization: { ...formData.organization, name: e.target.value }
+                        })}
+                        className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      />
+                    </Field>
+                    <Field label="Company Registration No.">
+                      <Input
+                        readOnly={!canEditOrg}
+                        value={formData.organization.company_reg_number}
+                        onChange={e => setFormData({
+                          ...formData,
+                          organization: { ...formData.organization, company_reg_number: e.target.value }
+                        })}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      />
+                    </Field>
+                    <Field label="VAT Registration Number">
+                      <Input
+                        readOnly={!canEditOrg}
+                        value={formData.organization.vat_number}
+                        onChange={e => setFormData({
+                          ...formData,
+                          organization: { ...formData.organization, vat_number: e.target.value }
+                        })}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      />
+                    </Field>
+                    <Field label="CK Number">
+                      <Input
+                        readOnly={!canEditOrg}
+                        value={formData.organization.ck_number}
+                        onChange={e => setFormData({
+                          ...formData,
+                          organization: { ...formData.organization, ck_number: e.target.value }
+                        })}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      />
+                    </Field>
+                    <Field label="Enterprise Size">
+                      <select
+                        disabled={!canEditOrg}
+                        value={formData.organization.company_size}
+                        onChange={e => setFormData({
+                          ...formData,
+                          organization: { ...formData.organization, company_size: e.target.value }
+                        })}
+                        className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      >
+                        <option value="">Select Scale...</option>
+                        <option value="1-10">Micro (1–10 people)</option>
+                        <option value="11-50">Small (11–50 people)</option>
+                        <option value="51-200">Medium (51–200 people)</option>
+                        <option value="201-500">Large (201–500 people)</option>
+                        <option value="500+">Enterprise (500+ people)</option>
+                      </select>
+                    </Field>
+                  </div>
+                </SectionCard>
+              )}
+
+              {/* ── Address ── */}
+              <SectionCard
+                title="Physical Address"
+                subtitle="Registered entity or personal physical location"
+                icon={<MapPin className="w-5 h-5" />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <Field label="Street Address" colSpan>
+                    <Input
+                      value={formData.profile.address}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, address: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                      placeholder="Building Number, Street Name..."
+                    />
+                  </Field>
+                  <Field label="City">
+                    <Input
+                      value={formData.profile.city}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, city: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                    />
+                  </Field>
+                  <Field label="Province / State">
+                    <Input
+                      value={formData.profile.state}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, state: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                    />
+                  </Field>
+                  <Field label="Postal / ZIP Code">
+                    <Input
+                      value={formData.profile.postal_code}
+                      onChange={e => setFormData({
+                        ...formData,
+                        profile: { ...formData.profile, postal_code: e.target.value }
+                      })}
+                      className={INPUT_CLS}
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
+            </form>
+          </>
+        ) : (
+          <OrgTeamTable />
+        )}
       </div>
     </div>
   );

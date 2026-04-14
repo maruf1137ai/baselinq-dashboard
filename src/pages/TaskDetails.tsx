@@ -77,6 +77,7 @@ import {
   Lock as LockIcon,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -92,8 +93,10 @@ import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
+import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { resolvePermissionCode } from "@/lib/roleUtils";
 
 // Role to approval permission mapping per document type
 const approvalPermissions: Record<string, string[]> = {
@@ -171,7 +174,7 @@ const getStatusBadgeColor = (status: string) => {
     return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
   // In-progress stages - blue
   if (['in progress', 'in review', 'review', 'issued', 'submitted', 'actioned', 'under review',
-    'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
+    'priced', 'recommended', 'sent for review', 'notice issued', 'under assessment', 'distributed',
     'further info required', 'response provided', 'determination made', 'on track / at risk',
     'scheduled'].includes(s))
     return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
@@ -552,6 +555,7 @@ export default function TaskDetails() {
       content: editor?.getHTML() || "",
       sender: user?.name || user?.email || "Unknown User",
       senderId: user?.id,
+      role: user?.role?.name || "User",
       date: new Date().toISOString(),
       structuredData: getStructuredData()
     };
@@ -573,14 +577,15 @@ export default function TaskDetails() {
         const isCreator = String(displayTask.creator?.id) === String(user?.id);
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
         const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-        if (['draft', 'open', 'todo', '', 'pending'].includes(currentStatusNorm)) {
-          // Any user submits first response → Submitted
-          updateData.status = "Submitted";
-          updateData.statusCause = "Response submitted";
-        } else if (isCreator && currentStatusNorm === 'underreview') {
-          // Creator submits counter-response while Under Review → Priced
+
+        if (['draft', 'open', 'todo', '', 'pending', 'submitted'].includes(currentStatusNorm) && !isCreator) {
+          // Builder submits pricing → Priced
           updateData.status = "Priced";
-          updateData.statusCause = `Counter-response submitted by ${creatorName}`;
+          updateData.statusCause = "VO Priced by Builder";
+        } else if (isCreator && currentStatusNorm === 'priced') {
+          // Creator submits counter-response while Priced → Under Review
+          updateData.status = "Under Review";
+          updateData.statusCause = `VO reviewed/countered by ${creatorName}`;
         }
       }
 
@@ -658,15 +663,20 @@ export default function TaskDetails() {
 
       // Sync pricing and response fields to update the underlying entity
       if (displayTask.type === "VO") {
-        updateData.recommendedAmount = recommendedAmount;
-        updateData.pricingDecision = pricingDecision;
-        updateData.pricingConditions = pricingConditions;
-        updateData.voTimeImpact = voTimeImpact;
-        updateData.lineItems = voLineItems.filter(i => i.description.trim()).map(i => ({
-          description: i.description,
-          quantity: parseFloat(i.qty) || 0,
-          unitRate: parseFloat(i.rate) || 0,
-        }));
+        if (recommendedAmount) updateData.recommendedAmount = parseFloat(recommendedAmount) || 0;
+        if (pricingDecision) updateData.pricingDecision = pricingDecision;
+        if (pricingConditions) updateData.pricingConditions = pricingConditions;
+        // Use 0 if empty to avoid backend ValueError for IntegerField
+        updateData.agreedTimeConsequence = voTimeImpact === "" ? 0 : parseInt(voTimeImpact) || 0;
+
+        const validItems = voLineItems.filter(i => i.description.trim());
+        if (validItems.length > 0) {
+          updateData.lineItems = validItems.map(i => ({
+            description: i.description,
+            quantity: parseFloat(i.qty) || 0,
+            unitRate: parseFloat(i.rate) || 0,
+          }));
+        }
       }
 
       if (displayTask.type === "SI") {
@@ -734,26 +744,42 @@ export default function TaskDetails() {
     const stages = displayTask?.timeline?.stages || [];
     const firstStage = stages[0];
     const lastStage = stages[stages.length - 1];
-    const taskStatus = status === firstStage ? "Todo" : status === lastStage || status == 'Completed' || status == 'Approved' ? "Done" : "In Review";
 
-    // console.log({ status, firstStage, lastStage, taskStatus })
+    // For VO: if we are setting it to 'Approved', but it's already 'Recommended', this might be the Client approval
+    const isClientApproval = displayTask.type === "VO" && displayTask.status === "Recommended";
+
+    const taskStatus = status === firstStage ? "Todo" :
+      (status === lastStage || status == 'Completed' || status == 'Approved') ? "Done" : "In Review";
 
     try {
+      const payload: any = { status, taskStatus, project: Number(projectId) };
+
+      if (displayTask.type === "VO") {
+        payload.isClientApproved = isClientApproval;
+        if (status === "Approved") {
+          payload.pricingDecision = "Approved";
+        }
+      }
+
       const updatedTask = await patchData({
         url: `tasks/tasks/${taskId}/update-entity/`,
-        data: { status, taskStatus, project: Number(projectId) },
+        data: payload,
       });
-      toast.success("Task approved successfully");
-      // Use the response directly — it has the freshly saved entity status
+
+      const voSuccessMsg = status === "Recommended"
+        ? "Variation Order recommended for Client approval"
+        : isClientApproval
+          ? "Variation Order signed by Client"
+          : "Variation Order approved successfully";
+      toast.success(displayTask.type === "VO" ? voSuccessMsg : "Task approved successfully");
+
       if (updatedTask) {
         setCurrentTask(updatedTask);
-      } else {
-        setCurrentTask((prev: any) => prev ? { ...prev, task: { ...(prev.task || {}), status }, status } : prev);
       }
+
       await refetchTask();
       await refetchAuditLogs();
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      await queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].includes('cost-ledger') });
     } catch (err) {
       console.error(err);
       toast.error("Failed to approve task");
@@ -837,6 +863,7 @@ export default function TaskDetails() {
       assignedTo: assignedTo,
       actionRequests: mappedActionRequests,
       responses: apiResponse.responses || [],
+      status: task.status || apiResponse.status || "Pending",
       timeline: {
         current: task.status || apiResponse.status || "Pending",
         stages: ["Pending", "In Review", "Approved", "Closed"],
@@ -895,7 +922,7 @@ export default function TaskDetails() {
           },
           timeline: {
             current: task.status || apiResponse.status || "Draft",
-            stages: ["Draft", "Submitted", "Under Review", "Priced", "Approved"],
+            stages: ["Draft", "Priced", "Under Review", "Recommended", "Approved"],
           },
           impact: {
             time: "0 days",
@@ -903,6 +930,7 @@ export default function TaskDetails() {
             riskScore: 35,
             riskMax: 100,
           },
+          isWithinMandate: task.isWithinMandate,
         };
 
       case "RFI":
@@ -1145,7 +1173,23 @@ export default function TaskDetails() {
     })()
     : 0;
 
-  const canApprove = !!user && !!displayTask && String(displayTask.creator?.id) === String(user?.id);
+  const canApprove = !!user && !!displayTask && (() => {
+    const isCreator = String(displayTask.creator?.id) === String(user?.id);
+    if (isCreator) return true;
+
+    if (displayTask.type === "VO") {
+      const userCode = resolvePermissionCode(user.role?.name || userRole || "");
+      const paRoles = ["PM", "ARCH", "CQS"];
+      const clientRoles = ["CLIENT", "CPM"];
+      // PA can approve/recommend when Priced
+      if (displayTask.status === "Priced" && paRoles.includes(userCode)) return true;
+      // Client can do final sign-off when Recommended
+      if (displayTask.status === "Recommended" && clientRoles.includes(userCode)) return true;
+      return false;
+    }
+
+    return false;
+  })();
 
   // Task is locked (read-only) once it reaches the final stage — no further responses or edits allowed
   const isTaskLocked = !!displayTask && (() => {
@@ -1248,53 +1292,38 @@ export default function TaskDetails() {
     <DashboardLayout padding="p-0">
 
       {/* ── VO Approve Confirmation Modal ── */}
-      <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
-        <DialogContent className="bg-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-normal">Approve Variation Order</DialogTitle>
-            <DialogDescription>{displayTask?.title || "Variation Order"}</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-foreground leading-relaxed">
-              You are about to approve this Variation Order. Once approved:
-            </p>
-            <ul className="space-y-2.5 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2.5">
-                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                The agreed amount will be recorded in the project cost ledger.
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                The Variation Order status will be set to Approved.
-              </li>
-              {/* <li className="flex items-start gap-2.5">
-                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                All assigned parties will be notified of the approval.
-              </li> */}
-            </ul>
-            <p className="text-xs text-muted-foreground border border-border rounded-lg px-3 py-2.5 bg-muted">
-              This action cannot be undone. Please confirm you have reviewed the priced response before proceeding.
-            </p>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="font-normal" onClick={() => setShowApproveModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="font-normal bg-primary text-white hover:bg-primary/90"
-              onClick={async () => {
-                setShowApproveModal(false);
-                const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                await handleApproveTask(lastStage);
-              }}
-            >
-              Approve VO
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {displayTask?.type === "VO" && (
+        <VOApprovalModal
+          open={showApproveModal}
+          onOpenChange={setShowApproveModal}
+          mode={displayTask.isWithinMandate || displayTask.status === "Recommended" ? "approve" : "recommend"}
+          vo={{
+            voNumber: displayTask.task_code || displayTask.displayId || "",
+            title: displayTask.title,
+            description: displayTask.formFields?.description,
+            discipline: displayTask.formFields?.discipline,
+            submittedBy: displayTask.creator?.name || "Unknown",
+            recommendedBy: (auditLogs || []).find((l: any) =>
+              (l.description || "").toLowerCase().includes("recommended"))?.createdBy?.name,
+            subTotal: displayTask.formFields?.subTotal ?? 0,
+            taxAmount: displayTask.formFields?.tax?.amount ?? 0,
+            grandTotal: displayTask.formFields?.grandTotal ?? 0,
+            currency: displayTask.formFields?.currency || "ZAR",
+            timeExtensionDays: (() => {
+              const sd = displayTask.responses?.slice(-1)?.[0]?.structuredData || {};
+              const v = Number(sd.voTimeImpact ?? 0);
+              return v > 0 ? v : undefined;
+            })(),
+          }}
+          onConfirm={async () => {
+            setShowApproveModal(false);
+            const targetStatus = (displayTask.isWithinMandate || displayTask.status === "Recommended")
+              ? "Approved"
+              : "Recommended";
+            await handleApproveTask(targetStatus);
+          }}
+        />
+      )}
 
       <div className="min-h-screen">
         <div className="">
@@ -1425,7 +1454,7 @@ export default function TaskDetails() {
                     : displayTask.type === "SI"
                       ? "Instruction Details"
                       : displayTask.type === "VO"
-                        ? "Variation Order Details"
+                        ? "Instruction"
                         : displayTask.type === "DC"
                           ? "Delay Reason & Impact"
                           : displayTask.type === "CPI"
@@ -1515,8 +1544,8 @@ export default function TaskDetails() {
                                 : "Response"}
                 </h2>
 
-                {/* Structured Pricing Response Fields - Only for VO non-creators */}
-                {displayTask.type === "VO" && !canApprove && (
+                {/* Structured Pricing Response Fields */}
+                {displayTask.type === "VO" && (
                   <div className="mb-6 pb-6 border-b border-border">
                     {(displayTask.responses?.length > 0) && (
                       <button
@@ -1975,22 +2004,29 @@ export default function TaskDetails() {
                     <span>Powered by Baseline Intelligence</span>
                   </div> */}
                   <div className="flex items-center gap-3">
-                    {canApprove && (
-                      <Button
-                        className="font-normal"
-                        onClick={() => {
-                          const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                          if (displayTask.type === "VO") {
-                            handleVOApproveClick();
-                          } else {
-                            handleApproveTask(lastStage);
-                          }
-                        }}
-                        disabled={displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
-                        {displayTask.timeline.current === displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                          ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                          : displayTask.type === "VO" ? "Approve" : "Close"}
-                      </Button>
+                    {displayTask.type === "VO" ? (
+                      canApprove && displayTask.status !== "Approved" && (
+                        <Button className="font-normal" onClick={handleVOApproveClick}>
+                          {(displayTask.isWithinMandate || displayTask.status === "Recommended")
+                            ? "Approve & Sign"
+                            : "Recommend for Approval"}
+                        </Button>
+                      )
+                    ) : (
+                      canApprove && (
+                        <Button
+                          className="font-normal"
+                          onClick={() => handleApproveTask(
+                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
+                          )}
+                          disabled={displayTask.timeline.current ===
+                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
+                          {displayTask.timeline.current ===
+                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
+                            ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
+                            : "Close"}
+                        </Button>
+                      )
                     )}
 
                     <button
@@ -2013,8 +2049,77 @@ export default function TaskDetails() {
                 </div>
               </Card>}
 
-              {/* Recent Responses Section */}
-              {displayTask.responses && displayTask.responses.some((resp: any) =>
+              {/* VO Rounds Section */}
+              {displayTask.type === "VO" && currentTask.rounds && currentTask.rounds.length > 0 && (
+                <div className="space-y-4 mb-4 mt-6">
+                  <div className="flex items-center justify-between px-1">
+                    <h2 className="text-sm font-normal text-foreground">
+                      Negotiation Rounds
+                    </h2>
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
+                      {currentTask.rounds.length} {currentTask.rounds.length === 1 ? 'Round' : 'Rounds'}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {currentTask.rounds.map((round: any, idx: number) => (
+                      <Card
+                        key={idx}
+                        className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"
+                        onClick={() => {
+                          const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                          const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                          if (isCreator && (currentStatusNorm === 'submitted' || currentStatusNorm === 'priced')) {
+                            const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+                            updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
+                          }
+                          setSelectedResponse(round);
+                          setIsResponseModalOpen(true);
+                        }}
+                      >
+                        <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-normal">
+                              {round.roundNumber}
+                            </div>
+                            <div>
+                              <p className="text-sm font-normal text-foreground">{round.sender}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {new Date(round.timestamp).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          {round.timeConsequence > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 bg-amber-50">
+                              +{round.timeConsequence} Days EOT
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="p-4 pt-1">
+                          {round.message && (
+                            <div
+                              className="text-xs text-muted-foreground mb-4 prose-sm max-w-none line-clamp-2 leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: round.message }}
+                            />
+                          )}
+
+                          {round.financials?.grandTotal > 0 && (
+                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-muted-foreground">Round Total:</span>
+                                <span className="text-sm font-normal text-foreground">{formatVOCurrency(round.financials.grandTotal)}</span>
+                              </div>
+                              <span className="text-[10px] text-primary flex items-center gap-0.5 font-normal">
+                                View breakdown <ChevronRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Responses Section (for non-VO or fallback) */}
+              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
                 String(resp.senderId) === String(user?.id) ||
                 String(displayTask.creator.id) === String(user?.id)
               ) && (
@@ -2039,15 +2144,6 @@ export default function TaskDetails() {
                             onClick={() => {
                               setSelectedResponse(resp);
                               setIsResponseModalOpen(true);
-                              // VO: Creator clicking a response while Submitted → Under Review
-                              if (displayTask?.type === "VO") {
-                                const isCreator = String(displayTask.creator?.id) === String(user?.id);
-                                const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-                                if (isCreator && currentStatusNorm === 'submitted') {
-                                  const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-                                  updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
-                                }
-                              }
                             }}
                             className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
                           >
@@ -2090,9 +2186,6 @@ export default function TaskDetails() {
                                         </span>
                                       )
                                     })}
-                                    {Object.keys(resp.structuredData).length > 2 && (
-                                      <span className="text-[9px] text-[#8081F6] font-normal">+ more</span>
-                                    )}
                                   </div>
                                 )}
                               </div>
@@ -2239,7 +2332,15 @@ export default function TaskDetails() {
                           <button
                             key={stage}
                             disabled={!canApprove}
-                            onClick={() => canApprove && handleApproveTask(stage)}
+                            onClick={() => {
+                              if (!canApprove) return;
+                              // For VO, route through the modal instead of direct approval
+                              if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
+                                handleVOApproveClick();
+                              } else {
+                                handleApproveTask(stage);
+                              }
+                            }}
                             className={cn(
                               "relative flex flex-col items-center flex-1",
                               canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70"
@@ -2585,12 +2686,26 @@ export default function TaskDetails() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h3 className="text-lg font-normal text-foreground">
-                      {selectedResponse.sender}
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-normal text-foreground">
+                        {selectedResponse.sender}
+                      </h3>
+                      {selectedResponse.timeConsequence > 0 ? (
+                        <Badge variant="outline" className="text-xs border-amber-200 text-amber-600 bg-amber-50 gap-1.5 font-normal">
+                          <Clock className="w-3 h-3" />
+                          +{selectedResponse.timeConsequence} Days EOT
+                        </Badge>
+                      ) : selectedResponse.timeConsequence === 0 ? (
+                        <Badge variant="outline" className="text-xs border-border text-muted-foreground bg-muted/50 gap-1.5 font-normal">
+                          <Clock className="w-3 h-3" />
+                          No Time Impact
+                        </Badge>
+                      ) : null}
+                    </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{new Date(selectedResponse.date).toLocaleString()}</span>
+                      <span>{selectedResponse.role}</span>
+                      <span>•</span>
+                      <span>{new Date(selectedResponse.timestamp || selectedResponse.date).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -2622,16 +2737,54 @@ export default function TaskDetails() {
                 )}
 
                 {/* Content Section */}
-                <div className="prose prose-sm max-w-none prose-slate">
-                  <div
-                    className="text-sm text-foreground leading-relaxed bg-white rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: selectedResponse.content }}
-                  />
+                <div className="space-y-3 mb-8">
+                  <h4 className="text-xs font-normal text-muted-foreground uppercase tracking-wider">Response Message</h4>
+                  <div className="prose prose-sm max-w-none prose-slate">
+                    <div
+                      className="text-sm text-foreground leading-relaxed bg-muted/20 p-4 rounded-xl border border-border/50"
+                      dangerouslySetInnerHTML={{ __html: selectedResponse.content || selectedResponse.message || '<p class="text-muted-foreground italic">No message provided.</p>' }}
+                    />
+                  </div>
                 </div>
+
+                {/* VO Breakdown Section */}
+                {selectedResponse.lineItems && selectedResponse.lineItems.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-normal text-muted-foreground uppercase tracking-wider">Price Breakdown</h4>
+                    <div className="rounded-xl border border-border overflow-hidden bg-white shadow-sm">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/50 border-b border-border text-muted-foreground">
+                          <tr>
+                            <th className="text-left px-4 py-2 font-normal">Description</th>
+                            <th className="text-right px-4 py-2 font-normal">Qty</th>
+                            <th className="text-right px-4 py-2 font-normal">Rate</th>
+                            <th className="text-right px-4 py-2 font-normal">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {selectedResponse.lineItems.map((li: any, lIdx: number) => (
+                            <tr key={lIdx} className="hover:bg-muted/5 transition-colors">
+                              <td className="px-4 py-2.5 text-foreground">{li.description}</td>
+                              <td className="px-4 py-2.5 text-right text-muted-foreground">{li.quantity}</td>
+                              <td className="px-4 py-2.5 text-right text-muted-foreground font-mono">{formatVOCurrency(li.unitRate)}</td>
+                              <td className="px-4 py-2.5 text-right font-normal text-foreground font-mono">{formatVOCurrency(li.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-[#1B1C1F] text-white">
+                          <tr>
+                            <td colSpan={3} className="px-4 py-2 text-right opacity-70">Total Amount</td>
+                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Footer Actions — only visible to task creator */}
-              {canApprove && (
+              {/* Footer Actions — only visible to task creator, but disabled for VOs */}
+              {canApprove && displayTask.type !== "VO" && (
                 <div className="p-4 border-t bg-muted/20 flex gap-3">
                   {displayTask.type === "CPI" ? (
                     <>

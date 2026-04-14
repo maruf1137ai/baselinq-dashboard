@@ -256,6 +256,23 @@ export const inviteCompanyMember = async (
   return res.data;
 };
 
+export const updateCompanyMemberRole = async (
+  projectId: string | number,
+  teamMemberId: string | number,
+  role: string
+) => {
+  const res = await api.patch(`projects/${projectId}/team-members/${teamMemberId}/`, { role_name: role });
+  return res.data;
+};
+
+export const removeCompanyMember = async (
+  projectId: string | number,
+  teamMemberId: string | number
+) => {
+  const res = await api.delete(`projects/${projectId}/team-members/${teamMemberId}/`);
+  return res.data;
+};
+
 export const getProfile = async () => {
   const res = await api.get("auth/profile/");
   return res.data;

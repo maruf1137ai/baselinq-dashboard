@@ -5,6 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatDate } from "@/lib/utils";
 import { useProjects, useProject, useUpdateProject } from "@/hooks/useProjects";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import {
@@ -145,7 +146,8 @@ const DATE_BTN_CLS =
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 const ProjectDetails = () => {
-  const { canEditProject } = usePermissions();
+  const { canEditProject: canEditByRole } = usePermissions();
+  const { data: currentUser } = useCurrentUser();
   const [selectedDocument, setSelectedDocument] = useState<ProjectDocument | null>(null);
   const [docToDelete, setDocToDelete] = useState<ProjectDocument | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -161,6 +163,9 @@ const ProjectDetails = () => {
   const project = fetchedProject || projects.find((p: any) => (p._id || p.id) == selectedProjectId);
 
   const selectedProject = project;
+
+  const isProjectCreator = !!currentUser?.id && String(project?.userId) === String(currentUser.id);
+  const canEditProject = canEditByRole || isProjectCreator;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -184,6 +189,7 @@ const ProjectDetails = () => {
       postal_address: { street: "", city: "", province: "", postal_code: "" },
       banking_details: { bank_name: "", account_number: "", branch_code: "" },
     },
+    principal_agent_mandate: "0",
   });
 
   useEffect(() => {
@@ -241,6 +247,9 @@ const ProjectDetails = () => {
           branch_code: typeof bank === "string" ? "" : bank.branch_code || "",
         },
       },
+      principal_agent_mandate: String(
+        (selectedProject as any).principalAgentMandate ?? (selectedProject as any).principal_agent_mandate ?? "0"
+      ),
     });
   }, [fetchedProject]);
 
@@ -264,6 +273,7 @@ const ProjectDetails = () => {
         total_budget: formData.total_budget ? Number(formData.total_budget) : undefined,
         vat_rate: formData.vat_rate ? Number(formData.vat_rate) : undefined,
         retention_rate: formData.retention_rate ? Number(formData.retention_rate) : undefined,
+        principal_agent_mandate: formData.principal_agent_mandate ? Number(formData.principal_agent_mandate) : undefined,
       } as any);
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
 
@@ -271,6 +281,19 @@ const ProjectDetails = () => {
     } catch {
       toast.error("Failed to save. Please try again.");
     }
+  };
+
+  const formatWithCommas = (val: string) => {
+    if (!val) return val;
+    const clean = val.replace(/,/g, "");
+    if (isNaN(Number(clean))) return val;
+    const parts = clean.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+  };
+
+  const handleNumericInput = (field: string, val: string) => {
+    setField(field, val.replace(/,/g, ""));
   };
 
   const setField = (key: string, value: string) =>
@@ -523,12 +546,24 @@ const ProjectDetails = () => {
             </Field>
             <Field label="Total Budget">
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 readOnly={!canEditProject}
-                value={formData.total_budget}
-                onChange={(e) => setField("total_budget", e.target.value)}
+                value={formatWithCommas(formData.total_budget)}
+                onChange={(e) => handleNumericInput("total_budget", e.target.value)}
                 className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                placeholder="e.g. 5000000"
+                placeholder="e.g. 5,000,000"
+              />
+            </Field>
+            <Field label="PA Mandate (Max VO ZAR)">
+              <Input
+                type="text"
+                inputMode="numeric"
+                readOnly={!canEditProject}
+                value={formatWithCommas(formData.principal_agent_mandate)}
+                onChange={(e) => handleNumericInput("principal_agent_mandate", e.target.value)}
+                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                placeholder="e.g. 50,000"
               />
             </Field>
             <Field label="Currency">
@@ -547,20 +582,22 @@ const ProjectDetails = () => {
             </Field>
             <Field label="VAT Rate (%)">
               <Input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 readOnly={!canEditProject}
-                value={formData.vat_rate}
-                onChange={(e) => setField("vat_rate", e.target.value)}
+                value={formatWithCommas(formData.vat_rate)}
+                onChange={(e) => handleNumericInput("vat_rate", e.target.value)}
                 className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 15"
               />
             </Field>
             <Field label="Retention Rate (%)">
               <Input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 readOnly={!canEditProject}
-                value={formData.retention_rate}
-                onChange={(e) => setField("retention_rate", e.target.value)}
+                value={formatWithCommas(formData.retention_rate)}
+                onChange={(e) => handleNumericInput("retention_rate", e.target.value)}
                 className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 5"
               />

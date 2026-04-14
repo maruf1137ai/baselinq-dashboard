@@ -17,6 +17,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [attachedFiles, setAttachedFiles] = useState<any[]>([]);
@@ -24,8 +25,93 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // @mention state
+  const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStart, setMentionStart] = useState(-1);
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+
   const userStr = localStorage.getItem("user");
   const currentUser = userStr ? JSON.parse(userStr) : null;
+  const projectId = localStorage.getItem("selectedProjectId");
+
+  // Fetch project members for @mention
+  useEffect(() => {
+    if (!projectId) return;
+    fetchData(`projects/${projectId}/team-members/`)
+      .then((res: any) => {
+        const members = res?.teamMembers || res?.results || (Array.isArray(res) ? res : []);
+        setProjectMembers(members);
+      })
+      .catch(() => {});
+  }, [projectId]);
+
+  const filteredMembers = mentionQuery
+    ? projectMembers.filter((m) =>
+        (m.name || m.user?.name || "").toLowerCase().includes(mentionQuery.toLowerCase())
+      )
+    : projectMembers;
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setMessage(val);
+
+    const cursor = e.target.selectionStart ?? val.length;
+    // Find the most recent @ before cursor
+    const textBeforeCursor = val.slice(0, cursor);
+    const atIdx = textBeforeCursor.lastIndexOf("@");
+
+    if (atIdx !== -1) {
+      const query = textBeforeCursor.slice(atIdx + 1);
+      // Only show if no space in query (mention is still being typed)
+      if (!query.includes(" ")) {
+        setMentionStart(atIdx);
+        setMentionQuery(query);
+        setShowMentions(true);
+        setActiveMentionIndex(0);
+        return;
+      }
+    }
+    setShowMentions(false);
+    setMentionQuery("");
+    setMentionStart(-1);
+  };
+
+  const selectMention = (member: any) => {
+    const name: string = member.name || member.user?.name || "User";
+    const userId: string = String(member.userId || member.user?.id || member._id || "");
+    // Replace the @query with @Name in the message
+    const before = message.slice(0, mentionStart);
+    const after = message.slice(mentionStart + 1 + mentionQuery.length);
+    setMessage(`${before}@${name} ${after}`);
+    // Track mentioned user
+    if (userId && !mentionedUserIds.includes(userId)) {
+      setMentionedUserIds((prev) => [...prev, userId]);
+    }
+    setShowMentions(false);
+    setMentionQuery("");
+    setMentionStart(-1);
+    // Refocus input
+    setTimeout(() => messageInputRef.current?.focus(), 0);
+  };
+
+  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showMentions || filteredMembers.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveMentionIndex((i) => Math.min(i + 1, filteredMembers.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveMentionIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      selectMention(filteredMembers[activeMentionIndex]);
+    } else if (e.key === "Escape") {
+      setShowMentions(false);
+    }
+  };
 
   // Extract task specific fields for the context card
   const getContextFields = () => {
@@ -194,11 +280,13 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
           content: message.trim(),
           is_urgent: false,
           parent: null,
+          ...(mentionedUserIds.length > 0 && { mentioned_user_ids: mentionedUserIds }),
         },
       });
 
       setMessage("");
       setAttachedFiles([]);
+      setMentionedUserIds([]);
 
       // Refresh messages from API
       await fetchMessages();
@@ -210,7 +298,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     }
   };
 
-  const handleKeyPress = (e: any) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    handleMentionKeyDown(e);
+    if (e.defaultPrevented) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -737,6 +827,34 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
           </div>
         )}
 
+        {/* @mention dropdown */}
+        {showMentions && filteredMembers.length > 0 && (
+          <div className="mb-2 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            {filteredMembers.map((member, idx) => {
+              const name = member.name || member.user?.name || "User";
+              const rawRole = member.role || member.user?.role || "";
+              const role = typeof rawRole === "object" && rawRole !== null ? (rawRole as any).name || "" : String(rawRole || "");
+              return (
+                <button
+                  key={member.userId || member._id || idx}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); selectMention(member); }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${idx === activeMentionIndex ? "bg-primary/10" : "hover:bg-muted/60"}`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-medium shrink-0">
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{name}</p>
+                    {role && <p className="text-[10px] text-muted-foreground truncate">{role}</p>}
+                  </div>
+                  <span className="text-[10px] text-primary font-normal">@mention</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Input bar */}
         <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
           {/* Hidden file input */}
@@ -796,11 +914,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             </div>
           ) : (
             <input
+              ref={messageInputRef}
               type="text"
-              placeholder="Type a message…"
+              placeholder="Type a message… (use @ to mention)"
               className="flex-grow bg-transparent outline-none text-[16px] text-[#676767]"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleMessageChange}
               onKeyDown={handleKeyPress}
             />
           )}

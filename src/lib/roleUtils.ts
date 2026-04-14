@@ -84,7 +84,7 @@ export const PERMISSIONS = {
   viewFinance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
   viewAudit: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
   viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
-  viewSettings: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  viewSettings: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH"],
   // Settings actions
   editTeamRoles: ["CLIENT", "CPM", "PM", "CM"],
   manageTeam: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
@@ -154,21 +154,21 @@ export const COMPANY_TYPES = [
  * in the Professional Role dropdown. "Other" / empty → show all roles.
  */
 export const COMPANY_TYPE_ROLE_CODES: Record<string, string[]> = {
-  "Architectural":            ["ARCH"],
-  "Civil Engineering":        ["CE", "SE"],
-  "Construction Management":  ["CM", "CONTRACTS_MGR", "SM", "SS", "FOREMAN"],
-  "Electrical Engineering":   ["ELEC_ENG", "MEP"],
+  "Architectural": ["ARCH"],
+  "Civil Engineering": ["CE", "SE"],
+  "Construction Management": ["CM", "CONTRACTS_MGR", "SM", "SS", "FOREMAN"],
+  "Electrical Engineering": ["ELEC_ENG", "MEP"],
   "Environmental Consulting": ["SO", "OTHER"],
-  "General Contractor":       ["CIDB", "SM", "SS", "FOREMAN", "SE"],
-  "Interior Design":          ["ARCH", "OTHER"],
-  "Landscape Architecture":   ["ARCH", "OTHER"],
-  "Legal & Compliance":       ["LEGAL", "OTHER"],
-  "Mechanical Engineering":   ["MECH_ENG", "MEP"],
-  "Project Management":       ["PM", "CPM", "CONS_PLANNER", "PLANNER"],
-  "Quantity Surveying":       ["QS", "CQS"],
-  "Structural Engineering":   ["STRUCT_ENG"],
-  "Urban Planning":           ["PLANNER", "OTHER"],
-  "Other":                    [], // empty = show all roles
+  "General Contractor": ["CIDB", "SM", "SS", "FOREMAN", "SE"],
+  "Interior Design": ["ARCH", "OTHER"],
+  "Landscape Architecture": ["ARCH", "OTHER"],
+  "Legal & Compliance": ["LEGAL", "OTHER"],
+  "Mechanical Engineering": ["MECH_ENG", "MEP"],
+  "Project Management": ["PM", "CPM", "CONS_PLANNER", "PLANNER"],
+  "Quantity Surveying": ["QS", "CQS"],
+  "Structural Engineering": ["STRUCT_ENG"],
+  "Urban Planning": ["PLANNER", "OTHER"],
+  "Other": [], // empty = show all roles
 };
 
 /**

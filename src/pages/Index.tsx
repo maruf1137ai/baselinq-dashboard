@@ -236,7 +236,7 @@ const Index = () => {
   const { data: currentUser } = useCurrentUser();
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
-  const { canEditProject } = usePermissions();
+  const { canEditProject: canEditByRole } = usePermissions();
   const { data: projectListData } = useFetch(
     currentUser?.id ? `projects/?userId=${currentUser.id}` : "",
     { enabled: !!currentUser?.id }
@@ -244,6 +244,8 @@ const Index = () => {
   const project = (projectListData?.results || []).find(
     (p: any) => String(p._id || p.id) === String(projectId)
   );
+  const isProjectCreator = !!currentUser?.id && String(project?.userId) === String(currentUser.id);
+  const canEditProject = canEditByRole || isProjectCreator;
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -461,13 +463,13 @@ const Index = () => {
               <div className="grid grid-cols-1 gap-3">
                 {projectStats.missing.map((item) => {
                   const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
-                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-[#f0edff]", iconColor: "text-[#6c5ce7]", description: "Describe the full construction scope." },
-                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-[#eef2ff]", iconColor: "text-[#6c5ce7]", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
-                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-[#f0fdf4]", iconColor: "text-[#16a34a]", description: "Set the total project budget." },
-                    "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-[#fff7ed]", iconColor: "text-[#ea580c]", description: "Upload contracts, drawings and project files." },
-                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-[#f0f9ff]", iconColor: "text-[#0284c7]", description: "Add the project site address or location." },
-                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-[#fdf4ff]", iconColor: "text-[#9333ea]", description: "Set the project start and end dates." },
-                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-[#fefce8]", iconColor: "text-[#ca8a04]", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
+                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Describe the full construction scope." },
+                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
+                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the total project budget." },
+                    "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
+                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Add the project site address or location." },
+                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the project start and end dates." },
+                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
