@@ -386,7 +386,8 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const { data: user } = useCurrentUser();
   const currentMember = teamMembers.find((m) => String(m.user.id) === String(user?.id));
   const myRole = currentMember?.roleName || user?.role?.code || "";
-  const canManageTeam = hasPermission(myRole, "manageTeam");
+  const isOrgAdmin = user?.account_type === 'organisation';
+  const canManageTeam = isOrgAdmin || hasPermission(myRole, "manageTeam");
 
   const availableUsers = allUsers.filter(
     (u) => !teamMembers.some((member: TeamMember) => member.user.id === u.id)

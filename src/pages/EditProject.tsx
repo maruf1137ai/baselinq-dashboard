@@ -61,6 +61,7 @@ import {
 } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
 import { ChevronsUpDown } from "lucide-react";
+import { LocationPickerMap } from "@/components/LocationPickerMap";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -69,10 +70,8 @@ interface FormState {
   project_number: string;
   description: string;
   location: string;
-  location_street: string;
-  location_city: string;
-  location_province: string;
-  location_postal: string;
+  latitude: string;
+  longitude: string;
   start_date: string;
   end_date: string;
   total_budget: string;
@@ -171,10 +170,8 @@ const DEFAULT_FORM: FormState = {
   project_number: "",
   description: "",
   location: "",
-  location_street: "",
-  location_city: "",
-  location_province: "",
-  location_postal: "",
+  latitude: "",
+  longitude: "",
   start_date: "",
   end_date: "",
   total_budget: "",
@@ -864,16 +861,13 @@ export default function EditProject() {
       return v.split("T")[0];
     };
 
-    const locParts = (p.location || "").split(",").map((s: string) => s.trim());
     setForm({
       name: p.name || "",
       project_number: p.project_number || p.projectNumber || "",
       description: p.description || "",
       location: p.location || "",
-      location_street: locParts[0] || "",
-      location_city: locParts[1] || "",
-      location_province: locParts[2] || "",
-      location_postal: locParts[3] || "",
+      latitude: String(p.latitude ?? ""),
+      longitude: String(p.longitude ?? ""),
       start_date: toDateStr(p.start_date || p.startDate),
       end_date: toDateStr(p.end_date || p.endDate),
       total_budget: budgetStr,
@@ -1214,8 +1208,9 @@ export default function EditProject() {
       status: "Active",
       contract_type: form.contract_type,
       total_budget: b,
-      location: [form.location_street, form.location_city, form.location_province, form.location_postal]
-        .map(s => s.trim()).filter(Boolean).join(", ") || form.location || undefined,
+      location: form.location || undefined,
+      latitude: form.latitude ? parseFloat(form.latitude) : null,
+      longitude: form.longitude ? parseFloat(form.longitude) : null,
       currency: form.currency,
       client_details: {
         company_name: clientForm.company_name,
@@ -1572,36 +1567,18 @@ export default function EditProject() {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <MapPin className="w-3.5 h-3.5 text-[#9ca3af]" />
-                          <label className="text-[13px] font-normal text-[#374151]">Project Location</label>
+                          <label className="text-[13px] font-normal text-[#374151]">Project Site Location</label>
                         </div>
-                        <div className="space-y-3">
-                          <input
-                            className={inputCls()}
-                            placeholder="Street / Area (e.g. 12 Main Street, Sandton)"
-                            value={form.location_street}
-                            onChange={(e) => setField("location_street", e.target.value)}
-                          />
-                          <div className="grid grid-cols-3 gap-3">
-                            <input
-                              className={inputCls()}
-                              placeholder="City"
-                              value={form.location_city}
-                              onChange={(e) => setField("location_city", e.target.value)}
-                            />
-                            <input
-                              className={inputCls()}
-                              placeholder="Province"
-                              value={form.location_province}
-                              onChange={(e) => setField("location_province", e.target.value)}
-                            />
-                            <input
-                              className={inputCls()}
-                              placeholder="Postal Code"
-                              value={form.location_postal}
-                              onChange={(e) => setField("location_postal", e.target.value)}
-                            />
-                          </div>
-                        </div>
+                        <LocationPickerMap
+                          location={form.location}
+                          latitude={form.latitude}
+                          longitude={form.longitude}
+                          onChange={(loc, lat, lng) => {
+                            setField("location", loc);
+                            setField("latitude", lat);
+                            setField("longitude", lng);
+                          }}
+                        />
                       </div>
                     </div>
                   )}
@@ -2214,7 +2191,7 @@ export default function EditProject() {
 
                         <div className="flex items-center gap-2 mb-3">
                           <label className="text-[13px] font-normal text-[#374151]">
-                            Upload your Construction Project Contrac
+                            Project Documents
                           </label>
                           <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                         </div>

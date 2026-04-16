@@ -25,6 +25,8 @@ export interface ProjectData {
   userId?: string;
   description?: string;
   location?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   start_date?: string;
   startDate?: string;
   end_date?: string;

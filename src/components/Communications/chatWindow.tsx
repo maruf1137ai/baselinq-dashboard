@@ -17,7 +17,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [attachedFiles, setAttachedFiles] = useState<any[]>([]);
@@ -54,7 +54,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
       )
     : projectMembers;
 
-  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setMessage(val);
 
@@ -97,7 +97,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     setTimeout(() => messageInputRef.current?.focus(), 0);
   };
 
-  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!showMentions || filteredMembers.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -298,7 +298,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     handleMentionKeyDown(e);
     if (e.defaultPrevented) return;
     if (e.key === "Enter" && !e.shiftKey) {
@@ -913,13 +913,17 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               </button>
             </div>
           ) : (
-            <input
+            <textarea
               ref={messageInputRef}
-              type="text"
               placeholder="Type a message… (use @ to mention)"
-              className="flex-grow bg-transparent outline-none text-[16px] text-[#676767]"
+              className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto"
+              rows={1}
               value={message}
-              onChange={handleMessageChange}
+              onChange={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+                handleMessageChange(e);
+              }}
               onKeyDown={handleKeyPress}
             />
           )}

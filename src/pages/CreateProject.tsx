@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Check,
-  MapPin,
   Pencil,
   X,
   FileText,
@@ -47,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { COMPANY_TYPES } from "@/lib/roleUtils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
+import { LocationPickerMap } from "@/components/LocationPickerMap";
 import {
   Command,
   CommandEmpty,
@@ -63,6 +63,8 @@ interface FormState {
   project_number: string;
   description: string;
   location: string;
+  latitude: string;
+  longitude: string;
   start_date: string;
   end_date: string;
   total_budget: string;
@@ -160,6 +162,8 @@ const DEFAULT_FORM: FormState = {
   project_number: "",
   description: "",
   location: "",
+  latitude: "",
+  longitude: "",
   start_date: "",
   end_date: "",
   total_budget: "",
@@ -921,10 +925,8 @@ export default function CreateProject() {
 
   const budget = parseBudget(form.total_budget);
   const vatRate = parseFloat(form.vat_rate) || 0;
-  const retentionRate = parseFloat(form.retention_rate) || 0;
   const vatAmount = budget * (vatRate / 100);
   const totalWithVat = budget + vatAmount;
-  const retentionAmount = budget * (retentionRate / 100);
 
   const getDuration = useCallback(() => {
     if (!form.start_date || !form.end_date) return null;
@@ -1118,6 +1120,8 @@ export default function CreateProject() {
       total_budget: b,
       totalBudget: b,
       location: form.location,
+      latitude: form.latitude ? parseFloat(form.latitude).toFixed(8) : null,
+      longitude: form.longitude ? parseFloat(form.longitude).toFixed(8) : null,
       currency: form.currency,
       status: "Active",
       // New onboarding fields — backend needs to support these
@@ -1495,15 +1499,16 @@ export default function CreateProject() {
                         <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
                           Project Location
                         </label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
-                          <input
-                            className={inputCls(false, "pl-10")}
-                            placeholder="e.g. Cape Town, Western Cape"
-                            value={form.location}
-                            onChange={(e) => setField("location", e.target.value)}
-                          />
-                        </div>
+                        <LocationPickerMap
+                          location={form.location}
+                          latitude={form.latitude}
+                          longitude={form.longitude}
+                          onChange={(loc, lat, lng) => {
+                            setField("location", loc);
+                            setField("latitude", lat);
+                            setField("longitude", lng);
+                          }}
+                        />
                       </div>
                     </div>
                   )}
@@ -1999,9 +2004,15 @@ export default function CreateProject() {
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            <p className="text-[12px] text-[#9ca3af] -mt-5 mb-2">
                               These members will be given predetermined access rights to the project.
                             </p>
+                            <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3 py-2 mb-4">
+                              <svg className="w-3.5 h-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
+                              <p className="text-[11px] text-[#92400e] leading-snug">
+                                Only internal organisation members can be assigned here. External companies (architects, engineers, etc.) are added after project creation via the <span className="font-medium">Associated Companies</span> tab in project settings.
+                              </p>
+                            </div>
                             <div className="space-y-3">
                               {appointedPersonnelList.map((entry) => (
                                 <OrgPersonnelSelectCard
@@ -2043,7 +2054,7 @@ export default function CreateProject() {
                       {/* Label + tooltip */}
                       <div className="flex items-center gap-2">
                         <label className="text-[13px] font-normal text-[#374151]">
-                          Upload your Construction Project Contract<span className="text-red-500">*</span>
+                          Project Documents<span className="text-red-500">*</span>
                         </label>
                         <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
                       </div>
@@ -2336,8 +2347,8 @@ export default function CreateProject() {
                           <span className="text-[13px] font-normal text-[#374151]">Financial Parameters</span>
                         </div>
 
-                        {/* Row 1: Budget + Currency + Contract Type */}
-                        <div className="grid grid-cols-3 gap-4 mb-4">
+                        {/* Row 1: Budget + Currency + Contract Type + VAT Rate */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
                           {/* Budget */}
                           <div>
                             <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
@@ -2391,36 +2402,8 @@ export default function CreateProject() {
                               ))}
                             </SelectField>
                           </div>
-                        </div>
 
-                        {/* Row 2: FX Rate + Retention + VAT */}
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <label className="text-[13px] font-normal text-[#374151]">FX Rate</label>
-                              <Tooltip text="Exchange rate to project base currency" />
-                            </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              className={inputCls()}
-                              value={form.fx_rate}
-                              onChange={(e) => setField("fx_rate", e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              Retention Rate (%)
-                            </label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              max={10}
-                              className={inputCls()}
-                              value={form.retention_rate}
-                              onChange={(e) => setField("retention_rate", e.target.value)}
-                            />
-                          </div>
+                          {/* VAT Rate */}
                           <div>
                             <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
                               VAT Rate (%)
@@ -2448,7 +2431,6 @@ export default function CreateProject() {
                               { label: `Contract Value (excl. VAT)`, value: budget },
                               { label: `VAT (${vatRate}%)`, value: vatAmount },
                               { label: `Total (incl. VAT)`, value: totalWithVat, bold: true },
-                              { label: `Retention (${retentionRate}%)`, value: retentionAmount },
                             ].map(({ label, value, bold }) => (
                               <div
                                 key={label}
@@ -2581,7 +2563,7 @@ export default function CreateProject() {
                     className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${addMemberTab === tab
                       ? "border-[#6c5ce7] text-[#6c5ce7]"
                       : "border-transparent text-[#6b7280] hover:text-[#374151]"
-                    }`}>
+                      }`}>
                     {tab === "existing" ? "Existing Users" : "Invite External"}
                   </button>
                 ))}

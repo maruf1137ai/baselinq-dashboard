@@ -179,8 +179,17 @@ export function DashboardSidebar() {
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
           <div className="p-4">
-            <div className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50">
-              <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10">
+            <div
+              className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 cursor-pointer hover:bg-white transition-colors group"
+              onClick={() => {
+                if (location.pathname.startsWith("/account")) {
+                  navigate("/account");
+                } else {
+                  navigate("/");
+                }
+              }}
+            >
+              <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
                 <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 min-w-0 text-left">

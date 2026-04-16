@@ -331,13 +331,22 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-tr from-[#6c5ce7]/5 to-[#a29bfe]/5 rounded-[20px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
             <div className="relative flex items-center">
-              <input
-                type="text"
+              <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Examine compliance, risks, or schedule impacts..."
-                className="w-full bg-[#f8f9fa] border-2 border-[#eef0f2] rounded-[20px] pl-6 pr-14 py-4 text-[14px] font-medium text-[#1a1a2e] focus:outline-none focus:bg-white focus:border-[#6c5ce7] transition-all duration-300 placeholder:text-[#94a3b8] placeholder:font-normal"
+                rows={1}
+                className="w-full bg-[#f8f9fa] border-2 border-[#eef0f2] rounded-[20px] pl-6 pr-14 py-4 text-[14px] font-medium text-[#1a1a2e] focus:outline-none focus:bg-white focus:border-[#6c5ce7] transition-all duration-300 placeholder:text-[#94a3b8] placeholder:font-normal resize-none overflow-hidden leading-relaxed"
               />
               <button
                 onClick={() => handleSend()}

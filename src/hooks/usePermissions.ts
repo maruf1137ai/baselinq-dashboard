@@ -26,6 +26,9 @@ export function usePermissions() {
   const projectCode = resolvePermissionCode(userRole ?? "");
   const globalCode = resolvePermissionCode(user?.role?.code ?? "");
 
+  // Org admins (account_type === 'organisation') can manage team regardless of project role
+  const isOrgAdmin = user?.account_type === 'organisation';
+
   const can = (permission: PermissionKey): boolean => {
     // While auth is loading, allow everything — RoleRoute handles the gate
     if (isLoading) return true;
@@ -59,6 +62,7 @@ export function usePermissions() {
 
   return {
     isLoading,
+    isOrgAdmin,
     can,
     canViewCompliance: can("viewCompliance"),
     canViewFinance: can("viewFinance"),
@@ -66,12 +70,12 @@ export function usePermissions() {
     canViewProgramme: can("viewProgramme"),
     canViewSettings: can("viewSettings"),
     canEditTeamRoles: can("editTeamRoles"),
-    canManageTeam: can("manageTeam"),
+    canManageTeam: isOrgAdmin || can("manageTeam"),
     canManageSettings: can("manageSettings"),
     canViewBilling: can("viewBilling"),
     canManageIntegrations: can("manageIntegrations"),
     canCreateProject: can("createProject"),
-    canEditProject: can("editProject"),
+    canEditProject: isOrgAdmin || can("editProject"),
     canCreateTasks: can("createTasks"),
   };
 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -187,9 +186,6 @@ const AccountOrganization = () => {
 
   if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading..." /></div>;
 
-  // Redirect users who can't do anything on this page
-  if (!isOrg && !canEdit) return <Navigate to="/account" replace />;
-
   return (
     <div className="max-w-4xl mx-auto p-8">
       <div className="flex items-start justify-between gap-4 mb-8">
@@ -197,13 +193,12 @@ const AccountOrganization = () => {
           <h2 className="text-2xl font-normal tracking-tight text-foreground">Organisation</h2>
           <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
         </div>
-        {isOrg && canEdit && (
+        {canEdit ? (
           <Button onClick={handleSave} disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
-        )}
-        {isOrg && !canEdit && (
+        ) : (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
             <Lock className="w-3.5 h-3.5" />
             <span>Read-only access</span>
@@ -215,6 +210,12 @@ const AccountOrganization = () => {
         {/* Org details */}
         <form onSubmit={handleSave}>
           <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
+            {!isOrg && !user?.organization && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-border text-muted-foreground text-sm mb-4">
+                <Building2 className="w-4 h-4 shrink-0" />
+                <span>You are not linked to any organisation. Contact your organisation admin for access.</span>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <Field label="Company / Entity Name">
                 <Input readOnly={!canEdit} value={formData.organization.name} onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })} className={cn(INPUT_CLS, "font-normal", !canEdit && "bg-slate-50/50 cursor-not-allowed")} />

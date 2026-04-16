@@ -29,9 +29,11 @@ import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns
 import { cn, formatDate } from "@/lib/utils";
 import { hasPermission, COMPANY_TYPES } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { isMeetingPast } from "@/lib/dateUtils";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useRoles } from "@/hooks/useRoles";
+import { LocationPickerMap } from "@/components/LocationPickerMap";
 
 const qInputCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10";
 const qSelectCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 appearance-none";
@@ -53,7 +55,7 @@ const Index = () => {
     brief: "",
     company_name: "", client_name: "", client_email: "",
     total_budget: "",
-    location_street: "", location_city: "", location_province: "", location_postal: "",
+    location_street: "", location_lat: "", location_lng: "",
     start_date: "", end_date: "",
     appointed_company_name: "",
     appointed_company_type: "",
@@ -108,7 +110,7 @@ const Index = () => {
       brief: "",
       company_name: "", client_name: "", client_email: "",
       total_budget: "",
-      location_street: "", location_city: "", location_province: "", location_postal: "",
+      location_street: "", location_lat: "", location_lng: "",
       start_date: "", end_date: "",
       appointed_company_name: "",
       appointed_company_type: "",
@@ -143,9 +145,9 @@ const Index = () => {
         payload.total_budget = num;
       }
       if (missing.includes("Location")) {
-        const loc = [quickForm.location_street, quickForm.location_city, quickForm.location_province, quickForm.location_postal]
-          .map(s => s.trim()).filter(Boolean).join(", ");
-        if (loc) payload.location = loc;
+        if (quickForm.location_street.trim()) payload.location = quickForm.location_street.trim();
+        if (quickForm.location_lat) payload.latitude = parseFloat(quickForm.location_lat);
+        if (quickForm.location_lng) payload.longitude = parseFloat(quickForm.location_lng);
       }
       if (missing.includes("Project Timeline") && quickForm.start_date && quickForm.end_date) {
         payload.start_date = quickForm.start_date;
@@ -233,6 +235,16 @@ const Index = () => {
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
+  const { data: meetingsResponse, isLoading: loadingMeetings } = useFetch<any>(
+    projectId ? `meetings/?project_id=${projectId}` : "",
+    { enabled: !!projectId }
+  );
+  const upcomingMeetings = (
+    (Array.isArray(meetingsResponse) ? meetingsResponse : meetingsResponse?.results ?? []) as any[]
+  )
+    .filter((m: any) => m.status !== "cancelled" && !isMeetingPast(m.date, m.time))
+    .sort((a: any, b: any) => new Date(a.date_time || a.date).getTime() - new Date(b.date_time || b.date).getTime())
+    .slice(0, 5);
   const { data: currentUser } = useCurrentUser();
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
@@ -406,7 +418,7 @@ const Index = () => {
     const fields = [
       { label: "Client Details", value: (clientDetails?.company_name || clientDetails?.companyName) ? clientDetails : null },
       { label: "Scope of Work", value: taskOrderBrief || null },
-      { label: "Upload your Construction Project Contract", value: projectDocs.length > 0 ? "yes" : null },
+      { label: "Project Documents", value: projectDocs.length > 0 ? "yes" : null },
       { label: "Budget Allocation", value: Number((project.totalBudget ?? project.total_budget) || 0) > 0 ? "yes" : null },
       { label: "Location", value: project.location || null },
       { label: "Project Timeline", value: (project.startDate || project.start_date) && (project.endDate || project.end_date) ? "yes" : null },
@@ -466,7 +478,7 @@ const Index = () => {
                     "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Describe the full construction scope." },
                     "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
                     "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the total project budget." },
-                    "Upload your Construction Project Contract": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
+                    "Project Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
                     "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Add the project site address or location." },
                     "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the project start and end dates." },
                     "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
@@ -704,6 +716,76 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Upcoming Meetings */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <CalendarIcon className="h-4 w-4 text-gray2" />
+              </div>
+              <h3 className="text-sm text-gray2">Upcoming Meetings</h3>
+            </div>
+            <button
+              onClick={() => navigate('/meetings')}
+              className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group"
+            >
+              View all
+              <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </CardHeader>
+          <CardContent className="bg-white p-2 mx-2 rounded-md">
+            {loadingMeetings ? (
+              <AwesomeLoader message="Loading meetings" />
+            ) : upcomingMeetings.length > 0 ? (
+              <div className="divide-y divide-border/50">
+                {upcomingMeetings.map((m: any) => (
+                  <Link
+                    key={m.id}
+                    to={`/meetings/${m.id}`}
+                    className="flex items-center justify-between px-2 py-3 hover:bg-muted/40 rounded-md transition-colors group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {m.title}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" />
+                          {m.date_time || m.date}
+                        </span>
+                        {m.location && (
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {m.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {m.attendees?.length > 0 && (
+                      <div className="flex -space-x-1.5 ml-4 shrink-0">
+                        {(m.attendees as string[]).slice(0, 3).map((name: string, i: number) => (
+                          <div key={i} className="h-6 w-6 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center">
+                            <span className="text-[10px] text-primary font-medium">
+                              {name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        ))}
+                        {m.extra_attendees > 0 && (
+                          <div className="h-6 w-6 rounded-full bg-muted border-2 border-white flex items-center justify-center">
+                            <span className="text-[10px] text-muted-foreground">+{m.extra_attendees}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-gray-500 text-sm">No upcoming meetings.</div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Documents */}
         <Card>
@@ -988,43 +1070,16 @@ const Index = () => {
                       <p className="text-[11px] text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
                     </div>
                   </div>
-                  <div className="p-5 grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-[11px] text-[#6b7280] normal-case mb-1.5">Street / Area</label>
-                      <input
-                        className={qInputCls}
-                        placeholder="e.g. 12 Main Street, Sandton"
-                        value={quickForm.location_street}
-                        onChange={(e) => setQuickForm((v) => ({ ...v, location_street: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-[#6b7280] normal-case mb-1.5">City</label>
-                      <input
-                        className={qInputCls}
-                        placeholder="e.g. Johannesburg"
-                        value={quickForm.location_city}
-                        onChange={(e) => setQuickForm((v) => ({ ...v, location_city: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-[#6b7280] normal-case mb-1.5">Province</label>
-                      <input
-                        className={qInputCls}
-                        placeholder="e.g. Gauteng"
-                        value={quickForm.location_province}
-                        onChange={(e) => setQuickForm((v) => ({ ...v, location_province: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-[#6b7280] normal-case mb-1.5">Postal Code</label>
-                      <input
-                        className={qInputCls}
-                        placeholder="e.g. 2196"
-                        value={quickForm.location_postal}
-                        onChange={(e) => setQuickForm((v) => ({ ...v, location_postal: e.target.value }))}
-                      />
-                    </div>
+                  <div className="p-5">
+                    <LocationPickerMap
+                      location={quickForm.location_street}
+                      latitude={quickForm.location_lat}
+                      longitude={quickForm.location_lng}
+                      mapHeight={260}
+                      onChange={(loc, lat, lng) =>
+                        setQuickForm((v) => ({ ...v, location_street: loc, location_lat: lat, location_lng: lng }))
+                      }
+                    />
                   </div>
                 </div>
               )}
@@ -1255,14 +1310,14 @@ const Index = () => {
               )}
 
               {/* ── Documents card ── */}
-              {(quickFillSection === null || quickFillSection === "Upload your Construction Project Contract") && projectStats.missing.includes("Upload your Construction Project Contract") && (
+              {(quickFillSection === null || quickFillSection === "Project Documents") && projectStats.missing.includes("Project Documents") && (
                 <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
                     <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
                       <CloudUpload className="w-4 h-4 text-[#ea580c]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Upload your Construction Project Contract</p>
+                      <p className="text-[13px] font-normal text-[#111827]">Project Documents</p>
                       <p className="text-[11px] text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
                     </div>
                   </div>

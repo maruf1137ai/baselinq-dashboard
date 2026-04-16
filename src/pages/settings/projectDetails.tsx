@@ -13,6 +13,7 @@ import {
   ProjectDocument,
 } from "@/lib/Api";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
+import { LocationPickerMap } from "@/components/LocationPickerMap";
 import {
   FileText,
   Trash2,
@@ -170,7 +171,9 @@ const ProjectDetails = () => {
   const [formData, setFormData] = useState({
     name: "",
     project_number: "",
-    location_fields: { street: "", city: "", province: "", postal_code: "" },
+    location: "",
+    latitude: "",
+    longitude: "",
     contract_type: "JBCC",
     start_date: "",
     end_date: "",
@@ -203,10 +206,9 @@ const ProjectDetails = () => {
       name: selectedProject.name || "",
       project_number:
         (selectedProject as any).projectNumber || (selectedProject as any).project_number || "",
-      location_fields: (() => {
-        const parts = ((selectedProject as any).location || "").split(",").map((s: string) => s.trim());
-        return { street: parts[0] || "", city: parts[1] || "", province: parts[2] || "", postal_code: parts[3] || "" };
-      })(),
+      location: (selectedProject as any).location || "",
+      latitude: String((selectedProject as any).latitude ?? ""),
+      longitude: String((selectedProject as any).longitude ?? ""),
       contract_type:
         (selectedProject as any).contractType || (selectedProject as any).contract_type || "JBCC",
       start_date: (selectedProject as any).startDate || (selectedProject as any).start_date || "",
@@ -260,14 +262,12 @@ const ProjectDetails = () => {
     if (!pId) return;
 
     try {
-      const { location_fields, ...rest } = formData;
-      const locationStr = [location_fields.street, location_fields.city, location_fields.province, location_fields.postal_code]
-        .filter(Boolean).join(", ");
-
       await updateProjectMutation.mutateAsync({
         id: pId,
-        ...rest,
-        location: locationStr || undefined,
+        ...formData,
+        location: formData.location || undefined,
+        latitude: formData.latitude ? parseFloat(formData.latitude).toFixed(8) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude).toFixed(8) : null,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
         total_budget: formData.total_budget ? Number(formData.total_budget) : undefined,
@@ -442,42 +442,20 @@ const ProjectDetails = () => {
                 placeholder="e.g. PRJ-2024-001"
               />
             </Field>
-            <Field label="Street / Area" colSpan>
-              <Input
+            <div className="md:col-span-2">
+              <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5">
+                Project Site Location
+              </label>
+              <LocationPickerMap
+                location={formData.location}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
                 readOnly={!canEditProject}
-                value={formData.location_fields.street}
-                onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, street: e.target.value } }))}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                placeholder="e.g. 12 Main Street, Sandton"
+                onChange={(loc, lat, lng) =>
+                  setFormData((p) => ({ ...p, location: loc, latitude: lat, longitude: lng }))
+                }
               />
-            </Field>
-            <Field label="City">
-              <Input
-                readOnly={!canEditProject}
-                value={formData.location_fields.city}
-                onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, city: e.target.value } }))}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                placeholder="e.g. Johannesburg"
-              />
-            </Field>
-            <Field label="Province">
-              <Input
-                readOnly={!canEditProject}
-                value={formData.location_fields.province}
-                onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, province: e.target.value } }))}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                placeholder="e.g. Gauteng"
-              />
-            </Field>
-            <Field label="Postal Code">
-              <Input
-                readOnly={!canEditProject}
-                value={formData.location_fields.postal_code}
-                onChange={(e) => setFormData((p) => ({ ...p, location_fields: { ...p.location_fields, postal_code: e.target.value } }))}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                placeholder="e.g. 2196"
-              />
-            </Field>
+            </div>
             <Field label="Contract Type">
               <select
                 disabled={!canEditProject}
