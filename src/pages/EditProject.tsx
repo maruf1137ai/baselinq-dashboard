@@ -62,6 +62,7 @@ import {
 import { cn, formatDate } from "@/lib/utils";
 import { ChevronsUpDown } from "lucide-react";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
+import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -288,22 +289,12 @@ function formatCurrency(amount: number, currency = "ZAR"): string {
 // ── Input helpers ──────────────────────────────────────────────────────────────
 
 function inputCls(error?: boolean, extra?: string) {
-  return cn(
-    "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all",
-    "bg-[#f5f6f8] border border-[#e2e5ea]",
-    "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
-    error && "!border-red-400 focus:!border-red-400 focus:ring-red-400/10",
-    extra
-  );
+  return cn(INPUT_BASE, error && INPUT_ERROR, extra);
 }
 
 const selectWrapCls = "relative w-full";
 function selectCls() {
-  return cn(
-    "w-full h-12 px-4 pr-9 rounded-[10px] text-sm text-[#111827] outline-none",
-    "bg-[#f5f6f8] border border-[#e2e5ea] appearance-none cursor-pointer",
-    "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 transition-all"
-  );
+  return SELECT_BASE;
 }
 
 // ── FileTypeIcon ───────────────────────────────────────────────────────────────
@@ -1835,7 +1826,7 @@ export default function EditProject() {
                         <div>
                           <SectionHeader
                             icon={<User className="w-3.5 h-3.5" />}
-                            label="Assigned Personnel"
+                            label="Project Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
                           />
@@ -2076,7 +2067,7 @@ export default function EditProject() {
                           <div className="pt-6">
                             <SectionHeader
                               icon={<User className="w-3.5 h-3.5" />}
-                              label="Key Personnel"
+                              label="Key Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />

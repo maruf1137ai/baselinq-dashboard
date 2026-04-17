@@ -176,7 +176,7 @@ const Finance = () => {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`text-base py-4 px-6 border-b-2 transition-all ${activeTab === tab
-                    ? "border-[#8081F6] text-foreground"
+                    ? "border-[#6c5ce7] text-foreground"
                     : "text-muted-foreground border-transparent"
                     }`}>
                   {tab}

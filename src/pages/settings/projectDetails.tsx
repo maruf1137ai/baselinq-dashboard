@@ -129,7 +129,7 @@ function PersonnelCard({
           {phone && <p className="text-xs text-muted-foreground">{phone}</p>}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No personnel assigned</p>
+        <p className="text-xs text-muted-foreground">No users assigned</p>
       )}
     </div>
   );
@@ -779,7 +779,7 @@ const ProjectDetails = () => {
             {clientDetails && (clientDetails.client || clientDetails.client_representative) && (
               <div>
                 <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
-                  Assigned Personnel
+                  Project Users
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <PersonnelCard

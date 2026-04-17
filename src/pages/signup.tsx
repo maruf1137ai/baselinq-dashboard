@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import AiIcon from "@/components/icons/AiIcon";
 
 const INPUT_CLS =
-  "w-full px-4 py-3.5 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3.5 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -75,8 +75,8 @@ const SignupPage = () => {
           {/* Info card */}
           <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              {/* <Sparkles className="w-5 h-5 text-[#8081F6]" /> */}
-              <AiIcon size={16} className="text-[#8081F6]" />
+              {/* <Sparkles className="w-5 h-5 text-[#6c5ce7]" /> */}
+              <AiIcon size={16} className="text-[#6c5ce7]" />
             </div>
             <p className="text-[13px] text-white/60 leading-snug">
               AI-powered contracts, compliance, and document management, all in one workspace.
@@ -89,7 +89,7 @@ const SignupPage = () => {
           <div className="border-t border-white/10 pt-6 space-y-3">
             <p className="text-[13px] text-white/50">
               Already have an account?{" "}
-              <button onClick={() => navigate("/login")} className="text-[#8081F6] hover:underline">
+              <button onClick={() => navigate("/login")} className="text-[#6c5ce7] hover:underline">
                 Sign in
               </button>
             </p>
@@ -114,14 +114,14 @@ const SignupPage = () => {
             </div>
             <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
           </div>
-          <button onClick={() => navigate("/login")} className="text-[13px] text-[#8081F6] hover:underline">
+          <button onClick={() => navigate("/login")} className="text-[13px] text-[#6c5ce7] hover:underline">
             Sign in
           </button>
         </div>
 
         {/* Desktop top bar */}
         <div className="hidden lg:flex items-center justify-end px-8 pt-5 pb-3 shrink-0">
-          <button onClick={() => navigate("/login")} className="text-[12px] text-[#8081F6] hover:underline">
+          <button onClick={() => navigate("/login")} className="text-[12px] text-[#6c5ce7] hover:underline">
             Already have an account? Sign in
           </button>
         </div>
@@ -213,7 +213,7 @@ const SignupPage = () => {
               <button
                 type="submit"
                 disabled={signupMutation.isPending}
-                className="mt-2 w-full py-3.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="mt-2 w-full py-3.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {signupMutation.isPending ? "Creating account..." : "Create Account"}
                 {!signupMutation.isPending && <ArrowRight className="w-4 h-4" />}

@@ -92,7 +92,7 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
           {/* Phase labels */}
           <div className="flex w-full mb-1">
             {[
-              { name: 'Foundation', width: '15%', color: '#8081F6' },
+              { name: 'Foundation', width: '15%', color: '#6c5ce7' },
               { name: 'Structure', width: '25%', color: '#3B82F6' },
               { name: 'Envelope', width: '20%', color: '#10B981' },
               { name: 'Fitout', width: '25%', color: '#F97316' },

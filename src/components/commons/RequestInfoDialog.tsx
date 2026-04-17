@@ -229,7 +229,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-[#8081F6] flex items-center justify-center text-white text-sm font-medium">
+                                  <div className="h-8 w-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-sm font-medium">
                                     {memberName.charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
@@ -241,7 +241,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                                 <div className={cn(
                                   "h-5 w-5 rounded-full border-2 flex items-center justify-center",
                                   isSelected
-                                    ? "border-[#8081F6] bg-[#8081F6]"
+                                    ? "border-[#6c5ce7] bg-[#6c5ce7]"
                                     : "border-gray-300 bg-white"
                                 )}>
                                   {isSelected && (

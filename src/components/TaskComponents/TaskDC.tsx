@@ -18,7 +18,7 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields }) => {
         <div>
           <label className="text-xs font-medium text-muted-foreground">Extension Requested</label>
           <p className="text-sm text-foreground mt-1 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-[#8081F6]" /> {formFields.requestedExtension || 0} Days
+            <Clock className="w-3.5 h-3.5 text-[#6c5ce7]" /> {formFields.requestedExtension || 0} Days
           </p>
         </div>
         <div>

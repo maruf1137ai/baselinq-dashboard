@@ -282,7 +282,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     && userRoles.some(r => clientRolesForSignOff.includes(r));
 
   // Card border + background per escalation level (pending review takes priority over warnings)
-  const cardBorder = needsSignOff ? 'border border-[#8081F6] bg-[#8081F6]/5 ring-1 ring-[#8081F6]/20' :
+  const cardBorder = needsSignOff ? 'border border-[#6c5ce7] bg-[#6c5ce7]/5 ring-1 ring-[#6c5ce7]/20' :
     needsReview ? 'border border-amber-400 bg-amber-50/20' :
       isResolved ? 'border border-border' :
         escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
@@ -313,10 +313,10 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             </div>
             {needsSignOff && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] font-medium text-[#8081F6] bg-[#8081F6]/10 border border-[#8081F6] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[10px] font-medium text-[#6c5ce7] bg-[#6c5ce7]/10 border border-[#6c5ce7] px-1.5 py-0.5 rounded-full flex items-center gap-1">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8081F6] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#8081F6]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6c5ce7] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#6c5ce7]" />
                   </span>
                   Awaiting Sign-off
                 </span>
@@ -367,7 +367,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   String(task.assignedBy?.userId) === String(currentUserId)
                 );
                 return visibleResponses.length > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] bg-[#8081F6]/10 text-[#8081F6] px-1.5 py-0.5 rounded shrink-0">
+                  <span className="flex items-center gap-1 text-[10px] bg-[#6c5ce7]/10 text-[#6c5ce7] px-1.5 py-0.5 rounded shrink-0">
                     <MessageSquare className="h-2.5 w-2.5" />
                     {visibleResponses.length}
                   </span>

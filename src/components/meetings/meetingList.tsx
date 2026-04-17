@@ -111,7 +111,7 @@ export default function MeetingsList() {
 
           {filteredUpcoming.length === 0 && filteredCompleted.length === 0 && (
             <div className="text-center py-20 text-sm text-muted-foreground">
-              No meetings found.
+              No meetings found
             </div>
           )}
         </>

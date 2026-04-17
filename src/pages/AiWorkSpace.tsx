@@ -371,7 +371,7 @@ const AiWorkSpace = () => {
                   </h2>
 
                   {/* Input with bottom toolbar */}
-                  <div className="rounded-2xl bg-white border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#8081F6]/30 focus-within:border-[#8081F6] transition-all">
+                  <div className="rounded-2xl bg-white border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#6c5ce7]/30 focus-within:border-[#6c5ce7] transition-all">
                     <Textarea
                       ref={textareaRef}
                       value={input}

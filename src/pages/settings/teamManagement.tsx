@@ -7,10 +7,10 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 const TeamManagement = () => {
   const { canEditTeamRoles, canManageTeam } = usePermissions();
-  const [activeTab, setActiveTab] = useState("Team Members");
+  const [activeTab, setActiveTab] = useState("Users");
 
   const btns = [
-    "Team Members",
+    "Users",
     "Role Permissions",
     "Approval Chains",
     "AI Routing",
@@ -20,7 +20,7 @@ const TeamManagement = () => {
     <div className="p-6">
       <h2 className="text-2xl font-normal tracking-tight text-foreground">Team Management</h2>
       <p className="text-sm text-muted-foreground mt-1 mb-6">
-        Manage team members, roles, permissions, and approval workflows.
+        Manage users, roles, permissions, and approval workflows.
       </p>
       <div className="btns flex items-center gap-2 border-b border-border">
         {btns.map((btn) => (
@@ -37,7 +37,7 @@ const TeamManagement = () => {
       </div>
 
       <div className="mt-6">
-        {activeTab === "Team Members" && <TeamMembersTable />}
+        {activeTab === "Users" && <TeamMembersTable />}
         {activeTab === "Role Permissions" && <RolePermissions />}
         {activeTab === "Approval Chains" && <ApprovalChains />}
         {activeTab === "AI Routing" && <AiRouting />}

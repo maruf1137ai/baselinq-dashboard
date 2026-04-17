@@ -150,7 +150,7 @@ const OrgTeamTable = () => {
         url: `auth/users/${selectedMember.id}/`,
         data: { role: editForm.role_code },
       });
-      toast.success("Member role updated");
+      toast.success("User role updated");
       setShowEditModal(false);
       fetchMembers();
     } catch (error: any) {
@@ -168,11 +168,11 @@ const OrgTeamTable = () => {
         url: `auth/organization/members/${selectedMember.id}/`,
         data: undefined,
       });
-      toast.success("Member removed from organization");
+      toast.success("User removed from organization");
       setShowDeleteDialog(false);
       fetchMembers();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to remove member");
+      toast.error(error?.response?.data?.error || "Failed to remove user");
     } finally {
       setIsSubmitting(false);
     }
@@ -211,7 +211,7 @@ const OrgTeamTable = () => {
         <div>
           <h2 className="text-xl font-normal text-foreground">Organization Team</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Manage your organization's members and pending invitations.
+            Manage your organization's users and pending invitations.
           </p>
         </div>
         {isOrgOwner && (
@@ -220,7 +220,7 @@ const OrgTeamTable = () => {
             className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2 rounded-lg"
           >
             <Plus className="w-4 h-4" />
-            Invite Member
+            Invite User
           </Button>
         )}
       </div>
@@ -231,7 +231,7 @@ const OrgTeamTable = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 border-b border-border">
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Member</th>
+                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">User</th>
                 <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Role</th>
                 <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Status</th>
                 {isOrgOwner && <th className="px-6 py-4 text-right"></th>}
@@ -253,7 +253,7 @@ const OrgTeamTable = () => {
                 </td>
                 <td className="px-6 py-4">
                   <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
-                    {user?.role?.name || (user?.account_type === 'organisation' ? 'Organization Owner' : 'Member')}
+                    {user?.role?.name || (user?.account_type === 'organisation' ? 'Organization Owner' : 'User')}
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -281,7 +281,7 @@ const OrgTeamTable = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
-                      {member.role || "Member"}
+                      {member.role || "User"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -347,7 +347,7 @@ const OrgTeamTable = () => {
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
                       <Clock className="w-3 h-3" />
-                      Pending Invite
+                      Pending
                     </span>
                   </td>
                   {isOrgOwner && (
@@ -371,7 +371,7 @@ const OrgTeamTable = () => {
               {(!data?.members.length && !data?.pending_invitations.length) && (
                 <tr>
                   <td colSpan={isOrgOwner ? 4 : 3} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                    No other members in this organization yet.
+                    No other users in this organization yet.
                   </td>
                 </tr>
               )}
@@ -386,7 +386,7 @@ const OrgTeamTable = () => {
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Invite Organization Member</DialogTitle>
+            <DialogTitle className="text-lg font-normal">Invite User</DialogTitle>
             <DialogDescription className="text-xs">
               Send an invitation to join your organization on Baselinq.
             </DialogDescription>
@@ -407,7 +407,7 @@ const OrgTeamTable = () => {
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="member@company.com"
+                placeholder="user@company.com"
                 className="h-10 rounded-lg text-sm border-border"
                 value={inviteForm.email}
                 onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
@@ -449,7 +449,7 @@ const OrgTeamTable = () => {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Change Member Role</DialogTitle>
+            <DialogTitle className="text-lg font-normal">Change User Role</DialogTitle>
             <DialogDescription className="text-xs">
               Update {selectedMember?.name || selectedMember?.email}'s role in the organization.
             </DialogDescription>
@@ -491,7 +491,7 @@ const OrgTeamTable = () => {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Remove Member?</AlertDialogTitle>
+            <AlertDialogTitle className="font-normal">Remove User</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to remove {selectedMember?.name || selectedMember?.email} from this organization? They will lose access to all associated projects.
             </AlertDialogDescription>
@@ -503,7 +503,7 @@ const OrgTeamTable = () => {
               disabled={isSubmitting}
               className="bg-red-600 text-white hover:bg-red-700 rounded-lg"
             >
-              {isSubmitting ? "Removing..." : "Remove Member"}
+              {isSubmitting ? "Removing..." : "Remove User"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -513,7 +513,7 @@ const OrgTeamTable = () => {
       <AlertDialog open={showCancelInviteDialog} onOpenChange={setShowCancelInviteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Cancel Invitation?</AlertDialogTitle>
+            <AlertDialogTitle className="font-normal">Cancel Invitation</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to cancel the invitation sent to {selectedInvite?.email}?
             </AlertDialogDescription>

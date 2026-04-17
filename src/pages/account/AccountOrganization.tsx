@@ -42,7 +42,7 @@ function Field({ label, children, colSpan }: { label: string; children: React.Re
 }
 
 const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
-const MODAL_INPUT_CLS = "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+const MODAL_INPUT_CLS = "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const AccountOrganization = () => {
   const { data: user, isLoading } = useCurrentUser();
@@ -162,10 +162,10 @@ const AccountOrganization = () => {
     setRemovingId(memberId);
     try {
       await orgRemoveMember(memberId);
-      toast.success("Member removed from organisation.");
+      toast.success("User removed from organisation.");
       setMembers(prev => prev.filter(m => m.id !== memberId));
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to remove member.");
+      toast.error(err?.response?.data?.error || "Failed to remove user.");
     } finally {
       setRemovingId(null);
     }
@@ -303,7 +303,7 @@ const AccountOrganization = () => {
 
         {/* Team members */}
         <SectionCard
-          title="Team Members"
+          title="Users"
           subtitle="People who have joined your organisation"
           icon={<Users className="w-4 h-4" />}
           action={canEdit && (
@@ -313,14 +313,14 @@ const AccountOrganization = () => {
               className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-normal"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              Invite member
+              Invite User
             </button>
           )}
         >
           {/* Invite form */}
           {showInviteForm && (
             <form onSubmit={handleInvite} className="mb-5">
-              <p className="text-[13px] text-gray-500 mb-3">Invite colleagues to your organisation.</p>
+              <p className="text-[13px] text-gray-500 mb-3">Invite users to your organisation.</p>
               <div className="space-y-2">
                 {inviteRows.map((row) => (
                   <div key={row.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
@@ -365,15 +365,15 @@ const AccountOrganization = () => {
               <button
                 type="button"
                 onClick={() => setInviteRows(p => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
-                className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors"
+                className="mt-3 flex items-center gap-2 text-[13px] text-[#6c5ce7] hover:text-[#6c6de9] transition-colors"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                Add another member
+                Add another user
               </button>
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-                <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#8081F6] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
+                <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#6c5ce7] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
                   {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {inviting ? "Sending..." : "Send Invites"}
+                  {inviting ? "Sending..." : "Send Invitation"}
                 </Button>
                 <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors">
                   Cancel
@@ -390,7 +390,7 @@ const AccountOrganization = () => {
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
                 <Users className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">No team members yet.</p>
+              <p className="text-sm text-muted-foreground">No users yet</p>
               <p className="text-xs text-muted-foreground mt-1">Invite someone to get started.</p>
             </div>
           ) : (
@@ -415,7 +415,7 @@ const AccountOrganization = () => {
                       onClick={() => handleRemoveMember(member.id)}
                       disabled={removingId === member.id}
                       className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
-                      title="Remove member"
+                      title="Remove user"
                     >
                       {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>

@@ -24,7 +24,7 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
       {/* AI Construction Atmosphere - Blueprint Grid */}
       <div className="absolute inset-0 z-0 opacity-[0.03]"
         style={{
-          backgroundImage: "linear-gradient(#8081F6 1px, transparent 1px), linear-gradient(90deg, #8081F6 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(#6c5ce7 1px, transparent 1px), linear-gradient(90deg, #6c5ce7 1px, transparent 1px)",
           backgroundSize: "32px 32px"
         }}
       />
@@ -83,7 +83,7 @@ export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
           {[0, 90, 180, 270].map((angle, i) => (
             <motion.div
               key={i}
-              className="absolute w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_#8081F6]"
+              className="absolute w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_#6c5ce7]"
               animate={{
                 rotate: angle + 360,
               }}

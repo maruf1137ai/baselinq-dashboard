@@ -73,7 +73,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
           ) : versions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
               <History className="w-8 h-8" />
-              <p className="text-sm">No versions found.</p>
+              <p className="text-sm">No versions found</p>
             </div>
           ) : (
             <div className="px-8 py-10 relative">

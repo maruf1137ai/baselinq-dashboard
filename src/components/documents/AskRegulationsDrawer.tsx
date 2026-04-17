@@ -190,8 +190,8 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
       <SheetContent side="right" className="sm:max-w-[750px] p-0 flex flex-col bg-white h-full shadow-2xl border-l z-[100] gap-0">
         <SheetHeader className="px-5 py-4 border-b shrink-0 bg-gray-50/50">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-[#8081F6]/10 rounded-xl flex items-center justify-center">
-              <AiIcon size={20} className="text-[#8081F6]" />
+            <div className="h-10 w-10 bg-[#6c5ce7]/10 rounded-xl flex items-center justify-center">
+              <AiIcon size={20} className="text-[#6c5ce7]" />
             </div>
             <div>
               <SheetTitle className="text-base font-normal text-foreground">Ask Regulations</SheetTitle>
@@ -241,8 +241,8 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                   )}>
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-2 mb-4">
-                        <div className="h-6 w-6 bg-[#8081F6]/10 rounded-lg flex items-center justify-center">
-                          <AiIcon size={14} className="text-[#8081F6]" />
+                        <div className="h-6 w-6 bg-[#6c5ce7]/10 rounded-lg flex items-center justify-center">
+                          <AiIcon size={14} className="text-[#6c5ce7]" />
                         </div>
                         <span className="text-xs text-gray-400 font-normal">Contract AI &bull; {msg.timestamp}</span>
                       </div>
@@ -384,7 +384,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                           <button
                             key={f}
                             onClick={() => handleSend(f)}
-                            className="bg-white border border-gray-100 hover:border-[#8081F6]/30 hover:bg-[#8081F6]/[0.02] text-xs text-gray-600 px-4 py-2.5 rounded-2xl w-fit transition-all shadow-sm font-normal text-left flex items-center gap-2 group"
+                            className="bg-white border border-gray-100 hover:border-[#6c5ce7]/30 hover:bg-[#6c5ce7]/[0.02] text-xs text-gray-600 px-4 py-2.5 rounded-2xl w-fit transition-all shadow-sm font-normal text-left flex items-center gap-2 group"
                           >
                             {f} <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" />
                           </button>
@@ -398,9 +398,9 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                 <div className="flex flex-col gap-3 items-start">
                   <div className="bg-white border border-gray-100 rounded-3xl rounded-tl-none p-6 shadow-sm">
                     <div className="flex gap-1.5">
-                      <div className="h-1.5 w-1.5 bg-[#8081F6] rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <div className="h-1.5 w-1.5 bg-[#8081F6] rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <div className="h-1.5 w-1.5 bg-[#8081F6] rounded-full animate-bounce" />
+                      <div className="h-1.5 w-1.5 bg-[#6c5ce7] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <div className="h-1.5 w-1.5 bg-[#6c5ce7] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <div className="h-1.5 w-1.5 bg-[#6c5ce7] rounded-full animate-bounce" />
                     </div>
                   </div>
                 </div>
@@ -411,7 +411,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
 
         {/* Input Footer */}
         <div className="p-5 border-t bg-white shrink-0">
-          <div className="relative flex items-center bg-gray-50 border border-gray-100 rounded-3xl px-4 py-2 focus-within:bg-white focus-within:border-[#8081F6]/30 focus-within:ring-4 focus-within:ring-[#8081F6]/5 transition-all">
+          <div className="relative flex items-center bg-gray-50 border border-gray-100 rounded-3xl px-4 py-2 focus-within:bg-white focus-within:border-[#6c5ce7]/30 focus-within:ring-4 focus-within:ring-[#6c5ce7]/5 transition-all">
             <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
               <Paperclip className="h-5 w-5" />
             </button>
@@ -435,7 +435,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
             <Button
               onClick={() => handleSend()}
               disabled={!inputValue.trim() || isSending}
-              className="h-10 w-10 p-0 rounded-2xl bg-[#8081F6] hover:bg-[#8081F6]/90 shadow-lg shadow-[#8081F6]/20 transition-all disabled:opacity-50 disabled:shadow-none shrink-0"
+              className="h-10 w-10 p-0 rounded-2xl bg-[#6c5ce7] hover:bg-[#6c5ce7]/90 shadow-lg shadow-[#6c5ce7]/20 transition-all disabled:opacity-50 disabled:shadow-none shrink-0"
             >
               {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>

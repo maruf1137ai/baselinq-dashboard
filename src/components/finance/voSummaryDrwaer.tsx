@@ -84,7 +84,7 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
               <SummaryRow
                 label="In Review"
                 value={formatCurrency(data.inReview)}
-                valueColor="text-[#8081F6]"
+                valueColor="text-[#6c5ce7]"
               />
               <SummaryRow
                 label="Draft Pipeline"
@@ -109,7 +109,7 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-[#8081F6] h-2 rounded-full"
+                  className="bg-[#6c5ce7] h-2 rounded-full"
                   style={{
                     width: `${data.contingencyUsagePercentage}%`,
                   }}></div>

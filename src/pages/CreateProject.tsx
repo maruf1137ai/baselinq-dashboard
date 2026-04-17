@@ -44,6 +44,7 @@ import {
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { COMPANY_TYPES } from "@/lib/roleUtils";
+import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
@@ -135,7 +136,7 @@ interface TaskOrderState {
 
 // COMPANY_TYPES imported from @/lib/roleUtils
 
-const STEPS = [
+const STEPS_BASE = [
   { id: 1, label: "Project Details", description: "Name, number, and location" },
   { id: 2, label: "Scope of Works", description: "Description & requirements" },
   { id: 3, label: "Client Details", description: "Client company & contacts" },
@@ -231,22 +232,12 @@ function formatCurrency(amount: number, currency = "ZAR"): string {
 // ── Input helpers ──────────────────────────────────────────────────────────────
 
 function inputCls(error?: boolean, extra?: string) {
-  return cn(
-    "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all",
-    "bg-[#f5f6f8] border border-[#e2e5ea]",
-    "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
-    error && "!border-red-400 focus:!border-red-400 focus:ring-red-400/10",
-    extra
-  );
+  return cn(INPUT_BASE, error && INPUT_ERROR, extra);
 }
 
 const selectWrapCls = "relative w-full";
 function selectCls() {
-  return cn(
-    "w-full h-12 px-4 pr-9 rounded-[10px] text-sm text-[#111827] outline-none",
-    "bg-[#f5f6f8] border border-[#e2e5ea] appearance-none cursor-pointer",
-    "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 transition-all"
-  );
+  return SELECT_BASE;
 }
 
 // ── FileTypeIcon ───────────────────────────────────────────────────────────────
@@ -432,175 +423,11 @@ function PersonnelEntryCard({
   );
 }
 
-// ── OrgPersonnelSelectCard ────────────────────────────────────────────────────
-
 interface OrgUser {
   id: number;
   name: string;
   email: string;
   role: { name: string; code: string } | null;
-}
-
-function OrgPersonnelSelectCard({
-  entry,
-  roleOptions,
-  takenRoles,
-  orgUsers,
-  allRoles,
-  onChange,
-  onRemove,
-  canRemove,
-}: {
-  entry: AssignedPersonnel;
-  roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
-  takenRoles: string[];
-  orgUsers: OrgUser[];
-  allRoles: { id?: number; name: string; code: string }[];
-  onChange: (v: AssignedPersonnel) => void;
-  onRemove: () => void;
-  canRemove: boolean;
-}) {
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const selectedRole = roleOptions.find((r) => r.value === entry.role);
-  const selectedOrgUser = orgUsers.find((u) => u.email === entry.email);
-
-  return (
-    <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
-      {/* Role selector row */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
-          </div>
-          <select
-            value={entry.role}
-            onChange={(e) => onChange({ ...entry, role: e.target.value })}
-            className="flex-1 text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none">
-            <option value="">Select role...</option>
-            {roleOptions.map((r) => (
-              <option
-                key={r.value}
-                value={r.value}
-                disabled={takenRoles.includes(r.value) && r.value !== entry.role}>
-                {r.value}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedRole && (
-            <span
-              className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
-              style={{ background: selectedRole.badgeColor }}>
-              {selectedRole.badge}
-            </span>
-          )}
-          {canRemove && (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* User combobox */}
-      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
-            {selectedOrgUser ? (
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
-                  {(selectedOrgUser.name || selectedOrgUser.email).charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-[13px] text-[#374151]">{selectedOrgUser.name}</p>
-                  <p className="text-[11px] text-[#9ca3af]">
-                    {selectedOrgUser.email}{selectedOrgUser.role?.name ? ` · ${selectedOrgUser.role.name}` : ""}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <span className="text-[13px] text-[#9ca3af]">Select team member...</span>
-            )}
-            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
-          <Command>
-            <CommandInput placeholder="Search team members..." className="text-[13px]" />
-            <CommandList>
-              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No team members found.</CommandEmpty>
-              <CommandGroup>
-                {orgUsers.map((u) => {
-                  const isSelected = entry.email === u.email;
-                  return (
-                    <CommandItem
-                      key={u.id}
-                      value={u.name || u.email}
-                      onSelect={() => {
-                        const matchedRole = roleOptions.find(
-                          (r) => r.value === u.role?.code || r.value === u.role?.name
-                        );
-                        onChange({
-                          ...entry,
-                          name: u.name,
-                          email: u.email,
-                          position: u.role?.name || "",
-                          userId: u.id,
-                          role: matchedRole ? matchedRole.value : entry.role,
-                        });
-                        setPopoverOpen(false);
-                      }}
-                      className="cursor-pointer px-3 py-2.5">
-                      <div className="flex items-center justify-between w-full gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
-                            {(u.name || u.email).charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
-                            <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
-                          </div>
-                        </div>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0" />}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {/* Org role — editable dropdown, pre-filled with user's role */}
-      {selectedOrgUser && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb]">
-          <User className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
-          <div className="flex-1">
-            <p className="text-[11px] text-[#9ca3af] mb-0.5">Organisation Role</p>
-            <select
-              value={entry.position}
-              onChange={(e) => onChange({ ...entry, position: e.target.value })}
-              className="w-full text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
-            >
-              <option value="">Select role...</option>
-              {allRoles.map((r) => (
-                <option key={r.code} value={r.name}>{r.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── AddressFields ─────────────────────────────────────────────────────────────
@@ -688,6 +515,12 @@ export default function CreateProject() {
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
   const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
   const [invitedPersonnelList, setInvitedPersonnelList] = useState<{ name: string; email: string; role_code: string }[]>([]);
+
+  // Add Appointed Personnel modal
+  const [showAddAppointedModal, setShowAddAppointedModal] = useState(false);
+  const [selectedAppointedUser, setSelectedAppointedUser] = useState<OrgUser | null>(null);
+  const [selectedAppointedRole, setSelectedAppointedRole] = useState("");
+  const [appointedPopoverOpen, setAppointedPopoverOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -842,6 +675,14 @@ export default function CreateProject() {
   const orgUsers: OrgUser[] = orgUsersData?.results || [];
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(user?.role?.code ?? '');
+
+  const STEPS = STEPS_BASE.map(s =>
+    s.id === 4
+      ? isClientOrContractor
+        ? { ...s, label: "Associated Company", description: "Professional firm & contacts" }
+        : { ...s, label: "Your Organisation", description: "Your company details & team" }
+      : s
+  );
 
   // ── Pre-populate from User Organization ───────────────────────────────────
 
@@ -1728,7 +1569,7 @@ export default function CreateProject() {
                         <div>
                           <SectionHeader
                             icon={<User className="w-3.5 h-3.5" />}
-                            label="Assigned Personnel"
+                            label="Project Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
                           />
@@ -1792,7 +1633,7 @@ export default function CreateProject() {
                               <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                                 <Plus className="w-3.5 h-3.5" />
                               </div>
-                              <span className="font-normal">Add Member</span>
+                              <span className="font-normal">Add User</span>
                             </button>
                           </div>
                         </div>
@@ -1898,7 +1739,7 @@ export default function CreateProject() {
                           <div>
                             <SectionHeader
                               icon={<Building2 className="w-3.5 h-3.5" />}
-                              label="Associated Company Information"
+                              label="Your Organisation"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
@@ -2000,7 +1841,7 @@ export default function CreateProject() {
                           <div>
                             <SectionHeader
                               icon={<User className="w-3.5 h-3.5" />}
-                              label="Key Personnel"
+                              label="Add Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />
@@ -2010,35 +1851,45 @@ export default function CreateProject() {
                             <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3 py-2 mb-4">
                               <svg className="w-3.5 h-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
                               <p className="text-[11px] text-[#92400e] leading-snug">
-                                Only internal organisation members can be assigned here. External companies (architects, engineers, etc.) are added after project creation via the <span className="font-medium">Associated Companies</span> tab in project settings.
+                                Only internal organisation users can be assigned here.
                               </p>
                             </div>
                             <div className="space-y-3">
-                              {appointedPersonnelList.map((entry) => (
-                                <OrgPersonnelSelectCard
-                                  key={entry.id}
-                                  entry={entry}
-                                  roleOptions={APPOINTED_ROLE_OPTIONS}
-                                  takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
-                                  orgUsers={orgUsers}
-                                  allRoles={appRoles}
-                                  onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                                  onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
-                                  canRemove={true}
-                                />
-                              ))}
-                              {appointedPersonnelList.length < APPOINTED_ROLE_OPTIONS.length && (
-                                <button
-                                  type="button"
-                                  onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
-                                  className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
-                                >
-                                  <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                    <Plus className="w-3.5 h-3.5" />
+                              {appointedPersonnelList.map((entry) => {
+                                const roleName = entry.position || entry.role || "Member";
+                                return (
+                                  <div key={entry.id} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
+                                    <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] font-normal shrink-0">
+                                      {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[13px] font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
+                                      <p className="text-[11px] text-[#9ca3af] truncate">{entry.email}</p>
+                                    </div>
+                                    <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                      className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   </div>
-                                  <span className="font-normal">Add Personnel</span>
-                                </button>
-                              )}
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAppointedUser(null);
+                                  setSelectedAppointedRole("");
+                                  setAppointedPopoverOpen(false);
+                                  setShowAddAppointedModal(true);
+                                }}
+                                className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
+                                <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                  <Plus className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="font-normal">Add User</span>
+                              </button>
                             </div>
                           </div>
                         </>
@@ -2523,6 +2374,155 @@ export default function CreateProject() {
         </div >
       </div >
 
+      {/* ── Add Appointed Personnel Modal ── */}
+      {showAddAppointedModal && (() => {
+        const alreadyAddedIds = new Set(appointedPersonnelList.map(e => e.userId).filter(Boolean));
+        const filteredOrgUsers = orgUsers.filter(u => !alreadyAddedIds.has(u.id));
+        const canAdd = !!selectedAppointedUser && !!selectedAppointedRole;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#eef2ff] flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#6366f1]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Users</h3>
+                    <p className="text-[12px] text-[#9ca3af]">Assign your organisation user to this project</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAppointedModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                {/* User select */}
+                <div className="space-y-1.5">
+                  <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
+                  <Popover open={appointedPopoverOpen} onOpenChange={setAppointedPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+                        {selectedAppointedUser ? (
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                              {(selectedAppointedUser.name || selectedAppointedUser.email).charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-[13px] text-[#374151]">{selectedAppointedUser.name || selectedAppointedUser.email}</p>
+                              <p className="text-[11px] text-[#9ca3af]">{selectedAppointedUser.email}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[13px] text-[#9ca3af]">Select a user...</span>
+                        )}
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search members..." className="text-[13px]" />
+                        <CommandList>
+                          <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredOrgUsers.map((u) => {
+                              const isSelected = selectedAppointedUser?.id === u.id;
+                              return (
+                                <CommandItem
+                                  key={u.id}
+                                  value={u.name || u.email}
+                                  onSelect={() => {
+                                    setSelectedAppointedUser(u);
+                                    setAppointedPopoverOpen(false);
+                                  }}
+                                  className="cursor-pointer px-3 py-2.5">
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                        {(u.name || u.email).charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
+                                        <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
+                                      </div>
+                                    </div>
+                                    <div className={cn(
+                                      "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
+                                      isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-[#e2e5ea] bg-white"
+                                    )}>
+                                      {isSelected && <Check className="h-3 w-3 text-white" />}
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Role select */}
+                {selectedAppointedUser && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[12px] font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
+                    <select
+                      className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                      value={selectedAppointedRole}
+                      onChange={(e) => setSelectedAppointedRole(e.target.value)}>
+                      <option value="">Select role…</option>
+                      {appRoles.map((r) => (
+                        <option key={r.code} value={r.name}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAppointedModal(false)}
+                  className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!canAdd}
+                  onClick={() => {
+                    if (!selectedAppointedUser || !selectedAppointedRole) return;
+                    setAppointedPersonnelList((prev) => [...prev, {
+                      id: crypto.randomUUID(),
+                      name: selectedAppointedUser.name || selectedAppointedUser.email,
+                      email: selectedAppointedUser.email,
+                      position: selectedAppointedRole,
+                      role: selectedAppointedRole,
+                      userId: selectedAppointedUser.id,
+                    }]);
+                    setSelectedAppointedUser(null);
+                    setSelectedAppointedRole("");
+                    setShowAddAppointedModal(false);
+                  }}
+                  className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
+                  <Check className="w-3.5 h-3.5" /> Add User
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Add Member Modal (unified) ── */}
       {showAddMemberModal && (() => {
         const alreadyAddedIds = new Set(clientPersonnelList.map(e => e.userId).filter(Boolean));
@@ -2541,8 +2541,8 @@ export default function CreateProject() {
                     <User className="w-4 h-4 text-[#00b894]" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Member</h3>
-                    <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
+                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Users</h3>
+                    <p className="text-[12px] text-[#9ca3af]">Assign your organisation user to this project</p>
                   </div>
                 </div>
                 <button
@@ -2731,7 +2731,7 @@ export default function CreateProject() {
                     }}
                     className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Check className="w-3.5 h-3.5" /> Add Member
+                    <Check className="w-3.5 h-3.5" /> Add User
                   </button>
                 ) : (
                   <button

@@ -34,10 +34,11 @@ import { isMeetingPast } from "@/lib/dateUtils";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useRoles } from "@/hooks/useRoles";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
+import { INPUT_BASE, SELECT_BASE, TEXTAREA_BASE } from "@/lib/constants";
 
-const qInputCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10";
-const qSelectCls = "w-full h-12 px-4 rounded-[10px] text-sm text-[#111827] outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 appearance-none";
-const qTextareaCls = "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none bg-[#f5f6f8] border border-[#e2e5ea] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 min-h-[200px] leading-relaxed";
+const qInputCls = INPUT_BASE;
+const qSelectCls = SELECT_BASE + " appearance-none";
+const qTextareaCls = TEXTAREA_BASE + " min-h-[200px]";
 
 // COMPANY_TYPES imported from @/lib/roleUtils
 
@@ -220,7 +221,7 @@ const Index = () => {
             })
           )
         );
-        toast.success(`${validInvites.length} appointed company invitation${validInvites.length > 1 ? "s" : ""} sent`);
+        toast.success(`${validInvites.length} associated company invitation${validInvites.length > 1 ? "s" : ""} sent`);
       }
 
       closeQuickFill();
@@ -481,7 +482,7 @@ const Index = () => {
                     "Project Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
                     "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Add the project site address or location." },
                     "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the project start and end dates." },
-                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms appointed to this project." : "Fill in your company details for this project." },
+                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
@@ -587,7 +588,7 @@ const Index = () => {
                 <circle cx="24" cy="24" r="20" fill="none" stroke="#E5E7EB" strokeWidth="4" />
                 <circle
                   cx="24" cy="24" r="20" fill="none"
-                  stroke="#8081F6" strokeWidth="4" strokeLinecap="round"
+                  stroke="#6c5ce7" strokeWidth="4" strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 20}`}
                   strokeDashoffset={`${2 * Math.PI * 20 * (1 - projectProgress / 100)}`}
                   className="transition-all duration-700"
@@ -671,7 +672,7 @@ const Index = () => {
                   ))}
                 </>
               ) : (
-                <div className="p-4 text-center text-gray-500">No actions found for this project.</div>
+                <div className="p-4 text-center text-gray-500">No actions found</div>
               )}
             </CardContent>
           </Card>
@@ -711,7 +712,7 @@ const Index = () => {
                   );
                 })
               ) : (
-                <div className="p-4 text-center text-gray-500">No recent activity.</div>
+                <div className="p-4 text-center text-gray-500">No recent activity</div>
               )}
             </CardContent>
           </Card>
@@ -782,7 +783,7 @@ const Index = () => {
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-500 text-sm">No upcoming meetings.</div>
+              <div className="p-4 text-center text-gray-500 text-sm">No upcoming meetings</div>
             )}
           </CardContent>
         </Card>
@@ -831,7 +832,7 @@ const Index = () => {
               </div>
             ) : (
               <div className="p-4 text-center text-gray-500 text-sm">
-                No documents uploaded yet.
+                No documents uploaded yet
               </div>
             )}
           </CardContent>
@@ -1159,7 +1160,7 @@ const Index = () => {
                       </p>
                       <p className="text-[11px] text-[#9ca3af]">
                         {isClientOrContractor
-                          ? "Invite professional firms appointed to this project"
+                          ? "Invite professional firms associated with this project"
                           : "Fill in your company details — auto-populates into contracts and appointment letters"}
                       </p>
                     </div>

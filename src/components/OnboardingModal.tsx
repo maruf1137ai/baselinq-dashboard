@@ -183,7 +183,7 @@ function StepAddressFields({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
+    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
   return (
     <div className="space-y-2">
@@ -214,7 +214,7 @@ function StepPersonnelCard({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
+    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
   return (
     <div className="rounded-xl border border-border bg-white p-4 space-y-3">
@@ -651,7 +651,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
 
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10",
+    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
 
   return (
@@ -729,7 +729,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Building2 className="w-4 h-4 text-[#8081F6]" />
+                  <Building2 className="w-4 h-4 text-[#6c5ce7]" />
                   <span className="text-sm font-medium text-muted-foreground">Company Information</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -757,11 +757,11 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         type="button"
                         onClick={() => handleCompanyLookup("client")}
                         disabled={isLookingUp}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#8081F6] hover:bg-[#8081F6]/5 transition-all"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8081F6]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
                         ) : (
                           <Search className="w-3.5 h-3.5" />
                         )}
@@ -787,15 +787,15 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <button
                       type="button"
                       onClick={() => setShowClientPersonnel(true)}
-                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#8081F6] hover:text-[#8081F6] hover:bg-primary/10 transition-all group">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#8081F6] group-hover:text-white transition-colors">
+                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-primary/10 transition-all group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
                     </button>
                   ) : (
                     <div className="space-y-3">
-                      <StepPersonnelCard label="Client" role="Super User" roleColor="#8081F6" value={clientForm.client} onChange={(v) => setClientForm(p => ({ ...p, client: v }))} />
+                      <StepPersonnelCard label="Client" role="Super User" roleColor="#6c5ce7" value={clientForm.client} onChange={(v) => setClientForm(p => ({ ...p, client: v }))} />
                       <StepPersonnelCard label="Client Representative" role="Tech User" roleColor="#00b894" value={clientForm.client_representative} onChange={(v) => setClientForm(p => ({ ...p, client_representative: v }))} />
                     </div>
                   )}
@@ -839,11 +839,11 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         type="button"
                         onClick={() => handleCompanyLookup("appointed")}
                         disabled={isLookingUp}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#8081F6] hover:bg-[#8081F6]/5 transition-all"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8081F6]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
                         ) : (
                           <Search className="w-3.5 h-3.5" />
                         )}
@@ -869,15 +869,15 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <button
                       type="button"
                       onClick={() => setShowAppointedPersonnel(true)}
-                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#8081F6] hover:text-[#8081F6] hover:bg-primary/10 transition-all group">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#8081F6] group-hover:text-white transition-colors">
+                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-primary/10 transition-all group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
                     </button>
                   ) : (
                     <div className="space-y-3">
-                      <StepPersonnelCard label="Principal Architect" role="Super User" roleColor="#8081F6" value={appointedForm.principal} onChange={(v) => setAppointedForm(p => ({ ...p, principal: v }))} />
+                      <StepPersonnelCard label="Principal Architect" role="Super User" roleColor="#6c5ce7" value={appointedForm.principal} onChange={(v) => setAppointedForm(p => ({ ...p, principal: v }))} />
                       <StepPersonnelCard label="Technical Representative" role="Tech User" roleColor="#00b894" value={appointedForm.technical_representative} onChange={(v) => setAppointedForm(p => ({ ...p, technical_representative: v }))} />
                     </div>
                   )}
@@ -941,7 +941,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <ScrollText className="w-4 h-4 text-[#8081F6]" />
+                    <ScrollText className="w-4 h-4 text-[#6c5ce7]" />
                     <span className="text-sm font-medium text-muted-foreground">Scope of Works</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
@@ -952,7 +952,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 <div className="space-y-4">
                   <div className="relative group">
                     <textarea
-                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-[#f5f6f8] border border-border focus:border-[#8081F6] focus:ring-2 focus:ring-[#8081F6]/10 resize-none leading-relaxed"
+                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-[#f5f6f8] border border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 resize-none leading-relaxed"
                       placeholder="Describe the project scope, deliverables, and key requirements..."
                       value={taskOrderBrief}
                       onChange={(e) => {

@@ -104,7 +104,7 @@ export const PaymentCertificateDrawer: React.FC<
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-[#8081F6] h-2 rounded-full"
+                  className="bg-[#6c5ce7] h-2 rounded-full"
                   style={{
                     width: `${data.contingencyUsagePercentage}%`,
                   }}></div>

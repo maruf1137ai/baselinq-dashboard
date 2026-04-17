@@ -40,7 +40,7 @@ const AddEvidenceModal: React.FC<AddEvidenceModalProps> = ({ isOpen, onClose }) 
           <Button variant="outline" onClick={onClose} className="bg-white">
             Cancel
           </Button>
-          <Button className="bg-[#8081F6] hover:bg-[#8081F6] text-white">
+          <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">
             Save Evidence
           </Button>
         </DialogFooter>

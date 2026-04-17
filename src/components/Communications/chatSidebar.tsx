@@ -24,8 +24,12 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
     // Search filter
     const searchLower = searchQuery.toLowerCase();
     const taskName = task.name?.toLowerCase() || "";
-    const taskId = task.taskId ? String(task.taskId) : "";
-    const matchesSearch = taskName.includes(searchLower) || taskId.includes(searchLower);
+    const taskIdString = task.taskId ? String(task.taskId) : "";
+    const isPrivate = !task.taskId;
+    const matchesSearch =
+      taskName.includes(searchLower) ||
+      taskIdString.includes(searchLower) ||
+      (isPrivate && "private".includes(searchLower));
 
     if (!matchesSearch) return false;
 
@@ -65,12 +69,8 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 const displayId = channel.taskId
                   ? `${taskType}-${String(channel.taskId).padStart(3, '0')}`
                   : null;
-                // Use description as title for non-task channels, truncated
-                const displayTitle = channel.taskId
-                  ? channel.name
-                  : (channel.description && channel.description !== "No specific details"
-                    ? channel.description
-                    : channel.name || "Direct Message");
+
+                const displayTitle = channel.name || "Direct Message";
                 const count = channel.unread_count || 0;
                 const isSelected = selectedTask?.id === channel.id;
                 const status = channel.status || "Open";
@@ -86,7 +86,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                     {/* Header Row: ID/Title and Status */}
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-normal text-primary">
-                        {displayId || "--"}
+                        {displayId || "Private"}
                       </span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${['Done', 'Approved', 'Completed', 'Closed', 'Verified', 'Acknowledged', 'EOT Awarded'].includes(status) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
                         }`}>
@@ -99,10 +99,10 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                       {displayTitle}
                     </div>
 
-                    {/* Footer — only show description for task channels since non-task channels use it as title */}
+                    {/* Footer - Description */}
                     <div className="flex justify-between items-center mt-1">
                       <div className="text-xs text-muted-foreground truncate max-w-[80%]">
-                        {channel.taskId ? (channel.description || "No details") : (channel.name !== displayTitle ? channel.name : "")}
+                        {channel.description || "No details"}
                       </div>
 
                       {count > 0 && (
@@ -128,7 +128,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
         {open ? (
           <button className="flex items-center gap-2 text-sm text-foreground hover:text-foreground w-full justify-center py-2">
             <InviteMember />
-            <span>Add members</span>
+            <span>Add users</span>
           </button>
         ) : (
           <Button variant="ghost" size="icon" className="h-8 w-8 mx-auto">

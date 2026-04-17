@@ -1,4 +1,5 @@
 import React from "react";
+import { getStatusBadgeClasses } from "@/lib/statusColors";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ const groupLogsByDate = (logs: any[]) => {
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
   if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
+  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
   if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
   if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
@@ -82,24 +83,12 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
       return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
       return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-    return { icon: <Clock className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
+    return { icon: <Clock className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
   }
   return { icon: <Circle className="w-3 h-3 text-muted-foreground" />, bg: '#F3F4F6' };
 };
 
-const getStatusBadgeColor = (status: string) => {
-  const s = (status || '').toLowerCase().replace(/_/g, ' ');
-  if (['done', 'approved', 'completed', 'verified', 'closed', 'eot awarded', 'acknowledged'].includes(s))
-    return 'bg-[#E9F7EC] text-[#16A34A] border border-[rgba(22,163,74,0.34)]';
-  if (['in progress', 'in review', 'review', 'issued', 'submitted', 'actioned', 'under review',
-    'priced', 'sent for review', 'notice issued', 'under assessment', 'distributed',
-    'further info required', 'response provided', 'determination made', 'on track / at risk',
-    'scheduled'].includes(s))
-    return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
-  if (['rejected', 'declined'].includes(s))
-    return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
-  return 'bg-muted text-muted-foreground border border-border';
-};
+const getStatusBadgeColor = getStatusBadgeClasses;
 
 const ENTITY_LABELS: Record<string, string> = {
   variationorder: 'Variation Order',
@@ -172,37 +161,15 @@ const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?
 
 const getStatusBadgeVariant = (status: string) => {
   switch (status.toLowerCase()) {
-    case "approved":
-    case "closed":
-      return "default";
-    case "pending":
-      return "secondary";
-    case "in review":
-    case "under review":
-      return "outline";
-    case "rejected":
-      return "destructive";
-    default:
-      return "secondary";
+    case "approved": case "closed": return "default";
+    case "pending": return "secondary";
+    case "in review": case "under review": return "outline";
+    case "rejected": return "destructive";
+    default: return "secondary";
   }
 };
 
-const getStatusColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "approved":
-    case "closed":
-      return "text-green-600 bg-green-50 border-green-200";
-    case "pending":
-      return "text-amber-600 bg-amber-50 border-amber-200";
-    case "in review":
-    case "under review":
-      return "text-primary bg-blue-50 border-blue-200";
-    case "rejected":
-      return "text-red-600 bg-red-50 border-red-200";
-    default:
-      return "text-muted-foreground bg-muted border-border";
-  }
-};
+const getStatusColor = getStatusBadgeClasses;
 
 export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   taskType,
@@ -248,7 +215,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                 {/* Line */}
                 <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
                   <div
-                    className="h-[2px] bg-[#8081F6] transition-all duration-500"
+                    className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
                     style={{
                       width: `${(currentStageIndex / (stageCount - 1)) * 100}%`,
                     }}
@@ -264,7 +231,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       className="relative flex flex-col items-center flex-1 cursor-pointer">
                       <div
                         className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                          ? "bg-[#8081F6] border-[#8081F6]"
+                          ? "bg-[#6c5ce7] border-[#6c5ce7]"
                           : "bg-white border-border"
                           }`}
                       />
@@ -426,7 +393,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Reply Due</span>
-            <span className="text-sm font-normal text-[#8081F6]">
+            <span className="text-sm font-normal text-[#6c5ce7]">
               {taskData?.deadlines?.replyDue}
             </span>
           </div>

@@ -23,7 +23,7 @@ const STEPS_CLIENT = [
 ];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -157,7 +157,7 @@ export default function AcceptInvitation() {
 
   const positionLabel = invite?.position
     ? invite.position.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : "Team Member";
+    : "User";
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -195,7 +195,7 @@ export default function AcceptInvitation() {
             <p className="text-sm text-gray-500 mb-6">This link may have expired or already been used.</p>
             <button
               onClick={() => navigate("/login")}
-              className="w-full py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all"
+              className="w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all"
             >
               Go to login
             </button>
@@ -232,7 +232,7 @@ export default function AcceptInvitation() {
 
           {/* Invite context pill */}
           <div className="inline-flex items-center gap-2 bg-white/8 border border-white/10 rounded-full px-4 py-2 mb-10">
-            <div className="w-2 h-2 rounded-full bg-[#8081F6]" />
+            <div className="w-2 h-2 rounded-full bg-[#6c5ce7]" />
             <span className="text-[13px] text-white/70">
               Joining as <span className="text-white/90">{positionLabel}</span>
             </span>
@@ -248,7 +248,7 @@ export default function AcceptInvitation() {
                   <div className="flex items-start gap-3.5 px-3 py-3 rounded-xl">
                     <div className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center text-[13px] shrink-0 mt-0.5 transition-colors",
-                      done ? "bg-[#8081F6] text-white" :
+                      done ? "bg-[#6c5ce7] text-white" :
                         active ? "bg-white/15 text-white border border-white/25" :
                           "bg-white/5 text-white/30 border border-white/10"
                     )}>
@@ -274,7 +274,7 @@ export default function AcceptInvitation() {
                       className="my-0.5"
                       style={
                         done
-                          ? { width: "2px", height: "16px", background: "#8081F6", marginLeft: "28px" }
+                          ? { width: "2px", height: "16px", background: "#6c5ce7", marginLeft: "28px" }
                           : { width: 0, height: "16px", borderLeft: "2px dashed rgba(255,255,255,0.12)", marginLeft: "28px" }
                       }
                     />
@@ -304,7 +304,7 @@ export default function AcceptInvitation() {
               <div
                 key={s.id}
                 className="h-1 flex-1 rounded-full transition-all duration-300"
-                style={{ background: s.id <= step ? "#8081F6" : "#e5e7eb" }}
+                style={{ background: s.id <= step ? "#6c5ce7" : "#e5e7eb" }}
               />
             ))}
           </div>
@@ -326,7 +326,7 @@ export default function AcceptInvitation() {
                   style={{
                     width: s.id === step ? "20px" : "8px",
                     height: "8px",
-                    background: s.id <= step ? "#8081F6" : "#e5e7eb",
+                    background: s.id <= step ? "#6c5ce7" : "#e5e7eb",
                   }}
                 />
               ))}
@@ -347,7 +347,7 @@ export default function AcceptInvitation() {
                 <div className="mb-7">
                   <h2 className="text-2xl text-[#1A1A1A] font-normal mb-1">Create your account</h2>
                   <p className="text-sm text-gray-500">
-                    Signing up as <span className="text-[#8081F6]">{invite.email}</span>
+                    Signing up as <span className="text-[#6c5ce7]">{invite.email}</span>
                   </p>
                 </div>
 
@@ -382,7 +382,7 @@ export default function AcceptInvitation() {
                   </Field>
 
                   <button type="submit"
-                    className="mt-2 w-full py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all">
+                    className="mt-2 w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all">
                     Continue
                   </button>
                 </form>
@@ -438,7 +438,7 @@ export default function AcceptInvitation() {
                     Back
                   </button>
                   <button type="button" onClick={() => setStep(3)}
-                    className="flex-1 py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all">
+                    className="flex-1 py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all">
                     Continue
                   </button>
                 </div>
@@ -486,7 +486,7 @@ export default function AcceptInvitation() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={acceptMutation.isPending}
-                    className="flex-1 py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {acceptMutation.isPending ? "Setting up your account..." : "Accept & join"}
                   </button>

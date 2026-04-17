@@ -92,7 +92,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
               {/* <SummaryRow
                 label="Progress"
                 value={progress}
-                valueColor="text-[#8081F6]"
+                valueColor="text-[#6c5ce7]"
               /> */}
               <section>
                 <div className="flex justify-between items-center mb-2">
@@ -103,7 +103,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-[#8081F6] h-2 rounded-full"
+                    className="bg-[#6c5ce7] h-2 rounded-full"
                     style={{
                       width: `${progress}%`,
                     }}></div>

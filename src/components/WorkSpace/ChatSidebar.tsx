@@ -137,22 +137,22 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
             {isLoading ? (
               <AwesomeLoader compact message="Loading chats" />
             ) : (
-            <div className="space-y-6 p-3">
-              {groupedSessions.map((group) => (
-                <div key={group.period}>
-                  <h3 className="mb-2 text-xs px-2 font-normal text-muted-foreground">
-                    {group.period}
-                  </h3>
-                  <div className="space-y-0.5">
-                    {group.items.map((session) => (
-                      <div
-                        key={session.id}
-                        className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${currentTaskId === String(session.taskId)
-                          ? "bg-sidebar border-border"
-                          : ""
-                          }`} onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}>
-                        <SessionLabel label={session.label} />
-                        {/* <DropdownMenu>
+              <div className="space-y-6 p-3">
+                {groupedSessions.map((group) => (
+                  <div key={group.period}>
+                    <h3 className="mb-2 text-xs px-2 font-normal text-muted-foreground">
+                      {group.period}
+                    </h3>
+                    <div className="space-y-0.5">
+                      {group.items.map((session) => (
+                        <div
+                          key={session.id}
+                          className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${currentTaskId === String(session.taskId)
+                            ? "bg-sidebar border-border"
+                            : ""
+                            }`} onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}>
+                          <SessionLabel label={session.label} />
+                          {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
@@ -186,12 +186,12 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu> */}
-                      </div>
-                    ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -201,7 +201,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
         {open ? (
           <button className="flex items-center gap-2 text-sm text-foreground hover:text-foreground">
             <InviteMember />
-            <span>Invite members</span>
+            <span>Invite users</span>
           </button>
         ) : (
           <Button variant="ghost" size="icon" className="h-8 w-8 mx-auto">

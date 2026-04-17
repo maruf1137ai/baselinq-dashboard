@@ -190,7 +190,7 @@ const AppointedCompanies = () => {
         contact_name: memberInviteForm.name.trim() || undefined,
         position: memberInviteForm.position || undefined,
       });
-      toast.success("Member invitation sent.");
+      toast.success("Invitation sent.");
       setMemberInviteForm({ name: "", email: "", position: "" });
       setInvitingForCompany(null);
       fetchCompanies();
@@ -222,11 +222,11 @@ const AppointedCompanies = () => {
     setIsRemovingMember(true);
     try {
       await removeCompanyMember(selectedProjectId, teamMemberId);
-      toast.success("Member removed.");
+      toast.success("User removed.");
       setRemovingMemberId(null);
       fetchCompanies();
     } catch {
-      toast.error("Failed to remove member.");
+      toast.error("Failed to remove user.");
     } finally {
       setIsRemovingMember(false);
     }
@@ -304,7 +304,7 @@ const AppointedCompanies = () => {
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground tracking-tight">Associated Companies</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Professional firms appointed to this project</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Professional firms associated with this project</p>
             </div>
           </div>
 
@@ -398,9 +398,9 @@ const AppointedCompanies = () => {
                           const canManageCompany = isCompanyMember;
                           return (
                             <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
-                              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Members</p>
+                              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Users</p>
                               {members.length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-2">No members yet.</p>
+                                <p className="text-xs text-muted-foreground py-2">No users yet</p>
                               ) : (
                                 members.map((m: any) => (
                                   <div key={m.id} className="rounded-lg bg-slate-50 border border-border overflow-hidden">
@@ -457,7 +457,7 @@ const AppointedCompanies = () => {
                                             m.status === "Expired" ? "bg-red-100 text-red-700" :
                                             "bg-green-100 text-green-700"
                                           )}>
-                                            {m.status}
+                                            {m.status === "Invited" ? "Pending" : m.status}
                                           </span>
                                         )}
                                         {/* Remove active member */}
@@ -521,7 +521,7 @@ const AppointedCompanies = () => {
                               {/* Inline invite form */}
                               {canManageCompany && invitingForCompany === comp.id ? (
                                 <div className="mt-3 pt-3 border-t border-border space-y-3">
-                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Invite Member</p>
+                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Invite User</p>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
                                       <label className="text-[11px] text-muted-foreground">Full Name</label>
@@ -572,7 +572,7 @@ const AppointedCompanies = () => {
                                       style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}
                                     >
                                       {isMemberInviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                                      Send Invite
+                                      Send Invitation
                                     </button>
                                   </div>
                                 </div>
@@ -583,7 +583,7 @@ const AppointedCompanies = () => {
                                   className="mt-2 w-full py-2 border border-dashed border-border rounded-lg flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
-                                  Invite Member
+                                  Invite User
                                 </button>
                               )}
                             </div>

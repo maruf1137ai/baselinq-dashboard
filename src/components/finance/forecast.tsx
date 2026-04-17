@@ -86,7 +86,7 @@ const Forecast = () => {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-[#8081F6] h-2 rounded-full"
+                        className="bg-[#6c5ce7] h-2 rounded-full"
                         style={{
                           width: `60%`,
                         }}
@@ -120,7 +120,7 @@ const Forecast = () => {
                       <span className="text-base text-muted-foreground">Planned</span>
                     </div>
                     <div className="flex items-center">
-                      <span className="w-3 h-3 bg-[#8081F6] rounded-full mr-3"></span>
+                      <span className="w-3 h-3 bg-[#6c5ce7] rounded-full mr-3"></span>
                       <span className="text-base text-muted-foreground">Actual</span>
                     </div>
                     <div className="flex items-center">

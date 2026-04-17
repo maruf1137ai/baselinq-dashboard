@@ -62,7 +62,7 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
   const projectTotalBudget = selectedProject?.totalBudget ?? selectedProject?.total_budget ?? 0;
 
   const dynamicBudgetData = [
-    { name: 'Subcontractor Costs', value: projectTotalBudget * 0.40, percentage: 40, color: '#8081F6' },
+    { name: 'Subcontractor Costs', value: projectTotalBudget * 0.40, percentage: 40, color: '#6c5ce7' },
     { name: 'Materials', value: projectTotalBudget * 0.25, percentage: 25, color: '#10B981' },
     { name: 'Preliminaries', value: projectTotalBudget * 0.15, percentage: 15, color: '#F97316' },
     { name: 'Professional Fees', value: projectTotalBudget * 0.12, percentage: 12, color: '#3B82F6' },

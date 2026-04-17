@@ -315,7 +315,7 @@ export function CostLedgerDrawer({
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-[#8081F6] hover:bg-[#8081F6] text-white" disabled={loading}>
+              <Button type="submit" className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editEntry ? "Update Entry" : "Create Entry"}
               </Button>

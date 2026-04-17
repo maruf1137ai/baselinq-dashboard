@@ -44,7 +44,7 @@ interface UploadDocumentModalProps {
   onSuccess?: () => void;
 }
 
-const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certificate', 'Contract Agreement'] as const;
+const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certificate'] as const;
 const DISCIPLINES = ['Architectural', 'Structural', 'MEP', 'Civil', 'Environmental'] as const;
 
 export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen, onClose, onSuccess }) => {

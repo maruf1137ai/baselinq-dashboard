@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2 } from "lucide-react";
-const uploadFile = async (_file: File, _id: string): Promise<string> => "";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel: any, projectName?: string, taskDetails?: any }) => {
   const [message, setMessage] = useState("");
@@ -24,6 +30,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type?: string } | null>(null);
 
   // @mention state
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
@@ -45,13 +52,13 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         const members = res?.teamMembers || res?.results || (Array.isArray(res) ? res : []);
         setProjectMembers(members);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [projectId]);
 
   const filteredMembers = mentionQuery
     ? projectMembers.filter((m) =>
-        (m.name || m.user?.name || "").toLowerCase().includes(mentionQuery.toLowerCase())
-      )
+      (m.name || m.user?.name || "").toLowerCase().includes(mentionQuery.toLowerCase())
+    )
     : projectMembers;
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -200,7 +207,11 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             hour: "2-digit",
             minute: "2-digit",
           }),
-          files: msg.attachments || [],
+          files: (msg.attachments || []).map((a: any) => ({
+            name: a.fileName || a.file_name || a.name || "",
+            type: a.fileType || a.file_type || a.type || "",
+            url: a.url || a.file_url || "",
+          })),
           is_urgent: msg.is_urgent,
           message_type: msg.message_type,
           is_system: msg.is_system,
@@ -256,39 +267,25 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
 
     setIsUploading(true);
     try {
-      const uploadedFiles = [];
-
-      // Upload files if any
-      for (const fileData of attachedFiles) {
-        try {
-          const url = await uploadFile(fileData.file, channel.id);
-          uploadedFiles.push({
-            name: fileData.name,
-            type: fileData.type,
-            url: url
-          });
-        } catch (error) {
-          console.error(`Failed to upload ${fileData.name}`, error);
-          toast.error(`Failed to upload ${fileData.name}`);
-        }
+      const formData = new FormData();
+      formData.append("content", message.trim() || "");
+      formData.append("is_urgent", "false");
+      if (mentionedUserIds.length > 0) {
+        mentionedUserIds.forEach((id) => formData.append("mentioned_user_ids", String(id)));
       }
+      attachedFiles.forEach((fileData) => {
+        formData.append("attachments", fileData.file, fileData.name);
+      });
 
-      // Post message to API
       await postData({
         url: `channels/${channel.id}/messages/`,
-        data: {
-          content: message.trim(),
-          is_urgent: false,
-          parent: null,
-          ...(mentionedUserIds.length > 0 && { mentioned_user_ids: mentionedUserIds }),
-        },
+        data: formData,
+        config: { headers: { "Content-Type": "multipart/form-data" } },
       });
 
       setMessage("");
       setAttachedFiles([]);
       setMentionedUserIds([]);
-
-      // Refresh messages from API
       await fetchMessages();
     } catch (error) {
       console.error("Failed to send message", error);
@@ -398,20 +395,18 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const handleAudioUploadAndSend = async (audioFile: File) => {
     setIsUploading(true);
     try {
-      // Upload audio file first
-      const url = await uploadFile(audioFile, channel.id);
+      const formData = new FormData();
+      formData.append("content", "");
+      formData.append("is_urgent", "false");
+      formData.append("message_type", "voice");
+      formData.append("attachments", audioFile, audioFile.name);
 
-      // Post voice message to API
       await postData({
         url: `channels/${channel.id}/messages/`,
-        data: {
-          content: `[Voice Message: ${url}]`,
-          is_urgent: false,
-          parent: null,
-        },
+        data: formData,
+        config: { headers: { "Content-Type": "multipart/form-data" } },
       });
 
-      // Refresh messages from API
       await fetchMessages();
     } catch (error) {
       console.error("Failed to send voice message", error);
@@ -481,470 +476,497 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     : `# ${channel.name}`;
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3 flex-shrink-0">
-        {/* Breadcrumb & Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="text-xs text-gray-500 font-normal breadcrumb flex items-center gap-1">
-              <span>{projectName}</span>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
-              <span>Communications</span>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-900 font-normal">{displayId}</span>
+    <>
+      <div className="h-full flex flex-col">
+        <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3 flex-shrink-0">
+          {/* Breadcrumb & Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="text-xs text-gray-500 font-normal breadcrumb flex items-center gap-1">
+                <span>{projectName}</span>
+                <ChevronRight className="w-3 h-3 text-gray-400" />
+                <span>Communications</span>
+                <ChevronRight className="w-3 h-3 text-gray-400" />
+                <span className="text-gray-900 font-normal">{displayId}</span>
+              </div>
             </div>
+            {contextData && (
+              <button
+                onClick={() => setShowContext(!showContext)}
+                className="text-xs flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors"
+              >
+                <Info className="w-3 h-3" />
+                {showContext ? "Hide Context" : "Show Context"}
+              </button>
+            )}
           </div>
-          {contextData && (
-            <button
-              onClick={() => setShowContext(!showContext)}
-              className="text-xs flex items-center gap-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors"
-            >
-              <Info className="w-3 h-3" />
-              {showContext ? "Hide Context" : "Show Context"}
-            </button>
+
+          {/* Document Context Card */}
+          {showContext && contextData && (
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-normal text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
+                  {contextData.title}
+                </h3>
+                <div className="flex gap-2 shrink-0">
+                  {contextData.status && (
+                    <Badge variant="outline" className="bg-white text-gray-700 border-gray-200 text-[10px] h-5">
+                      {contextData.status}
+                    </Badge>
+                  )}
+                  {(contextData as any).priority && (
+                    <Badge variant="outline" className={`text-[10px] h-5 ${(contextData as any).priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}>
+                      {(contextData as any).priority}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4">
+                {(contextData as any).dueDate && (
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-gray-500 font-normal">Due Date</p>
+                      <p className="text-xs text-gray-900">{formatDate((contextData as any).dueDate)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {(contextData as any).cost && (
+                  <div className="flex items-start gap-2">
+                    <DollarSign className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-gray-500 font-normal">Cost Impact</p>
+                      <p className="text-xs text-gray-900 font-normal">{(contextData as any).cost}</p>
+                    </div>
+                  </div>
+                )}
+
+                {(contextData as any).details?.map((detail: any, i: number) => (
+                  <div key={i} className={`flex items-start gap-2 ${detail.fullWidth ? 'col-span-2' : ''}`}>
+                    <div className="w-3.5 shrink-0" /> {/* Spacer for alignment */}
+                    <div>
+                      <p className="text-[10px] text-gray-500 font-normal">{detail.label}</p>
+                      <p className="text-xs text-gray-900 line-clamp-1" title={detail.value}>{detail.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Task Completed Banner */}
+          {isTaskCompleted && (
+            <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-in slide-in-from-top-1 duration-300">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-[12px] font-normal text-primary leading-none">Task Completed</p>
+                <p className="text-[11px] text-primary/70 mt-0.5">This task has been marked as complete.</p>
+              </div>
+            </div>
+          )}
+
+          {channel.description && !showContext && (
+            <p className="text text-sm text-[#6A7282] mt-1">
+              {channel.description}
+            </p>
           )}
         </div>
 
-        {/* Document Context Card */}
-        {showContext && contextData && (
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-sm font-normal text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
-                {contextData.title}
-              </h3>
-              <div className="flex gap-2 shrink-0">
-                {contextData.status && (
-                  <Badge variant="outline" className="bg-white text-gray-700 border-gray-200 text-[10px] h-5">
-                    {contextData.status}
-                  </Badge>
-                )}
-                {contextData.priority && (
-                  <Badge variant="outline" className={`text-[10px] h-5 ${contextData.priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
-                    }`}>
-                    {contextData.priority}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4">
-              {contextData.dueDate && (
-                <div className="flex items-start gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-normal">Due Date</p>
-                    <p className="text-xs text-gray-900">{formatDate(contextData.dueDate)}</p>
+        <div className="bg-white border-r border-[#DEDEDE] flex-1 relative overflow-hidden">
+          <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
+            <div className="relative size-full">
+              {/* Chat Messages */}
+              <div
+                className="box-border content-stretch flex flex-col gap-2 items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
+                data-name="chat">
+                {/* Channel welcome banner */}
+                <div className="flex flex-col items-center justify-center w-full py-8 self-center">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <MessageSquare className="h-7 w-7 text-gray-400" />
                   </div>
+                  <p className="text-sm font-normal text-[#101828] text-center">
+                    {channel.name || displayId}
+                  </p>
+                  <p className="text-xs text-[#9CA3AF] mt-1">
+                    Channel created{channel.created_at ? ` on ${formatDate(channel.created_at)}` : ""}{channel.created_by_name ? ` by ${channel.created_by_name}` : ""}
+                  </p>
+                  {channel.description && (
+                    <p className="text-xs text-[#6A7282] mt-1.5 max-w-sm text-center">{channel.description}</p>
+                  )}
                 </div>
-              )}
 
-              {(contextData as any).cost && (
-                <div className="flex items-start gap-2">
-                  <DollarSign className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-normal">Cost Impact</p>
-                    <p className="text-xs text-gray-900 font-normal">{(contextData as any).cost}</p>
+                {isLoadingMessages && (
+                  <div className="w-full self-center">
+                    <AwesomeLoader compact message="Loading messages" />
                   </div>
-                </div>
-              )}
-
-              {(contextData as any).details?.map((detail: any, i: number) => (
-                <div key={i} className={`flex items-start gap-2 ${detail.fullWidth ? 'col-span-2' : ''}`}>
-                  <div className="w-3.5 shrink-0" /> {/* Spacer for alignment */}
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-normal">{detail.label}</p>
-                    <p className="text-xs text-gray-900 line-clamp-1" title={detail.value}>{detail.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Task Completed Banner */}
-        {isTaskCompleted && (
-          <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-in slide-in-from-top-1 duration-300">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-[12px] font-normal text-primary leading-none">Task Completed</p>
-              <p className="text-[11px] text-primary/70 mt-0.5">This task has been marked as complete.</p>
-            </div>
-          </div>
-        )}
-
-        {channel.description && !showContext && (
-          <p className="text text-sm text-[#6A7282] mt-1">
-            {channel.description}
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white border-r border-[#DEDEDE] flex-1 relative overflow-hidden">
-        <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
-          <div className="relative size-full">
-            {/* Chat Messages */}
-            <div
-              className="box-border content-stretch flex flex-col gap-2 items-end left-0 overflow-clip px-0 py-[20.444px] top-0 w-full"
-              data-name="chat">
-              {/* Channel welcome banner */}
-              <div className="flex flex-col items-center justify-center w-full py-8 self-center hidden">
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                  <MessageSquare className="h-7 w-7 text-gray-400" />
-                </div>
-                <p className="text-sm font-normal text-[#101828] text-center">
-                  {channel.name || displayId}
-                </p>
-                <p className="text-xs text-[#9CA3AF] mt-1">
-                  Channel created{channel.created_at ? ` on ${formatDate(channel.created_at)}` : ""}{channel.created_by_name ? ` by ${channel.created_by_name}` : ""}
-                </p>
-                {channel.description && (
-                  <p className="text-xs text-[#6A7282] mt-1.5 max-w-sm text-center">{channel.description}</p>
                 )}
-              </div>
-
-              {isLoadingMessages && (
-                <div className="w-full self-center">
-                  <AwesomeLoader compact message="Loading messages" />
-                </div>
-              )}
-              {!isLoadingMessages && messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
-                  <MessageSquare className="h-8 w-8 stroke-[1.5]" />
-                  <p className="text-xs">No messages yet, start the conversation below</p>
-                </div>
-              )}
-              {messages.map((msg) => {
-                // System / status-change messages render as centered elements
-                if (msg.message_type === 'status_change' || msg.is_system) {
-                  // Completion messages get a prominent green banner
-                  const isCompletion = msg.content?.includes('is now complete') || msg.content?.includes('✅');
-                  // Strip emoji prefix from backend content
-                  const cleanContent = (msg.content || '').replace(/^[✅📋]\s*/, '').trim();
-                  if (isCompletion) {
-                    return (
-                      <div key={msg.id} className="w-full self-center py-2 px-2">
-                        <div className="mx-auto max-w-sm rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm">
-                          <div className="flex items-center gap-2 bg-primary px-4 py-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
-                            <span className="text-[11px] font-normal text-white uppercase tracking-wider">Task Completed</span>
-                          </div>
-                          <div className="px-4 py-3 text-center">
-                            <p className="text-[12px] text-foreground leading-relaxed">{cleanContent}</p>
-                            <p className="text-[10px] text-muted-foreground mt-1.5">{msg.timestamp}</p>
+                {!isLoadingMessages && messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
+                    <MessageSquare className="h-8 w-8 stroke-[1.5]" />
+                    <p className="text-xs">No messages yet, start the conversation below</p>
+                  </div>
+                )}
+                {messages.map((msg) => {
+                  // System / status-change messages render as centered elements
+                  if (msg.message_type === 'status_change' || msg.is_system) {
+                    // Completion messages get a prominent green banner
+                    const isCompletion = msg.content?.includes('is now complete') || msg.content?.includes('✅');
+                    // Strip emoji prefix from backend content
+                    const cleanContent = (msg.content || '').replace(/^[✅📋]\s*/, '').trim();
+                    if (isCompletion) {
+                      return (
+                        <div key={msg.id} className="w-full self-center py-2 px-2">
+                          <div className="mx-auto max-w-sm rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm">
+                            <div className="flex items-center gap-2 bg-primary px-4 py-2">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
+                              <span className="text-[11px] font-normal text-white uppercase tracking-wider">Task Completed</span>
+                            </div>
+                            <div className="px-4 py-3 text-center">
+                              <p className="text-[12px] text-foreground leading-relaxed">{cleanContent}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1.5">{msg.timestamp}</p>
+                            </div>
                           </div>
                         </div>
+                      );
+                    }
+                    // Regular status changes render as a centered pill with dividers
+                    return (
+                      <div key={msg.id} className="flex items-center gap-3 w-full justify-center py-1.5 self-center px-2">
+                        <div className="h-px flex-1 bg-[#EBEBEB]" />
+                        <div className="flex items-center gap-1.5 bg-[#F7F7F8] border border-[#EBEBEB] rounded-full px-3 py-1 shrink-0">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
+                          <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">{cleanContent}</span>
+                        </div>
+                        <div className="h-px flex-1 bg-[#EBEBEB]" />
                       </div>
                     );
                   }
-                  // Regular status changes render as a centered pill with dividers
+
+                  const isCurrentUser = currentUser?.id === msg.sender_id;
+                  const senderInitial = msg.sender_name?.charAt(0)?.toUpperCase() || "?";
+                  // Detect AI-generated messages
+                  const isAI = msg.sender_name?.toLowerCase() === 'ai' || msg.sender_name?.toLowerCase() === 'baselinq ai' || msg.sender_name?.toLowerCase() === 'system' || msg.message_type === 'ai_generated' || msg.message_type === 'auto_reply';
+
                   return (
-                    <div key={msg.id} className="flex items-center gap-3 w-full justify-center py-1.5 self-center px-2">
-                      <div className="h-px flex-1 bg-[#EBEBEB]" />
-                      <div className="flex items-center gap-1.5 bg-[#F7F7F8] border border-[#EBEBEB] rounded-full px-3 py-1 shrink-0">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
-                        <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">{cleanContent}</span>
-                      </div>
-                      <div className="h-px flex-1 bg-[#EBEBEB]" />
-                    </div>
-                  );
-                }
-
-                const isCurrentUser = currentUser?.id === msg.sender_id;
-                const senderInitial = msg.sender_name?.charAt(0)?.toUpperCase() || "?";
-                // Detect AI-generated messages
-                const isAI = msg.sender_name?.toLowerCase() === 'ai' || msg.sender_name?.toLowerCase() === 'baselinq ai' || msg.sender_name?.toLowerCase() === 'system' || msg.message_type === 'ai_generated' || msg.message_type === 'auto_reply';
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
-                    {isCurrentUser ? (
-                      // Current User Message (right side)
-                      <div className="relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4">
-                        <div className="relative text-[#101828] text-base">
-                          <p className="leading-[26px] whitespace-pre-wrap">
-                            {msg.content}
-                          </p>
-                        </div>
-                        {/* Files */}
-                        {msg.files && msg.files.length > 0 && (
-                          <div className="flex items-start gap-2 flex-wrap mt-2">
-                            {msg.files.map((file: any, index: number) => (
-                              file.type?.startsWith('audio/') || file.name?.endsWith('.webm') ? (
-                                <div key={index} className="w-full min-w-[200px] mt-2">
-                                  <audio controls className="w-full h-8">
-                                    <source src={file.url} type={file.type || "audio/webm"} />
-                                    Your browser does not support the audio element.
-                                  </audio>
-                                </div>
-                              ) : (
-                                <a
-                                  key={index}
-                                  href={file.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
-                                  <FileIcon type={file.type} />
-                                  <div className="text-[#364153] text-[14px]">
-                                    <p className="leading-[20px]">{file.name}</p>
-                                  </div>
-                                </a>
-                              )
-                            ))}
+                    <div
+                      key={msg.id}
+                      className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
+                      {isCurrentUser ? (
+                        // Current User Message (right side)
+                        <div className="relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4">
+                          <div className="relative text-[#101828] text-base">
+                            <p className="leading-[26px] whitespace-pre-wrap">
+                              {msg.content}
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      // Other User Message (left side with avatar)
-                      <div className="flex gap-3 items-start">
-                        {/* Avatar */}
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-primary/10' : 'bg-[#101828]'}`}>
-                          {isAI ? (
-                            <Sparkles className="w-4 h-4 text-primary" />
-                          ) : (
-                            <span className="text-white text-sm font-normal"> {senderInitial} </span>
+                          {/* Files */}
+                          {msg.files && msg.files.length > 0 && (
+                            <div className="flex items-start gap-2 flex-wrap mt-2">
+                              {msg.files.map((file: any, index: number) => {
+                                const isAudio = file.type?.startsWith('audio/') || /\.(webm|mp3|ogg|wav|m4a)$/i.test(file.name || '') || /\.(webm|mp3|ogg|wav|m4a)$/i.test(file.url || '');
+                                const isImage = !isAudio && (file.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.name || '') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.url || ''));
+                                if (isAudio) return (
+                                  <div key={index} className="w-full min-w-[200px] mt-2">
+                                    <audio controls className="w-full h-8">
+                                      <source src={file.url} type={file.type || "audio/webm"} />
+                                    </audio>
+                                  </div>
+                                );
+                                if (isImage) return (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => setPreviewFile(file)}
+                                    className="rounded-lg overflow-hidden border border-[#e2e5ea] hover:opacity-90 transition-opacity">
+                                    <img src={file.url} alt={file.name} className="max-w-[140px] max-h-[100px] object-cover block" />
+                                  </button>
+                                );
+                                return (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => setPreviewFile(file)}
+                                    className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
+                                    <FileIcon type={file.type} />
+                                    <div className="text-[#364153] text-[14px]">
+                                      <p className="leading-[20px]">{file.name}</p>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
-                        <div className="flex-1">
-                          {/* Sender Name */}
-                          <p className="text-muted-foreground text-xs mb-1 capitalize flex items-center gap-1.5">
-                            {msg.sender_name}
-                            {isAI && <span className="text-primary text-[10px] font-normal">AI</span>}
-                          </p>
-                          {/* Message Box */}
-                          <div className={`relative rounded-xl py-2.5 px-4 ${isAI ? 'bg-primary/5 border-l-2 border-primary/30' : 'bg-sidebar'}`}>
-                            <div className="relative text-foreground text-base">
-                              <p className="leading-[26px] whitespace-pre-wrap">
-                                {msg.content}
-                              </p>
-                            </div>
-                            {/* Files */}
-                            {msg.files && msg.files.length > 0 && (
-                              <div className="flex items-start gap-2 flex-wrap mt-2">
-                                {msg.files.map((file: any, index: number) => (
-                                  file.type?.startsWith('audio/') || file.name?.endsWith('.webm') ? (
-                                    <div key={index} className="w-full min-w-[200px] mt-2">
-                                      <audio controls className="w-full h-8">
-                                        <source src={file.url} type={file.type || "audio/webm"} />
-                                        Your browser does not support the audio element.
-                                      </audio>
-                                    </div>
-                                  ) : (
-                                    <a
-                                      key={index}
-                                      href={file.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
-                                      <FileIcon type={file.type} />
-                                      <div className="text-[#364153] text-[14px]">
-                                        <p className="leading-[20px]">{file.name}</p>
-                                      </div>
-                                    </a>
-                                  )
-                                ))}
-                              </div>
+                      ) : (
+                        // Other User Message (left side with avatar)
+                        <div className="flex gap-3 items-start">
+                          {/* Avatar */}
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-primary/10' : 'bg-[#101828]'}`}>
+                            {isAI ? (
+                              <Sparkles className="w-4 h-4 text-primary" />
+                            ) : (
+                              <span className="text-white text-sm font-normal"> {senderInitial} </span>
                             )}
                           </div>
+                          <div className="flex-1">
+                            {/* Sender Name */}
+                            <p className="text-muted-foreground text-xs mb-1 capitalize flex items-center gap-1.5">
+                              {msg.sender_name}
+                              {isAI && <span className="text-primary text-[10px] font-normal">AI</span>}
+                            </p>
+                            {/* Message Box */}
+                            <div className={`relative rounded-xl py-2.5 px-4 ${isAI ? 'bg-primary/5 border-l-2 border-primary/30' : 'bg-sidebar'}`}>
+                              <div className="relative text-foreground text-base">
+                                <p className="leading-[26px] whitespace-pre-wrap">
+                                  {msg.content}
+                                </p>
+                              </div>
+                              {/* Files */}
+                              {msg.files && msg.files.length > 0 && (
+                                <div className="flex items-start gap-2 flex-wrap mt-2">
+                                  {msg.files.map((file: any, index: number) => {
+                                    const isAudio = file.type?.startsWith('audio/') || /\.(webm|mp3|ogg|wav|m4a)$/i.test(file.name || '') || /\.(webm|mp3|ogg|wav|m4a)$/i.test(file.url || '');
+                                    const isImage = !isAudio && (file.type?.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.name || '') || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(file.url || ''));
+                                    if (isAudio) return (
+                                      <div key={index} className="w-full min-w-[200px] mt-2">
+                                        <audio controls className="w-full h-8">
+                                          <source src={file.url} type={file.type || "audio/webm"} />
+                                        </audio>
+                                      </div>
+                                    );
+                                    if (isImage) return (
+                                      <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => setPreviewFile(file)}
+                                        className="rounded-lg overflow-hidden border border-[#e2e5ea] hover:opacity-90 transition-opacity">
+                                        <img src={file.url} alt={file.name} className="max-w-[140px] max-h-[100px] object-cover block" />
+                                      </button>
+                                    );
+                                    return (
+                                      <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => setPreviewFile(file)}
+                                        className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors border border-[#e2e5ea]">
+                                        <FileIcon type={file.type} />
+                                        <div className="text-[#364153] text-[14px]">
+                                          <p className="leading-[20px]">{file.name}</p>
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <div className="content-stretch flex gap-[20.444px] items-start relative shrink-0 w-full self-start">
+                    <div
+                      className="relative rounded-[20.444px] shrink-0 size-[35.778px]"
+                      data-name="app-icons">
+                      <div className="box-border content-stretch flex flex-col gap-[10.222px] items-center justify-center overflow-clip p-[10.222px] relative rounded-[inherit] size-[35.778px] border-[#e0e0e0] border-[1.278px]">
+                        <div className="h-[14.842px] relative shrink-0 w-[14.374px]">
+                          <svg
+                            className="block size-full"
+                            fill="none"
+                            preserveAspectRatio="none"
+                            viewBox="0 0 15 15">
+                            <g id="Group 6">
+                              <g id="Vector">
+                                <path
+                                  d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
+                                  fill="var(--fill-0, black)"
+                                />
+                                <path
+                                  d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
+                                  fill="var(--fill-1, black)"
+                                />
+                              </g>
+                            </g>
+                          </svg>
                         </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Typing Indicator */}
-              {isTyping && (
-                <div className="content-stretch flex gap-[20.444px] items-start relative shrink-0 w-full self-start">
-                  <div
-                    className="relative rounded-[20.444px] shrink-0 size-[35.778px]"
-                    data-name="app-icons">
-                    <div className="box-border content-stretch flex flex-col gap-[10.222px] items-center justify-center overflow-clip p-[10.222px] relative rounded-[inherit] size-[35.778px] border-[#e0e0e0] border-[1.278px]">
-                      <div className="h-[14.842px] relative shrink-0 w-[14.374px]">
-                        <svg
-                          className="block size-full"
-                          fill="none"
-                          preserveAspectRatio="none"
-                          viewBox="0 0 15 15">
-                          <g id="Group 6">
-                            <g id="Vector">
-                              <path
-                                d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
-                                fill="var(--fill-0, black)"
-                              />
-                              <path
-                                d="M3.36331 11.7917H14.3537V14.8418H0.00474542V14.5144C0.00474542 10.8604 0.00652495 7.20642 0 3.55186C0 3.32527 0.0747403 3.16867 0.224814 3.00495C1.05882 2.09561 2.00257 1.33397 3.11833 0.796552C3.23044 0.742573 3.3473 0.697491 3.48314 0.638767C3.4428 4.36273 3.40306 8.05111 3.36272 11.7917H3.36331Z"
-                                fill="var(--fill-1, black)"
-                              />
-                            </g>
-                          </g>
-                        </svg>
+                    </div>
+                    <div className="flex items-center space-x-1 bg-[#F3F2F0] rounded-[10px] py-3 px-4">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}></div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1 bg-[#F3F2F0] rounded-[10px] py-3 px-4">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
 
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Search - Input Area */}
-      <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
-        {/* Attached Files Preview */}
-        {attachedFiles.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            {attachedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="bg-white inline-flex items-center gap-1 rounded-[4px] py-1 px-2 border border-[#DEDEDE]">
-                <FileIcon type={file.type} />
-                <div className="text-[#364153] text-[12px]">
-                  <p className="leading-[16px]">{file.name}</p>
+        {/* Search - Input Area */}
+        <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
+          {/* Attached Files Preview */}
+          {attachedFiles.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              {attachedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="bg-white inline-flex items-center gap-1 rounded-[4px] py-1 px-2 border border-[#DEDEDE]">
+                  <FileIcon type={file.type} />
+                  <div className="text-[#364153] text-[12px]">
+                    <p className="leading-[16px]">{file.name}</p>
+                  </div>
+                  <button
+                    onClick={() => removeAttachedFile(index)}
+                    className="text-[#6A7282] hover:text-[#101828] ml-1">
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeAttachedFile(index)}
-                  className="text-[#6A7282] hover:text-[#101828] ml-1">
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* @mention dropdown */}
-        {showMentions && filteredMembers.length > 0 && (
-          <div className="mb-2 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
-            {filteredMembers.map((member, idx) => {
-              const name = member.name || member.user?.name || "User";
-              const rawRole = member.role || member.user?.role || "";
-              const role = typeof rawRole === "object" && rawRole !== null ? (rawRole as any).name || "" : String(rawRole || "");
-              return (
-                <button
-                  key={member.userId || member._id || idx}
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); selectMention(member); }}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${idx === activeMentionIndex ? "bg-primary/10" : "hover:bg-muted/60"}`}
-                >
-                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-medium shrink-0">
-                    {name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate">{name}</p>
-                    {role && <p className="text-[10px] text-muted-foreground truncate">{role}</p>}
-                  </div>
-                  <span className="text-[10px] text-primary font-normal">@mention</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Input bar */}
-        <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
-          {/* Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileAttach}
-            className="hidden"
-            multiple
-          />
-
-          {/* Attachment Icon */}
-          <button
-            onClick={triggerFileInput}
-            className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
-            <svg
-              className="w-6 h-6"
-              viewBox="0 0 16 22"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M9.90245 7.34739V13.4168C9.90245 14.6518 8.90131 15.6529 7.66634 15.6529C6.43137 15.6529 5.43023 14.6518 5.43023 13.4168V5.43072C5.43023 2.96078 7.43251 0.958496 9.90245 0.958496C12.3724 0.958496 14.3747 2.96078 14.3747 5.43072V13.4168C14.3747 17.1217 11.3713 20.1252 7.66634 20.1252C3.96143 20.1252 0.958008 17.1217 0.958008 13.4168V7.34739"
-                stroke="currentColor"
-                strokeWidth="1.91667"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-
-          {/* Voice Icon */}
-          <button
-            onClick={handleVoiceRecord}
-            className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
-              }`}>
-            {isRecording && !isPaused ? (
-              <Pause className="w-6 h-6" />
-            ) : (
-              <Mic className="w-6 h-6" />
-            )}
-          </button>
-
-          {/* Input or Recording UI */}
-          {isRecording ? (
-            <div className="flex-grow flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full bg-red-500 ${!isPaused && "animate-pulse"}`} />
-              <span className="text-[#676767] text-[16px]">
-                {isPaused ? "Recording Paused" : "Recording..."}
-              </span>
-              <button
-                onClick={() => {
-                  stopRecording(true);
-                }}
-                className="ml-auto p-1 hover:bg-gray-200 rounded-full"
-              >
-                <X className="w-4 h-4 text-[#676767]" />
-              </button>
+              ))}
             </div>
-          ) : (
-            <textarea
-              ref={messageInputRef}
-              placeholder="Type a message… (use @ to mention)"
-              className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto"
-              rows={1}
-              value={message}
-              onChange={(e) => {
-                e.target.style.height = "auto";
-                e.target.style.height = `${e.target.scrollHeight}px`;
-                handleMessageChange(e);
-              }}
-              onKeyDown={handleKeyPress}
-            />
           )}
 
-          {/* Send Button */}
-          <button
-            onClick={handleSend}
-            disabled={((message.trim() === "" && attachedFiles.length === 0) && !isRecording) || isUploading}
-            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${((message.trim() || attachedFiles.length > 0) || isRecording) && !isUploading
-              ? "bg-[#101828] cursor-pointer"
-              : "bg-[#e0e0e0] cursor-not-allowed"
-              }`}>
-            {isUploading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 text-white" />
-            )}
-          </button>
+          {/* @mention dropdown */}
+          {showMentions && filteredMembers.length > 0 && (
+            <div className="mb-2 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+              {filteredMembers.map((member, idx) => {
+                const name = member.name || member.user?.name || "User";
+                const rawRole = member.role || member.user?.role || "";
+                const role = typeof rawRole === "object" && rawRole !== null ? (rawRole as any).name || "" : String(rawRole || "");
+                return (
+                  <button
+                    key={member.userId || member._id || idx}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); selectMention(member); }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${idx === activeMentionIndex ? "bg-primary/10" : "hover:bg-muted/60"}`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-medium shrink-0">
+                      {name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">{name}</p>
+                      {role && <p className="text-[10px] text-muted-foreground truncate">{role}</p>}
+                    </div>
+                    <span className="text-[10px] text-primary font-normal">@mention</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Input bar */}
+          <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileAttach}
+              className="hidden"
+              multiple
+            />
+
+            {/* Attachment Icon */}
+            <button
+              onClick={triggerFileInput}
+              className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
+              <svg
+                className="w-6 h-6"
+                viewBox="0 0 16 22"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M9.90245 7.34739V13.4168C9.90245 14.6518 8.90131 15.6529 7.66634 15.6529C6.43137 15.6529 5.43023 14.6518 5.43023 13.4168V5.43072C5.43023 2.96078 7.43251 0.958496 9.90245 0.958496C12.3724 0.958496 14.3747 2.96078 14.3747 5.43072V13.4168C14.3747 17.1217 11.3713 20.1252 7.66634 20.1252C3.96143 20.1252 0.958008 17.1217 0.958008 13.4168V7.34739"
+                  stroke="currentColor"
+                  strokeWidth="1.91667"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+
+            {/* Voice Icon */}
+            <button
+              onClick={handleVoiceRecord}
+              className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
+                }`}>
+              {isRecording && !isPaused ? (
+                <Pause className="w-6 h-6" />
+              ) : (
+                <Mic className="w-6 h-6" />
+              )}
+            </button>
+
+            {/* Input + optional recording status */}
+            <div className="flex-grow flex flex-col gap-1 min-w-0">
+              {isRecording && (
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full bg-red-500 shrink-0 ${!isPaused && "animate-pulse"}`} />
+                  <span className="text-[#676767] text-[13px]">
+                    {isPaused ? "Recording Paused" : "Recording..."}
+                  </span>
+                  <button
+                    onClick={() => stopRecording(true)}
+                    className="ml-auto p-1 hover:bg-gray-200 rounded-full shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5 text-[#676767]" />
+                  </button>
+                </div>
+              )}
+              <textarea
+                ref={messageInputRef}
+                placeholder={isRecording ? "Add a caption (optional)…" : "Type a message… (use @ to mention)"}
+                className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto"
+                rows={1}
+                value={message}
+                onChange={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                  handleMessageChange(e);
+                }}
+                onKeyDown={handleKeyPress}
+              />
+            </div>
+
+            {/* Send Button */}
+            <button
+              onClick={handleSend}
+              disabled={(message.trim() === "" && attachedFiles.length === 0 && !isRecording) || isUploading}
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
+                ? "bg-[#101828] cursor-pointer"
+                : "bg-[#e0e0e0] cursor-not-allowed"
+                }`}>
+              {isUploading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 text-white" />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
-    </div >
+      </div >
+
+      <FilePreviewModal
+        isOpen={!!previewFile}
+        onOpenChange={(open) => !open && setPreviewFile(null)}
+        file={previewFile ? { name: previewFile.name, url: previewFile.url, fileType: previewFile.type } : null}
+      />
+    </>
   );
 };
 

@@ -88,7 +88,7 @@ This matter requires your immediate attention as it blocks payment.
           <Button variant="outline" onClick={onClose} className="bg-white">
             Cancel
           </Button>
-          <Button className="bg-[#8081F6] hover:bg-[#8081F6] text-white">
+          <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">
             Generate & Link to Task
           </Button>
         </DialogFooter>

@@ -333,7 +333,7 @@ export default function RightSideDrawer() {
               {activeTab === "Audit Trail" && (
                 <div className="flex flex-col">
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#8081F6] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -345,7 +345,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#8081F6] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -357,7 +357,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#8081F6] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue

@@ -463,7 +463,7 @@ const DocumentDetail = () => {
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
                   <AiIcon size={32} />
-                  <p className="text-sm">No AI findings for this document.</p>
+                  <p className="text-sm">No AI findings for this document</p>
                 </div>
               )}
 
@@ -550,7 +550,7 @@ const DocumentDetail = () => {
               ) : links.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
                   <Link2 className="w-8 h-8" />
-                  <p className="text-sm">No linked items yet.</p>
+                  <p className="text-sm">No linked items yet</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -661,7 +661,7 @@ const DocumentDetail = () => {
               ) : obligations.length === 0 && !showObligationForm ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
                   <AlertCircle className="w-8 h-8" />
-                  <p className="text-sm">No obligations extracted yet.</p>
+                  <p className="text-sm">No obligations extracted yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -764,7 +764,7 @@ const DocumentDetail = () => {
               ) : versions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
                   <FileClock className="w-8 h-8" />
-                  <p className="text-sm">No versions found.</p>
+                  <p className="text-sm">No versions found</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -844,7 +844,7 @@ const DocumentDetail = () => {
       <AlertDialog open={!!linkToDelete} onOpenChange={(open) => !open && setLinkToDelete(null)}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove link?</AlertDialogTitle>
+            <AlertDialogTitle>Remove Link</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the link to <span className="font-medium text-[#1A1A1A]">{linkToDelete?.ref}</span>. This action cannot be undone.
             </AlertDialogDescription>
@@ -890,7 +890,7 @@ const DocumentDetail = () => {
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete <span className="font-medium text-[#1A1A1A]">{doc.name}</span> and all its versions, findings, and obligations. This action cannot be undone.
             </AlertDialogDescription>

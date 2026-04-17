@@ -23,7 +23,7 @@ const ORG_STEPS = [
   { id: 1, label: "Account Setup", description: "Name & password" },
   { id: 2, label: "Account Type", description: "Company or individual?" },
   { id: 3, label: "Company Details", description: "Legal & address info" },
-  { id: 4, label: "Team Members", description: "Add your personnel" },
+  { id: 4, label: "Users", description: "Add your users" },
 ];
 
 const IND_STEPS = [
@@ -33,7 +33,7 @@ const IND_STEPS = [
 ];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const inputCls = (err = false) =>
   err
@@ -205,7 +205,7 @@ export default function AcceptAppointedInvitation() {
           <p className="text-sm text-gray-500">{loadError}</p>
           <button
             onClick={() => navigate("/login")}
-            className="mt-6 w-full py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all"
+            className="mt-6 w-full py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all"
           >
             Go to login
           </button>
@@ -250,11 +250,11 @@ export default function AcceptAppointedInvitation() {
 
           <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5 text-[#8081F6]" />
+              <Building2 className="w-5 h-5 text-[#6c5ce7]" />
             </div>
             <div>
-              <p className="text-[13px] text-white/80 font-medium">Invited by {info?.invited_by || "a team member"}</p>
-              <p className="text-[11px] text-white/40 mt-0.5">{info?.position?.replace('_', ' ') || "Project Member"}</p>
+              <p className="text-[13px] text-white/80 font-medium">Invited by {info?.invited_by || "a user"}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">{info?.position?.replace('_', ' ') || "Project User"}</p>
             </div>
           </div>
 
@@ -267,7 +267,7 @@ export default function AcceptAppointedInvitation() {
                 <div key={s.id} className="flex items-center gap-3.5">
                   <div className={cn(
                     "w-6 h-6 rounded-full flex items-center justify-center text-[10px] transition-all duration-300",
-                    done ? "bg-[#8081F6] text-white" : active ? "bg-[#8081F6] text-white shadow-lg" : "bg-white/5 text-white/20 border border-white/10"
+                    done ? "bg-[#6c5ce7] text-white" : active ? "bg-[#6c5ce7] text-white shadow-lg" : "bg-white/5 text-white/20 border border-white/10"
                   )}>
                     {done ? <Check className="w-3 h-3" /> : s.id}
                   </div>
@@ -290,7 +290,7 @@ export default function AcceptAppointedInvitation() {
           <div className="border-t border-white/10 pt-6 space-y-3">
             <p className="text-[13px] text-white/50">
               Already have an account?{" "}
-              <button onClick={() => navigate("/login")} className="text-[#8081F6] hover:underline">
+              <button onClick={() => navigate("/login")} className="text-[#6c5ce7] hover:underline">
                 Sign in
               </button>
             </p>
@@ -312,7 +312,7 @@ export default function AcceptAppointedInvitation() {
           <div className="flex gap-1.5 mb-2">
             {STEPS.map((s) => (
               <div key={s.id} className="h-1 flex-1 rounded-full transition-all duration-300"
-                style={{ background: s.id <= step ? "#8081F6" : "#e5e7eb" }} />
+                style={{ background: s.id <= step ? "#6c5ce7" : "#e5e7eb" }} />
             ))}
           </div>
           <p className="text-[13px] text-[#374151]">Step {step} of {STEPS.length}: {STEPS[step - 1]?.label}</p>
@@ -326,7 +326,7 @@ export default function AcceptAppointedInvitation() {
             <div className="hidden lg:flex items-center gap-2 mb-8">
               {STEPS.map((s) => (
                 <div key={s.id} className="transition-all duration-300 rounded-full"
-                  style={{ width: s.id === step ? "20px" : "8px", height: "8px", background: s.id <= step ? "#8081F6" : "#e5e7eb" }} />
+                  style={{ width: s.id === step ? "20px" : "8px", height: "8px", background: s.id <= step ? "#6c5ce7" : "#e5e7eb" }} />
               ))}
               <span className="ml-2 text-xs text-gray-400 font-medium">Step {step} of {STEPS.length}</span>
             </div>
@@ -401,13 +401,13 @@ export default function AcceptAppointedInvitation() {
                     className={cn(
                       "w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition-all group",
                       accountType === type.id
-                        ? "border-[#8081F6] bg-[#8081F6]/5 shadow-sm shadow-[#8081F6]/10"
+                        ? "border-[#6c5ce7] bg-[#6c5ce7]/5 shadow-sm shadow-[#6c5ce7]/10"
                         : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
                     )}
                   >
                     <div className={cn(
                       "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                      accountType === type.id ? "bg-[#8081F6] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                      accountType === type.id ? "bg-[#6c5ce7] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
                     )}>
                       {type.icon}
                     </div>
@@ -421,7 +421,7 @@ export default function AcceptAppointedInvitation() {
                       <p className="text-[12px] text-gray-500 mt-0.5">{type.desc}</p>
                     </div>
                     {accountType === type.id && (
-                      <div className="w-5 h-5 rounded-full bg-[#8081F6] flex items-center justify-center shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
                         <Check className="w-3 h-3 text-white" />
                       </div>
                     )}
@@ -484,8 +484,8 @@ export default function AcceptAppointedInvitation() {
                         Insurance Certificate <span className="text-gray-400">(optional)</span>
                       </label>
                       <label className={cn(
-                        "flex items-center gap-2 px-3.5 py-2.5 border border-dashed border-gray-200 rounded-xl text-sm cursor-pointer hover:border-[#8081F6] hover:text-[#8081F6] transition-all",
-                        insuranceFile ? "border-[#8081F6] text-[#8081F6] bg-[#8081F6]/5" : "text-gray-400"
+                        "flex items-center gap-2 px-3.5 py-2.5 border border-dashed border-gray-200 rounded-xl text-sm cursor-pointer hover:border-[#6c5ce7] hover:text-[#6c5ce7] transition-all",
+                        insuranceFile ? "border-[#6c5ce7] text-[#6c5ce7] bg-[#6c5ce7]/5" : "text-gray-400"
                       )}>
                         <Paperclip className="w-4 h-4 shrink-0" />
                         <span className="truncate text-xs">
@@ -606,9 +606,9 @@ export default function AcceptAppointedInvitation() {
                 <button
                   type="button"
                   onClick={() => setPersonnel(prev => [...prev, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
-                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 text-[13px] text-gray-400 hover:border-[#8081F6] hover:text-[#8081F6] transition-all"
+                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 text-[13px] text-gray-400 hover:border-[#6c5ce7] hover:text-[#6c5ce7] transition-all"
                 >
-                  <Plus className="w-4 h-4" /> Add Team Member
+                  <Plus className="w-4 h-4" /> Add User
                 </button>
               </div>
             )}
@@ -633,7 +633,7 @@ export default function AcceptAppointedInvitation() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex-1 py-2.5 bg-[#8081F6] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-[#6c5ce7] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all flex items-center justify-center gap-2"
                 >
                   Continue
                   <ArrowRight className="w-4 h-4" />
@@ -643,7 +643,7 @@ export default function AcceptAppointedInvitation() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 bg-[#8081F6] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-[#6c5ce7] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? "Submitting…" : "Complete Setup"}
                   {!isSubmitting && <ArrowRight className="w-4 h-4" />}

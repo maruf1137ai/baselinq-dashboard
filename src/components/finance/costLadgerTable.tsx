@@ -237,7 +237,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#8081F6] text-white" : "text-gray-600 hover:bg-gray-100"
+                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-gray-100"
                   }`}>
                   {p}
                 </button>

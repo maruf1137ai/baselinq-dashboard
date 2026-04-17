@@ -183,7 +183,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                         />
                       ) : null}
                       <div
-                        className="w-7 h-7 rounded-full bg-[#8081F6] flex items-center justify-center text-white text-xs font-medium shrink-0"
+                        className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs font-medium shrink-0"
                         style={{ display: order.requestedBy.avatarUrl ? 'none' : 'flex' }}
                       >
                         {order.requestedBy.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -264,7 +264,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${safePage === p
-                    ? "bg-[#8081F6] text-white"
+                    ? "bg-[#6c5ce7] text-white"
                     : "text-foreground hover:bg-muted"
                     }`}>
                   {p}

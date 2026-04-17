@@ -96,7 +96,7 @@ export function BillingLadgerDialog({ wFull }) {
             <tbody className="bg-white divide-y divide-gray-200">
               {billingLadgerData.map((order, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-[#8081F6] hover:text-blue-800">
+                  <td className="px-6 py-4 whitespace-nowrap text-base text-[#6c5ce7] hover:text-blue-800">
                     {order.date}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-base text-foreground">

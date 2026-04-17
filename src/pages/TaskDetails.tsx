@@ -149,7 +149,7 @@ const groupLogsByDate = (logs: any[]) => {
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
   if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
+  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
   if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
   if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
@@ -162,7 +162,7 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
       return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
       return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-    return { icon: <Clock className="w-3 h-3 text-[#8081F6]" />, bg: '#EEF2FF' };
+    return { icon: <Clock className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
   }
   return { icon: <Circle className="w-3 h-3 text-muted-foreground" />, bg: '#F3F4F6' };
 };
@@ -177,7 +177,7 @@ const getStatusBadgeColor = (status: string) => {
     'priced', 'recommended', 'sent for review', 'notice issued', 'under assessment', 'distributed',
     'further info required', 'response provided', 'determination made', 'on track / at risk',
     'scheduled'].includes(s))
-    return 'bg-primary/10 text-[#8081F6] border border-[#C7D2FE]';
+    return 'bg-primary/10 text-[#6c5ce7] border border-[#C7D2FE]';
   // Negative stages - red
   if (['rejected', 'declined'].includes(s))
     return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
@@ -842,7 +842,7 @@ export default function TaskDetails() {
       id: req._id,
       senderName: req.requestedBy?.name || "User",
       recipient: req.recipient?.name || "Recipient",
-      role: req.requestedBy?.role || "Team Member",
+      role: req.requestedBy?.role || "User",
       task: req.requestDetails,
       date: req.dueDate,
       status: "Pending"
@@ -1427,7 +1427,7 @@ export default function TaskDetails() {
                             <Tooltip key={assignee.userId || index}>
                               <TooltipTrigger asChild>
                                 <div
-                                  className="h-8 w-8 rounded-full bg-[#8081F6] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer"
+                                  className="h-8 w-8 rounded-full bg-[#6c5ce7] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer"
                                   style={{ marginLeft: index > 0 ? "-8px" : "0" }}
                                 >
                                   {assignee.name?.charAt(0).toUpperCase() || "U"}
@@ -1975,7 +1975,7 @@ export default function TaskDetails() {
                   </button> */}
                   {/* <Separator orientation="vertical" className="h-6 mx-2" /> */}
                   {/* <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted rounded text-sm">
-                    <Zap className="h-4 w-4 text-[#8081F6]" />
+                    <Zap className="h-4 w-4 text-[#6c5ce7]" />
                     <span className="text-foreground">Smart Actions</span>
                   </button> */}
                 </div>
@@ -2128,7 +2128,7 @@ export default function TaskDetails() {
                       <h2 className="text-sm font-normal text-foreground">
                         Recent Responses
                       </h2>
-                      <span className="text-[10px] bg-primary/10 text-[#8081F6] px-2 py-0.5 rounded-full font-normal">
+                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
                         {displayTask.responses.length} Total
                       </span>
                     </div>
@@ -2145,11 +2145,11 @@ export default function TaskDetails() {
                               setSelectedResponse(resp);
                               setIsResponseModalOpen(true);
                             }}
-                            className="p-4 bg-white border border-border hover:border-[#8081F6] hover:shadow-md transition-all cursor-pointer group rounded-xl"
+                            className="p-4 bg-white border border-border hover:border-[#6c5ce7] hover:shadow-md transition-all cursor-pointer group rounded-xl"
                           >
                             <div className="flex items-start gap-4">
                               <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-border">
-                                <AvatarFallback className="bg-primary/5 text-[#8081F6] text-xs font-normal">
+                                <AvatarFallback className="bg-primary/5 text-[#6c5ce7] text-xs font-normal">
                                   {resp.sender
                                     ?.split(" ")
                                     .map((n: string) => n[0])
@@ -2319,7 +2319,7 @@ export default function TaskDetails() {
                       {/* Line */}
                       <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
                         <div
-                          className="h-[2px] bg-[#8081F6] transition-all duration-500"
+                          className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
                           style={{
                             width: `${(currentStageIndex / (displayTask.timeline.stages.length - 1)) * 100}%`,
                           }}
@@ -2348,7 +2348,7 @@ export default function TaskDetails() {
                             {/* Dot */}
                             <div
                               className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                                ? "bg-[#8081F6] border-[#8081F6]"
+                                ? "bg-[#6c5ce7] border-[#6c5ce7]"
                                 : "bg-white border-border"
                                 }`}
                             />
@@ -2375,7 +2375,7 @@ export default function TaskDetails() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-foreground">Reply due</span>
-                      <span className="text-sm  text-[#8081F6]">
+                      <span className="text-sm  text-[#6c5ce7]">
                         {displayTask.deadlines.replyDue}
                       </span>
                     </div>
@@ -2419,7 +2419,7 @@ export default function TaskDetails() {
                       </div>
                       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#8081F6] rounded-full"
+                          className="h-full bg-[#6c5ce7] rounded-full"
                           style={{
                             width: `${(displayTask.impact.riskScore / displayTask.impact.riskMax) * 100}%`,
                           }}
@@ -2438,7 +2438,7 @@ export default function TaskDetails() {
                     <h3 className="text-xs font-normal text-muted-foreground">
                       Linked Documents
                     </h3>
-                    <Button variant="ghost" className="h-6 w-6 p-0 text-[#8081F6] hover:bg-transparent">
+                    <Button variant="ghost" className="h-6 w-6 p-0 text-[#6c5ce7] hover:bg-transparent">
                       <Link2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -2591,7 +2591,7 @@ export default function TaskDetails() {
                         {selectedAssignUsers.map((u) => (
                           <span
                             key={u._id}
-                            className="inline-flex items-center gap-1 bg-primary/10 text-[#8081F6] text-xs px-2 py-1 rounded-md"
+                            className="inline-flex items-center gap-1 bg-primary/10 text-[#6c5ce7] text-xs px-2 py-1 rounded-md"
                           >
                             {u.user?.name || u.name || "User"}
                           </span>
@@ -2605,9 +2605,9 @@ export default function TaskDetails() {
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                   <Command>
-                    <CommandInput placeholder="Search team members..." />
+                    <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandEmpty>No users found</CommandEmpty>
                       <CommandGroup>
                         {projectMembers.map((member: any) => {
                           const memberName = member.user?.name || member.name || member.user?.email || "";
@@ -2628,7 +2628,7 @@ export default function TaskDetails() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-[#8081F6] text-white flex items-center justify-center text-sm font-normal">
+                                  <div className="h-8 w-8 rounded-full bg-[#6c5ce7] text-white flex items-center justify-center text-sm font-normal">
                                     {(memberName || memberEmail).charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
@@ -2641,7 +2641,7 @@ export default function TaskDetails() {
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                    isSelected ? "border-[#8081F6] bg-[#8081F6]" : "border-border bg-white"
+                                    isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-white"
                                   )}
                                 >
                                   {isSelected && <Check className="h-3 w-3 text-white" />}
@@ -2666,7 +2666,7 @@ export default function TaskDetails() {
             <button
               onClick={handleAssignUser}
               disabled={selectedAssignUsers.length === 0 || isAssigning}
-              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-[#8081F6] hover:bg-[#6c6de0] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-[#6c5ce7] hover:bg-[#6c6de0] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAssigning ? "Assigning..." : "Submit"}
             </button>

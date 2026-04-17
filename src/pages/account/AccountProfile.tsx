@@ -223,9 +223,6 @@ const AccountProfile = () => {
             <Field label="Registration No.">
               <Input value={formData.profile.professional_reg_number} onChange={e => setFormData({ ...formData, profile: { ...formData.profile, professional_reg_number: e.target.value } })} className={INPUT_CLS} placeholder="e.g. REG-123456" />
             </Field>
-            <Field label="Insurance Expiry Date">
-              <Input type="date" value={formData.insurance_document.expiry_date} onChange={e => setFormData({ ...formData, insurance_document: { ...formData.insurance_document, expiry_date: e.target.value } })} className={INPUT_CLS} />
-            </Field>
           </div>
         </SectionCard>
 

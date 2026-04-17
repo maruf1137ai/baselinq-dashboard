@@ -1,4 +1,4 @@
-import { Check, ExternalLink, TriangleAlert, FileText, Calendar, AlertCircle, Clock, Tag } from 'lucide-react';
+import { Check, ExternalLink, TriangleAlert, FileText, Calendar, AlertCircle, Clock, Tag, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
@@ -9,6 +9,12 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import useFetch from '@/hooks/useFetch';
 import { formatDate } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ChatSammary = ({ task: channelTask }: { task: any }) => {
   const navigate = useNavigate();
@@ -89,41 +95,84 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="py-4 px-6 border-b border-[#DEDEDE]">
-        <h2 className="text-base font-normal text-[#101828]">Task Context</h2>
+        <h2 className="text-base font-normal text-[#101828]">
+          {taskId ? "Task Context" : "Channel Context"}
+        </h2>
         <div className="flex items-center gap-2 mt-2">
           <Badge variant="outline" className={`${getStatusColor(status)} border px-2.5 py-0.5 rounded-full text-xs font-normal`}>
             {status}
           </Badge>
-          <span className="text-xs text-gray-500 flex items-center gap-1">
-            {date ? <><Clock className="w-3 h-3" /> Due {formatDate(date)}</> : "No Due Date"}
-          </span>
+          {date && (
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Due {formatDate(date)}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto py-4 px-6 space-y-6">
 
-        {/* Core Fields Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-              <Tag className="w-3 h-3" /> Priority
-            </div>
-            <div className="text-sm font-normal text-gray-900">{priority || "Normal"}</div>
+        {/* Participants Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-normal text-gray-900 flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-400" />
+              Participants
+            </h3>
+            <span className="text-[10px] text-gray-400 font-normal">
+              {channelTask.members?.length || 0} Users
+            </span>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> Discipline
-            </div>
-            {taskType && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <FileText className="w-3 h-3" /> Type
-                </span>
-                <span className="text-xs font-medium text-foreground truncate ml-2">{taskType}</span>
+          <div className="flex flex-wrap gap-2">
+            <TooltipProvider delayDuration={0}>
+              <div className="flex -space-x-2 overflow-hidden transition-all">
+                {(channelTask.members || []).map((member: any, index: number) => {
+                  const name = member.user_name || member.user?.name || member.name || member.user_email || member.user?.email || "User";
+                  const initial = name.charAt(0).toUpperCase();
+                  return (
+                    <Tooltip key={member.id || index}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="h-8 w-8 rounded-full bg-[#6c5ce7] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer shadow-sm"
+                        >
+                          {initial}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">{name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
               </div>
-            )}
+            </TooltipProvider>
           </div>
         </div>
+
+        {/* Core Fields Grid - only show for tasks */}
+        {taskId && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <Tag className="w-3 h-3" /> Priority
+              </div>
+              <div className="text-sm font-normal text-gray-900">{priority || "Normal"}</div>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> Discipline
+              </div>
+              {taskType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="w-3 h-3" /> Type
+                  </span>
+                  <span className="text-[10px] font-medium text-foreground truncate ml-2">{taskType}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         <div>
@@ -180,13 +229,13 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
       </div>
 
       <div className="p-4 border-t border-[#DEDEDE] mt-auto">
-        {(taskId || channelTask.id) && (
+        {taskId && (
           <div className="flex flex-col gap-2.5">
             <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">
               <ExternalLink className="mr-2 h-4 w-4" /> View Full Task
             </Button>
             {/* Request Info Dialog kept as is */}
-            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId || channelTask.id} wFull />
+            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId} wFull />
           </div>
         )}
       </div>

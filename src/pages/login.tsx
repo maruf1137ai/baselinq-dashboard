@@ -5,7 +5,7 @@ import { useLogin } from "@/hooks/useLogin";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -85,8 +85,8 @@ const LoginPage = () => {
           <div className="mt-10 space-y-4">
             {FEATURES.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#8081F6]/20 border border-[#8081F6]/30 flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-[#8081F6]" />
+                <div className="w-5 h-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-[#6c5ce7]" />
                 </div>
                 <p className="text-[13px] text-white/60 leading-snug">{feature}</p>
               </div>
@@ -99,7 +99,7 @@ const LoginPage = () => {
           <div className="border-t border-white/10 pt-6 space-y-3">
             <p className="text-[13px] text-white/50">
               Don't have an account?{" "}
-              <button onClick={() => navigate("/signup")} className="text-[#8081F6] hover:underline">
+              <button onClick={() => navigate("/signup")} className="text-[#6c5ce7] hover:underline">
                 Create one
               </button>
             </p>
@@ -125,7 +125,7 @@ const LoginPage = () => {
             <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
           </div>
           <div className="hidden lg:block" />
-          <button onClick={() => navigate("/signup")} className="text-[12px] text-[#8081F6] hover:underline">
+          <button onClick={() => navigate("/signup")} className="text-[12px] text-[#6c5ce7] hover:underline">
             Create account
           </button>
         </div>
@@ -184,7 +184,7 @@ const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="mt-2 w-full py-3 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-2 w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </button>

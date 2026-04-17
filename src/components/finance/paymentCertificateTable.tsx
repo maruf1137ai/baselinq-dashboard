@@ -175,13 +175,13 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             value={search}
             onChange={handleSearch}
             placeholder="Search by PC #, period, status..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#8081F6]/30 focus:border-[#8081F6]"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/30 focus:border-[#6c5ce7]"
           />
         </div>
         {onNew && (
           <button
             onClick={onNew}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-[#8081F6] hover:bg-[#8081F6] transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-[#6c5ce7] hover:bg-[#6c5ce7] transition-all shadow-sm shrink-0"
           >
             <Plus className="w-4 h-4" />
             New Certificate
@@ -283,7 +283,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#8081F6] text-white" : "text-gray-600 hover:bg-gray-100"
+                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-gray-100"
                   }`}>
                   {p}
                 </button>

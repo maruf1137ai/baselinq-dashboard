@@ -168,7 +168,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   if (!isLoading && documents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-2">
-        <p className="text-sm">No documents uploaded yet.</p>
+        <p className="text-sm">No documents uploaded yet</p>
       </div>
     );
   }

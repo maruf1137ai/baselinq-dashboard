@@ -62,7 +62,7 @@ const ACCOUNT_TYPES = [
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8081F6]/20 focus:border-[#8081F6]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -225,7 +225,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
   };
 
   const STEP_LABELS = accountType === "organisation"
-    ? ["Your Role", "Account Type", "Company Details", "Invite Team"]
+    ? ["Your Role", "Account Type", "Company Details", "Invite Users"]
     : ["Your Role", "Account Type", "Your Details"];
 
   return (
@@ -269,7 +269,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                     <div className="flex items-center gap-3 py-2">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] transition-all duration-200",
-                        done || active ? "bg-[#8081F6] text-white" : "bg-white/10 text-white/40 border border-white/10"
+                        done || active ? "bg-[#6c5ce7] text-white" : "bg-white/10 text-white/40 border border-white/10"
                       )}>
                         {done ? <Check className="w-3.5 h-3.5" /> : sId}
                       </div>
@@ -279,10 +279,10 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                       )}>
                         {label}
                       </p>
-                      {active && <ChevronRight className="w-3.5 h-3.5 text-[#8081F6] shrink-0 ml-auto" />}
+                      {active && <ChevronRight className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 ml-auto" />}
                     </div>
                     {i < STEP_LABELS.length - 1 && (
-                      <div style={{ marginLeft: "13px", paddingLeft: "10px", height: "12px", borderLeft: `2px solid ${done ? "#8081F6" : "rgba(255,255,255,0.1)"}` }} />
+                      <div style={{ marginLeft: "13px", paddingLeft: "10px", height: "12px", borderLeft: `2px solid ${done ? "#6c5ce7" : "rgba(255,255,255,0.1)"}` }} />
                     )}
                   </React.Fragment>
                 );
@@ -310,7 +310,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 <div
                   key={i}
                   className="h-1 flex-1 rounded-full transition-all duration-300"
-                  style={{ background: (i + 1) <= step ? "#8081F6" : "#e5e7eb" }}
+                  style={{ background: (i + 1) <= step ? "#6c5ce7" : "#e5e7eb" }}
                 />
               ))}
             </div>
@@ -338,7 +338,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                       style={{
                         width: (i + 1) === step ? "20px" : "8px",
                         height: "8px",
-                        background: (i + 1) <= step ? "#8081F6" : "#e5e7eb",
+                        background: (i + 1) <= step ? "#6c5ce7" : "#e5e7eb",
                       }}
                     />
                   ))}
@@ -365,12 +365,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setRole(r.id)}
                           className={cn(
                             "flex items-center gap-3 px-3.5 py-3 rounded-xl border text-left transition-all group",
-                            role === r.id ? "border-[#8081F6] bg-[#8081F6]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                            role === r.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
                           )}
                         >
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all",
-                            role === r.id ? "bg-[#8081F6] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                            role === r.id ? "bg-[#6c5ce7] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {r.icon}
                           </div>
@@ -378,7 +378,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             {r.label}
                           </span>
                           {role === r.id && (
-                            <div className="w-4 h-4 rounded-full bg-[#8081F6] flex items-center justify-center shrink-0">
+                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
                               <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                           )}
@@ -400,12 +400,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setAccountType(type.id)}
                           className={cn(
                             "w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition-all group",
-                            accountType === type.id ? "border-[#8081F6] bg-[#8081F6]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                            accountType === type.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
                           )}
                         >
                           <div className={cn(
                             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                            accountType === type.id ? "bg-[#8081F6] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                            accountType === type.id ? "bg-[#6c5ce7] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {type.icon}
                           </div>
@@ -414,7 +414,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             <p className="text-[12px] text-gray-400 mt-0.5">{type.desc}</p>
                           </div>
                           {accountType === type.id && (
-                            <div className="w-5 h-5 rounded-full bg-[#8081F6] flex items-center justify-center shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
                               <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
@@ -461,7 +461,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           </div>
                         </div>
                         <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-[#f0edff] border border-[#d6d3ff]">
-                          <Info className="w-3.5 h-3.5 text-[#8081F6] shrink-0 mt-0.5" />
+                          <Info className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 mt-0.5" />
                           <p className="text-[12px] text-[#5b5bcc] leading-snug">These details will auto-populate into all contracts and appointment letters.</p>
                         </div>
                       </>
@@ -527,52 +527,56 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                       </div>
                     </div>
 
-                    {/* Insurance */}
-                    <div className="flex items-center gap-3 pt-1">
-                      <div className="h-px flex-1 bg-gray-100" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Insurance Certificate</span>
-                      <div className="h-px flex-1 bg-gray-100" />
-                    </div>
+                    {/* Insurance — organisations only */}
+                    {accountType === "organisation" && (
+                      <>
+                        <div className="flex items-center gap-3 pt-1">
+                          <div className="h-px flex-1 bg-gray-100" />
+                          <span className="text-[10px] text-gray-400 uppercase tracking-widest">Insurance Certificate</span>
+                          <div className="h-px flex-1 bg-gray-100" />
+                        </div>
 
-                    <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => setInsuranceCertificate(e.target.files?.[0] ?? null)} />
-                    {insuranceCertificate ? (
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50">
-                        <FileText className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-sm text-gray-700 flex-1 truncate">{insuranceCertificate.name}</span>
-                        <button type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-[#8081F6]/40 hover:text-[#8081F6] transition-all"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload certificate, PDF or image (optional)
-                      </button>
-                    )}
-
-                    <div>
-                      <label className={LABEL_CLS}>Insurance Expiry Date <span className="text-gray-300">(optional)</span></label>
-                      <Popover open={insuranceCalendarOpen} onOpenChange={setInsuranceCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <button type="button" className={cn(INPUT_CLS, "flex items-center justify-between text-left", !insuranceExpiry && "text-gray-400")}>
-                            <span>{insuranceExpiry ? format(insuranceExpiry, "dd MMM yyyy") : "Pick a date"}</span>
-                            <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                        <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => setInsuranceCertificate(e.target.files?.[0] ?? null)} />
+                        {insuranceCertificate ? (
+                          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50">
+                            <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span className="text-sm text-gray-700 flex-1 truncate">{insuranceCertificate.name}</span>
+                            <button type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-[#6c5ce7]/40 hover:text-[#6c5ce7] transition-all"
+                          >
+                            <Upload className="w-4 h-4" />
+                            Upload certificate, PDF or image (optional)
                           </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={insuranceExpiry} onSelect={(d) => { setInsuranceExpiry(d); setInsuranceCalendarOpen(false); }} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                        )}
+
+                        <div>
+                          <label className={LABEL_CLS}>Insurance Expiry Date <span className="text-gray-300">(optional)</span></label>
+                          <Popover open={insuranceCalendarOpen} onOpenChange={setInsuranceCalendarOpen}>
+                            <PopoverTrigger asChild>
+                              <button type="button" className={cn(INPUT_CLS, "flex items-center justify-between text-left", !insuranceExpiry && "text-gray-400")}>
+                                <span>{insuranceExpiry ? format(insuranceExpiry, "dd MMM yyyy") : "Pick a date"}</span>
+                                <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={insuranceExpiry} onSelect={(d) => { setInsuranceExpiry(d); setInsuranceCalendarOpen(false); }} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
                 {/* ── Step 4: Invite team (org only) ── */}
                 {step === 4 && accountType === "organisation" && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-4">Invite colleagues, you can also do this later from settings.</p>
+                    <p className="text-[13px] text-gray-500 mb-4">Invite users, you can also do this later from settings.</p>
                     <div className="space-y-2">
                       {teamMembers.map((member) => (
                         <div key={member.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
@@ -594,9 +598,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         </div>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors">
+                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-[13px] text-[#6c5ce7] hover:text-[#6c6de9] transition-colors">
                       <UserPlus className="w-3.5 h-3.5" />
-                      Add another member
+                      Add another user
                     </button>
                   </div>
                 )}
@@ -616,7 +620,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {/* Step 1 → 2 */}
               {step === 1 && (
                 <button type="button" disabled={!role} onClick={() => setStep(2)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -624,7 +628,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {/* Step 2 → 3 */}
               {step === 2 && (
                 <button type="button" disabled={!accountType} onClick={handleGoToDetails}
-                  className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -633,12 +637,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 3 && (
                 accountType === "organisation" ? (
                   <button type="button" disabled={!companyName} onClick={() => setStep(4)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     Continue <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
                   </button>
                 )
@@ -648,7 +652,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 4 && (
                 <>
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#8081F6] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
                   </button>
                   <button type="button" disabled={saving} onClick={handleSave} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
@@ -751,7 +755,7 @@ const SelectProject = () => {
         <div className="max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 rounded-2xl bg-[#f0edff] flex items-center justify-center mx-auto mb-5">
-              <SparkleIcon className="w-8 h-8 text-[#8081F6]" />
+              <SparkleIcon className="w-8 h-8 text-[#6c5ce7]" />
             </div>
             <h2 className="text-[22px] font-normal tracking-tight text-foreground mb-2">
               Complete your profile first

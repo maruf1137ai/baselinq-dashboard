@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { getStatusBadgeClasses } from "@/lib/statusColors";
 import { Category, LedgerEntry } from "../finance/costLadger";
 import { MoreHorizontal, ChevronsUpDown, Check, User as UserIcon, Mail, X } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
@@ -149,7 +150,7 @@ const ActionsCell = ({
         url: `projects/${projectId}/team-members/${member._id}/`,
         data: undefined,
       });
-      toast.success("Team member removed successfully");
+      toast.success("User removed successfully");
       setShowDeleteDialog(false);
       onRefetch();
     } catch (error: any) {
@@ -228,7 +229,7 @@ const ActionsCell = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove {member.user.name} from this project? This action cannot be undone.
             </AlertDialogDescription>
@@ -249,15 +250,15 @@ const ActionsCell = ({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>Edit Member</DialogTitle>
+            <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update the role and discipline for this team member
+              Update the role and discipline for this user
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* User Information - Read Only */}
             <div className="space-y-2">
-              <Label>Team Member</Label>
+              <Label>User</Label>
               <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted">
                 <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-normal">
                   {member.user.name?.charAt(0).toUpperCase()}
@@ -309,7 +310,7 @@ const ActionsCell = ({
               onClick={handleEditRole}
               disabled={isUpdating || !selectedRole}
               className="bg-primary hover:bg-primary/90">
-              {isUpdating ? "Updating..." : "Update Role"}
+              {isUpdating ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -336,31 +337,11 @@ export enum OrderStatus {
   Rejected = "Rejected",
 }
 
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const baseClasses = "px-3 py-1 text-xs rounded-full inline-block";
-
-  if (status === "Active") {
-    return (
-      <span className={`${baseClasses} bg-green-50 text-green-700 border border-green-200`}>
-        {status}
-      </span>
-    );
-  }
-
-  if (status === "Pending") {
-    return (
-      <span className={`${baseClasses} bg-amber-50 text-amber-700 border border-amber-200`}>
-        {status}
-      </span>
-    );
-  }
-
-  return (
-    <span className={`${baseClasses} bg-red-50 text-red-700 border border-red-200`}>
-      {status}
-    </span>
-  );
-};
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
+  <span className={`px-3 py-1 text-xs rounded-full inline-block ${getStatusBadgeClasses(status)}`}>
+    {status}
+  </span>
+);
 
 const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   entries,
@@ -410,7 +391,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             roleCode: selectedRole.code,
           },
         });
-        toast.success("Team member added successfully");
+        toast.success("User added successfully");
         setShowAddMemberModal(false);
         setSelectedUser(null);
         setSelectedRole(null);
@@ -463,7 +444,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         <input
           type="text"
           className="py-2 px-6 text-sm text-muted-foreground border border-border bg-white rounded-lg w-full"
-          placeholder="Search team members"
+          placeholder="Search users…"
         />
         <FilterBtns />
         {canManageTeam && (
@@ -471,7 +452,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             onClick={() => setShowAddMemberModal(true)}
             className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
             <span className="mr-1">+</span>
-            Add members
+            Add User
           </Button>
         )}
       </div>
@@ -486,7 +467,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <UserIcon className="w-4 h-4 text-[#00b894]" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Team Member</h3>
+                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add User</h3>
                   <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
                 </div>
               </div>
@@ -543,9 +524,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       </PopoverTrigger>
                       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
                         <Command>
-                          <CommandInput placeholder="Search team members..." className="text-[13px]" />
+                          <CommandInput placeholder="Search users…" className="text-[13px]" />
                           <CommandList>
-                            <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No user found.</CommandEmpty>
+                            <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found</CommandEmpty>
                             <CommandGroup>
                               {availableUsers.map((u) => {
                                 const isSelected = selectedUser?.id === u.id;
@@ -669,9 +650,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 {isSubmitting ? (
                   activeTab === "add" ? "Adding..." : "Inviting..."
                 ) : activeTab === "add" ? (
-                  <><Check className="w-3.5 h-3.5" /> Add Member</>
+                  <><Check className="w-3.5 h-3.5" /> Add User</>
                 ) : (
-                  <><Mail className="w-3.5 h-3.5" /> Send Invite</>
+                  <><Mail className="w-3.5 h-3.5" /> Send Invitation</>
                 )}
               </button>
             </div>
