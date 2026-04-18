@@ -199,7 +199,7 @@ function StepAddressFields({
 }
 
 
-function StepPersonnelCard({
+function StepUserCard({
   label,
   role,
   roleColor,
@@ -273,8 +273,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
   const [appointedForm, setAppointedForm] = useState<AppointedFormState>(DEFAULT_APPOINTED);
   const [appointedError, setAppointedError] = useState("");
   const [taskOrderBrief, setTaskOrderBrief] = useState("");
-  const [showClientPersonnel, setShowClientPersonnel] = useState(false);
-  const [showAppointedPersonnel, setShowAppointedPersonnel] = useState(false);
+  const [showClientUsers, setShowClientUsers] = useState(false);
+  const [showAppointedUsers, setShowAppointedUsers] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [userProfileLoaded, setUserProfileLoaded] = useState(false);
 
@@ -382,10 +382,10 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       setTaskOrderBrief(project.description || project.task_order_brief || project.taskOrderBrief || "");
 
       if (cd && (cd.client?.name || cd.client?.email || cd.client_representative?.name || cd.client_representative?.email)) {
-        setShowClientPersonnel(true);
+        setShowClientUsers(true);
       }
       if (ac && (ac.principal?.name || ac.principal?.email || ac.technical_representative?.name || ac.technical_representative?.email)) {
-        setShowAppointedPersonnel(true);
+        setShowAppointedUsers(true);
       }
     } else {
       form.reset({
@@ -404,8 +404,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       });
       setClientForm({ ...DEFAULT_CLIENT });
       setTaskOrderBrief("");
-      setShowClientPersonnel(false);
-      setShowAppointedPersonnel(false);
+      setShowClientUsers(false);
+      setShowAppointedUsers(false);
 
       if (!appointedForm.company_name && userObj) {
         const org = userObj.organization;
@@ -782,21 +782,21 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Personnel</p>
-                  {!showClientPersonnel ? (
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Users</p>
+                  {!showClientUsers ? (
                     <button
                       type="button"
-                      onClick={() => setShowClientPersonnel(true)}
+                      onClick={() => setShowClientUsers(true)}
                       className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#8081F6] hover:text-[#8081F6] hover:bg-primary/10 transition-all group">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#8081F6] group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-normal">Add Assigned Personnel</span>
+                      <span className="font-normal">Add Assigned Users</span>
                     </button>
                   ) : (
                     <div className="space-y-3">
-                      <StepPersonnelCard label="Client" role="Super User" roleColor="#8081F6" value={clientForm.client} onChange={(v) => setClientForm(p => ({ ...p, client: v }))} />
-                      <StepPersonnelCard label="Client Representative" role="Tech User" roleColor="#00b894" value={clientForm.client_representative} onChange={(v) => setClientForm(p => ({ ...p, client_representative: v }))} />
+                      <StepUserCard label="Client" role="Super User" roleColor="#8081F6" value={clientForm.client} onChange={(v) => setClientForm(p => ({ ...p, client: v }))} />
+                      <StepUserCard label="Client Representative" role="Tech User" roleColor="#00b894" value={clientForm.client_representative} onChange={(v) => setClientForm(p => ({ ...p, client_representative: v }))} />
                     </div>
                   )}
                 </div>
@@ -864,21 +864,21 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </div>
                 </div>
                 <div className="border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Personnel</p>
-                  {!showAppointedPersonnel ? (
+                  <p className="text-xs font-medium text-muted-foreground normal-case mb-3">Assigned Users</p>
+                  {!showAppointedUsers ? (
                     <button
                       type="button"
-                      onClick={() => setShowAppointedPersonnel(true)}
+                      onClick={() => setShowAppointedUsers(true)}
                       className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#8081F6] hover:text-[#8081F6] hover:bg-primary/10 transition-all group">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#8081F6] group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-normal">Add Assigned Personnel</span>
+                      <span className="font-normal">Add Assigned Users</span>
                     </button>
                   ) : (
                     <div className="space-y-3">
-                      <StepPersonnelCard label="Principal Architect" role="Super User" roleColor="#8081F6" value={appointedForm.principal} onChange={(v) => setAppointedForm(p => ({ ...p, principal: v }))} />
-                      <StepPersonnelCard label="Technical Representative" role="Tech User" roleColor="#00b894" value={appointedForm.technical_representative} onChange={(v) => setAppointedForm(p => ({ ...p, technical_representative: v }))} />
+                      <StepUserCard label="Principal Architect" role="Super User" roleColor="#8081F6" value={appointedForm.principal} onChange={(v) => setAppointedForm(p => ({ ...p, principal: v }))} />
+                      <StepUserCard label="Technical Representative" role="Tech User" roleColor="#00b894" value={appointedForm.technical_representative} onChange={(v) => setAppointedForm(p => ({ ...p, technical_representative: v }))} />
                     </div>
                   )}
                 </div>

@@ -67,7 +67,7 @@ const INPUT_CLS =
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
 type AccountType = "organisation" | "individual";
-interface TeamMember { id: string; name: string; email: string; position: string; }
+interface ProjectUser { id: string; name: string; email: string; position: string; }
 
 // ── Complete Profile Modal ────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
   const [phoneNumber, setPhoneNumber] = useState("");
 
   // Step 4 — Invite (org only)
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
+  const [users, setUsers] = useState<ProjectUser[]>([
     { id: crypto.randomUUID(), name: "", email: "", position: "" },
   ]);
 
@@ -180,7 +180,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
 
       // Send team invites via dedicated endpoint (duplicate-safe, same flow as org page)
       if (accountType === "organisation") {
-        const validInvites = teamMembers.filter((m) => m.email.trim());
+        const validInvites = users.filter((m) => m.email.trim());
         await Promise.all(
           validInvites.map((m) =>
             orgInviteMember({ name: m.name, email: m.email, position: m.position }).catch(() => { })
@@ -572,31 +572,31 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 {/* ── Step 4: Invite team (org only) ── */}
                 {step === 4 && accountType === "organisation" && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-4">Invite colleagues, you can also do this later from settings.</p>
+                    <p className="text-[13px] text-gray-500 mb-4">Invite users, you can also do this later from settings.</p>
                     <div className="space-y-2">
-                      {teamMembers.map((member) => (
+                      {users.map((member) => (
                         <div key={member.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
                           <div className="flex-1 grid grid-cols-3 gap-2">
-                            <input type="text" placeholder="Full name" value={member.name} onChange={(e) => setTeamMembers((p) => p.map((m) => m.id === member.id ? { ...m, name: e.target.value } : m))} className={INPUT_CLS} />
-                            <input type="email" placeholder="Email address" value={member.email} onChange={(e) => setTeamMembers((p) => p.map((m) => m.id === member.id ? { ...m, email: e.target.value } : m))} className={INPUT_CLS} />
-                            <select value={member.position} onChange={(e) => setTeamMembers((p) => p.map((m) => m.id === member.id ? { ...m, position: e.target.value } : m))} className={INPUT_CLS}>
+                            <input type="text" placeholder="Full name" value={member.name} onChange={(e) => setUsers((p) => p.map((m) => m.id === member.id ? { ...m, name: e.target.value } : m))} className={INPUT_CLS} />
+                            <input type="email" placeholder="Email address" value={member.email} onChange={(e) => setUsers((p) => p.map((m) => m.id === member.id ? { ...m, email: e.target.value } : m))} className={INPUT_CLS} />
+                            <select value={member.position} onChange={(e) => setUsers((p) => p.map((m) => m.id === member.id ? { ...m, position: e.target.value } : m))} className={INPUT_CLS}>
                               <option value="">Position...</option>
                               {inviteRoles.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
                               <option value="admin">Administrator</option>
                               <option value="other">Other</option>
                             </select>
                           </div>
-                          {teamMembers.length > 1 && (
-                            <button type="button" onClick={() => setTeamMembers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
+                          {users.length > 1 && (
+                            <button type="button" onClick={() => setUsers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors">
+                    <button type="button" onClick={() => setUsers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-[13px] text-[#8081F6] hover:text-[#6c6de9] transition-colors">
                       <UserPlus className="w-3.5 h-3.5" />
-                      Add another member
+                      Add another user
                     </button>
                   </div>
                 )}
@@ -744,7 +744,7 @@ const SelectProject = () => {
 
   // ── Profile incomplete screen ──
   // Only show when the user hasn't completed onboarding AND has no projects
-  // (team members invited by an owner may have role=null but should see their projects)
+  // (users invited by an owner may have role=null but should see their projects)
   if (!projectsLoading && projects.length === 0 && user && !user.role) {
     return (
       <>

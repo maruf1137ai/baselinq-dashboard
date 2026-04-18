@@ -36,7 +36,7 @@ import {
   lookupCompany,
   inviteAppointedCompany,
   inviteClient,
-  invitePersonnel,
+  inviteUser,
   postData
 } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
@@ -384,9 +384,9 @@ function SelectField({
   );
 }
 
-// ── PersonnelEntryCard ─────────────────────────────────────────────────────────
+// ── UserEntryCard ─────────────────────────────────────────────────────────
 
-interface AssignedPersonnel {
+interface AssignedUser {
   id: string;
   role: string;
   name: string;
@@ -395,7 +395,7 @@ interface AssignedPersonnel {
   userId?: number;
 }
 
-function PersonnelEntryCard({
+function UserEntryCard({
   entry,
   roleOptions,
   takenRoles,
@@ -403,10 +403,10 @@ function PersonnelEntryCard({
   onRemove,
   canRemove,
 }: {
-  entry: AssignedPersonnel;
+  entry: AssignedUser;
   roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
   takenRoles: string[];
-  onChange: (v: AssignedPersonnel) => void;
+  onChange: (v: AssignedUser) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
@@ -496,7 +496,7 @@ interface OrgUser {
   role: { name: string; code: string } | null;
 }
 
-function OrgPersonnelSelectCard({
+function OrgUserSelectCard({
   entry,
   roleOptions,
   takenRoles,
@@ -506,12 +506,12 @@ function OrgPersonnelSelectCard({
   onRemove,
   canRemove,
 }: {
-  entry: AssignedPersonnel;
+  entry: AssignedUser;
   roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
   takenRoles: string[];
   orgUsers: OrgUser[];
   allRoles: { id?: number; name: string; code: string }[];
-  onChange: (v: AssignedPersonnel) => void;
+  onChange: (v: AssignedUser) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
@@ -582,16 +582,16 @@ function OrgPersonnelSelectCard({
                 </div>
               </div>
             ) : (
-              <span className="text-[13px] text-[#9ca3af]">Select team member...</span>
+              <span className="text-[13px] text-[#9ca3af]">Select user...</span>
             )}
             <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
           <Command>
-            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+            <CommandInput placeholder="Search users..." className="text-[13px]" />
             <CommandList>
-              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No team members found.</CommandEmpty>
+              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
               <CommandGroup>
                 {orgUsers.map((u) => {
                   const isSelected = entry.email === u.email;
@@ -769,8 +769,8 @@ export default function EditProject() {
   const [taskOrder, setTaskOrder] = useState<TaskOrderState>({ brief: "" });
   const [existingDocs, setExistingDocs] = useState<ProjectDocument[]>([]);
   const [deletingDocId, setDeletingDocId] = useState<string | number | null>(null);
-  const [clientPersonnelList, setClientPersonnelList] = useState<AssignedPersonnel[]>([]);
-  const [appointedPersonnelList, setAppointedPersonnelList] = useState<AssignedPersonnel[]>([]);
+  const [clientUsersList, setClientUsersList] = useState<AssignedUser[]>([]);
+  const [associatedUsersList, setAssociatedUsersList] = useState<AssignedUser[]>([]);
 
   const CLIENT_ROLE_OPTIONS = [
     { value: "Client", badge: "Super User", badgeColor: "#6c5ce7", iconColor: "#6c5ce7" },
@@ -800,35 +800,35 @@ export default function EditProject() {
   const [inviteClientData, setInviteClientData] = useState({ name: '', email: '' });
   const [isInvited, setIsInvited] = useState(false);
 
-  // Invite Personnel modal
-  const [showInvitePersonnelModal, setShowInvitePersonnelModal] = useState(false);
-  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
-  const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
+  // Invite User modal
+  const [showInviteUserModal, setShowInviteUserModal] = useState(false);
+  const [inviteUserForm, setInviteUserForm] = useState({ name: "", email: "", role_code: "" });
+  const [inviteUserSubmitting, setInviteUserSubmitting] = useState(false);
 
   const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
   const orgUsers: OrgUser[] = orgUsersData?.results || [];
 
-  const handleInvitePersonnelSubmit = async () => {
-    if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
-    setInvitePersonnelSubmitting(true);
+  const handleInviteUserSubmit = async () => {
+    if (!inviteUserForm.email.trim() || !inviteUserForm.role_code) return;
+    setInviteUserSubmitting(true);
     try {
-      await invitePersonnel({
-        name: invitePersonnelForm.name,
-        email: invitePersonnelForm.email,
-        role_code: invitePersonnelForm.role_code,
+      await inviteUser({
+        name: inviteUserForm.name,
+        email: inviteUserForm.email,
+        role_code: inviteUserForm.role_code,
       });
-      toast.success(`Invitation sent to ${invitePersonnelForm.email}`);
-      setShowInvitePersonnelModal(false);
-      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
+      toast.success(`Invitation sent to ${inviteUserForm.email}`);
+      setShowInviteUserModal(false);
+      setInviteUserForm({ name: "", email: "", role_code: "" });
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to send invitation.");
     } finally {
-      setInvitePersonnelSubmitting(false);
+      setInviteUserSubmitting(false);
     }
   };
 
-  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
-    const toAdd = personnel.filter(e => e.userId);
+  const handleAddUsersToProject = async (projectId: number | string, users: AssignedUser[]) => {
+    const toAdd = users.filter(e => e.userId);
     if (toAdd.length === 0) return;
     await Promise.all(toAdd.map(async (entry) => {
       try {
@@ -905,24 +905,24 @@ export default function EditProject() {
     setTaskOrder({ brief: tb });
     setExistingDocs(p.documents || []);
 
-    // Pre-populate personnel lists from saved data
-    const initialClientPersonnel: AssignedPersonnel[] = [];
+    // Pre-populate user lists from saved data
+    const initialClientUsers: AssignedUser[] = [];
     if (cd.client?.name || cd.client?.email) {
-      initialClientPersonnel.push({ id: crypto.randomUUID(), role: "Client", name: cd.client.name || "", email: cd.client.email || "", position: cd.client.position || "" });
+      initialClientUsers.push({ id: crypto.randomUUID(), role: "Client", name: cd.client.name || "", email: cd.client.email || "", position: cd.client.position || "" });
     }
     if (cd.client_representative?.name || cd.client_representative?.email) {
-      initialClientPersonnel.push({ id: crypto.randomUUID(), role: "Client Representative", name: cd.client_representative.name || "", email: cd.client_representative.email || "", position: cd.client_representative.position || "" });
+      initialClientUsers.push({ id: crypto.randomUUID(), role: "Client Representative", name: cd.client_representative.name || "", email: cd.client_representative.email || "", position: cd.client_representative.position || "" });
     }
-    if (initialClientPersonnel.length) setClientPersonnelList(initialClientPersonnel);
+    if (initialClientUsers.length) setClientUsersList(initialClientUsers);
 
-    const initialAppointedPersonnel: AssignedPersonnel[] = [];
+    const initialAssociatedUsers: AssignedUser[] = [];
     if (ac.principal?.name || ac.principal?.email) {
-      initialAppointedPersonnel.push({ id: crypto.randomUUID(), role: "Principal Architect", name: ac.principal.name || "", email: ac.principal.email || "", position: ac.principal.position || "" });
+      initialAssociatedUsers.push({ id: crypto.randomUUID(), role: "Principal Architect", name: ac.principal.name || "", email: ac.principal.email || "", position: ac.principal.position || "" });
     }
     if (ac.technical_representative?.name || ac.technical_representative?.email) {
-      initialAppointedPersonnel.push({ id: crypto.randomUUID(), role: "Technical Representative", name: ac.technical_representative.name || "", email: ac.technical_representative.email || "", position: ac.technical_representative.position || "" });
+      initialAssociatedUsers.push({ id: crypto.randomUUID(), role: "Technical Representative", name: ac.technical_representative.name || "", email: ac.technical_representative.email || "", position: ac.technical_representative.position || "" });
     }
-    if (initialAppointedPersonnel.length) setAppointedPersonnelList(initialAppointedPersonnel);
+    if (initialAssociatedUsers.length) setAssociatedUsersList(initialAssociatedUsers);
     if (false) {
     }
     if (tb) {
@@ -1219,8 +1219,8 @@ export default function EditProject() {
         physical_address: clientForm.physical_address,
         postal_address: clientForm.postal_address,
         office_number: clientForm.office_number,
-        client: (() => { const e = clientPersonnelList.find(x => x.role === "Client"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
-        client_representative: (() => { const e = clientPersonnelList.find(x => x.role === "Client Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        client: (() => { const e = clientUsersList.find(x => x.role === "Client"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        client_representative: (() => { const e = clientUsersList.find(x => x.role === "Client Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
       },
       appointed_company: {
         company_name: appointedForm.company_name,
@@ -1230,14 +1230,14 @@ export default function EditProject() {
         postal_address: appointedForm.postal_address,
         office_number: appointedForm.office_number,
         role_as_per_appointment: appointedForm.role_as_per_appointment,
-        principal: (() => { const e = appointedPersonnelList.find(x => x.role === "Principal Architect"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
-        technical_representative: (() => { const e = appointedPersonnelList.find(x => x.role === "Technical Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        principal: (() => { const e = associatedUsersList.find(x => x.role === "Principal Architect"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        technical_representative: (() => { const e = associatedUsersList.find(x => x.role === "Technical Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
       },
       task_order_brief: taskOrder.brief,
     };
 
-    // Create snapshot for handleAddPersonnelToProject
-    const personnelSnapshot = [...clientPersonnelList, ...appointedPersonnelList];
+    // Create snapshot for handleAddUsersToProject
+    const usersSnapshot = [...clientUsersList, ...associatedUsersList];
 
     updateProject(data, {
       onSuccess: async (result: any) => {
@@ -1270,10 +1270,10 @@ export default function EditProject() {
           toast.success("Project updated successfully!");
         }
 
-        // Invitations & Personnel
+        // Invitations & Users
         if (!isClientOrContractor) await handleInviteClient(pId);
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
-        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
+        if (pId) await handleAddUsersToProject(pId, usersSnapshot);
 
         queryClient.invalidateQueries({
           predicate: (query) => {
@@ -1476,9 +1476,9 @@ export default function EditProject() {
                   {currentStep === 1 &&
                     "Give your project a name and number so your team can identify it."}
                   {currentStep === 2 &&
-                    "Fill in the client's company details and assign personnel. This information will auto-populate into contracts and letters."}
+                    "Fill in the client's company details and assign users. This information will auto-populate into contracts and letters."}
                   {currentStep === 3 &&
-                    "Enter the details of the appointed professional firm and their key team members."}
+                    "Enter the details of the appointed professional firm and their key users."}
                   {currentStep === 4 &&
                     "Upload additional documents for this project. Existing documents are unchanged."}
                   {currentStep === 5 &&
@@ -1830,12 +1830,12 @@ export default function EditProject() {
                         </div>
                       )}
 
-                      {/* ── Assigned Personnel (Only for Clients) ── */}
+                      {/* ── Assigned Users (Only for Clients) ── */}
                       {isClientOrContractor && (
                         <div>
                           <SectionHeader
                             icon={<User className="w-3.5 h-3.5" />}
-                            label="Assigned Personnel"
+                            label="Assigned Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
                           />
@@ -1843,23 +1843,23 @@ export default function EditProject() {
                             These members will be given predetermined access rights to the project.
                           </p>
                           <div className="space-y-3">
-                            {clientPersonnelList.map((entry) => (
-                              <OrgPersonnelSelectCard
+                            {clientUsersList.map((entry) => (
+                              <OrgUserSelectCard
                                 key={entry.id}
                                 entry={entry}
                                 roleOptions={CLIENT_ROLE_OPTIONS}
-                                takenRoles={clientPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                takenRoles={clientUsersList.filter(e => e.id !== entry.id).map(e => e.role)}
                                 orgUsers={orgUsers}
                                 allRoles={appRoles}
-                                onChange={(v) => setClientPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                                onRemove={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                onChange={(v) => setClientUsersList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                onRemove={() => setClientUsersList((prev) => prev.filter((e) => e.id !== entry.id))}
                                 canRemove={true}
                               />
                             ))}
-                            {clientPersonnelList.length < CLIENT_ROLE_OPTIONS.length && (
+                            {clientUsersList.length < CLIENT_ROLE_OPTIONS.length && (
                               <button
                                 type="button"
-                                onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                onClick={() => setClientUsersList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                 className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
                                 <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                                   <Plus className="w-3.5 h-3.5" />
@@ -1869,7 +1869,7 @@ export default function EditProject() {
                             )}
                             <button
                               type="button"
-                              onClick={() => setShowInvitePersonnelModal(true)}
+                              onClick={() => setShowInviteUserModal(true)}
                               className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
                               <Mail className="w-3.5 h-3.5" />
                               <span className="font-normal">Invite User</span>
@@ -2076,7 +2076,7 @@ export default function EditProject() {
                           <div className="pt-6">
                             <SectionHeader
                               icon={<User className="w-3.5 h-3.5" />}
-                              label="Key Personnel"
+                              label="Key Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />
@@ -2084,23 +2084,23 @@ export default function EditProject() {
                               These members will be given predetermined access rights to the project.
                             </p>
                             <div className="space-y-3">
-                              {appointedPersonnelList.map((entry) => (
-                                <OrgPersonnelSelectCard
+                              {associatedUsersList.map((entry) => (
+                                <OrgUserSelectCard
                                   key={entry.id}
                                   entry={entry}
                                   roleOptions={APPOINTED_ROLE_OPTIONS}
-                                  takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                  takenRoles={associatedUsersList.filter(e => e.id !== entry.id).map(e => e.role)}
                                   orgUsers={orgUsers}
                                   allRoles={appRoles}
-                                  onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                                  onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                  onChange={(v) => setAssociatedUsersList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                  onRemove={() => setAssociatedUsersList((prev) => prev.filter((e) => e.id !== entry.id))}
                                   canRemove={true}
                                 />
                               ))}
-                              {appointedPersonnelList.length < APPOINTED_ROLE_OPTIONS.length && (
+                              {associatedUsersList.length < APPOINTED_ROLE_OPTIONS.length && (
                                 <button
                                   type="button"
-                                  onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                  onClick={() => setAssociatedUsersList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                   className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
                                   <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                                     <Plus className="w-3.5 h-3.5" />
@@ -2110,7 +2110,7 @@ export default function EditProject() {
                               )}
                               <button
                                 type="button"
-                                onClick={() => setShowInvitePersonnelModal(true)}
+                                onClick={() => setShowInviteUserModal(true)}
                                 className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
                                 <Mail className="w-3.5 h-3.5" />
                                 <span className="font-normal">Invite User</span>
@@ -2641,8 +2641,8 @@ export default function EditProject() {
           </div>
         </div >
       </div >
-      {/* ── Invite Personnel Modal ── */}
-      {showInvitePersonnelModal && (
+      {/* ── Invite User Modal ── */}
+      {showInviteUserModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             {/* Header */}
@@ -2658,7 +2658,7 @@ export default function EditProject() {
               </div>
               <button
                 type="button"
-                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                onClick={() => { setShowInviteUserModal(false); setInviteUserForm({ name: "", email: "", role_code: "" }); }}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
                 <X className="w-4 h-4" />
               </button>
@@ -2673,8 +2673,8 @@ export default function EditProject() {
                   <input
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
                     placeholder="e.g. John Smith"
-                    value={invitePersonnelForm.name}
-                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
+                    value={inviteUserForm.name}
+                    onChange={(e) => setInviteUserForm((p) => ({ ...p, name: e.target.value }))}
                   />
                 </div>
               </div>
@@ -2687,8 +2687,8 @@ export default function EditProject() {
                     type="email"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
                     placeholder="e.g. john@company.com"
-                    value={invitePersonnelForm.email}
-                    onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
+                    value={inviteUserForm.email}
+                    onChange={(e) => setInviteUserForm((p) => ({ ...p, email: e.target.value }))}
                   />
                 </div>
               </div>
@@ -2697,8 +2697,8 @@ export default function EditProject() {
                 <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                 <select
                   className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                  value={invitePersonnelForm.role_code}
-                  onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
+                  value={inviteUserForm.role_code}
+                  onChange={(e) => setInviteUserForm((p) => ({ ...p, role_code: e.target.value }))}>
                   <option value="">Select role...</option>
                   {appRoles.map((r) => (
                     <option key={r.code} value={r.code}>{r.name}</option>
@@ -2711,16 +2711,16 @@ export default function EditProject() {
             <div className="px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
+                onClick={() => { setShowInviteUserModal(false); setInviteUserForm({ name: "", email: "", role_code: "" }); }}
                 className="px-4 py-2 text-[13px] text-[#6b7280] hover:text-[#374151] transition-all">
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleInvitePersonnelSubmit}
-                disabled={invitePersonnelSubmitting}
+                onClick={handleInviteUserSubmit}
+                disabled={inviteUserSubmitting}
                 className="px-6 py-2 bg-[#6c5ce7] text-white rounded-lg text-[13px] font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-                {invitePersonnelSubmitting ? "Inviting…" : "Invite User"}
+                {inviteUserSubmitting ? "Inviting…" : "Invite User"}
               </button>
             </div>
           </div>

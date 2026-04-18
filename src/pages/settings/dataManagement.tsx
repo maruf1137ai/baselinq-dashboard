@@ -139,7 +139,7 @@ const DataManagement = () => {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <span className="h-1 w-1 rounded-full bg-destructive" />
-                All team members will lose access
+                All users will lose access
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <span className="h-1 w-1 rounded-full bg-destructive" />

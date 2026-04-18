@@ -85,7 +85,7 @@ interface Role {
   updated_at?: string;
 }
 
-interface TeamMember {
+interface ProjectUser {
   _id: string;
   projectId: string;
   userId: string;
@@ -110,7 +110,8 @@ interface ProjectUsersResponse {
   projectId: string;
   projectNumber: string;
   projectName: string;
-  teamMembers: TeamMember[];
+  // TODO PR #2: rename to 'users' alongside backend response field change
+  teamMembers: ProjectUser[];
   totalMembers: number;
 }
 
@@ -130,7 +131,7 @@ const ActionsCell = ({
   onRefetchRoles,
   roles,
 }: {
-  member: TeamMember;
+  member: ProjectUser;
   projectId: string;
   onRefetch: () => void;
   onRefetchRoles: () => void;
@@ -149,12 +150,12 @@ const ActionsCell = ({
         url: `projects/${projectId}/team-members/${member._id}/`,
         data: undefined,
       });
-      toast.success("Team member removed successfully");
+      toast.success("User removed successfully");
       setShowDeleteDialog(false);
       onRefetch();
     } catch (error: any) {
-      console.error("Error removing team member:", error);
-      const errorMessage = error?.response?.data?.error || error?.message || "Failed to remove team member. Please try again.";
+      console.error("Error removing user:", error);
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to remove user. Please try again.";
       toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
@@ -228,7 +229,7 @@ const ActionsCell = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove {member.user.name} from this project? This action cannot be undone.
             </AlertDialogDescription>
@@ -249,15 +250,15 @@ const ActionsCell = ({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>Edit Member</DialogTitle>
+            <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update the role and discipline for this team member
+              Update the role and discipline for this user
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* User Information - Read Only */}
             <div className="space-y-2">
-              <Label>Team Member</Label>
+              <Label>User</Label>
               <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted">
                 <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-normal">
                   {member.user.name?.charAt(0).toUpperCase()}
@@ -379,18 +380,18 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const teamMembers = projectUsersData?.teamMembers || [];
+  const projectUsers = projectUsersData?.teamMembers || [];
   const allUsers = allUsersData?.results || [];
   const roles = (rolesData || []).filter(r => r.code && r.is_active !== false).sort((a, b) => a.name.localeCompare(b.name));
 
   const { data: user } = useCurrentUser();
-  const currentMember = teamMembers.find((m) => String(m.user.id) === String(user?.id));
-  const myRole = currentMember?.roleName || user?.role?.code || "";
+  const currentProjectUser = projectUsers.find((m) => String(m.user.id) === String(user?.id));
+  const myRole = currentProjectUser?.roleName || user?.role?.code || "";
   const isOrgAdmin = user?.account_type === 'organisation';
   const canManageTeam = isOrgAdmin || hasPermission(myRole, "manageTeam");
 
   const availableUsers = allUsers.filter(
-    (u) => !teamMembers.some((member: TeamMember) => member.user.id === u.id)
+    (u) => !projectUsers.some((projectUser: ProjectUser) => projectUser.user.id === u.id)
   );
 
   const [inviteEmail, setInviteEmail] = useState("");
@@ -410,14 +411,14 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             roleCode: selectedRole.code,
           },
         });
-        toast.success("Team member added successfully");
+        toast.success("User added successfully");
         setShowAddMemberModal(false);
         setSelectedUser(null);
         setSelectedRole(null);
         await refetch();
       } catch (error: any) {
-        console.error("Error adding team member:", error);
-        toast.error(error?.response?.data?.error || "Failed to add member");
+        console.error("Error adding user:", error);
+        toast.error(error?.response?.data?.error || "Failed to add user");
       } finally {
         setIsSubmitting(false);
       }
@@ -441,7 +442,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         setSelectedRole(null);
         await refetch();
       } catch (error: any) {
-        console.error("Error inviting member:", error);
+        console.error("Error inviting user:", error);
         toast.error(error?.response?.data?.error || "Failed to send invitation");
       } finally {
         setIsSubmitting(false);
@@ -452,7 +453,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <AwesomeLoader message="Analyzing Team Permissions" />
+        <AwesomeLoader message="Analyzing User Permissions" />
       </div>
     );
   }
@@ -463,7 +464,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         <input
           type="text"
           className="py-2 px-6 text-sm text-muted-foreground border border-border bg-white rounded-lg w-full"
-          placeholder="Search team members"
+          placeholder="Search users"
         />
         <FilterBtns />
         {canManageTeam && (
@@ -471,7 +472,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             onClick={() => setShowAddMemberModal(true)}
             className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
             <span className="mr-1">+</span>
-            Add members
+            Add users
           </Button>
         )}
       </div>
@@ -486,7 +487,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <UserIcon className="w-4 h-4 text-[#00b894]" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Team Member</h3>
+                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add User</h3>
                   <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
                 </div>
               </div>
@@ -543,7 +544,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       </PopoverTrigger>
                       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
                         <Command>
-                          <CommandInput placeholder="Search team members..." className="text-[13px]" />
+                          <CommandInput placeholder="Search users..." className="text-[13px]" />
                           <CommandList>
                             <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No user found.</CommandEmpty>
                             <CommandGroup>
@@ -669,7 +670,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 {isSubmitting ? (
                   activeTab === "add" ? "Adding..." : "Inviting..."
                 ) : activeTab === "add" ? (
-                  <><Check className="w-3.5 h-3.5" /> Add Member</>
+                  <><Check className="w-3.5 h-3.5" /> Add User</>
                 ) : (
                   <><Mail className="w-3.5 h-3.5" /> Send Invite</>
                 )}
@@ -705,7 +706,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-border">
-              {teamMembers.map((member: TeamMember) => (
+              {projectUsers.map((member: ProjectUser) => (
                 <tr
                   key={member._id}
                   className="hover:bg-muted/50 transition-colors duration-150 text-foreground">

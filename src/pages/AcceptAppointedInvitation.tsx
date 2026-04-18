@@ -11,7 +11,7 @@ const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL });
 
 type AccountType = "organisation" | "individual";
 
-interface PersonnelEntry {
+interface UserEntry {
   id: string;
   name: string;
   email: string;
@@ -23,7 +23,7 @@ const ORG_STEPS = [
   { id: 1, label: "Account Setup", description: "Name & password" },
   { id: 2, label: "Account Type", description: "Company or individual?" },
   { id: 3, label: "Company Details", description: "Legal & address info" },
-  { id: 4, label: "Team Members", description: "Add your personnel" },
+  { id: 4, label: "Users", description: "Add your users" },
 ];
 
 const IND_STEPS = [
@@ -103,8 +103,8 @@ export default function AcceptAppointedInvitation() {
     physical_address: { street: "", city: "", province: "", postal_code: "" },
   });
 
-  // Step 4 (org) — Personnel
-  const [personnel, setPersonnel] = useState<PersonnelEntry[]>([
+  // Step 4 (org) — Users
+  const [users, setUsers] = useState<UserEntry[]>([
     { id: crypto.randomUUID(), name: "", email: "", position: "" },
   ]);
 
@@ -170,6 +170,7 @@ export default function AcceptAppointedInvitation() {
             physical_address: individual.physical_address,
             // send empty company fields so backend stores cleanly
             company_name: name,
+            // field name matches backend, to be renamed in PR #2
             personnel: [],
           }
           : {
@@ -180,7 +181,8 @@ export default function AcceptAppointedInvitation() {
             ...company,
             insurance_s3_key,
             insurance_file_name,
-            personnel: personnel.filter(p => p.name.trim() || p.email.trim()),
+            // field name matches backend, to be renamed in PR #2
+            personnel: users.filter(p => p.name.trim() || p.email.trim()),
           };
 
       const res = await api.post(`/auth/accept-appointed-invitation/${token}/`, payload);
@@ -253,7 +255,7 @@ export default function AcceptAppointedInvitation() {
               <Building2 className="w-5 h-5 text-[#8081F6]" />
             </div>
             <div>
-              <p className="text-[13px] text-white/80 font-medium">Invited by {info?.invited_by || "a team member"}</p>
+              <p className="text-[13px] text-white/80 font-medium">Invited by {info?.invited_by || "a user"}</p>
               <p className="text-[11px] text-white/40 mt-0.5">{info?.position?.replace('_', ' ') || "Project Member"}</p>
             </div>
           </div>
@@ -571,15 +573,15 @@ export default function AcceptAppointedInvitation() {
               </div>
             )}
 
-            {/* ── Step 4 (Org): Team Members ── */}
+            {/* ── Step 4 (Org): Users ── */}
             {step === 4 && accountType === "organisation" && (
               <div className="space-y-3">
                 <p className="text-[12px] text-[#9ca3af]">Optional, add the people who will work on this project.</p>
-                {personnel.map((p) => (
+                {users.map((p) => (
                   <div key={p.id} className="bg-gray-50/50 rounded-xl border border-gray-100 p-4">
                     <div className="flex justify-end mb-2">
-                      {personnel.length > 1 && (
-                        <button type="button" onClick={() => setPersonnel(prev => prev.filter(x => x.id !== p.id))} className="text-gray-400 hover:text-red-500 transition-colors">
+                      {users.length > 1 && (
+                        <button type="button" onClick={() => setUsers(prev => prev.filter(x => x.id !== p.id))} className="text-gray-400 hover:text-red-500 transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       )}
@@ -587,15 +589,15 @@ export default function AcceptAppointedInvitation() {
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1.5">Name</label>
-                        <input className={INPUT_CLS} value={p.name} onChange={e => setPersonnel(prev => prev.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))} placeholder="Full name" />
+                        <input className={INPUT_CLS} value={p.name} onChange={e => setUsers(prev => prev.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))} placeholder="Full name" />
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1.5">Email</label>
-                        <input className={INPUT_CLS} value={p.email} type="email" onChange={e => setPersonnel(prev => prev.map(x => x.id === p.id ? { ...x, email: e.target.value } : x))} placeholder="email@firm.co.za" />
+                        <input className={INPUT_CLS} value={p.email} type="email" onChange={e => setUsers(prev => prev.map(x => x.id === p.id ? { ...x, email: e.target.value } : x))} placeholder="email@firm.co.za" />
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1.5">Position</label>
-                        <select className={INPUT_CLS} value={p.position} onChange={e => setPersonnel(prev => prev.map(x => x.id === p.id ? { ...x, position: e.target.value } : x))}>
+                        <select className={INPUT_CLS} value={p.position} onChange={e => setUsers(prev => prev.map(x => x.id === p.id ? { ...x, position: e.target.value } : x))}>
                           <option value="">Select</option>
                           {roles.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
                         </select>
@@ -605,10 +607,10 @@ export default function AcceptAppointedInvitation() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setPersonnel(prev => [...prev, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
+                  onClick={() => setUsers(prev => [...prev, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
                   className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 text-[13px] text-gray-400 hover:border-[#8081F6] hover:text-[#8081F6] transition-all"
                 >
-                  <Plus className="w-4 h-4" /> Add Team Member
+                  <Plus className="w-4 h-4" /> Add User
                 </button>
               </div>
             )}

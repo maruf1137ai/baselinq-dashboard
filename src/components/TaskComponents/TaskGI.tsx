@@ -31,7 +31,7 @@ export const TaskGI: React.FC<TaskGIProps> = ({ formFields }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="text-xs font-medium text-muted-foreground">Applicable To</label>
-          <p className="text-sm text-foreground mt-1">{formFields.applicableTo || "All Project Personnel"}</p>
+          <p className="text-sm text-foreground mt-1">{formFields.applicableTo || "All Project Users"}</p>
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">Compliance Requirement</label>

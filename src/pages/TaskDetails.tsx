@@ -386,12 +386,13 @@ export default function TaskDetails() {
   const [showPricingResponse, setShowPricingResponse] = useState(false);
 
 
-  // Fetch project team members for assign modal
+  // Fetch project users for assign modal
   const { data: projectTeamData } = useFetch<any>(
     projectId ? `projects/${projectId}/team-members/` : "",
     { enabled: !!projectId }
   );
-  const projectMembers = projectTeamData?.teamMembers || [];
+  // field name matches backend, to be renamed in PR #2
+  const projectUsers = projectTeamData?.teamMembers || [];
 
   const handleAnalyzeWithAi = async () => {
     setIsAnalyzeModalOpen(true);
@@ -842,7 +843,7 @@ export default function TaskDetails() {
       id: req._id,
       senderName: req.requestedBy?.name || "User",
       recipient: req.recipient?.name || "Recipient",
-      role: req.requestedBy?.role || "Team Member",
+      role: req.requestedBy?.role || "User",
       task: req.requestDetails,
       date: req.dueDate,
       status: "Pending"
@@ -1375,7 +1376,7 @@ export default function TaskDetails() {
                         <DropdownMenuItem
                           onClick={() => {
                             const assignedTo = currentTask?.assignedTo || [];
-                            const preSelected = projectMembers.filter((m: any) =>
+                            const preSelected = projectUsers.filter((m: any) =>
                               assignedTo.some((a: any) => a.userId === m.userId)
                             );
                             setSelectedAssignUsers(preSelected);
@@ -2605,11 +2606,11 @@ export default function TaskDetails() {
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                   <Command>
-                    <CommandInput placeholder="Search team members..." />
+                    <CommandInput placeholder="Search users..." />
                     <CommandList>
                       <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
-                        {projectMembers.map((member: any) => {
+                        {projectUsers.map((member: any) => {
                           const memberName = member.user?.name || member.name || member.user?.email || "";
                           const memberEmail = member.user?.email || member.email || "";
                           const isSelected = selectedAssignUsers.some((u) => u._id === member._id);

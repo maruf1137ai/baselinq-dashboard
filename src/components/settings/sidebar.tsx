@@ -30,14 +30,14 @@ const navItems = [
     items: [
       {
         id: 1,
-        title: "Team Management",
+        title: "User Management",
         url: "/settings",
         icon: <Users className="h-4 w-4 text-current" />,
       },
       {
         id: 10,
         title: "Associated Companies",
-        url: "/settings/appointed-companies",
+        url: "/settings/associated-companies",
         icon: <Building2 className="h-4 w-4 text-current" />,
       },
       {

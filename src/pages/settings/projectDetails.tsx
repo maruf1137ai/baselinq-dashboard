@@ -102,18 +102,18 @@ function Field({
   );
 }
 
-function PersonnelCard({
+function UserCard({
   label,
   role,
-  personnel,
+  user,
 }: {
   label: string;
   role: string;
-  personnel?: { name?: string; email?: string; phone?: string };
+  user?: { name?: string; email?: string; phone?: string };
 }) {
-  const name = personnel?.name || "";
-  const email = personnel?.email || "";
-  const phone = personnel?.phone || "";
+  const name = user?.name || "";
+  const email = user?.email || "";
+  const phone = user?.phone || "";
   const hasData = name || email || phone;
 
   return (
@@ -129,7 +129,7 @@ function PersonnelCard({
           {phone && <p className="text-xs text-muted-foreground">{phone}</p>}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No personnel assigned</p>
+        <p className="text-xs text-muted-foreground">No user assigned</p>
       )}
     </div>
   );
@@ -775,22 +775,22 @@ const ProjectDetails = () => {
               </div>
             </div>
 
-            {/* Assigned Personnel (read-only) */}
+            {/* Assigned Users (read-only) */}
             {clientDetails && (clientDetails.client || clientDetails.client_representative) && (
               <div>
                 <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
-                  Assigned Personnel
+                  Assigned Users
                 </p>
                 <div className="grid grid-cols-2 gap-4">
-                  <PersonnelCard
+                  <UserCard
                     label="Client"
                     role="Super User"
-                    personnel={clientDetails.client}
+                    user={clientDetails.client}
                   />
-                  <PersonnelCard
+                  <UserCard
                     label="Client Representative"
                     role="Tech User"
-                    personnel={clientDetails.client_representative}
+                    user={clientDetails.client_representative}
                   />
                 </div>
               </div>

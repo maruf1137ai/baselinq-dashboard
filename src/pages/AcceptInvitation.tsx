@@ -157,7 +157,7 @@ export default function AcceptInvitation() {
 
   const positionLabel = invite?.position
     ? invite.position.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : "Team Member";
+    : "User";
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {

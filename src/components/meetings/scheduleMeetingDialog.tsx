@@ -51,7 +51,8 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
     projectId ? `projects/${projectId}/team-members/` : "",
     { enabled: !!projectId }
   );
-  const teamMembers = teamData?.teamMembers || [];
+  // field name matches backend, to be renamed in PR #2
+  const users = teamData?.teamMembers || [];
 
   const { mutateAsync: postRequest, isPending } = usePost();
 
@@ -196,7 +197,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                   >
                     {selectedAttendees.length > 0 ? (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {teamMembers
+                        {users
                           .filter((m) => selectedAttendees.includes(parseInt(m.userId)))
                           .map((member) => (
                             <span
@@ -224,11 +225,11 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                   <Command>
-                    <CommandInput placeholder="Search team members..." />
+                    <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No team member found.</CommandEmpty>
+                      <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
-                        {teamMembers.map((member) => {
+                        {users.map((member) => {
                           const u = member.user;
                           const name = u?.name || u?.email || "User";
                           const email = u?.email;

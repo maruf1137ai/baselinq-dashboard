@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, invitePersonnel, postData } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, inviteUser, postData } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
@@ -85,7 +85,7 @@ interface FormErrors {
   attachments?: string;
 }
 
-interface PersonnelState {
+interface UserState {
   name: string;
   email: string;
   position: string;
@@ -106,8 +106,8 @@ interface ClientFormState {
   physical_address: AddressState;
   postal_address: AddressState;
   office_number: string;
-  client: PersonnelState;
-  client_representative: PersonnelState;
+  client: UserState;
+  client_representative: UserState;
 }
 
 interface ClientErrors {
@@ -123,8 +123,8 @@ interface AppointedFormState {
   postal_address: AddressState;
   office_number: string;
   role_as_per_appointment: string;
-  principal: PersonnelState;
-  technical_representative: PersonnelState;
+  principal: UserState;
+  technical_representative: UserState;
 }
 
 interface TaskOrderState {
@@ -155,7 +155,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
 
-const DEFAULT_PERSONNEL: PersonnelState = { name: "", email: "", position: "" };
+const DEFAULT_USER: UserState = { name: "", email: "", position: "" };
 
 const DEFAULT_FORM: FormState = {
   name: "",
@@ -181,8 +181,8 @@ const DEFAULT_CLIENT_FORM: ClientFormState = {
   physical_address: { ...DEFAULT_ADDRESS },
   postal_address: { ...DEFAULT_ADDRESS },
   office_number: "",
-  client: { ...DEFAULT_PERSONNEL },
-  client_representative: { ...DEFAULT_PERSONNEL },
+  client: { ...DEFAULT_USER },
+  client_representative: { ...DEFAULT_USER },
 };
 
 const DEFAULT_APPOINTED_FORM: AppointedFormState = {
@@ -194,8 +194,8 @@ const DEFAULT_APPOINTED_FORM: AppointedFormState = {
   postal_address: { ...DEFAULT_ADDRESS },
   office_number: "",
   role_as_per_appointment: "",
-  principal: { ...DEFAULT_PERSONNEL },
-  technical_representative: { ...DEFAULT_PERSONNEL },
+  principal: { ...DEFAULT_USER },
+  technical_representative: { ...DEFAULT_USER },
 };
 
 
@@ -327,9 +327,9 @@ function SelectField({
   );
 }
 
-// ── PersonnelEntryCard ─────────────────────────────────────────────────────────
+// ── UserEntryCard ─────────────────────────────────────────────────────────
 
-interface AssignedPersonnel {
+interface AssignedUser {
   id: string;
   role: string;
   name: string;
@@ -338,7 +338,7 @@ interface AssignedPersonnel {
   userId?: number;
 }
 
-function PersonnelEntryCard({
+function UserEntryCard({
   entry,
   roleOptions,
   takenRoles,
@@ -346,10 +346,10 @@ function PersonnelEntryCard({
   onRemove,
   canRemove,
 }: {
-  entry: AssignedPersonnel;
+  entry: AssignedUser;
   roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
   takenRoles: string[];
-  onChange: (v: AssignedPersonnel) => void;
+  onChange: (v: AssignedUser) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
@@ -432,7 +432,7 @@ function PersonnelEntryCard({
   );
 }
 
-// ── OrgPersonnelSelectCard ────────────────────────────────────────────────────
+// ── OrgUserSelectCard ────────────────────────────────────────────────────
 
 interface OrgUser {
   id: number;
@@ -441,7 +441,7 @@ interface OrgUser {
   role: { name: string; code: string } | null;
 }
 
-function OrgPersonnelSelectCard({
+function OrgUserSelectCard({
   entry,
   roleOptions,
   takenRoles,
@@ -451,12 +451,12 @@ function OrgPersonnelSelectCard({
   onRemove,
   canRemove,
 }: {
-  entry: AssignedPersonnel;
+  entry: AssignedUser;
   roleOptions: { value: string; badge: string; badgeColor: string; iconColor: string }[];
   takenRoles: string[];
   orgUsers: OrgUser[];
   allRoles: { id?: number; name: string; code: string }[];
-  onChange: (v: AssignedPersonnel) => void;
+  onChange: (v: AssignedUser) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
@@ -527,16 +527,16 @@ function OrgPersonnelSelectCard({
                 </div>
               </div>
             ) : (
-              <span className="text-[13px] text-[#9ca3af]">Select team member...</span>
+              <span className="text-[13px] text-[#9ca3af]">Select user...</span>
             )}
             <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
           <Command>
-            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+            <CommandInput placeholder="Search users..." className="text-[13px]" />
             <CommandList>
-              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No team members found.</CommandEmpty>
+              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
               <CommandGroup>
                 {orgUsers.map((u) => {
                   const isSelected = entry.email === u.email;
@@ -680,14 +680,14 @@ export default function CreateProject() {
   const [inviteClientData, setInviteClientData] = useState({ name: "", email: "" });
   const [isInvited, setIsInvited] = useState(false);
 
-  // Add Member modal (unified)
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [addMemberTab, setAddMemberTab] = useState<"existing" | "invite">("existing");
-  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<OrgUser | null>(null);
-  const [selectedMemberRole, setSelectedMemberRole] = useState("");
-  const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
-  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
-  const [invitedPersonnelList, setInvitedPersonnelList] = useState<{ name: string; email: string; role_code: string }[]>([]);
+  // Add User modal (unified)
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserTab, setAddUserTab] = useState<"existing" | "invite">("existing");
+  const [selectedUserToAdd, setSelectedUserToAdd] = useState<OrgUser | null>(null);
+  const [selectedUserRole, setSelectedUserRole] = useState("");
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+  const [inviteUserForm, setInviteUserForm] = useState({ name: "", email: "", role_code: "" });
+  const [invitedUsersList, setInvitedUsersList] = useState<{ name: string; email: string; role_code: string }[]>([]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -714,8 +714,8 @@ export default function CreateProject() {
   const [clientErrors, setClientErrors] = useState<ClientErrors>({});
   const [appointedForm, setAppointedForm] = useState<AppointedFormState>(DEFAULT_APPOINTED_FORM);
   const [taskOrder, setTaskOrder] = useState<TaskOrderState>({ brief: "" });
-  const [clientPersonnelList, setClientPersonnelList] = useState<AssignedPersonnel[]>([]);
-  const [appointedPersonnelList, setAppointedPersonnelList] = useState<AssignedPersonnel[]>([]);
+  const [clientUsersList, setClientUsersList] = useState<AssignedUser[]>([]);
+  const [associatedUsersList, setAssociatedUsersList] = useState<AssignedUser[]>([]);
 
   interface AppointedInviteEntry {
     id: string;
@@ -821,14 +821,14 @@ export default function CreateProject() {
     if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
   };
 
-  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
-    const toAdd = personnel.filter(e => e.userId);
+  const handleAddUsersToProject = async (projectId: number | string, users: AssignedUser[]) => {
+    const toAdd = users.filter(e => e.userId);
     if (toAdd.length === 0) return;
     await Promise.all(toAdd.map(async (entry) => {
       try {
         await postData({
           url: `projects/${projectId}/team-members/`,
-          data: { userId: entry.userId, roleName: entry.position || entry.role || "Member" },
+          data: { userId: entry.userId, roleName: entry.position || entry.role || "User" },
         });
       } catch (err: any) {
         const msg = err?.response?.data?.error || err?.message || "Unknown error";
@@ -1092,8 +1092,8 @@ export default function CreateProject() {
     if (!validateStep(6)) return;
     setIsSubmitting(true);
     // Snapshot mutable state so onSuccess closure always has the latest values
-    const personnelSnapshot = [...clientPersonnelList];
-    const invitedPersonnelSnapshot = [...invitedPersonnelList];
+    const usersSnapshot = [...clientUsersList];
+    const invitedUsersSnapshot = [...invitedUsersList];
 
     const b = parseBudget(form.total_budget);
     const fx = parseFloat(form.fx_rate) || 1;
@@ -1132,8 +1132,8 @@ export default function CreateProject() {
         physical_address: clientForm.physical_address,
         postal_address: clientForm.postal_address,
         office_number: clientForm.office_number,
-        client: (() => { const e = clientPersonnelList.find(x => x.role === "Client"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
-        client_representative: (() => { const e = clientPersonnelList.find(x => x.role === "Client Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        client: (() => { const e = clientUsersList.find(x => x.role === "Client"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_USER; })(),
+        client_representative: (() => { const e = clientUsersList.find(x => x.role === "Client Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_USER; })(),
       },
       appointed_company: {
         company_name: appointedForm.company_name,
@@ -1143,8 +1143,8 @@ export default function CreateProject() {
         postal_address: appointedForm.postal_address,
         office_number: appointedForm.office_number,
         role_as_per_appointment: appointedForm.role_as_per_appointment,
-        principal: (() => { const e = appointedPersonnelList.find(x => x.role === "Principal Architect"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
-        technical_representative: (() => { const e = appointedPersonnelList.find(x => x.role === "Technical Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_PERSONNEL; })(),
+        principal: (() => { const e = associatedUsersList.find(x => x.role === "Principal Architect"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_USER; })(),
+        technical_representative: (() => { const e = associatedUsersList.find(x => x.role === "Technical Representative"); return e ? { name: e.name, email: e.email, position: e.position } : DEFAULT_USER; })(),
       },
       task_order_brief: taskOrder.brief,
     };
@@ -1201,13 +1201,13 @@ export default function CreateProject() {
           await handleInviteClient(pId);
         }
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
-        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
+        if (pId) await handleAddUsersToProject(pId, usersSnapshot);
 
-        // Send personnel invites now that we have a project_id
-        if (pId && invitedPersonnelSnapshot.length > 0) {
-          await Promise.all(invitedPersonnelSnapshot.map(async (p) => {
+        // Send user invites now that we have a project_id
+        if (pId && invitedUsersSnapshot.length > 0) {
+          await Promise.all(invitedUsersSnapshot.map(async (p) => {
             try {
-              await invitePersonnel({ name: p.name, email: p.email, role_code: p.role_code, project_id: pId });
+              await inviteUser({ name: p.name, email: p.email, role_code: p.role_code, project_id: pId });
             } catch (err: any) {
               toast.warning(`Could not invite ${p.email}: ${err?.response?.data?.error || err?.message}`);
             }
@@ -1406,9 +1406,9 @@ export default function CreateProject() {
                   {currentStep === 2 &&
                     "Describe the full scope of construction works. This will auto-populate into contract documents and appointment letters."}
                   {currentStep === 3 &&
-                    "Fill in the client's company details and assign personnel. This information will auto-populate into contracts and letters."}
+                    "Fill in the client's company details and assign users. This information will auto-populate into contracts and letters."}
                   {currentStep === 4 &&
-                    "Enter the details of the appointed professional firm and their key team members."}
+                    "Enter the details of the appointed professional firm and their key users."}
                   {currentStep === 5 &&
                     "Upload the key documents for this project. You can always add more later."}
                   {currentStep === 6 &&
@@ -1723,22 +1723,22 @@ export default function CreateProject() {
                         </div>
                       )}
 
-                      {/* ── Assigned Personnel (Only for Clients) ── */}
+                      {/* ── Assigned Users (Only for Clients) ── */}
                       {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div>
                           <SectionHeader
                             icon={<User className="w-3.5 h-3.5" />}
-                            label="Assigned Personnel"
+                            label="Assigned Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
                           />
                           <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
-                            These members will be given predetermined access rights to the project.
+                            These users will be given predetermined access rights to the project.
                           </p>
                           <div className="space-y-3">
                             {/* Existing org users added */}
-                            {clientPersonnelList.map((entry) => {
-                              const roleName = entry.position || entry.role || "Member";
+                            {clientUsersList.map((entry) => {
+                              const roleName = entry.position || entry.role || "User";
                               return (
                                 <div key={entry.id} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
                                   <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] font-normal shrink-0">
@@ -1751,7 +1751,7 @@ export default function CreateProject() {
                                   <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                   <button
                                     type="button"
-                                    onClick={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                    onClick={() => setClientUsersList((prev) => prev.filter((e) => e.id !== entry.id))}
                                     className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
                                     <X className="w-4 h-4" />
                                   </button>
@@ -1759,7 +1759,7 @@ export default function CreateProject() {
                               );
                             })}
                             {/* Invited external users */}
-                            {invitedPersonnelList.map((person, i) => (
+                            {invitedUsersList.map((person, i) => (
                               <div key={i} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
                                 <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6c5ce7] text-[11px] font-normal shrink-0">
                                   {(person.name || person.email || "U").charAt(0).toUpperCase()}
@@ -1771,28 +1771,28 @@ export default function CreateProject() {
                                 <span className="text-[11px] text-[#9ca3af] bg-[#f3f4f6] border border-[#e2e5ea] px-2 py-0.5 rounded-full shrink-0">Invited</span>
                                 <button
                                   type="button"
-                                  onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
+                                  onClick={() => setInvitedUsersList((prev) => prev.filter((_, idx) => idx !== i))}
                                   className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
                                   <X className="w-4 h-4" />
                                 </button>
                               </div>
                             ))}
-                            {/* Single "Add Member" button */}
+                            {/* Single "Add User" button */}
                             <button
                               type="button"
                               onClick={() => {
-                                setAddMemberTab("existing");
-                                setSelectedMemberToAdd(null);
-                                setSelectedMemberRole("");
-                                setMemberPopoverOpen(false);
-                                setInvitePersonnelForm({ name: "", email: "", role_code: "" });
-                                setShowAddMemberModal(true);
+                                setAddUserTab("existing");
+                                setSelectedUserToAdd(null);
+                                setSelectedUserRole("");
+                                setUserPopoverOpen(false);
+                                setInviteUserForm({ name: "", email: "", role_code: "" });
+                                setShowAddUserModal(true);
                               }}
                               className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
                               <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                                 <Plus className="w-3.5 h-3.5" />
                               </div>
-                              <span className="font-normal">Add Member</span>
+                              <span className="font-normal">Add User</span>
                             </button>
                           </div>
                         </div>
@@ -2000,43 +2000,43 @@ export default function CreateProject() {
                           <div>
                             <SectionHeader
                               icon={<User className="w-3.5 h-3.5" />}
-                              label="Key Personnel"
+                              label="Key Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />
                             <p className="text-[12px] text-[#9ca3af] -mt-5 mb-2">
-                              These members will be given predetermined access rights to the project.
+                              These users will be given predetermined access rights to the project.
                             </p>
                             <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3 py-2 mb-4">
                               <svg className="w-3.5 h-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
                               <p className="text-[11px] text-[#92400e] leading-snug">
-                                Only internal organisation members can be assigned here. External companies (architects, engineers, etc.) are added after project creation via the <span className="font-medium">Associated Companies</span> tab in project settings.
+                                Only internal organisation users can be assigned here. External companies (architects, engineers, etc.) are added after project creation via the <span className="font-medium">Associated Companies</span> tab in project settings.
                               </p>
                             </div>
                             <div className="space-y-3">
-                              {appointedPersonnelList.map((entry) => (
-                                <OrgPersonnelSelectCard
+                              {associatedUsersList.map((entry) => (
+                                <OrgUserSelectCard
                                   key={entry.id}
                                   entry={entry}
                                   roleOptions={APPOINTED_ROLE_OPTIONS}
-                                  takenRoles={appointedPersonnelList.filter(e => e.id !== entry.id).map(e => e.role)}
+                                  takenRoles={associatedUsersList.filter(e => e.id !== entry.id).map(e => e.role)}
                                   orgUsers={orgUsers}
                                   allRoles={appRoles}
-                                  onChange={(v) => setAppointedPersonnelList((prev) => prev.map((e) => e.id === v.id ? v : e))}
-                                  onRemove={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
+                                  onChange={(v) => setAssociatedUsersList((prev) => prev.map((e) => e.id === v.id ? v : e))}
+                                  onRemove={() => setAssociatedUsersList((prev) => prev.filter((e) => e.id !== entry.id))}
                                   canRemove={true}
                                 />
                               ))}
-                              {appointedPersonnelList.length < APPOINTED_ROLE_OPTIONS.length && (
+                              {associatedUsersList.length < APPOINTED_ROLE_OPTIONS.length && (
                                 <button
                                   type="button"
-                                  onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
+                                  onClick={() => setAssociatedUsersList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                   className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
                                 >
                                   <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
                                     <Plus className="w-3.5 h-3.5" />
                                   </div>
-                                  <span className="font-normal">Add Personnel</span>
+                                  <span className="font-normal">Add User</span>
                                 </button>
                               )}
                             </div>
@@ -2523,13 +2523,13 @@ export default function CreateProject() {
         </div >
       </div >
 
-      {/* ── Add Member Modal (unified) ── */}
-      {showAddMemberModal && (() => {
-        const alreadyAddedIds = new Set(clientPersonnelList.map(e => e.userId).filter(Boolean));
-        const alreadyInvitedEmails = new Set(invitedPersonnelList.map(e => e.email));
+      {/* ── Add User Modal (unified) ── */}
+      {showAddUserModal && (() => {
+        const alreadyAddedIds = new Set(clientUsersList.map(e => e.userId).filter(Boolean));
+        const alreadyInvitedEmails = new Set(invitedUsersList.map(e => e.email));
         const filteredOrgUsers = orgUsers.filter(u => !alreadyAddedIds.has(u.id));
-        const canAddExisting = !!selectedMemberToAdd;
-        const canAddInvite = !!invitePersonnelForm.email.trim() && !!invitePersonnelForm.role_code;
+        const canAddExisting = !!selectedUserToAdd;
+        const canAddInvite = !!inviteUserForm.email.trim() && !!inviteUserForm.role_code;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -2541,13 +2541,13 @@ export default function CreateProject() {
                     <User className="w-4 h-4 text-[#00b894]" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Member</h3>
+                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add User</h3>
                     <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowAddMemberModal(false)}
+                  onClick={() => setShowAddUserModal(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
                   <X className="w-4 h-4" />
                 </button>
@@ -2559,8 +2559,8 @@ export default function CreateProject() {
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setAddMemberTab(tab)}
-                    className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${addMemberTab === tab
+                    onClick={() => setAddUserTab(tab)}
+                    className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${addUserTab === tab
                       ? "border-[#6c5ce7] text-[#6c5ce7]"
                       : "border-transparent text-[#6b7280] hover:text-[#374151]"
                       }`}>
@@ -2571,24 +2571,24 @@ export default function CreateProject() {
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-6 py-5">
-                {addMemberTab === "existing" ? (
+                {addUserTab === "existing" ? (
                   <div className="space-y-4">
                     {/* Combobox — same pattern as team management settings */}
                     <div className="space-y-1.5">
                       <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
-                      <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
+                      <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
                         <PopoverTrigger asChild>
                           <button
                             type="button"
                             className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
-                            {selectedMemberToAdd ? (
+                            {selectedUserToAdd ? (
                               <div className="flex items-center gap-2.5">
                                 <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
-                                  {(selectedMemberToAdd.name || selectedMemberToAdd.email).charAt(0).toUpperCase()}
+                                  {(selectedUserToAdd.name || selectedUserToAdd.email).charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className="text-[13px] text-[#374151]">{selectedMemberToAdd.name || selectedMemberToAdd.email}</p>
-                                  <p className="text-[11px] text-[#9ca3af]">{selectedMemberToAdd.email}</p>
+                                  <p className="text-[13px] text-[#374151]">{selectedUserToAdd.name || selectedUserToAdd.email}</p>
+                                  <p className="text-[11px] text-[#9ca3af]">{selectedUserToAdd.email}</p>
                                 </div>
                               </div>
                             ) : (
@@ -2599,19 +2599,19 @@ export default function CreateProject() {
                         </PopoverTrigger>
                         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
                           <Command>
-                            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+                            <CommandInput placeholder="Search users..." className="text-[13px]" />
                             <CommandList>
                               <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
                               <CommandGroup>
                                 {filteredOrgUsers.map((u) => {
-                                  const isSelected = selectedMemberToAdd?.id === u.id;
+                                  const isSelected = selectedUserToAdd?.id === u.id;
                                   return (
                                     <CommandItem
                                       key={u.id}
                                       value={u.name || u.email}
                                       onSelect={() => {
-                                        setSelectedMemberToAdd(u);
-                                        setMemberPopoverOpen(false);
+                                        setSelectedUserToAdd(u);
+                                        setUserPopoverOpen(false);
                                       }}
                                       className="cursor-pointer px-3 py-2.5">
                                       <div className="flex items-center justify-between w-full">
@@ -2642,13 +2642,13 @@ export default function CreateProject() {
                     </div>
 
                     {/* Role select — shown when a user is selected */}
-                    {selectedMemberToAdd && (
+                    {selectedUserToAdd && (
                       <div className="space-y-1.5">
                         <label className="block text-[12px] font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
                         <select
                           className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                          value={selectedMemberRole}
-                          onChange={(e) => setSelectedMemberRole(e.target.value)}>
+                          value={selectedUserRole}
+                          onChange={(e) => setSelectedUserRole(e.target.value)}>
                           <option value="">Select role…</option>
                           {appRoles.map((r) => (
                             <option key={r.code} value={r.code}>{r.name}</option>
@@ -2667,8 +2667,8 @@ export default function CreateProject() {
                         <input
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
                           placeholder="e.g. John Smith"
-                          value={invitePersonnelForm.name}
-                          onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
+                          value={inviteUserForm.name}
+                          onChange={(e) => setInviteUserForm((p) => ({ ...p, name: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -2680,8 +2680,8 @@ export default function CreateProject() {
                           type="email"
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
                           placeholder="e.g. john@company.com"
-                          value={invitePersonnelForm.email}
-                          onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
+                          value={inviteUserForm.email}
+                          onChange={(e) => setInviteUserForm((p) => ({ ...p, email: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -2689,8 +2689,8 @@ export default function CreateProject() {
                       <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                       <select
                         className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                        value={invitePersonnelForm.role_code}
-                        onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
+                        value={inviteUserForm.role_code}
+                        onChange={(e) => setInviteUserForm((p) => ({ ...p, role_code: e.target.value }))}>
                         <option value="">Select role…</option>
                         {appRoles.map((r) => (
                           <option key={r.code} value={r.code}>{r.name}</option>
@@ -2705,43 +2705,43 @@ export default function CreateProject() {
               <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowAddMemberModal(false)}
+                  onClick={() => setShowAddUserModal(false)}
                   className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
                   Cancel
                 </button>
-                {addMemberTab === "existing" ? (
+                {addUserTab === "existing" ? (
                   <button
                     type="button"
-                    disabled={!canAddExisting || !selectedMemberRole}
+                    disabled={!canAddExisting || !selectedUserRole}
                     onClick={() => {
-                      if (!selectedMemberToAdd || !selectedMemberRole) return;
-                      const roleName = appRoles.find(r => r.code === selectedMemberRole)?.name || selectedMemberRole;
-                      setClientPersonnelList((prev) => [...prev, {
+                      if (!selectedUserToAdd || !selectedUserRole) return;
+                      const roleName = appRoles.find(r => r.code === selectedUserRole)?.name || selectedUserRole;
+                      setClientUsersList((prev) => [...prev, {
                         id: crypto.randomUUID(),
-                        name: selectedMemberToAdd.name || selectedMemberToAdd.email,
-                        email: selectedMemberToAdd.email,
+                        name: selectedUserToAdd.name || selectedUserToAdd.email,
+                        email: selectedUserToAdd.email,
                         position: roleName,
                         role: roleName,
-                        userId: selectedMemberToAdd.id,
+                        userId: selectedUserToAdd.id,
                       }]);
-                      setSelectedMemberToAdd(null);
-                      setSelectedMemberRole("");
+                      setSelectedUserToAdd(null);
+                      setSelectedUserRole("");
                       setMemberSearch("");
-                      setShowAddMemberModal(false);
+                      setShowAddUserModal(false);
                     }}
                     className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Check className="w-3.5 h-3.5" /> Add Member
+                    <Check className="w-3.5 h-3.5" /> Add User
                   </button>
                 ) : (
                   <button
                     type="button"
-                    disabled={!canAddInvite || alreadyInvitedEmails.has(invitePersonnelForm.email.trim())}
+                    disabled={!canAddInvite || alreadyInvitedEmails.has(inviteUserForm.email.trim())}
                     onClick={() => {
-                      if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
-                      setInvitedPersonnelList((prev) => [...prev, { ...invitePersonnelForm }]);
-                      setInvitePersonnelForm({ name: "", email: "", role_code: "" });
-                      setShowAddMemberModal(false);
+                      if (!inviteUserForm.email.trim() || !inviteUserForm.role_code) return;
+                      setInvitedUsersList((prev) => [...prev, { ...inviteUserForm }]);
+                      setInviteUserForm({ name: "", email: "", role_code: "" });
+                      setShowAddUserModal(false);
                     }}
                     className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>

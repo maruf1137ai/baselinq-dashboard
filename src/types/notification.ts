@@ -7,6 +7,7 @@ export type NotificationType =
   | "rfi_created"
   | "dc_created"
   | "cpi_created"
+  // TODO PR #2: rename to "user_added" alongside backend notification type change
   | "team_member_added";
 
 export interface Notification {
