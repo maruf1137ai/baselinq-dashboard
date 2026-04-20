@@ -42,12 +42,20 @@ interface UploadDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialDiscipline?: string;
+  customDisciplines?: string[];
 }
 
 const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certificate'] as const;
 const DISCIPLINES = ['Architectural', 'Structural', 'MEP', 'Civil', 'Environmental'] as const;
 
-export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialDiscipline = '',
+  customDisciplines = [],
+}) => {
   const [submitting, setSubmitting] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
 
@@ -68,6 +76,13 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
     const suffix = String(Math.floor(Math.random() * 900) + 100);
     setReference(`${initials}-${suffix}`);
   }, [name]);
+
+  // Set initial discipline when modal opens with pre-selected discipline
+  useEffect(() => {
+    if (isOpen && initialDiscipline) {
+      setDiscipline(initialDiscipline);
+    }
+  }, [isOpen, initialDiscipline]);
 
   // Step 3 — linking (optional)
   const [linkSearch, setLinkSearch] = useState('');
@@ -432,6 +447,16 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({ isOpen
                     {DISCIPLINES.map((d) => (
                       <SelectItem key={d} value={d}>{d}</SelectItem>
                     ))}
+                    {customDisciplines.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                          Custom Segments
+                        </div>
+                        {customDisciplines.map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

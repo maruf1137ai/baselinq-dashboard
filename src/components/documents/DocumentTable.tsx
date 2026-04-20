@@ -124,6 +124,7 @@ interface DocumentTableProps {
   onVersionUpload?: (doc: ApiDocument) => void;
   onDelete?: (doc: ApiDocument) => void;
   customDisciplines?: string[];
+  onUploadToDiscipline?: (discipline: string) => void;
 }
 
 const getDisciplineColor = (disp: string) => {
@@ -145,6 +146,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   onVersionUpload,
   onDelete,
   customDisciplines = [],
+  onUploadToDiscipline,
 }) => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -291,33 +293,43 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
       })}
 
       {/* Custom (empty) discipline groups */}
-      {customDisciplines.map((discipline) => (
-        <div key={discipline} className="bg-white rounded-[14px] border border-dashed border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 flex items-center justify-between border-b border-dashed border-gray-100">
-            <div className="flex items-center gap-3">
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              <div
-                className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30"
-              />
-              <span className="text-foreground font-normal">{discipline}</span>
-              <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full ml-1">
-                0
-              </span>
+      {customDisciplines
+        .filter((discipline) => !groupedDocs.hasOwnProperty(discipline))
+        .map((discipline) => (
+          <div key={discipline} className="bg-white rounded-[14px] border border-dashed border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-dashed border-gray-100">
+              <div className="flex items-center gap-3">
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                <div
+                  className="w-2.5 h-2.5 rounded-sm"
+                  style={{ backgroundColor: getDisciplineColor(discipline) }}
+                />
+                <span className="text-foreground font-normal">{discipline}</span>
+                <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full ml-1">
+                  0
+                </span>
+              </div>
+            </div>
+            <div className="px-6 py-8 flex flex-col items-center justify-center gap-3 text-center">
+              <p className="text-sm text-muted-foreground font-normal">
+                No documents in this segment yet.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-normal border-border text-muted-foreground gap-1.5 rounded-lg"
+                onClick={() => {
+                  if (onUploadToDiscipline) {
+                    onUploadToDiscipline(discipline);
+                  }
+                }}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Upload to {discipline}
+              </Button>
             </div>
           </div>
-          <div className="px-6 py-8 flex flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm text-muted-foreground font-normal">No documents in this segment yet.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-normal border-border text-muted-foreground gap-1.5 rounded-lg"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Upload to {discipline}
-            </Button>
-          </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 };
