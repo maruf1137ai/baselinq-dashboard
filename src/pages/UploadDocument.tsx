@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,7 @@ import {
 import { cn } from '@/lib/utils';
 import AiIcon from '@/components/icons/AiIcon';
 import { useS3Upload } from '@/hooks/useS3Upload';
-import { validateFile, postData } from '@/lib/Api';
+import { validateFile, postData, fetchData } from '@/lib/Api';
 import { toast } from 'sonner';
 import useFetch from '@/hooks/useFetch';
 
@@ -43,6 +43,7 @@ export default function UploadDocument() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projectId = localStorage.getItem('selectedProjectId');
+  const [searchParams] = useSearchParams();
 
   const [submitting, setSubmitting] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
@@ -62,6 +63,20 @@ export default function UploadDocument() {
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
+  // Fetch custom disciplines from API
+  const { data: disciplinesData } = useQuery({
+    queryKey: ['project-disciplines', projectId],
+    queryFn: () => fetchData(`projects/${projectId}/disciplines/`),
+    enabled: !!projectId,
+  });
+
+  const customDisciplines = useMemo(() => {
+    return disciplinesData?.custom?.map((d: any) => d.name) || [];
+  }, [disciplinesData]);
+
+  // Read discipline from URL parameter (for pre-fill from segment upload)
+  const disciplineParam = searchParams.get('discipline');
+
   // Auto-generate reference from name
   useEffect(() => {
     if (referenceEdited) return;
@@ -74,6 +89,13 @@ export default function UploadDocument() {
   useEffect(() => {
     if (docType !== 'Certificate') setCertificateSubtype('');
   }, [docType]);
+
+  // Pre-fill discipline from URL parameter
+  useEffect(() => {
+    if (disciplineParam && !discipline) {
+      setDiscipline(disciplineParam);
+    }
+  }, [disciplineParam]);
 
   const { data: capabilities } = useFetch<{
     documentTypes: string[];
@@ -353,6 +375,16 @@ export default function UploadDocument() {
                         {DISCIPLINES.map(d => (
                           <SelectItem key={d} value={d}>{d}</SelectItem>
                         ))}
+                        {customDisciplines.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Custom Segments
+                            </div>
+                            {customDisciplines.map(d => (
+                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
