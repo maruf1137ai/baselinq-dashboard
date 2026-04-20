@@ -37,6 +37,7 @@ import ProjectProtectedRoute from "./components/ProjectProtectedRoute";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
 import DocumentDetail from "./pages/DocumentDetail";
+import UploadDocument from "./pages/UploadDocument";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import AcceptAppointedInvitation from "./pages/AcceptAppointedInvitation";
 import OnboardingDashboard from "./pages/OnboardingDashboard";
@@ -181,6 +182,13 @@ const App = () => (
             <ProtectedRoute>
               <ProjectProtectedRoute>
                 <Documents />
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/documents/upload" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <UploadDocument />
               </ProjectProtectedRoute>
             </ProtectedRoute>
           } />

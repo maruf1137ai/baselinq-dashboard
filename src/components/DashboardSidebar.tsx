@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2 } from "lucide-react";
+import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check } from "lucide-react";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -80,6 +80,12 @@ export function DashboardSidebar() {
   const totalUnread = Array.isArray(channelsData)
     ? channelsData.reduce((sum: number, ch: any) => sum + (ch.unread_count || 0), 0)
     : 0
+
+  const { data: meetingUnreadData } = useFetch<{ count: number }>(
+    selectedProjectId ? `notifications/unread_count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
+    { refetchInterval: 30000 }
+  )
+  const meetingUnread = meetingUnreadData?.count || 0
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -179,25 +185,66 @@ export function DashboardSidebar() {
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
           <div className="p-4">
-            <div
-              className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 cursor-pointer hover:bg-white transition-colors group"
-              onClick={() => {
-                if (location.pathname.startsWith("/account")) {
-                  navigate("/account");
-                } else {
-                  navigate("/");
-                }
-              }}
-            >
-              <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
-                <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+            {location.pathname.startsWith("/account") ? (
+              <div
+                className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 cursor-pointer hover:bg-white transition-colors group"
+                onClick={() => navigate("/account")}
+              >
+                <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
+                  <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <h1 className="text-sm font-regular text-foreground aeonik truncate">
+                    baselinq
+                  </h1>
+                </div>
               </div>
-              <div className="flex-1 min-w-0 text-left">
-                <h1 className="text-sm font-regular text-foreground aeonik truncate">
-                  {selectedProject?.name || "baselinq"}
-                </h1>
-              </div>
-            </div>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 hover:bg-white transition-colors cursor-pointer outline-none">
+                    <div
+                      className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 hover:scale-105 transition-transform"
+                      onClick={(e) => { e.stopPropagation(); navigate("/"); }}
+                    >
+                      <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex items-center gap-1 text-left">
+                      <h1 className="text-sm font-regular text-foreground aeonik truncate flex-1">
+                        {selectedProject?.name || "baselinq"}
+                      </h1>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  sideOffset={4}
+                  className="w-[var(--radix-dropdown-menu-trigger-width)]"
+                >
+                  <DropdownMenuLabel>Projects</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {projects.length === 0 ? (
+                    <DropdownMenuItem disabled>No projects</DropdownMenuItem>
+                  ) : (
+                    projects.map((project: any) => {
+                      const pId = String(project._id || project.id);
+                      const isSelected = pId === selectedProjectId;
+                      return (
+                        <DropdownMenuItem
+                          key={pId}
+                          onClick={() => handleProjectSelect(project)}
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                          <span className={isSelected ? "font-medium" : "pl-[18px]"}>{project.name}</span>
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           <div className="flex-1 overflow-auto px-2">
@@ -212,7 +259,7 @@ export function DashboardSidebar() {
                     {[
                       { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" />, show: true },
                       { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" />, show: true },
-                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" />, show: user?.account_type === "organisation" || can("manageSettings") },
+                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" />, show: user?.account_type === "organisation" },
                     ].filter(item => item.show).map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
@@ -245,7 +292,10 @@ export function DashboardSidebar() {
                         const isActive = item.url === "/"
                           ? location.pathname === "/"
                           : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                        const badge = item.title === "Communications" && totalUnread > 0 ? totalUnread : 0;
+                        const badge =
+                          item.title === "Communications" && totalUnread > 0 ? totalUnread :
+                          item.title === "Meetings" && meetingUnread > 0 ? meetingUnread :
+                          0;
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton

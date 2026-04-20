@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, invitePersonnel, postData } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, invitePersonnel, postData, createAssociatedCompany } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
@@ -654,14 +654,18 @@ export default function CreateProject() {
     if (toInvite.length > 0) toast.success(`Appointed company invitation(s) sent`);
   };
 
-  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[]) => {
+  const handleAddPersonnelToProject = async (projectId: number | string, personnel: AssignedPersonnel[], associated_company_id?: number) => {
     const toAdd = personnel.filter(e => e.userId);
     if (toAdd.length === 0) return;
     await Promise.all(toAdd.map(async (entry) => {
       try {
         await postData({
           url: `projects/${projectId}/team-members/`,
-          data: { userId: entry.userId, roleName: entry.position || entry.role || "Member" },
+          data: {
+            userId: entry.userId,
+            roleName: entry.position || entry.role || "Member",
+            ...(associated_company_id ? { associated_company_id } : {}),
+          },
         });
       } catch (err: any) {
         const msg = err?.response?.data?.error || err?.message || "Unknown error";
@@ -1042,7 +1046,27 @@ export default function CreateProject() {
           await handleInviteClient(pId);
         }
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
-        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot);
+
+        // For non-client users: register their own org as an associated company
+        // so it appears in Settings > Associated Companies
+        let associatedCompanyId: number | undefined;
+        if (!isClientOrContractor && appointedForm.company_name.trim() && pId) {
+          try {
+            const principal = appointedPersonnelList.find(x => x.role === "Principal Architect");
+            const result = await createAssociatedCompany(pId, {
+              company_name: appointedForm.company_name,
+              company_type: appointedForm.company_type,
+              role: appointedForm.role_as_per_appointment || appointedForm.company_type,
+              contact_name: principal?.name || "",
+              contact_email: principal?.email || "",
+            });
+            associatedCompanyId = result.id;
+          } catch {
+            // Non-critical — project is already created
+          }
+        }
+
+        if (pId) await handleAddPersonnelToProject(pId, personnelSnapshot, associatedCompanyId);
 
         // Send personnel invites now that we have a project_id
         if (pId && invitedPersonnelSnapshot.length > 0) {

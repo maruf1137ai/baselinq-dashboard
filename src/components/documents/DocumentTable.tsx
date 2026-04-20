@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import {
   MoreVertical,
   ChevronDown,
@@ -22,12 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export interface ApiDocument {
   _id: string;
@@ -61,61 +54,6 @@ export interface ApiDocument {
   };
 }
 
-interface TooltipWrapperProps {
-  children: React.ReactNode;
-  content: string;
-}
-
-const TooltipWrapper = ({ children, content }: TooltipWrapperProps) => (
-  <TooltipProvider>
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent className="bg-[#1e293b] text-white border-0 text-xs">
-        {content}
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
-
-// Generate version history from a version string like "v3" → ["v1", "v2", "v3"]
-const generateVersionHistory = (version: string): string[] => {
-  if (!version) return ['v1'];
-  const match = version.match(/^v(\d+)$/i);
-  if (!match) return [version];
-  const num = parseInt(match[1], 10);
-  return Array.from({ length: num }, (_, i) => `v${i + 1}`);
-};
-
-// Universal revision pills — works for both drawings (letters) and other docs (versions)
-const RevisionPills = ({ doc }: { doc: Document }) => {
-  const history = (doc as any).revisionHistory ?? generateVersionHistory((doc as any).version ?? (doc as any).currentVersion);
-  const current = (doc as any).revision ?? history[history.length - 1];
-  const overflow = Math.max(0, history.length - 3);
-  const visible = history.slice(-3);
-
-  return (
-    <TooltipWrapper content={`Revisions: ${history.join(' → ')}`}>
-      <div className="flex items-center gap-1">
-        {overflow > 0 && (
-          <span className="text-xs text-muted-foreground font-medium">+{overflow}</span>
-        )}
-        {visible.map((rev) => (
-          <div
-            key={rev}
-            className={cn(
-              'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border transition-all',
-              rev === current
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-muted-foreground border-border'
-            )}
-          >
-            {rev}
-          </div>
-        ))}
-      </div>
-    </TooltipWrapper>
-  );
-};
 
 interface DocumentTableProps {
   documents: ApiDocument[];
@@ -247,7 +185,9 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     </div>
 
                     <div className="w-28 shrink-0">
-                      <RevisionPills doc={doc as any} />
+                      <span className="text-sm text-muted-foreground font-normal">
+                        {doc.currentVersion || ''}
+                      </span>
                     </div>
 
                     <span className="text-muted-foreground text-sm w-28 shrink-0 text-right font-normal whitespace-nowrap">

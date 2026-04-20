@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -16,7 +17,6 @@ import {
   FileText,
   CheckCircle2,
   FileClock,
-  Info,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
@@ -33,6 +33,7 @@ interface VersionUploadModalProps {
 }
 
 export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, onClose, document: doc, onSuccess }) => {
+  const [versionName, setVersionName] = useState('');
   const [changelog, setChangelog] = useState('');
   const [notifyTeam, setNotifyTeam] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +58,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
 
   const handleClose = () => {
     s3Upload.entries.forEach((entry) => s3Upload.removeEntry(entry.id));
+    setVersionName('');
     setChangelog('');
     setNotifyTeam(true);
     setSubmitting(false);
@@ -64,6 +66,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
   };
 
   const handleSubmit = async () => {
+    if (!versionName.trim()) { toast.error('Version name is required'); return; }
     if (s3Upload.entries.length === 0) return;
     const entry = s3Upload.entries[0];
     if (entry.status !== 'done' || !entry.s3Key) {
@@ -79,6 +82,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
           s3_key: entry.s3Key,
           file_name: entry.file.name,
           file_size: entry.file.size,
+          version_name: versionName.trim() || undefined,
           changelog: changelog.trim() || undefined,
           notify_team: notifyTeam,
         },
@@ -97,8 +101,6 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
   if (!doc) return null;
 
   const entry = s3Upload.entries[0];
-  const currentVersion = doc.currentVersion || doc.version || 'v1';
-  const nextVersionNum = parseInt(currentVersion.replace(/\D/g, '') || '1') + 1;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -116,14 +118,6 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
         </DialogHeader>
 
         <div className="p-8 space-y-6">
-          <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start gap-3">
-            <Info className="h-4 w-4 text-blue-500 mt-0.5" />
-            <div className="text-xs text-blue-700 leading-relaxed">
-              Uploading a new version will increment <strong>{currentVersion} &rarr; v{nextVersionNum}</strong>.
-              The previous version will be archived and accessible in version history.
-            </div>
-          </div>
-
           <div className="space-y-4">
             {!entry ? (
               <div
@@ -177,7 +171,19 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
             )}
 
             <div className="space-y-2">
-              <Label className="text-xs font-normal text-gray-400 uppercase block">Changelog</Label>
+              <Label className="text-sm font-normal text-muted-foreground block">
+                Version Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={versionName}
+                onChange={(e) => setVersionName(e.target.value)}
+                placeholder="e.g. Rev A, Issue 1, P1"
+                className="h-10 border-border rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-normal text-muted-foreground block">Changelog</Label>
               <Textarea
                 value={changelog}
                 onChange={(e) => setChangelog(e.target.value)}
@@ -200,7 +206,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
           <Button variant="outline" onClick={handleClose} disabled={submitting} className="flex-1 font-normal h-11 border-gray-200 bg-white">Cancel</Button>
           <Button
             onClick={handleSubmit}
-            disabled={!entry || entry.status !== 'done' || submitting}
+            disabled={!entry || entry.status !== 'done' || submitting || !versionName.trim()}
             className="flex-1 font-normal h-11 shadow-lg shadow-primary/20 gap-2"
           >
             {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</> : <><CheckCircle2 className="h-4 w-4" /> Finish</>}

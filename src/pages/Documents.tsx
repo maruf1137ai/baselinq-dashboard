@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, ChevronDown, X } from 'lucide-react';
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal';
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -36,7 +35,6 @@ const Documents = () => {
   const projectId = localStorage.getItem('selectedProjectId');
 
   const [isAskOpen, setIsAskOpen] = useState(false);
-  const [isUploadDocumentModalOpen, setIsUploadDocumentModalOpen] = useState(false);
   const [isVersionUploadModalOpen, setIsVersionUploadModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isAddingSegment, setIsAddingSegment] = useState(false);
@@ -44,7 +42,6 @@ const Documents = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [docToDelete, setDocToDelete] = useState<any>(null);
-  const [preselectedDiscipline, setPreselectedDiscipline] = useState<string>('');
 
   // Fetch custom disciplines from API
   const { data: disciplinesData } = useQuery({
@@ -193,20 +190,8 @@ const Documents = () => {
     deleteCustomDiscipline(name);
   };
 
-  const handleUploadSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
-    setIsUploadDocumentModalOpen(false);
-    setPreselectedDiscipline('');
-  };
-
   const handleOpenUploadWithDiscipline = (disciplineName: string) => {
-    setPreselectedDiscipline(disciplineName);
-    setIsUploadDocumentModalOpen(true);
-  };
-
-  const handleCloseUploadModal = () => {
-    setIsUploadDocumentModalOpen(false);
-    setPreselectedDiscipline('');
+    navigate(`/documents/upload?discipline=${encodeURIComponent(disciplineName)}`);
   };
 
 
@@ -214,7 +199,7 @@ const Documents = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-8 p-4">
+      <div className="max-w-[1600px] mx-auto space-y-4 p-4">
         <AskRegulationsDrawer
           isOpen={isAskOpen}
           onClose={() => setIsAskOpen(false)}
@@ -249,7 +234,7 @@ const Documents = () => {
             {canUploadAny && (
               <Button
                 className="bg-primary text-white hover:opacity-90 transition-all rounded-lg h-9 px-4 font-normal"
-                onClick={() => setIsUploadDocumentModalOpen(true)}
+                onClick={() => navigate('/documents/upload')}
               >
                 <Plus className="w-5 h-5 mr-1" />
                 Upload
@@ -339,7 +324,7 @@ const Documents = () => {
         )} */}
 
         {/* Filters & Discipline Pills — dynamic */}
-        <div className="flex flex-row gap-6 pt-4 justify-between">
+        <div className="flex flex-row gap-6 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground mr-2 font-normal">Discipline</span>
 
@@ -467,14 +452,6 @@ const Documents = () => {
           />
         </div>
       </div>
-
-      <UploadDocumentModal
-        isOpen={isUploadDocumentModalOpen}
-        onClose={handleCloseUploadModal}
-        onSuccess={handleUploadSuccess}
-        initialDiscipline={preselectedDiscipline}
-        customDisciplines={customDisciplines}
-      />
 
       <VersionUploadModal
         isOpen={isVersionUploadModalOpen}
