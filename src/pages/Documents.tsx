@@ -9,7 +9,7 @@ import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal'
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { fetchData, deleteData } from '@/lib/Api';
+import { fetchData, deleteData, postData } from '@/lib/Api';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -39,12 +39,23 @@ const Documents = () => {
   const [isUploadDocumentModalOpen, setIsUploadDocumentModalOpen] = useState(false);
   const [isVersionUploadModalOpen, setIsVersionUploadModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
-  const [customDisciplines, setCustomDisciplines] = useState<string[]>([]);
   const [isAddingSegment, setIsAddingSegment] = useState(false);
   const [newSegmentName, setNewSegmentName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [preselectedDiscipline, setPreselectedDiscipline] = useState<string>('');
+
+  // Fetch custom disciplines from API
+  const { data: disciplinesData } = useQuery({
+    queryKey: ['project-disciplines', projectId],
+    queryFn: () => fetchData(`projects/${projectId}/disciplines/`),
+    enabled: !!projectId,
+  });
+
+  const customDisciplines = useMemo(() => {
+    return disciplinesData?.custom?.map((d: any) => d.name) || [];
+  }, [disciplinesData]);
 
   // Summary stats from backend
   const { data: summaryData } = useQuery({
@@ -72,6 +83,30 @@ const Documents = () => {
       setDocToDelete(null);
     },
     onError: () => toast.error('Failed to delete document.'),
+  });
+
+  // Add segment mutation
+  const { mutate: addCustomDiscipline, isPending: isAddingDiscipline } = useMutation({
+    mutationFn: (name: string) =>
+      postData({ url: `projects/${projectId}/disciplines/`, data: { name } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-disciplines', projectId] });
+      toast.success('Segment added successfully.');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to add segment.');
+    },
+  });
+
+  // Delete segment mutation
+  const { mutate: deleteCustomDiscipline, isPending: isDeletingDiscipline } = useMutation({
+    mutationFn: (name: string) =>
+      deleteData({ url: `projects/${projectId}/disciplines/${encodeURIComponent(name)}/`, data: undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-disciplines', projectId] });
+      toast.success('Segment removed successfully.');
+    },
+    onError: () => toast.error('Failed to remove segment.'),
   });
 
   // Filter & sort state
@@ -142,20 +177,36 @@ const Documents = () => {
 
   const handleAddSegment = () => {
     const name = newSegmentName.trim();
-    if (name && !disciplines.includes(name) && !customDisciplines.includes(name)) {
-      setCustomDisciplines(prev => [...prev, name]);
+    if (!name) {
+      return;
     }
+    if (disciplines.includes(name) || customDisciplines.includes(name)) {
+      toast.error('This segment already exists.');
+      return;
+    }
+    addCustomDiscipline(name);
     setNewSegmentName('');
     setIsAddingSegment(false);
   };
 
   const handleRemoveSegment = (name: string) => {
-    setCustomDisciplines(prev => prev.filter(d => d !== name));
+    deleteCustomDiscipline(name);
   };
 
   const handleUploadSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
     setIsUploadDocumentModalOpen(false);
+    setPreselectedDiscipline('');
+  };
+
+  const handleOpenUploadWithDiscipline = (disciplineName: string) => {
+    setPreselectedDiscipline(disciplineName);
+    setIsUploadDocumentModalOpen(true);
+  };
+
+  const handleCloseUploadModal = () => {
+    setIsUploadDocumentModalOpen(false);
+    setPreselectedDiscipline('');
   };
 
 
@@ -412,14 +463,17 @@ const Documents = () => {
             onVersionUpload={handleVersionUpload}
             onDelete={(doc) => setDocToDelete(doc)}
             customDisciplines={customDisciplines}
+            onUploadToDiscipline={handleOpenUploadWithDiscipline}
           />
         </div>
       </div>
 
       <UploadDocumentModal
         isOpen={isUploadDocumentModalOpen}
-        onClose={() => setIsUploadDocumentModalOpen(false)}
+        onClose={handleCloseUploadModal}
         onSuccess={handleUploadSuccess}
+        initialDiscipline={preselectedDiscipline}
+        customDisciplines={customDisciplines}
       />
 
       <VersionUploadModal
