@@ -324,8 +324,9 @@ const Documents = () => {
         )} */}
 
         {/* Filters & Discipline Pills — dynamic */}
-        <div className="flex flex-row gap-6 justify-between">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3">
+        <div className="flex flex-row gap-6 justify-between items-start">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
             <span className="text-sm text-muted-foreground mr-2 font-normal">Discipline</span>
 
             {disciplines.map((discipline) => (
@@ -343,15 +344,21 @@ const Documents = () => {
               </button>
             ))}
 
-            {customDisciplines.map((discipline) => (
+            {customDisciplines.filter(d => !disciplines.includes(d)).map((discipline) => (
               <div
                 key={discipline}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border border-dashed border-border bg-muted text-muted-foreground whitespace-nowrap group"
+                className={cn(
+                  "flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm transition-all whitespace-nowrap border font-normal group cursor-pointer",
+                  selectedDiscipline === discipline
+                    ? "bg-foreground border-transparent text-white"
+                    : "bg-white border-border text-muted-foreground hover:border-border hover:text-foreground"
+                )}
+                onClick={() => setSelectedDiscipline(discipline)}
               >
                 {discipline}
                 <button
-                  onClick={() => handleRemoveSegment(discipline)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
+                  onClick={(e) => { e.stopPropagation(); handleRemoveSegment(discipline); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 ml-1"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -412,11 +419,11 @@ const Documents = () => {
             </div>
 
           </div> */}
-          <div className="relative flex items-center gap-2">
+          <div className="relative flex items-center gap-2 shrink-0 pt-2">
             <span className="text-xs text-muted-foreground">Sort:</span>
             <button
               onClick={() => setShowSortMenu(v => !v)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal whitespace-nowrap"
             >
               {currentSortLabel} <ChevronDown className="w-4 h-4" />
             </button>
@@ -438,6 +445,7 @@ const Documents = () => {
             )}
           </div>
         </div>
+        </div>
 
         {/* Grouped Document List */}
         <div className="mt-4">
@@ -447,7 +455,7 @@ const Documents = () => {
             onRowClick={handleOpenDetail}
             onVersionUpload={handleVersionUpload}
             onDelete={(doc) => setDocToDelete(doc)}
-            customDisciplines={customDisciplines}
+            customDisciplines={selectedDiscipline === 'All' ? customDisciplines : []}
             onUploadToDiscipline={handleOpenUploadWithDiscipline}
           />
         </div>
