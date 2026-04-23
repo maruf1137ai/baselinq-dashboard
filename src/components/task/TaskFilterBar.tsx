@@ -6,12 +6,12 @@ import { X, User, Users } from 'lucide-react';
 const DOC_TYPES = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'] as const;
 
 const DOC_TYPE_COLORS: Record<string, { active: string; inactive: string }> = {
-  All: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  VO: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  RFI: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  SI: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  DC: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  CPI: { active: 'bg-foreground text-white border-foreground', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  All: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  VO: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  RFI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  SI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  DC: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  CPI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
 };
 
 export interface TaskFilters {

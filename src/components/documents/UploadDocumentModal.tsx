@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,6 @@ import {
   Link2,
   CheckCircle2,
   ChevronRight,
-  ChevronLeft,
   Search,
   AlertCircle,
   Loader2,
@@ -37,6 +36,12 @@ import { useS3Upload } from '@/hooks/useS3Upload';
 import { validateFile, postData } from '@/lib/Api';
 import { toast } from 'sonner';
 import useFetch from '@/hooks/useFetch';
+import {
+  CATEGORIES,
+  CATEGORY_TO_TYPES,
+  DISCIPLINES,
+  type DocCategory,
+} from '@/lib/documentTaxonomy';
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
@@ -46,36 +51,24 @@ interface UploadDocumentModalProps {
   customDisciplines?: string[];
 }
 
-const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certificate'] as const;
-const DISCIPLINES = ['Architectural', 'Structural', 'MEP', 'Civil', 'Environmental'] as const;
-
 export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
   initialDiscipline = '',
-  customDisciplines = [],
 }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Form fields
+  const [category, setCategory] = useState<DocCategory | ''>('');
   const [name, setName] = useState('');
   const [docType, setDocType] = useState<string>('');
   const [discipline, setDiscipline] = useState<string>('');
   const [reference, setReference] = useState('');
-  const [referenceEdited, setReferenceEdited] = useState(false);
   const [description, setDescription] = useState('');
   const [runAiAnalysis, setRunAiAnalysis] = useState(true);
-
-  // Auto-generate reference from name unless user has manually edited it
-  useEffect(() => {
-    if (referenceEdited) return;
-    if (!name.trim()) { setReference(''); return; }
-    const initials = name.trim().split(/\s+/).map(w => w[0].toUpperCase()).join('');
-    const suffix = String(Math.floor(Math.random() * 900) + 100);
-    setReference(`${initials}-${suffix}`);
-  }, [name]);
 
   // Set initial discipline when modal opens with pre-selected discipline
   useEffect(() => {
@@ -83,6 +76,19 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       setDiscipline(initialDiscipline);
     }
   }, [isOpen, initialDiscipline]);
+
+  // Reset docType if it's no longer allowed by the selected category
+  useEffect(() => {
+    if (!category) return;
+    const allowed = CATEGORY_TO_TYPES[category];
+    if (docType && !allowed.includes(docType)) {
+      setDocType('');
+    }
+    // Auto-select when only one type is allowed (Drawings → Drawing)
+    if (!docType && allowed.length === 1) {
+      setDocType(allowed[0]);
+    }
+  }, [category]);
 
   // Step 3 — linking (optional)
   const [linkSearch, setLinkSearch] = useState('');
@@ -110,8 +116,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     projectId ? `projects/${projectId}/tasks/` : '',
     { enabled: !!projectId && showLinking },
   );
-
-  // console.log({ taskResponse })
 
   const allTasks = (taskResponse?.tasks || [])
     .filter((item: any) => !DONE_STATUSES.includes(item.status || ''))
@@ -166,16 +170,27 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     });
   }, [s3Upload]);
 
+  // Validation
+  const missingCategory = !category;
+  const missingType = !docType;
+  const missingDiscipline = !discipline;
+  const missingName = !name.trim();
+  const showFieldErrors = attemptedSubmit;
+  const canSubmit =
+    !missingCategory &&
+    !missingType &&
+    !missingDiscipline &&
+    !missingName &&
+    s3Upload.entries.length > 0 &&
+    !s3Upload.hasUploading;
+
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      toast.error('Document name is required');
-      return;
-    }
-    if (!docType) {
-      toast.error('Document type is required');
-      return;
-    }
-    if (docType === 'Certificate' && !certificateSubtype) {
+    setAttemptedSubmit(true);
+    if (missingName) { toast.error('Document name is required'); return; }
+    if (missingCategory) { toast.error('Category is required'); return; }
+    if (missingType) { toast.error('Type is required'); return; }
+    if (missingDiscipline) { toast.error('Discipline is required'); return; }
+    if (docType === 'Certificate' && uploadableCertSubtypes.length > 0 && !certificateSubtype) {
       toast.error('Certificate type is required');
       return;
     }
@@ -183,7 +198,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       toast.error('Please select a file to upload');
       return;
     }
-
     if (!projectId) {
       toast.error('No project selected');
       return;
@@ -192,7 +206,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     setSubmitting(true);
 
     try {
-      // Wait for all S3 uploads to complete
       const ids = s3Upload.entries.map((e) => e.id);
       const s3Keys = await s3Upload.waitForAll(ids);
 
@@ -200,7 +213,6 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
         .filter((t: any) => selectedLinkIds.includes(t.id))
         .map((t: any) => ({ type: t.type, id: t.id }));
 
-      // Use batch upload endpoint when multiple files
       if (s3Upload.entries.length > 1) {
         const files = s3Upload.entries
           .map((entry) => {
@@ -225,12 +237,11 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             discipline: discipline || '',
             reference: reference || '',
             description: description || '',
-            runAiAnalysis: runAiAnalysis,
+            runAiAnalysis,
             linkIds,
           },
         });
       } else {
-        // Single file — use original endpoint
         const entry = s3Upload.entries[0];
         const s3Key = s3Keys.get(entry.id);
         if (!s3Key) {
@@ -274,17 +285,18 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
 
   const handleClose = () => {
     setShowLinking(false);
+    setCategory('');
     setName('');
     setDocType('');
     setCertificateSubtype('');
     setDiscipline('');
     setReference('');
-    setReferenceEdited(false);
     setDescription('');
     setRunAiAnalysis(true);
     setLinkSearch('');
     setSelectedLinkIds([]);
     setActiveFilter('All');
+    setAttemptedSubmit(false);
     onClose();
   };
 
@@ -295,7 +307,14 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     }
   }, [docType]);
 
-  const canProceedStep1 = s3Upload.entries.length > 0 && !s3Upload.hasUploading;
+  // Document types allowed for the chosen category, intersected with user permissions
+  const allowedTypesForCategory = category ? CATEGORY_TO_TYPES[category] : [];
+  const typeOptions = allowedTypesForCategory.filter((t) =>
+    uploadableDocTypes.length === 0 ? true : uploadableDocTypes.includes(t)
+  );
+
+  const errCls = (missing: boolean) =>
+    showFieldErrors && missing ? 'border-red-400 ring-1 ring-red-300' : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -406,125 +425,165 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             </div>
           )}
 
-          {/* Section 2 — Details & AI */}
+          {/* Section 2 — Details */}
           {uploadableDocTypes.length > 0 && (
-          <div className="space-y-6 text-left">
-            <div>
-              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
-                Document Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="e.g. Main Contract Agreement"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6 text-left">
+              {/* Category pill selector */}
               <div>
                 <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
-                  Document Type <span className="text-red-500">*</span>
+                  Category <span className="text-red-500">*</span>
                 </Label>
-                <Select value={docType} onValueChange={setDocType}>
-                  <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOCUMENT_TYPES.filter(t => uploadableDocTypes.includes(t)).map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div
+                  className={cn(
+                    "inline-flex gap-2 p-1 rounded-xl border",
+                    showFieldErrors && missingCategory ? "border-red-400" : "border-gray-200"
+                  )}
+                >
+                  {CATEGORIES.map((c) => {
+                    const active = category === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategory(c)}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-normal transition-all border",
+                          active
+                            ? "bg-primary/10 border-primary text-primary"
+                            : "bg-white border-transparent text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+                {showFieldErrors && missingCategory && (
+                  <p className="text-xs text-red-500 mt-1.5">Category is required</p>
+                )}
               </div>
-              <div>
-                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">Discipline</Label>
-                <Select value={discipline} onValueChange={setDiscipline}>
-                  <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
-                    <SelectValue placeholder="Select discipline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DISCIPLINES.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                    {customDisciplines.length > 0 && (
-                      <>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
-                          Custom Segments
-                        </div>
-                        {customDisciplines.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
-              <div>
-                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
-                  Certificate Type <span className="text-red-500">*</span>
-                </Label>
-                <Select value={certificateSubtype} onValueChange={setCertificateSubtype}>
-                  <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
-                    <SelectValue placeholder="Select certificate type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uploadableCertSubtypes.map((subtype) => (
-                      <SelectItem key={subtype} value={subtype}>{subtype} Certificate</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div>
-              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
-                Reference Number
-              </Label>
-              <Input
-                placeholder="Auto-generated from name"
-                value={reference}
-                onChange={(e) => { setReferenceEdited(true); setReference(e.target.value); }}
-                className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
-                Description (Optional)
-              </Label>
-              <Textarea
-                placeholder="Brief summary of the document contents..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[100px] border-gray-200 rounded-xl focus:ring-primary/20 p-4"
-              />
-            </div>
-
-            <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary">
-                  <AiIcon size={24} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                    Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={docType} onValueChange={setDocType} disabled={!category}>
+                    <SelectTrigger
+                      className={cn(
+                        "h-12 border-gray-200 rounded-xl focus:ring-primary/20",
+                        errCls(missingType)
+                      )}
+                    >
+                      <SelectValue placeholder={category ? "Select type" : "Select category first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {typeOptions.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <p className="text-sm font-normal text-gray-900">Run AI Analysis</p>
-                  <p className="text-xs text-gray-500 max-w-[280px]">
-                    Automatically extract obligations, flags, and clause references.
-                  </p>
+                  <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                    Discipline <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={discipline} onValueChange={setDiscipline}>
+                    <SelectTrigger
+                      className={cn(
+                        "h-12 border-gray-200 rounded-xl focus:ring-primary/20",
+                        errCls(missingDiscipline)
+                      )}
+                    >
+                      <SelectValue placeholder="Select discipline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DISCIPLINES.map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <Switch
-                checked={runAiAnalysis}
-                onCheckedChange={(checked) => {
-                  setRunAiAnalysis(checked);
-                  postData({ url: 'documents/run-ai/', data: { runAiAnalysis: checked } }).catch(() => {});
-                }}
-              />
+
+              {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
+                <div>
+                  <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                    Certificate Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={certificateSubtype} onValueChange={setCertificateSubtype}>
+                    <SelectTrigger className="h-12 border-gray-200 rounded-xl focus:ring-primary/20">
+                      <SelectValue placeholder="Select certificate type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uploadableCertSubtypes.map((subtype) => (
+                        <SelectItem key={subtype} value={subtype}>{subtype} Certificate</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                  Document Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="e.g. Main Contract Agreement"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={cn(
+                    "h-12 border-gray-200 rounded-xl focus:ring-primary/20",
+                    errCls(missingName)
+                  )}
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                  Reference
+                </Label>
+                <Input
+                  placeholder="e.g. ARC-DWG-0042"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  className="h-12 border-gray-200 rounded-xl focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-normal text-gray-400 normal-case mb-2 block">
+                  Description (Optional)
+                </Label>
+                <Textarea
+                  placeholder="Brief summary of the document contents..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[100px] border-gray-200 rounded-xl focus:ring-primary/20 p-4"
+                />
+              </div>
+
+              <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary">
+                    <AiIcon size={24} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-normal text-gray-900">Run AI Analysis</p>
+                    <p className="text-xs text-gray-500 max-w-[280px]">
+                      Automatically extract obligations, flags, and clause references.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={runAiAnalysis}
+                  onCheckedChange={(checked) => {
+                    setRunAiAnalysis(checked);
+                    postData({ url: 'documents/run-ai/', data: { runAiAnalysis: checked } }).catch(() => {});
+                  }}
+                />
+              </div>
             </div>
-          </div>
           )}
 
           <div className="h-px bg-gray-100 w-full" />
@@ -632,7 +691,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <Button
             onClick={handleSubmit}
             className="font-normal h-10 px-6 gap-2"
-            disabled={submitting || s3Upload.entries.length === 0 || s3Upload.hasUploading}
+            disabled={submitting || !canSubmit}
           >
             {submitting ? (
               <>
