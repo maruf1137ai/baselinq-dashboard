@@ -93,12 +93,13 @@ export const InsuranceBanner = () => {
 
   const handleClick = () => {
     // Pre-fill the upload form for an insurance certificate.
-    // The upload page reads `discipline` from the query string; we also
-    // pass `type` and `certificateSubtype` which the upload page can
-    // honour in a follow-up (for now the user just picks Category = Documents
-    // and Type = Certificate manually — the discipline prefill is the
-    // most useful bit).
-    const qs = new URLSearchParams();
+    // UploadDocument.tsx reads these query params and populates the form.
+    const qs = new URLSearchParams({
+      category: 'Documents',
+      type: 'Certificate',
+      certificateSubtype: 'Insurance',
+      namePrefill: 'Professional Insurance Certificate',
+    });
     const profession =
       (user.role?.name || user.profile?.professional_body) ?? '';
     if (profession) qs.set('discipline', profession);

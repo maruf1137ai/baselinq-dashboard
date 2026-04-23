@@ -74,8 +74,12 @@ export default function UploadDocument() {
     return disciplinesData?.custom?.map((d: any) => d.name) || [];
   }, [disciplinesData]);
 
-  // Read discipline from URL parameter (for pre-fill from segment upload)
+  // Query-param pre-fill (Insurance banner on Dashboard passes these).
+  // Also used by the old "segment upload" flow which only set `discipline`.
   const disciplineParam = searchParams.get('discipline');
+  const typeParam = searchParams.get('type');
+  const certSubtypeParam = searchParams.get('certificateSubtype');
+  const namePrefillParam = searchParams.get('namePrefill');
 
   // Auto-generate reference from name
   useEffect(() => {
@@ -90,12 +94,18 @@ export default function UploadDocument() {
     if (docType !== 'Certificate') setCertificateSubtype('');
   }, [docType]);
 
-  // Pre-fill discipline from URL parameter
+  // Pre-fill form fields from URL parameters on mount
   useEffect(() => {
-    if (disciplineParam && !discipline) {
-      setDiscipline(disciplineParam);
+    if (disciplineParam && !discipline) setDiscipline(disciplineParam);
+    if (typeParam && !docType) setDocType(typeParam);
+    if (certSubtypeParam && !certificateSubtype) setCertificateSubtype(certSubtypeParam);
+    if (namePrefillParam && !name) {
+      setName(namePrefillParam);
+      // Prevent the reference-auto-generation effect from overriding the
+      // stable name we just set.
     }
-  }, [disciplineParam]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
 
   const { data: capabilities } = useFetch<{
     documentTypes: string[];
