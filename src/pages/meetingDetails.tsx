@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronDown, Calendar, MapPin, Users, FileText, MoreHorizontal, Loader2, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,14 +10,16 @@ import {
 import AiIcon from "@/components/icons/AiIcon";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 
-import { isMeetingPast, isMeetingPastUTC, formatMeetingDateTime } from "@/lib/dateUtils";
+import { formatMeetingDateTime } from "@/lib/dateUtils";
+import { LifecycleBadge, ArtefactBadge } from "@/components/meetings/MeetingStatusBadges";
+import type { LifecycleStatus, ArtefactStatus } from "@/components/meetings/MeetingStatusBadges";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
@@ -25,7 +28,8 @@ interface TranscriptSegment { id: number; speaker: string; time: string; text: s
 interface MeetingDetail {
   id: number;
   title: string;
-  status: string;
+  status: LifecycleStatus;
+  artefact_status: ArtefactStatus;
   date: string;
   date_display: string;
   time: string;
@@ -87,10 +91,19 @@ export default function MeetingDetails() {
   const [showTranscript, setShowTranscript] = useState(false);
   const [approvingIndex, setApprovingIndex] = useState<number | null>(null);
   const [aiNotesOpen, setAiNotesOpen] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [outcomeDismissed, setOutcomeDismissed] = useState(false);
   const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
   const { data: meeting, isLoading, isError, refetch } = useFetch<MeetingDetail>(
-    id ? `meetings/${id}/` : null
+    id ? `meetings/${id}/` : null,
+    {
+      refetchInterval: (query: any) => {
+        const s = query?.state?.data?.status;
+        return s === "starting_soon" || s === "live" ? 10000 : false;
+      },
+    }
   );
 
   const handleApprove = async (item: ActionItem, index: number) => {
@@ -114,6 +127,19 @@ export default function MeetingDetails() {
     }
   };
 
+  const handleStatusUpdate = async (newStatus: string) => {
+    setStatusUpdating(true);
+    try {
+      await patchRequest({ url: `meetings/${id}/`, data: { status: newStatus } });
+      await refetch();
+      toast.success(`Meeting marked as ${newStatus.replace("_", " ")}.`);
+    } catch {
+      toast.error("Failed to update meeting status.");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -133,9 +159,9 @@ export default function MeetingDetails() {
     );
   }
 
-  const isCompleted = meeting.status === "completed";
-  const isOccurred = meeting.status === "occurred" || (!isCompleted && (isMeetingPastUTC(meeting.scheduled_utc) || isMeetingPast(meeting.date, meeting.time)));
-  const hasAiNotes = isCompleted && !!meeting.summary?.overview;
+  const isCompleted  = meeting.status === "completed";
+  const isPast       = isCompleted || meeting.status === "no_show";
+  const hasAiNotes   = meeting.artefact_status === "notes_ready";
 
   return (
     <DashboardLayout>
@@ -151,14 +177,21 @@ export default function MeetingDetails() {
 
         {/* Header */}
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-normal tracking-tight text-foreground">{meeting.title}</h1>
-            {isCompleted ? (
-              <Badge className="bg-green-50 text-green-700 border-0 text-xs px-2 py-0.5 rounded-full">Completed</Badge>
-            ) : isOccurred ? (
-              <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full">Occurred</Badge>
-            ) : (
-              <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-normal tracking-tight text-foreground">{meeting.title}</h1>
+              <LifecycleBadge status={meeting.status} />
+              {isCompleted && <ArtefactBadge artefactStatus={meeting.artefact_status} />}
+            </div>
+            {(meeting.status === "scheduled" || meeting.status === "starting_soon") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleStatusUpdate("cancelled")}
+                disabled={statusUpdating}
+              >
+                Cancel Meeting
+              </Button>
             )}
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
@@ -188,15 +221,15 @@ export default function MeetingDetails() {
           </div>
         </div>
 
-        {/* AI Summary — for occurred and completed meetings */}
-        {(isCompleted || isOccurred) && (
+        {/* AI Summary — for completed/no-show meetings */}
+        {isPast && (
           <div className="p-4 border border-border rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
                 <AiIcon size={16} className="text-primary" />
                 <h2 className="text-sm font-medium text-foreground">AI Summary</h2>
               </div>
-              {!hasAiNotes && (
+              {(meeting.artefact_status === "none" || meeting.artefact_status === "transcribed") && (
                 <button
                   onClick={() => setAiNotesOpen(true)}
                   className="text-xs text-primary hover:underline flex items-center gap-1"
@@ -205,6 +238,10 @@ export default function MeetingDetails() {
                 </button>
               )}
             </div>
+
+            {meeting.artefact_status === "processing" && (
+              <p className="text-sm text-muted-foreground">Transcript is being processed, notes will appear shortly...</p>
+            )}
 
             {hasAiNotes ? (
               <>
@@ -218,11 +255,11 @@ export default function MeetingDetails() {
                   ))}
                 </div>
               </>
-            ) : (
+            ) : meeting.artefact_status !== "processing" ? (
               <p className="text-sm text-muted-foreground">
                 No AI notes yet. Click "Generate AI Notes" to create a summary from the meeting transcript.
               </p>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -353,8 +390,41 @@ export default function MeetingDetails() {
           </div>
         )}
 
+        {/* Pending outcome — no_show */}
+        {meeting.status === "no_show" && !outcomeDismissed && (
+          <div className="p-6 border border-amber-200 bg-amber-50 rounded-lg">
+            <p className="text-sm font-medium text-amber-800 mb-1">Awaiting outcome</p>
+            <p className="text-sm text-amber-700 mb-4">The scheduled time has passed. What happened with this meeting?</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleStatusUpdate("completed")}
+                disabled={statusUpdating}
+              >
+                Mark as Completed
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleStatusUpdate("cancelled")}
+                disabled={statusUpdating}
+              >
+                Mark as Cancelled
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOutcomeDismissed(true)}
+                disabled={statusUpdating}
+              >
+                Confirm No Show
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Upcoming meeting placeholder */}
-        {!isCompleted && !isOccurred && (
+        {!isPast && meeting.status !== "no_show" && (
           <div className="p-8 border border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
             Meeting details will appear here once the meeting is completed and AI notes are generated.
           </div>

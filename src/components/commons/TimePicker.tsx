@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
 
 export function TimePicker({ time, setTime }: any) {
@@ -18,6 +19,7 @@ export function TimePicker({ time, setTime }: any) {
   const [tempHour, setTempHour] = useState("12");
   const [tempMinute, setTempMinute] = useState("00");
   const [tempMeridiem, setTempMeridiem] = useState("AM");
+  const [customMinute, setCustomMinute] = useState("");
 
   const applyTime = () => {
     const formatted = `${tempHour}:${tempMinute} ${tempMeridiem}`;
@@ -65,14 +67,32 @@ export function TimePicker({ time, setTime }: any) {
               {minutes.map((m) => (
                 <button
                   key={m}
-                  onClick={() => setTempMinute(m)}
+                  onClick={() => { setTempMinute(m); setCustomMinute(""); }}
                   className={`
                     py-1 rounded-md border text-sm
-                    ${tempMinute === m ? "bg-primary text-white" : ""}
+                    ${tempMinute === m && !customMinute ? "bg-primary text-white" : ""}
                   `}>
                   {m}
                 </button>
               ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                placeholder="Custom (0–59)"
+                value={customMinute}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomMinute(val);
+                  const n = parseInt(val);
+                  if (!isNaN(n) && n >= 0 && n <= 59) {
+                    setTempMinute(String(n).padStart(2, "0"));
+                  }
+                }}
+                className="h-8 text-sm"
+              />
             </div>
           </div>
 

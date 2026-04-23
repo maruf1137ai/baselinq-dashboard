@@ -1,19 +1,20 @@
 import { Calendar, MapPin, Search } from "lucide-react";
-import AiIcon from "@/components/icons/AiIcon";
 import React, { useState } from "react";
 import { Input } from "../ui/input";
 import { Link } from "react-router-dom";
 import { ScheduleNewMeetingDialog } from "./scheduleMeetingDialog";
-import { Badge } from "../ui/badge";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { isMeetingPastUTC, formatMeetingDateTime, isMeetingPast } from "@/lib/dateUtils";
+import { formatMeetingDateTime } from "@/lib/dateUtils";
+import { LifecycleBadge, ArtefactBadge } from "./MeetingStatusBadges";
+import type { LifecycleStatus, ArtefactStatus } from "./MeetingStatusBadges";
 import type { Notification } from "@/types/notification";
 
 interface Meeting {
   id: number;
   title: string;
-  status: "scheduled" | "held" | "cancelled" | "occurred" | "completed";
+  status: LifecycleStatus;
+  artefact_status: ArtefactStatus;
   date: string;
   time: string;
   date_time: string;
@@ -23,30 +24,21 @@ interface Meeting {
   attendees: string[];
   extra_attendees: number;
   ai_notes: boolean;
-  is_completed?: boolean;
 }
-
-
-
-const StatusBadge = ({ item }: { item: Meeting }) => {
-  if (item.status === "cancelled") {
-    return <Badge className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full">Cancelled</Badge>;
-  }
-  if (item.status === "completed") {
-    return <Badge className="bg-green-50 text-green-700 border border-green-200 text-xs px-2 py-0.5 rounded-full">Completed</Badge>;
-  }
-  if (item.status === "occurred" || isMeetingPastUTC(item.scheduled_utc) || isMeetingPast(item.date, item.time)) {
-    return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full">Occurred</Badge>;
-  }
-  return <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>;
-};
 
 export default function MeetingsList() {
   const [searchQuery, setSearchQuery] = useState("");
   const projectId = localStorage.getItem("selectedProjectId");
 
   const { data, isLoading, refetch } = useFetch<any>(
-    projectId ? `meetings/?project_id=${projectId}` : null
+    projectId ? `meetings/?project_id=${projectId}` : null,
+    {
+      refetchInterval: (query: any) => {
+        const list: any[] = Array.isArray(query?.state?.data) ? query.state.data : (query?.state?.data?.results ?? []);
+        const hasActive = list.some((m: any) => m.status === "starting_soon" || m.status === "live");
+        return hasActive ? 10000 : false;
+      },
+    }
   );
 
   const { data: unreadNotifs } = useFetch<Notification[]>(
@@ -59,26 +51,26 @@ export default function MeetingsList() {
       .filter(Boolean)
   );
 
-  const meetings: Meeting[] = (Array.isArray(data) ? data : (data?.results ?? [])).map((m: any) => ({
-    ...m,
-    is_completed: m.status === "completed" || m.status === "occurred" || isMeetingPastUTC(m.scheduled_utc) || isMeetingPast(m.date, m.time)
-  }));
+  const meetings: Meeting[] = Array.isArray(data) ? data : (data?.results ?? []);
 
-  const upcoming = meetings.filter((m) => !m.is_completed && m.status !== "cancelled");
-  const completed = meetings.filter((m) => m.is_completed && m.status !== "cancelled");
+  const upcoming   = meetings.filter((m) => m.status === "scheduled" || m.status === "starting_soon" || m.status === "live");
+  const completed  = meetings.filter((m) => m.status === "completed");
+  const noShows    = meetings.filter((m) => m.status === "no_show");
+  const cancelled  = meetings.filter((m) => m.status === "cancelled");
 
   const filterMeetings = (list: Meeting[]) => {
     if (!searchQuery) return list;
     const q = searchQuery.toLowerCase();
     return list.filter(
-      (m) =>
-        m.title.toLowerCase().includes(q) ||
-        m.location.toLowerCase().includes(q)
+      (m) => m.title.toLowerCase().includes(q) || m.location.toLowerCase().includes(q)
     );
   };
 
-  const filteredUpcoming = filterMeetings(upcoming);
+  const filteredUpcoming  = filterMeetings(upcoming);
   const filteredCompleted = filterMeetings(completed);
+  const filteredNoShows   = filterMeetings(noShows);
+  const filteredCancelled = filterMeetings(cancelled);
+  const isEmpty = filteredUpcoming.length === 0 && filteredCompleted.length === 0 && filteredNoShows.length === 0 && filteredCancelled.length === 0;
 
   return (
     <div className="space-y-6">
@@ -101,34 +93,53 @@ export default function MeetingsList() {
       {!isLoading && (
         <>
           {filteredUpcoming.length > 0 && (
-            <div>
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">Upcoming</h2>
-              <div className="space-y-2">
-                {filteredUpcoming.map((item) => (
-                  <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
-                ))}
-              </div>
-            </div>
+            <Section title="Upcoming">
+              {filteredUpcoming.map((item) => (
+                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+              ))}
+            </Section>
           )}
 
           {filteredCompleted.length > 0 && (
-            <div>
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">Completed</h2>
-              <div className="space-y-2">
-                {filteredCompleted.map((item) => (
-                  <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
-                ))}
-              </div>
-            </div>
+            <Section title="Completed">
+              {filteredCompleted.map((item) => (
+                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+              ))}
+            </Section>
           )}
 
-          {filteredUpcoming.length === 0 && filteredCompleted.length === 0 && (
+          {filteredNoShows.length > 0 && (
+            <Section title="No Show">
+              {filteredNoShows.map((item) => (
+                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+              ))}
+            </Section>
+          )}
+
+          {filteredCancelled.length > 0 && (
+            <Section title="Cancelled">
+              {filteredCancelled.map((item) => (
+                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+              ))}
+            </Section>
+          )}
+
+          {isEmpty && (
             <div className="text-center py-20 text-sm text-muted-foreground">
               No meetings found
             </div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h2 className="text-sm font-medium text-muted-foreground mb-3">{title}</h2>
+      <div className="space-y-2">{children}</div>
     </div>
   );
 }
@@ -143,11 +154,9 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
         <div className="flex items-center gap-2 min-w-0">
           {isUnread && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
           <h3 className="text-sm font-medium text-foreground truncate">{item.title}</h3>
-          <StatusBadge item={item} />
-          {item.ai_notes && (
-            <span className="flex items-center gap-1 text-xs text-primary shrink-0">
-              <AiIcon size={14} className="text-primary" /> AI Notes
-            </span>
+          <LifecycleBadge status={item.status} />
+          {item.status === "completed" && (
+            <ArtefactBadge artefactStatus={item.artefact_status} />
           )}
         </div>
         <div className="flex items-center gap-2 ml-4 shrink-0">
