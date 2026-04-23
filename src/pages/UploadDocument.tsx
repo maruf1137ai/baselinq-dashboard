@@ -68,19 +68,29 @@ export default function UploadDocument() {
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  // Read discipline from URL parameter (for pre-fill from segment upload)
+  // Query-param pre-fill (Insurance banner on Dashboard passes these;
+  // also used by any deep-link that wants the upload form populated).
   const disciplineParam = searchParams.get('discipline');
+  const typeParam = searchParams.get('type');
+  const certSubtypeParam = searchParams.get('certificateSubtype');
+  const namePrefillParam = searchParams.get('namePrefill');
+  const categoryParam = searchParams.get('category') as DocCategory | null;
 
   useEffect(() => {
     if (docType !== 'Certificate') setCertificateSubtype('');
   }, [docType]);
 
-  // Pre-fill discipline from URL parameter
+  // Pre-fill form fields from URL parameters on mount
   useEffect(() => {
-    if (disciplineParam && !discipline) {
-      setDiscipline(disciplineParam);
+    if (categoryParam && !category && (CATEGORIES as readonly string[]).includes(categoryParam)) {
+      setCategory(categoryParam as DocCategory);
     }
-  }, [disciplineParam]);
+    if (disciplineParam && !discipline) setDiscipline(disciplineParam);
+    if (typeParam && !docType) setDocType(typeParam);
+    if (certSubtypeParam && !certificateSubtype) setCertificateSubtype(certSubtypeParam);
+    if (namePrefillParam && !name) setName(namePrefillParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryParam, disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
 
   // Reset docType if the selected category no longer allows it
   useEffect(() => {
