@@ -8,6 +8,7 @@ import { Badge } from "../ui/badge";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { isMeetingPastUTC, formatMeetingDateTime, isMeetingPast } from "@/lib/dateUtils";
+import type { Notification } from "@/types/notification";
 
 interface Meeting {
   id: number;
@@ -46,6 +47,16 @@ export default function MeetingsList() {
 
   const { data, isLoading, refetch } = useFetch<any>(
     projectId ? `meetings/?project_id=${projectId}` : null
+  );
+
+  const { data: unreadNotifs } = useFetch<Notification[]>(
+    projectId ? `notifications/?unread_only=true&project_id=${projectId}` : null
+  );
+  const unreadMeetingIds = new Set(
+    (Array.isArray(unreadNotifs) ? unreadNotifs : [])
+      .filter((n) => n.type === "meeting_invited" || n.type === "meeting_updated")
+      .map((n) => n.data?.meeting_id)
+      .filter(Boolean)
   );
 
   const meetings: Meeting[] = (Array.isArray(data) ? data : (data?.results ?? [])).map((m: any) => ({
@@ -94,7 +105,7 @@ export default function MeetingsList() {
               <h2 className="text-sm font-medium text-muted-foreground mb-3">Upcoming</h2>
               <div className="space-y-2">
                 {filteredUpcoming.map((item) => (
-                  <MeetingCard key={item.id} item={item} />
+                  <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
                 ))}
               </div>
             </div>
@@ -105,7 +116,7 @@ export default function MeetingsList() {
               <h2 className="text-sm font-medium text-muted-foreground mb-3">Completed</h2>
               <div className="space-y-2">
                 {filteredCompleted.map((item) => (
-                  <MeetingCard key={item.id} item={item} />
+                  <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
                 ))}
               </div>
             </div>
@@ -122,14 +133,15 @@ export default function MeetingsList() {
   );
 }
 
-function MeetingCard({ item }: { item: Meeting }) {
+function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) {
   return (
     <Link
       to={`/meetings/${item.id}`}
-      className="block rounded-lg border border-border px-4 py-3 hover:bg-sidebar transition-colors"
+      className={`block rounded-lg border px-4 py-3 hover:bg-sidebar transition-colors ${isUnread ? "border-primary/40 bg-primary/5" : "border-border"}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
+          {isUnread && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
           <h3 className="text-sm font-medium text-foreground truncate">{item.title}</h3>
           <StatusBadge item={item} />
           {item.ai_notes && (

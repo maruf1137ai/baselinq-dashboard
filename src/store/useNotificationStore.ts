@@ -56,6 +56,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       ),
       unreadCount: Math.max(0, state.unreadCount - 1),
     }));
+    window.dispatchEvent(new Event("notifications-marked-read"));
 
     try {
       await apiMarkAsRead(id);
@@ -75,6 +76,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       })),
       unreadCount: 0,
     }));
+    window.dispatchEvent(new Event("notifications-marked-read"));
 
     try {
       await apiMarkAllAsRead();

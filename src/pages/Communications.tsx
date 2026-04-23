@@ -121,6 +121,7 @@ const Communications = () => {
           data: {}
         });
         queryClient.invalidateQueries({ queryKey: [projectId ? `channels/?projectId=${projectId}` : ""] });
+        window.dispatchEvent(new Event("notifications-marked-read"));
       } catch (err) {
         console.error("Failed to mark channel as read", err);
       }

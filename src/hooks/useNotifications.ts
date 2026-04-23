@@ -41,6 +41,13 @@ export function useNotifications() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sync when anything elsewhere marks notifications as read
+  useEffect(() => {
+    const handler = () => useNotificationStore.getState().refresh();
+    window.addEventListener("notifications-marked-read", handler);
+    return () => window.removeEventListener("notifications-marked-read", handler);
+  }, []);
+
   // Listen for service worker messages (push events + notification clicks)
   useEffect(() => {
     const handler = (event: MessageEvent) => {

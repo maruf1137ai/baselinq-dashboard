@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check } from "lucide-react";
+import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check, Loader2 } from "lucide-react";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -40,6 +40,7 @@ import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 
 const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
@@ -67,6 +68,7 @@ export function DashboardSidebar() {
   const { can } = usePermissions();
   const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
+  const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
   const { setUserRole, clearUserRole } = useUserRoleStore();
@@ -81,11 +83,17 @@ export function DashboardSidebar() {
     ? channelsData.reduce((sum: number, ch: any) => sum + (ch.unread_count || 0), 0)
     : 0
 
-  const { data: meetingUnreadData } = useFetch<{ count: number }>(
+  const { data: meetingUnreadData, refetch: refetchMeetingUnread } = useFetch<{ count: number }>(
     selectedProjectId ? `notifications/unread_count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
     { refetchInterval: 30000 }
   )
   const meetingUnread = meetingUnreadData?.count || 0
+
+  useEffect(() => {
+    const handler = () => refetchMeetingUnread();
+    window.addEventListener("notifications-marked-read", handler);
+    return () => window.removeEventListener("notifications-marked-read", handler);
+  }, [refetchMeetingUnread]);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -168,6 +176,7 @@ export function DashboardSidebar() {
     }
 
     window.dispatchEvent(new Event("project-change"));
+    setIsSwitchingProject(true);
     window.location.reload();
   };
 
@@ -182,6 +191,7 @@ export function DashboardSidebar() {
 
   return (
     <>
+      {isSwitchingProject && <AwesomeLoader fullPage message="Switching Project" />}
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
           <div className="p-4">
@@ -211,7 +221,11 @@ export function DashboardSidebar() {
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-1 text-left">
                       <h1 className="text-sm font-regular text-foreground aeonik truncate flex-1">
-                        {selectedProject?.name || "baselinq"}
+                        {isLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          selectedProject?.name || ""
+                        )}
                       </h1>
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     </div>

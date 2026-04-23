@@ -38,7 +38,7 @@ export function DashboardHeader() {
 
   const handleNotificationClick = async (item: (typeof notifications)[0]) => {
     if (!item.isRead) {
-      await markAsRead(item._id);
+      markAsRead(item._id);
     }
   };
 
