@@ -132,7 +132,8 @@ export default function MeetingDetails() {
     );
   }
 
-  const isCompleted = meeting.status === "held" || isMeetingPast(meeting.date, meeting.time);
+  const isCompleted = meeting.status === "completed";
+  const isOccurred = meeting.status === "occurred" || (!isCompleted && isMeetingPast(meeting.date, meeting.time));
   const hasAiNotes = isCompleted && !!meeting.summary?.overview;
 
   return (
@@ -153,6 +154,8 @@ export default function MeetingDetails() {
             <h1 className="text-2xl font-normal tracking-tight text-foreground">{meeting.title}</h1>
             {isCompleted ? (
               <Badge className="bg-green-50 text-green-700 border-0 text-xs px-2 py-0.5 rounded-full">Completed</Badge>
+            ) : isOccurred ? (
+              <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full">Occurred</Badge>
             ) : (
               <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>
             )}
@@ -184,8 +187,8 @@ export default function MeetingDetails() {
           </div>
         </div>
 
-        {/* AI Summary — only for completed meetings */}
-        {isCompleted && (
+        {/* AI Summary — for occurred and completed meetings */}
+        {(isCompleted || isOccurred) && (
           <div className="p-4 border border-border rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
@@ -350,7 +353,7 @@ export default function MeetingDetails() {
         )}
 
         {/* Upcoming meeting placeholder */}
-        {!isCompleted && (
+        {!isCompleted && !isOccurred && (
           <div className="p-8 border border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
             Meeting details will appear here once the meeting is completed and AI notes are generated.
           </div>

@@ -7,7 +7,9 @@ export type NotificationType =
   | "rfi_created"
   | "dc_created"
   | "cpi_created"
-  | "team_member_added";
+  | "team_member_added"
+  | "meeting_invited"
+  | "meeting_updated";
 
 export interface Notification {
   _id: string;

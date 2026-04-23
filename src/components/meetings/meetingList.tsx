@@ -28,12 +28,14 @@ interface Meeting {
 
 
 const StatusBadge = ({ item }: { item: Meeting }) => {
-  const isCompleted = item.status === "held" || isMeetingPast(item.date, item.time);
   if (item.status === "cancelled") {
     return <Badge className="bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full">Cancelled</Badge>;
   }
-  if (isCompleted) {
+  if (item.status === "completed") {
     return <Badge className="bg-green-50 text-green-700 border border-green-200 text-xs px-2 py-0.5 rounded-full">Completed</Badge>;
+  }
+  if (item.status === "occurred" || isMeetingPast(item.date, item.time)) {
+    return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full">Occurred</Badge>;
   }
   return <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>;
 };
@@ -48,7 +50,7 @@ export default function MeetingsList() {
 
   const meetings: Meeting[] = (Array.isArray(data) ? data : (data?.results ?? [])).map((m: any) => ({
     ...m,
-    is_completed: m.status === "held" || isMeetingPast(m.date, m.time)
+    is_completed: m.status === "completed" || m.status === "occurred" || isMeetingPast(m.date, m.time)
   }));
 
   const upcoming = meetings.filter((m) => !m.is_completed && m.status !== "cancelled");

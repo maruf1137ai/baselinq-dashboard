@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, CalendarIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
@@ -20,11 +20,18 @@ import { patchData, registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function VOForm({ setOpen, initialStatus, initialData, taskId }: any) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [discipline, setDiscipline] = useState(initialData?.discipline || "");
   const [description, setDescription] = useState(initialData?.description || "");
+  const [dateInstructed, setDateInstructed] = useState<Date | undefined>(
+    initialData?.dateInstructed ? new Date(initialData.dateInstructed) : undefined
+  );
   const [items, setItems] = useState(
     initialData?.lineItems?.length
       ? initialData.lineItems.map((li: any) => ({
@@ -113,6 +120,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       tax_rate: taxRate,
       tax_amount: taxAmount,
       grand_total: grandTotal,
+      date_instructed: dateInstructed ? format(dateInstructed, "yyyy-MM-dd") : null,
     };
 
     const handleSuccess = async (result: any) => {
@@ -207,6 +215,29 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div>
+        <Label className="block mb-1">Date of Instruction</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn("w-full justify-start text-left font-normal", !dateInstructed && "text-muted-foreground")}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateInstructed ? format(dateInstructed, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <Calendar
+              mode="single"
+              selected={dateInstructed}
+              onSelect={setDateInstructed}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div>
