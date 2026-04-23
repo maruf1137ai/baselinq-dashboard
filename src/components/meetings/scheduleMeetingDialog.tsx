@@ -28,7 +28,7 @@ import { TimePicker } from "../commons/TimePicker";
 import { usePost } from "@/hooks/usePost";
 import useFetch from "@/hooks/useFetch";
 import { toast } from "sonner";
-import { Check, User, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 const priorityBtns = [
   { id: 1, title: "Low" },
@@ -37,13 +37,17 @@ const priorityBtns = [
 ];
 
 export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void }) {
+  const currentUserId = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}").id as number | undefined; } catch { return undefined; }
+  })();
+
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [priorityBtn, setPriorityBtn] = useState("Low");
   const [meetingLink, setMeetingLink] = useState("");
-  const [selectedAttendees, setSelectedAttendees] = useState<number[]>([]);
+  const [selectedAttendees, setSelectedAttendees] = useState<number[]>(currentUserId ? [currentUserId] : []);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const projectId = localStorage.getItem("selectedProjectId");
@@ -85,7 +89,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
       setTime("");
       setPriorityBtn("Low");
       setMeetingLink("");
-      setSelectedAttendees([]);
+      setSelectedAttendees(currentUserId ? [currentUserId] : []);
       onCreated?.();
     } catch {
       toast.error("Failed to schedule meeting.");
@@ -199,23 +203,30 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {teamMembers
                           .filter((m) => selectedAttendees.includes(parseInt(m.userId)))
-                          .map((member) => (
-                            <span
-                              key={member._id}
-                              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[12px] px-2 py-1 rounded-md"
-                            >
-                              {member.user?.name || member.user?.email}
-                              <X
-                                className="w-3 h-3 cursor-pointer hover:text-primary/70"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedAttendees((prev) =>
-                                    prev.filter((id) => id !== parseInt(member.userId))
-                                  );
-                                }}
-                              />
-                            </span>
-                          ))}
+                          .map((member) => {
+                            const isCreator = parseInt(member.userId) === currentUserId;
+                            return (
+                              <span
+                                key={member._id}
+                                className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[12px] px-2 py-1 rounded-md"
+                              >
+                                {member.user?.name || member.user?.email}
+                                {isCreator ? (
+                                  <span className="text-[10px] text-primary/60 ml-0.5">You</span>
+                                ) : (
+                                  <X
+                                    className="w-3 h-3 cursor-pointer hover:text-primary/70"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedAttendees((prev) =>
+                                        prev.filter((id) => id !== parseInt(member.userId))
+                                      );
+                                    }}
+                                  />
+                                )}
+                              </span>
+                            );
+                          })}
                       </div>
                     ) : (
                       <span className="text-muted-foreground text-sm">Select participants...</span>
@@ -234,17 +245,19 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                           const name = u?.name || u?.email || "User";
                           const email = u?.email;
                           const isSelected = selectedAttendees.includes(parseInt(member.userId));
+                          const isCreator = parseInt(member.userId) === currentUserId;
                           return (
                             <CommandItem
                               key={member._id}
                               onSelect={() => {
+                                if (isCreator) return;
                                 setSelectedAttendees((prev) =>
                                   isSelected
                                     ? prev.filter((id) => id !== parseInt(member.userId))
                                     : [...prev, parseInt(member.userId)]
                                 );
                               }}
-                              className="cursor-pointer"
+                              className={isCreator ? "cursor-default opacity-70" : "cursor-pointer"}
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
