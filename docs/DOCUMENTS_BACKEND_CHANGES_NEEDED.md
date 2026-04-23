@@ -27,6 +27,42 @@ This doc lists everything the Documents v1 redesign **couldn't do with the exist
 
 ---
 
+## ⚡ TL;DR — what's done, what's left
+
+### ✅ Shipped in frontend PR (#24) — works with current backend
+
+| Client ask | Status | How |
+|-----|--------|----|
+| 3 top-level categories (Drawings / Documents / Contracts) | ✅ Done | Category pills on `/documents`, derived from `Document.type` client-side |
+| Remove "Add Segment" button | ✅ Done | Deleted from UI |
+| Upload form: name / type / discipline required | ✅ Done | Form validates and blocks submit |
+| 21-item fixed discipline list | ✅ Done | `src/lib/documentTaxonomy.ts` |
+| Field cascade: Category → Type → Discipline → Name | ✅ Done | Upload form rebuilt |
+| Consistent glossary (Category/Type/Discipline) | ✅ Done | UI + internal vars |
+| Remove mandatory doc upload from onboarding | ✅ Done | OnboardingModal step 4 removed |
+| DocumentDetail shows Category + Type + Discipline | ✅ Done | Detail panel updated |
+| Category + Discipline grouping in doc list | ✅ Done | Table groups break up the rows |
+| Version control retention + rollback | ✅ Works | Already worked in existing backend, untouched |
+
+### ❌ STILL NEEDED — blocked on backend
+
+| Client ask | Why it needs backend | See section |
+|-----|----|----|
+| Role-gated uploads (architect → architectural only) | Needs new `can_upload_discipline` permission, extension of `/user-capabilities/` endpoint | §4 |
+| Predetermined subfolders under each category (Concepts/Design Dev/Tender/etc.) | Needs new `DocumentSubfolder` model + API + defaults seeder | §2 |
+| Custom subfolder creation | Requires the subfolder model above | §2 |
+| Re-map existing docs to new structure | Needs data migration script | §7 |
+| Insurance expiry warnings | Needs `has_current_insurance` property on user | §6 |
+
+### 🟡 FRONTEND-ONLY, deferred to a follow-up
+
+| Ask | Status |
+|-----|--------|
+| "Add your professional insurance" banner on Dashboard | In separate PR (`feat/dashboard-insurance-banner`) |
+| "Needs filing" inbox for ambiguous migrated docs | Depends on backend migration (§7) landing first |
+
+---
+
 ## What the frontend currently does (no backend change required)
 
 - ✅ **Category** (Drawings / Documents / Contracts) is **derived client-side** from `Document.type`:
