@@ -71,6 +71,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
           meeting_link: meetingLink.trim() || null,
           date: format(date, "yyyy-MM-dd"),
           time,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           priority: priorityBtn,
           status: "scheduled",
           location: meetingLink.trim() ? "Virtual — Video Call" : "",

@@ -7,16 +7,16 @@ import { ScheduleNewMeetingDialog } from "./scheduleMeetingDialog";
 import { Badge } from "../ui/badge";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-
-import { isMeetingPast } from "@/lib/dateUtils";
+import { isMeetingPastUTC, formatMeetingDateTime, isMeetingPast } from "@/lib/dateUtils";
 
 interface Meeting {
   id: number;
   title: string;
-  status: "scheduled" | "held" | "cancelled";
+  status: "scheduled" | "held" | "cancelled" | "occurred" | "completed";
   date: string;
   time: string;
   date_time: string;
+  scheduled_utc?: string;
   location: string;
   meeting_link?: string;
   attendees: string[];
@@ -34,7 +34,7 @@ const StatusBadge = ({ item }: { item: Meeting }) => {
   if (item.status === "completed") {
     return <Badge className="bg-green-50 text-green-700 border border-green-200 text-xs px-2 py-0.5 rounded-full">Completed</Badge>;
   }
-  if (item.status === "occurred" || isMeetingPast(item.date, item.time)) {
+  if (item.status === "occurred" || isMeetingPastUTC(item.scheduled_utc) || isMeetingPast(item.date, item.time)) {
     return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full">Occurred</Badge>;
   }
   return <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">Upcoming</Badge>;
@@ -50,7 +50,7 @@ export default function MeetingsList() {
 
   const meetings: Meeting[] = (Array.isArray(data) ? data : (data?.results ?? [])).map((m: any) => ({
     ...m,
-    is_completed: m.status === "completed" || m.status === "occurred" || isMeetingPast(m.date, m.time)
+    is_completed: m.status === "completed" || m.status === "occurred" || isMeetingPastUTC(m.scheduled_utc) || isMeetingPast(m.date, m.time)
   }));
 
   const upcoming = meetings.filter((m) => !m.is_completed && m.status !== "cancelled");
@@ -157,7 +157,7 @@ function MeetingCard({ item }: { item: Meeting }) {
       </div>
       <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
         <span className="flex items-center gap-1 shrink-0">
-          <Calendar className="h-3.5 w-3.5" /> {item.date_time}
+          <Calendar className="h-3.5 w-3.5" /> {item.scheduled_utc ? formatMeetingDateTime(item.scheduled_utc) : item.date_time}
         </span>
         <span className="flex items-center gap-1 shrink-0">
           <MapPin className="h-3.5 w-3.5" /> {item.location}

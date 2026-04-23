@@ -16,7 +16,7 @@ import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 
-import { isMeetingPast } from "@/lib/dateUtils";
+import { isMeetingPast, isMeetingPastUTC, formatMeetingDateTime } from "@/lib/dateUtils";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
@@ -29,6 +29,7 @@ interface MeetingDetail {
   date: string;
   date_display: string;
   time: string;
+  scheduled_utc?: string;
   location: string;
   meeting_link?: string;
   summary: { overview: string; sections: { title: string; body: string }[] };
@@ -133,7 +134,7 @@ export default function MeetingDetails() {
   }
 
   const isCompleted = meeting.status === "completed";
-  const isOccurred = meeting.status === "occurred" || (!isCompleted && isMeetingPast(meeting.date, meeting.time));
+  const isOccurred = meeting.status === "occurred" || (!isCompleted && (isMeetingPastUTC(meeting.scheduled_utc) || isMeetingPast(meeting.date, meeting.time)));
   const hasAiNotes = isCompleted && !!meeting.summary?.overview;
 
   return (
@@ -162,7 +163,7 @@ export default function MeetingDetails() {
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" /> {meeting.date_display}{meeting.time ? ` • ${meeting.time}` : ""}
+              <Calendar className="h-3.5 w-3.5" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
             </span>
             {meeting.location && (
               <span className="flex items-center gap-1.5">
