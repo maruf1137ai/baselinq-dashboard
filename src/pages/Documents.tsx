@@ -251,6 +251,7 @@ const Documents = () => {
             onRowClick={handleOpenDetail}
             onVersionUpload={handleVersionUpload}
             onDelete={(doc) => setDocToDelete(doc)}
+            groupBy={selectedCategory === 'All' ? 'category' : 'discipline'}
             customDisciplines={[]}
             onUploadToDiscipline={handleOpenUploadWithDiscipline}
           />
