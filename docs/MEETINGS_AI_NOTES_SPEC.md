@@ -248,3 +248,45 @@ Frontend:
 - `src/components/meetings/meetingList.tsx` — badge on card
 - `src/components/meetings/generateAiNotesDialog.tsx` — visibility rules
 - `src/types/notification.ts` — new types
+
+---
+
+## Appendix — attendee RSVP (added 24 Apr)
+
+**Client ask (24 Apr):** *"we need a accept and decline when users are added to a meeting, and a scroll over on users attending or declined so people can see who is attending the meeting"*
+
+### Backend
+
+```python
+class MeetingAttendee(models.Model):
+    class Response(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        ACCEPTED = "accepted", _("Accepted")
+        DECLINED = "declined", _("Declined")
+        TENTATIVE = "tentative", _("Tentative")
+
+    meeting = models.ForeignKey(Meeting, on_delete=CASCADE, related_name="attendee_records")
+    user = models.ForeignKey(User, on_delete=CASCADE)
+    response = models.CharField(max_length=16, choices=Response.choices, default=Response.PENDING)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("meeting", "user")]
+```
+
+Endpoints:
+- `POST /api/meetings/{id}/respond/` — body `{response: "accepted"|"declined"|"tentative"}`
+- `GET /api/meetings/{id}/attendees/` — returns `[{user, response, responded_at}, ...]`
+
+Notification type:
+- `meeting_response_received` — fires to creator when someone responds
+
+Migration: back-fill existing `Meeting.attendees` M2M into new `MeetingAttendee` rows with `response=pending`.
+
+### Frontend
+- Meeting list card: hover on "N users" → popover listing each attendee + icon/colour per response state
+- Meeting detail: Accept / Decline / Tentative buttons for current user, shown when they're an attendee and haven't responded yet
+- Attendee list section shows tally "3 accepted · 1 declined · 2 pending"
+
+**Size:** ~200 lines backend + migration, ~250 lines frontend, 1 new notification type.
