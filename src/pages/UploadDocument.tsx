@@ -338,17 +338,6 @@ export default function UploadDocument() {
               )}
             </div>
 
-            {/* AI info card */}
-            <div className="rounded-xl bg-white border border-border px-5 py-4 flex items-center gap-4">
-              <div className="h-10 w-10 bg-primary/5 rounded-xl flex items-center justify-center shrink-0">
-                <AiIcon size={20} />
-              </div>
-              <p className="text-sm leading-snug">
-                <span className="font-medium text-foreground">AI analysis runs automatically</span>{' '}
-                <span className="text-muted-foreground">on upload to extract key clauses</span>
-              </p>
-            </div>
-
             {/* No permission notice */}
             {uploadableDocTypes.length === 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3">
@@ -366,7 +355,7 @@ export default function UploadDocument() {
           {/* Right — Details */}
           {uploadableDocTypes.length > 0 && (
             <div className="col-span-3 space-y-4">
-              <div className="bg-white rounded-xl border border-border p-6 space-y-6">
+              <div className="bg-white rounded-xl border border-border p-5 space-y-4">
                 <h2 className="text-sm font-normal text-foreground">Document Details</h2>
 
                 {/* Selected file names */}
@@ -494,7 +483,7 @@ export default function UploadDocument() {
                     placeholder="Enter a brief description of the document"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    className="min-h-[100px] border-border rounded-lg resize-none"
+                    className="min-h-[64px] border-border rounded-lg resize-none"
                   />
                 </div>
 
