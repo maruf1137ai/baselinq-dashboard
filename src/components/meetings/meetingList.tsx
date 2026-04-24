@@ -1,4 +1,5 @@
 import { Calendar, MapPin, Search, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import React, { useState } from "react";
 import { Input } from "../ui/input";
 import { Link } from "react-router-dom";
@@ -168,9 +169,31 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
           <span className="flex items-center gap-1.5 whitespace-nowrap max-w-[18rem] truncate">
             <MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{item.location}</span>
           </span>
-          <span className="flex items-center gap-1.5 whitespace-nowrap">
-            <Users className="h-3.5 w-3.5" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
-          </span>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="flex items-center gap-1.5 whitespace-nowrap cursor-help"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <Users className="h-3.5 w-3.5" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="end" className="max-w-[18rem]">
+                <div className="text-xs font-medium mb-1">Attendees</div>
+                <ul className="text-xs space-y-0.5">
+                  {item.attendees.slice(0, 8).map((name, i) => (
+                    <li key={i}>{name}</li>
+                  ))}
+                </ul>
+                {(item.extra_attendees > 0 || item.attendees.length > 8) && (
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    +{item.extra_attendees + Math.max(0, item.attendees.length - 8)} more — open meeting for full list
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </Link>

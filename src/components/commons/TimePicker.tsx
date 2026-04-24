@@ -118,7 +118,10 @@ export function TimePicker({
             />
           </div>
 
-          <div className="max-h-[240px] overflow-y-auto py-1">
+          <div
+            className="max-h-[240px] overflow-y-auto py-1 overscroll-contain"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {filtered.length === 0 ? (
               <div className="px-3 py-6 text-center text-xs text-muted-foreground">
                 No matches. Try &quot;9:30&quot; or &quot;14:00&quot;.
