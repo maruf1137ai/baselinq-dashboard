@@ -13,6 +13,7 @@ import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check, MapPin, CalendarIcon, Building2 } from 'lucide-react';
+import { InsuranceBanner } from '@/components/InsuranceBanner';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -446,6 +447,8 @@ const Index = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <InsuranceBanner />
+
         {showCompletionCard && (
           <div className="p-6 rounded-2xl bg-white border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
             {/* Header */}

@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,12 +30,16 @@ import {
 import { cn } from '@/lib/utils';
 import AiIcon from '@/components/icons/AiIcon';
 import { useS3Upload } from '@/hooks/useS3Upload';
-import { validateFile, postData, fetchData } from '@/lib/Api';
+import { validateFile, postData } from '@/lib/Api';
 import { toast } from 'sonner';
 import useFetch from '@/hooks/useFetch';
+import {
+  CATEGORIES,
+  CATEGORY_TO_TYPES,
+  DISCIPLINES,
+  type DocCategory,
+} from '@/lib/documentTaxonomy';
 
-const DOCUMENT_TYPES = ['Contract', 'Drawing', 'Specification', 'Report', 'Certificate'] as const;
-const DISCIPLINES = ['Architectural', 'Structural', 'MEP', 'Civil', 'Environmental'] as const;
 const DONE_STATUSES = ['done', 'Done', 'DONE', 'Closed', 'closed', 'CLOSED', 'Approved', 'approved'];
 const TYPE_FILTERS = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'];
 
@@ -47,13 +51,14 @@ export default function UploadDocument() {
 
   const [submitting, setSubmitting] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Form fields
+  const [category, setCategory] = useState<DocCategory | ''>('');
   const [name, setName] = useState('');
   const [docType, setDocType] = useState('');
   const [discipline, setDiscipline] = useState('');
   const [reference, setReference] = useState('');
-  const [referenceEdited, setReferenceEdited] = useState(false);
   const [description, setDescription] = useState('');
   const [runAiAnalysis, setRunAiAnalysis] = useState(true);
   const [certificateSubtype, setCertificateSubtype] = useState('');
@@ -63,39 +68,41 @@ export default function UploadDocument() {
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  // Fetch custom disciplines from API
-  const { data: disciplinesData } = useQuery({
-    queryKey: ['project-disciplines', projectId],
-    queryFn: () => fetchData(`projects/${projectId}/disciplines/`),
-    enabled: !!projectId,
-  });
-
-  const customDisciplines = useMemo(() => {
-    return disciplinesData?.custom?.map((d: any) => d.name) || [];
-  }, [disciplinesData]);
-
-  // Read discipline from URL parameter (for pre-fill from segment upload)
+  // Query-param pre-fill (Insurance banner on Dashboard passes these;
+  // also used by any deep-link that wants the upload form populated).
   const disciplineParam = searchParams.get('discipline');
-
-  // Auto-generate reference from name
-  useEffect(() => {
-    if (referenceEdited) return;
-    if (!name.trim()) { setReference(''); return; }
-    const initials = name.trim().split(/\s+/).map(w => w[0].toUpperCase()).join('');
-    const suffix = String(Math.floor(Math.random() * 900) + 100);
-    setReference(`${initials}-${suffix}`);
-  }, [name]);
+  const typeParam = searchParams.get('type');
+  const certSubtypeParam = searchParams.get('certificateSubtype');
+  const namePrefillParam = searchParams.get('namePrefill');
+  const categoryParam = searchParams.get('category') as DocCategory | null;
 
   useEffect(() => {
     if (docType !== 'Certificate') setCertificateSubtype('');
   }, [docType]);
 
-  // Pre-fill discipline from URL parameter
+  // Pre-fill form fields from URL parameters on mount
   useEffect(() => {
-    if (disciplineParam && !discipline) {
-      setDiscipline(disciplineParam);
+    if (categoryParam && !category && (CATEGORIES as readonly string[]).includes(categoryParam)) {
+      setCategory(categoryParam as DocCategory);
     }
-  }, [disciplineParam]);
+    if (disciplineParam && !discipline) setDiscipline(disciplineParam);
+    if (typeParam && !docType) setDocType(typeParam);
+    if (certSubtypeParam && !certificateSubtype) setCertificateSubtype(certSubtypeParam);
+    if (namePrefillParam && !name) setName(namePrefillParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryParam, disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
+
+  // Reset docType if the selected category no longer allows it
+  useEffect(() => {
+    if (!category) return;
+    const allowed = CATEGORY_TO_TYPES[category];
+    if (docType && !allowed.includes(docType)) {
+      setDocType('');
+    }
+    if (!docType && allowed.length === 1) {
+      setDocType(allowed[0]);
+    }
+  }, [category]);
 
   const { data: capabilities } = useFetch<{
     documentTypes: string[];
@@ -151,10 +158,31 @@ export default function UploadDocument() {
     });
   }, [s3Upload]);
 
+  const missingCategory = !category;
+  const missingType = !docType;
+  const missingDiscipline = !discipline;
+  const missingName = !name.trim();
+  const showFieldErrors = attemptedSubmit;
+  const canSubmit =
+    !missingCategory &&
+    !missingType &&
+    !missingDiscipline &&
+    !missingName &&
+    s3Upload.entries.length > 0 &&
+    !s3Upload.hasUploading;
+
+  const errCls = (missing: boolean) =>
+    showFieldErrors && missing ? 'border-red-400 ring-1 ring-red-300' : '';
+
   const handleSubmit = async () => {
-    if (!name.trim()) { toast.error('Document name is required'); return; }
-    if (!docType) { toast.error('Document type is required'); return; }
-    if (docType === 'Certificate' && !certificateSubtype) { toast.error('Certificate type is required'); return; }
+    setAttemptedSubmit(true);
+    if (missingName) { toast.error('Document name is required'); return; }
+    if (missingCategory) { toast.error('Category is required'); return; }
+    if (missingType) { toast.error('Type is required'); return; }
+    if (missingDiscipline) { toast.error('Discipline is required'); return; }
+    if (docType === 'Certificate' && uploadableCertSubtypes.length > 0 && !certificateSubtype) {
+      toast.error('Certificate type is required'); return;
+    }
     if (s3Upload.entries.length === 0) { toast.error('Please select a file to upload'); return; }
     if (!projectId) { toast.error('No project selected'); return; }
 
@@ -189,6 +217,12 @@ export default function UploadDocument() {
     }
   };
 
+  const typeOptions = category
+    ? CATEGORY_TO_TYPES[category].filter((t) =>
+        uploadableDocTypes.length === 0 ? true : uploadableDocTypes.includes(t)
+      )
+    : [];
+
   return (
     <DashboardLayout>
       <div className="max-w-[1600px] mx-auto space-y-6 p-4">
@@ -220,7 +254,7 @@ export default function UploadDocument() {
             <Button
               onClick={handleSubmit}
               className="h-9 px-5 font-normal gap-2"
-              disabled={submitting || s3Upload.entries.length === 0 || s3Upload.hasUploading}
+              disabled={submitting || !canSubmit}
             >
               {submitting ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</>
@@ -304,17 +338,6 @@ export default function UploadDocument() {
               )}
             </div>
 
-            {/* AI info card */}
-            <div className="rounded-xl bg-white border border-border px-5 py-4 flex items-center gap-4">
-              <div className="h-10 w-10 bg-primary/5 rounded-xl flex items-center justify-center shrink-0">
-                <AiIcon size={20} />
-              </div>
-              <p className="text-sm leading-snug">
-                <span className="font-medium text-foreground">AI analysis runs automatically</span>{' '}
-                <span className="text-muted-foreground">on upload to extract key clauses</span>
-              </p>
-            </div>
-
             {/* No permission notice */}
             {uploadableDocTypes.length === 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3">
@@ -332,70 +355,84 @@ export default function UploadDocument() {
           {/* Right — Details */}
           {uploadableDocTypes.length > 0 && (
             <div className="col-span-3 space-y-4">
-              <div className="bg-white rounded-xl border border-border p-6 space-y-6">
+              <div className="bg-white rounded-xl border border-border p-5 space-y-4">
                 <h2 className="text-sm font-normal text-foreground">Document Details</h2>
+
+                {/* Selected file names */}
+                {s3Upload.entries.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Uploading:{' '}
+                    <span className="text-foreground">
+                      {s3Upload.entries.map(e => e.file.name).join(', ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Category pill selector */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-normal text-muted-foreground">
+                    Category <span className="text-red-500">*</span>
+                  </Label>
+                  <div
+                    className={cn(
+                      "inline-flex gap-2 p-1 rounded-xl border",
+                      showFieldErrors && missingCategory ? "border-red-400" : "border-border"
+                    )}
+                  >
+                    {CATEGORIES.map((c) => {
+                      const active = category === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setCategory(c)}
+                          className={cn(
+                            "px-4 py-2 rounded-lg text-sm font-normal transition-all border",
+                            active
+                              ? "bg-primary/10 border-primary text-primary"
+                              : "bg-white border-transparent text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {showFieldErrors && missingCategory && (
+                    <p className="text-xs text-red-500">Category is required</p>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-normal text-muted-foreground">
-                      Document Name <span className="text-red-500">*</span>
+                      Type <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      placeholder="Enter document name"
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      className="h-10 border-border rounded-lg"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-normal text-muted-foreground">
-                      Document Type <span className="text-red-500">*</span>
-                    </Label>
-                    <Select value={docType} onValueChange={setDocType}>
-                      <SelectTrigger className="h-10 border-border rounded-lg">
-                        <SelectValue placeholder="Select type" />
+                    <Select value={docType} onValueChange={setDocType} disabled={!category}>
+                      <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingType))}>
+                        <SelectValue placeholder={category ? "Select type" : "Select category first"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {DOCUMENT_TYPES.filter(t => uploadableDocTypes.includes(t)).map(t => (
+                        {typeOptions.map(t => (
                           <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-normal text-muted-foreground">Discipline</Label>
+                    <Label className="text-sm font-normal text-muted-foreground">
+                      Discipline <span className="text-red-500">*</span>
+                    </Label>
                     <Select value={discipline} onValueChange={setDiscipline}>
-                      <SelectTrigger className="h-10 border-border rounded-lg">
+                      <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingDiscipline))}>
                         <SelectValue placeholder="Select discipline" />
                       </SelectTrigger>
                       <SelectContent>
                         {DISCIPLINES.map(d => (
                           <SelectItem key={d} value={d}>{d}</SelectItem>
                         ))}
-                        {customDisciplines.length > 0 && (
-                          <>
-                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                              Custom Segments
-                            </div>
-                            {customDisciplines.map(d => (
-                              <SelectItem key={d} value={d}>{d}</SelectItem>
-                            ))}
-                          </>
-                        )}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-normal text-muted-foreground">Reference Number</Label>
-                    <Input
-                      placeholder="Enter reference number"
-                      value={reference}
-                      onChange={e => { setReferenceEdited(true); setReference(e.target.value); }}
-                      className="h-10 border-border rounded-lg"
-                    />
                   </div>
                 </div>
 
@@ -417,13 +454,36 @@ export default function UploadDocument() {
                   </div>
                 )}
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-normal text-muted-foreground">
+                      Document Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      placeholder="Enter document name"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className={cn("h-10 border-border rounded-lg", errCls(missingName))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-normal text-muted-foreground">Reference</Label>
+                    <Input
+                      placeholder="e.g. ARC-DWG-0042"
+                      value={reference}
+                      onChange={e => setReference(e.target.value)}
+                      className="h-10 border-border rounded-lg"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-sm font-normal text-muted-foreground">Description (Optional)</Label>
                   <Textarea
                     placeholder="Enter a brief description of the document"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    className="min-h-[100px] border-border rounded-lg resize-none"
+                    className="min-h-[64px] border-border rounded-lg resize-none"
                   />
                 </div>
 

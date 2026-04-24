@@ -147,18 +147,16 @@ const STEPS = [
   { id: 1, label: "Project Details" },
   { id: 2, label: "Client Details" },
   { id: 3, label: "Associated Company" },
-  { id: 4, label: "Documents" },
-  { id: 5, label: "Scope of Works" },
-  { id: 6, label: "Financials & Timeline" },
+  { id: 4, label: "Scope of Works" },
+  { id: 5, label: "Financials & Timeline" },
 ];
 
 const STEP_FIELDS: Record<number, (keyof z.infer<typeof projectSchema>)[]> = {
   1: ["name", "project_number", "location"],
   2: [],
   3: [],
-  4: ["attachments"],
-  5: ["description"],
-  6: ["start_date", "end_date", "total_budget", "fx_rate", "contract_type", "retention_rate", "vat_rate"],
+  4: ["description"],
+  5: ["start_date", "end_date", "total_budget", "fx_rate", "contract_type", "retention_rate", "vat_rate"],
 };
 
 // ── Helper Components ───────────────────────────────────────────────────────
@@ -537,10 +535,6 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
       const valid = await form.trigger(fields);
       if (!valid) return;
     }
-    if (currentStep === 4 && !project && selectedFiles.length === 0) {
-      // We allow proceeding without documents if explicitly needed, but typically required
-      // toast.warn("Consider uploading at least one project document.");
-    }
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
   };
 
@@ -885,59 +879,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               </div>
             )}
 
-            {/* Step 4: Documents */}
+            {/* Step 4: Scope of Works */}
             {currentStep === 4 && (
-              <div className="space-y-4">
-                <FormField control={form.control} name="attachments" render={() => (
-                  <FormItem>
-                    <FormLabel>Project Documents {!project && "*"}</FormLabel>
-                    <FormControl>
-                      <div>
-                        <Input type="file" id="project-upload" className="hidden" onChange={handleFileChange} multiple accept={ALLOWED_FILE_EXTENSIONS.join(",")} />
-                        <div className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-10 cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => document.getElementById("project-upload")?.click()}>
-                          <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">Drag and drop your files here</p>
-                          <p className="text-sm text-muted-foreground">or click to browse</p>
-                          <p className="text-xs text-muted-foreground mt-2">PDF, JPG, PNG, GIF, WEBP, XLSX, XLS (max 20MB)</p>
-                        </div>
-                        {selectedFiles.length > 0 && (
-                          <div className="mt-3 flex flex-col gap-2">
-                            {selectedFiles.map((file, index) => (
-                              <div key={index} className="border rounded-lg p-3 bg-gray-50">
-                                <div className="flex justify-between items-start gap-2">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <FileText className="h-4 w-4 text-gray-500 shrink-0" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium truncate">{file.name}</p>
-                                      <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-                                    </div>
-                                  </div>
-                                  <button type="button" onClick={() => handleRemoveFile(index)} className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" disabled={isUploading}>
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                {uploadProgress[file.name] !== undefined && (
-                                  <div className="mt-2">
-                                    <Progress value={uploadProgress[file.name]} className="h-1" />
-                                    <p className="text-xs text-gray-500 mt-1">{uploadProgress[file.name] === 100 ? "Uploaded" : `${uploadProgress[file.name]}%`}</p>
-                                  </div>
-                                )}
-                                {fileErrors[file.name] && <p className="text-xs text-red-500 mt-1">{fileErrors[file.name]}</p>}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            )}
-
-            {/* Step 5: Scope of Works */}
-            {currentStep === 5 && (
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 pb-2 border-b border-border">
@@ -966,8 +909,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               </div>
             )}
 
-            {/* Step 6: Financials & Timeline */}
-            {currentStep === 6 && (
+            {/* Step 5: Financials & Timeline */}
+            {currentStep === 5 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="start_date" render={({ field }) => (

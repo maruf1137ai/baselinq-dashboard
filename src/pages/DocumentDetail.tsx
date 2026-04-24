@@ -22,6 +22,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
+import { getCategoryForDoc, SUBCATEGORY_LABEL } from '@/lib/documentTaxonomy';
 import AiIcon from '@/components/icons/AiIcon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -400,7 +401,8 @@ const DocumentDetail = () => {
                   </div>
                   <div className="space-y-1">
                     <DetailItem label="Reference" value={doc.reference} isActionable />
-                    <DetailItem label="Document type" value={doc.type} />
+                    <DetailItem label="Category" value={getCategoryForDoc(doc as any)} />
+                    <DetailItem label="Type" value={SUBCATEGORY_LABEL[doc.type ?? ""] || doc.type} />
                     <DetailItem label="Discipline" value={doc.discipline} />
                     <DetailItem label="Description" value={doc.description} />
                     <DetailItem label="File name" value={doc.fileName} />
