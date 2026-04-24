@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Search } from "lucide-react";
+import { Calendar, MapPin, Search, Users } from "lucide-react";
 import React, { useState } from "react";
 import { Input } from "../ui/input";
 import { Link } from "react-router-dom";
@@ -145,12 +145,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) {
+  const totalAttendees = item.attendees.length + (item.extra_attendees || 0);
   return (
     <Link
       to={`/meetings/${item.id}`}
       className={`block rounded-lg border px-4 py-3 hover:bg-sidebar transition-colors ${isUnread ? "border-primary/40 bg-primary/5" : "border-border"}`}
     >
-      <div className="flex items-center justify-between">
+      {/* Row: title + badges (left), date · location · attendees (right, same line) */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 min-w-0">
           {isUnread && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
           <h3 className="text-sm font-medium text-foreground truncate">{item.title}</h3>
@@ -159,30 +161,17 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
             <ArtefactBadge artefactStatus={item.artefact_status} />
           )}
         </div>
-        <div className="flex items-center gap-2 ml-4 shrink-0">
-          <div className="flex -space-x-1.5">
-            {item.attendees.slice(0, 3).map((name, i) => (
-              <div key={i} className="h-6 w-6 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center">
-                <span className="text-[10px] text-primary font-medium">
-                  {name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            ))}
-            {item.extra_attendees > 0 && (
-              <div className="h-6 w-6 rounded-full bg-muted border-2 border-white flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">+{item.extra_attendees}</span>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-5 text-xs text-muted-foreground shrink-0">
+          <span className="flex items-center gap-1.5 whitespace-nowrap tabular-nums">
+            <Calendar className="h-3.5 w-3.5" /> {item.scheduled_utc ? formatMeetingDateTime(item.scheduled_utc) : item.date_time}
+          </span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap max-w-[18rem] truncate">
+            <MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{item.location}</span>
+          </span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
+            <Users className="h-3.5 w-3.5" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
+          </span>
         </div>
-      </div>
-      <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-        <span className="flex items-center gap-1 shrink-0">
-          <Calendar className="h-3.5 w-3.5" /> {item.scheduled_utc ? formatMeetingDateTime(item.scheduled_utc) : item.date_time}
-        </span>
-        <span className="flex items-center gap-1 shrink-0">
-          <MapPin className="h-3.5 w-3.5" /> {item.location}
-        </span>
       </div>
     </Link>
   );

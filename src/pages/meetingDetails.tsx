@@ -221,29 +221,31 @@ export default function MeetingDetails() {
           </div>
         </div>
 
-        {/* AI Summary — for completed/no-show meetings */}
+        {/* Linq AI Notes — primary flow when a meeting link was provided */}
         {isPast && (
           <div className="p-4 border border-border rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
                 <AiIcon size={16} className="text-primary" />
-                <h2 className="text-sm font-medium text-foreground">AI Summary</h2>
+                <h2 className="text-sm font-medium text-foreground">Linq AI Notes</h2>
               </div>
-              {(meeting.artefact_status === "none" || meeting.artefact_status === "transcribed") && (
-                <button
-                  onClick={() => setAiNotesOpen(true)}
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  <AiIcon size={12} /> Generate AI Notes
-                </button>
+              {hasAiNotes && (
+                <span className="text-[11px] text-muted-foreground">
+                  Captured by Linq AI from meeting recording
+                </span>
               )}
             </div>
 
+            {/* Processing state */}
             {meeting.artefact_status === "processing" && (
-              <p className="text-sm text-muted-foreground">Transcript is being processed, notes will appear shortly...</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                Linq AI is transcribing and summarising. Notes typically land 2–5 minutes after the meeting ends.
+              </div>
             )}
 
-            {hasAiNotes ? (
+            {/* Notes available */}
+            {hasAiNotes && (
               <>
                 <p className="text-sm text-foreground leading-relaxed mb-4">{meeting.summary.overview}</p>
                 <div className="space-y-4">
@@ -255,11 +257,40 @@ export default function MeetingDetails() {
                   ))}
                 </div>
               </>
-            ) : meeting.artefact_status !== "processing" ? (
-              <p className="text-sm text-muted-foreground">
-                No AI notes yet. Click "Generate AI Notes" to create a summary from the meeting transcript.
-              </p>
-            ) : null}
+            )}
+
+            {/* Empty state — no bot, no notes, no processing */}
+            {!hasAiNotes && meeting.artefact_status !== "processing" && (
+              <div className="py-4">
+                <p className="text-sm text-foreground mb-2">No Linq AI notes for this meeting.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+                  Linq AI attends any meeting that has a video-call link (Zoom, Meet or Teams). It joins as a bot, records, and generates a summary plus decisions and action items automatically within a few minutes of the meeting ending.
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  This meeting either had no link when it was scheduled, or the bot couldn&apos;t join. You can still add notes manually as a backup — see the Manual Transcript section below.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual Transcript — secondary backup only. Hidden when Linq AI notes exist. */}
+        {isPast && !hasAiNotes && meeting.artefact_status !== "processing" && (
+          <div className="p-4 border border-dashed border-border rounded-lg bg-muted/20">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Manual Transcript (Backup)
+              </h3>
+              <button
+                onClick={() => setAiNotesOpen(true)}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <AiIcon size={12} /> Paste transcript
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Fallback when Linq AI couldn&apos;t attend the meeting. Paste a transcript from your video-call provider and we&apos;ll still generate a summary — the same AI treatment, just from your text instead of a recording.
+            </p>
           </div>
         )}
 
