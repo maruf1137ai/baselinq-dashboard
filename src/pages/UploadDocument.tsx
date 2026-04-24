@@ -68,13 +68,11 @@ export default function UploadDocument() {
   const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  // Query-param pre-fill (Insurance banner on Dashboard passes these;
-  // also used by any deep-link that wants the upload form populated).
+  // Query-param pre-fill (Insurance banner on Dashboard passes these; also used by deep-link upload flows)
   const disciplineParam = searchParams.get('discipline');
   const typeParam = searchParams.get('type');
   const certSubtypeParam = searchParams.get('certificateSubtype');
   const namePrefillParam = searchParams.get('namePrefill');
-  const categoryParam = searchParams.get('category') as DocCategory | null;
 
   useEffect(() => {
     if (docType !== 'Certificate') setCertificateSubtype('');
@@ -82,15 +80,16 @@ export default function UploadDocument() {
 
   // Pre-fill form fields from URL parameters on mount
   useEffect(() => {
-    if (categoryParam && !category && (CATEGORIES as readonly string[]).includes(categoryParam)) {
-      setCategory(categoryParam as DocCategory);
-    }
     if (disciplineParam && !discipline) setDiscipline(disciplineParam);
     if (typeParam && !docType) setDocType(typeParam);
     if (certSubtypeParam && !certificateSubtype) setCertificateSubtype(certSubtypeParam);
-    if (namePrefillParam && !name) setName(namePrefillParam);
+    if (namePrefillParam && !name) {
+      setName(namePrefillParam);
+      // Prevent the reference-auto-generation effect from overriding the
+      // stable name we just set.
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryParam, disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
+  }, [disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
 
   // Reset docType if the selected category no longer allows it
   useEffect(() => {

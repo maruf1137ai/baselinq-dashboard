@@ -45,11 +45,11 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
   // Get task ID - try from task prop first, then from formFields.task
   const taskId = task?.id || formFields.task?.id;
 
-  // Check if current user is assigned to this task
-  const isAssigned = task?.assignedTo?.some((assignee: any) => assignee.userId === user?.id);
+  // Check if current user is assigned to this task (stringify both — backend serializer returns userId as string while useCurrentUser types id as number)
+  const isAssigned = task?.assignedTo?.some((assignee: any) => String(assignee.userId) === String(user?.id));
 
   // Check if current user is the SI creator
-  const isCreator = formFields.issuedBy?.userId === user?.id;
+  const isCreator = String(formFields.issuedBy?.userId) === String(user?.id);
 
   // Debug logging (temporary)
   // console.log("🔍 SI Debug:", {
