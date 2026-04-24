@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Popover,
   PopoverTrigger,
@@ -8,116 +8,142 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function TimePicker({ time, setTime }: any) {
+/**
+ * Single-pane time picker: scrollable 15-minute slot list (Cal.com / Google Calendar pattern).
+ * One click = one choice. No compound hour/minute/AM-PM, no Apply button.
+ * Typed search: "9", "9:30", "9pm", "14:00" all parse + snap to nearest slot.
+ */
+
+const SLOTS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const suffix = h < 12 ? "AM" : "PM";
+      out.push(`${hour12}:${String(m).padStart(2, "0")} ${suffix}`);
+    }
+  }
+  return out;
+})();
+
+function normaliseQuery(raw: string): string | null {
+  const q = raw.trim().toLowerCase();
+  if (!q) return null;
+  const m = q.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)?$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  const ampm = m[3];
+  if (isNaN(h) || h < 0 || h > 23) return null;
+  if (isNaN(min) || min < 0 || min > 59) return null;
+  if (ampm === "pm" && h < 12) h += 12;
+  if (ampm === "am" && h === 12) h = 0;
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const suffix = h < 12 ? "AM" : "PM";
+  const snapMin = Math.round(min / 15) * 15;
+  const adjMin = snapMin === 60 ? 0 : snapMin;
+  return `${hour12}:${String(adjMin).padStart(2, "0")} ${suffix}`;
+}
+
+export function TimePicker({
+  time,
+  setTime,
+  label = "Time *",
+}: {
+  time: string;
+  setTime: (t: string) => void;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedRef = useRef<HTMLButtonElement>(null);
 
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutes = ["00", "15", "30", "45"];
-  const meridiem = ["AM", "PM"];
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return SLOTS;
+    return SLOTS.filter((s) => s.toLowerCase().includes(q));
+  }, [query]);
 
-  const [tempHour, setTempHour] = useState("12");
-  const [tempMinute, setTempMinute] = useState("00");
-  const [tempMeridiem, setTempMeridiem] = useState("AM");
-  const [customMinute, setCustomMinute] = useState("");
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      selectedRef.current?.scrollIntoView({ block: "center" });
+    }, 40);
+    return () => clearTimeout(t);
+  }, [open]);
 
-  const applyTime = () => {
-    const formatted = `${tempHour}:${tempMinute} ${tempMeridiem}`;
-    setTime(formatted);
+  const pick = (slot: string) => {
+    setTime(slot);
     setOpen(false);
+    setQuery("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const parsed = normaliseQuery(query);
+    if (parsed && SLOTS.includes(parsed)) {
+      pick(parsed);
+    } else if (filtered.length > 0) {
+      pick(filtered[0]);
+    }
   };
 
   return (
     <div className="flex flex-col w-full">
-      <Label className="text-sm text-foreground mb-2">Due Time *</Label>
+      <Label className="text-sm text-foreground mb-2">{label}</Label>
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="justify-start font-normal text-left">
+            className="justify-start font-normal text-left"
+          >
             <Clock className="mr-2 h-4 w-4" />
             {time || "Select time"}
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent className="w-[260px] p-4 space-y-4">
-          {/* HOURS */}
-          <div>
-            <p className="text-sm font-medium mb-2">Hour</p>
-            <div className="grid grid-cols-6 gap-2">
-              {hours.map((h) => (
-                <button
-                  key={h}
-                  onClick={() => setTempHour(String(h))}
-                  className={`
-                    py-1 rounded-md border text-sm
-                    ${tempHour === String(h) ? "bg-primary text-white" : ""}
-                  `}>
-                  {h}
-                </button>
-              ))}
-            </div>
+        <PopoverContent className="w-[220px] p-0" align="start">
+          <div className="p-2 border-b border-border">
+            <Input
+              autoFocus
+              placeholder="Type 9:30, 9am, 14:00…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="h-8 text-sm"
+            />
           </div>
 
-          {/* MINUTES */}
-          <div>
-            <p className="text-sm font-medium mb-2">Minutes</p>
-            <div className="grid grid-cols-4 gap-2">
-              {minutes.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => { setTempMinute(m); setCustomMinute(""); }}
-                  className={`
-                    py-1 rounded-md border text-sm
-                    ${tempMinute === m && !customMinute ? "bg-primary text-white" : ""}
-                  `}>
-                  {m}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Input
-                type="number"
-                min={0}
-                max={59}
-                placeholder="Custom (0–59)"
-                value={customMinute}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCustomMinute(val);
-                  const n = parseInt(val);
-                  if (!isNaN(n) && n >= 0 && n <= 59) {
-                    setTempMinute(String(n).padStart(2, "0"));
-                  }
-                }}
-                className="h-8 text-sm"
-              />
-            </div>
+          <div className="max-h-[240px] overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                No matches. Try &quot;9:30&quot; or &quot;14:00&quot;.
+              </div>
+            ) : (
+              filtered.map((slot) => {
+                const isSelected = slot === time;
+                return (
+                  <button
+                    key={slot}
+                    ref={isSelected ? selectedRef : undefined}
+                    onClick={() => pick(slot)}
+                    className={cn(
+                      "w-full text-left px-3 py-1.5 text-sm transition-colors tabular-nums",
+                      isSelected
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {slot}
+                  </button>
+                );
+              })
+            )}
           </div>
-
-          {/* AM / PM */}
-          <div>
-            <p className="text-sm font-medium mb-2">AM / PM</p>
-            <div className="flex gap-2">
-              {meridiem.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setTempMeridiem(m)}
-                  className={`
-                    flex-1 py-1 rounded-md border text-sm
-                    ${tempMeridiem === m ? "bg-primary text-white" : ""}
-                  `}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* APPLY BUTTON */}
-          <Button onClick={applyTime} className="w-full">
-            Set Time
-          </Button>
         </PopoverContent>
       </Popover>
     </div>
