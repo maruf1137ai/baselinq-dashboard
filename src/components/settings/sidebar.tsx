@@ -21,6 +21,7 @@ import {
   Database,
   CircleCheckBig,
   Building2,
+  KeyRound,
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
@@ -80,6 +81,12 @@ const navItems = [
         title: "Notifications",
         url: "/settings/notifications",
         icon: <Bell className="h-4 w-4 text-current" />,
+      },
+      {
+        id: 11,
+        title: "Roles & Permissions",
+        url: "/settings/permissions",
+        icon: <KeyRound className="h-4 w-4 text-current" />,
       },
     ],
   },

@@ -102,6 +102,33 @@ const Documents = () => {
   });
   const allFilteredDocs: ApiDocument[] = data?.results ?? [];
 
+  // Fetch unread notifications to identify unread documents
+  const { data: unreadNotifs, refetch: refetchUnread } = useQuery({
+    queryKey: ['notifications', projectId, 'unread', 'documents'],
+    queryFn: () => fetchData(`notifications/?unread_only=true&project_id=${projectId}`),
+    enabled: !!projectId,
+  });
+
+  useEffect(() => {
+    const handler = () => refetchUnread();
+    window.addEventListener("notifications-marked-read", handler);
+    return () => window.removeEventListener("notifications-marked-read", handler);
+  }, [refetchUnread]);
+
+  const unreadDocIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (Array.isArray(unreadNotifs)) {
+      unreadNotifs.forEach((n: any) => {
+        if (n.type === 'document_created' || n.type === 'document_version_created') {
+          if (n.data?.documentId) {
+            ids.add(String(n.data.documentId));
+          }
+        }
+      });
+    }
+    return ids;
+  }, [unreadNotifs]);
+
   // Category filter is client-side (derived from Document.type)
   const documents = useMemo(() => {
     if (selectedCategory === 'All') return allFilteredDocs;
@@ -254,6 +281,7 @@ const Documents = () => {
             groupBy={selectedCategory === 'All' ? 'category' : 'discipline'}
             customDisciplines={[]}
             onUploadToDiscipline={handleOpenUploadWithDiscipline}
+            unreadDocIds={unreadDocIds}
           />
         </div>
       </div>

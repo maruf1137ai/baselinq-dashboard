@@ -1,81 +1,73 @@
-import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { useCurrentUser } from "./useCurrentUser";
-import { resolvePermissionCode, PERMISSIONS, PermissionKey } from "@/lib/roleUtils";
+import { useEffectivePermissions } from "./useEffectivePermissions";
+import { PermissionKey } from "@/lib/roleUtils";
 
 /**
- * Central permissions hook.
+ * Central permissions hook — backed by the DB permission matrix.
  *
- * Checks both the user's project-level role (from useUserRoleStore, fetched
- * per project) and their global org role (from useCurrentUser). Access is
- * granted if either role satisfies the permission.
+ * Each flag maps to a permission code that is resolved server-side via
+ * `has_perm(user, code, project)`.  Admins can edit the matrix from
+ * Settings → Role Permissions and changes take effect immediately.
  *
- * IMPORTANT: Always check `isLoading` before using permission flags.
- * While loading, all `can()` calls return true to prevent false redirects
- * during page reload before auth data is available.
- *
- * Usage:
- *   const { isLoading, canViewCompliance, canEditTeamRoles, can } = usePermissions();
- *   if (isLoading) return <Spinner />;
- *   if (!canViewCompliance) return <Navigate to="/unauthorized" />;
- *   {canEditTeamRoles && <button>Edit Role</button>}
+ * While permissions are loading, all flags return `true` to prevent false
+ * redirects during page reload before auth data is available.
  */
+
+// Map legacy flag names to DB permission codes
+const FLAG_TO_CODE: Record<PermissionKey, string> = {
+  viewCompliance:      "compliance.view",
+  viewFinance:         "finance.view",
+  viewAudit:           "audit.view",
+  viewProgramme:       "programme.view",
+  viewSettings:        "settings.view",
+  editTeamRoles:       "settings.team.roles.edit",
+  manageTeam:          "settings.team.manage",
+  manageSettings:      "settings.manage",
+  viewBilling:         "settings.billing.view",
+  manageIntegrations:  "settings.integrations.manage",
+  createProject:       "project.create",
+  editProject:         "project.edit",
+  createTasks:         "task.create",
+};
+
 export function usePermissions() {
-  const { userRole } = useUserRoleStore();
-  const { data: user, isLoading } = useCurrentUser();
+  const { data: user, isLoading: userLoading } = useCurrentUser();
+  const isOrgAdmin = user?.account_type === "organisation";
 
-  const projectCode = resolvePermissionCode(userRole ?? "");
-  const globalCode = resolvePermissionCode(user?.role?.code ?? "");
+  const projectId =
+    parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
 
-  // Org admins (account_type === 'organisation') can manage team regardless of project role
-  const isOrgAdmin = user?.account_type === 'organisation';
+  const { data: effectivePerms, isLoading: permsLoading } =
+    useEffectivePermissions(projectId);
+
+  const isLoading = userLoading || permsLoading;
+
+  const perm = (code: string): boolean => {
+    if (isLoading) return true;
+    return effectivePerms?.permissions?.[code] ?? false;
+  };
 
   const can = (permission: PermissionKey): boolean => {
-    // While auth is loading, allow everything — RoleRoute handles the gate
-    if (isLoading) return true;
-
-    const allowed = PERMISSIONS[permission] as readonly string[];
-
-    // Categorize permissions
-    const globalOnlyPermissions: PermissionKey[] = [
-      "createProject",
-      "manageSettings",
-      "viewBilling"
-    ];
-
-    // 1. If it's a global-only permission, check against global role only
-    if (globalOnlyPermissions.includes(permission)) {
-      return allowed.includes(globalCode);
-    }
-
-    // 2. For project-level permissions: 
-    //    - If user has a project-specific role, that is the strict source of truth
-    if (projectCode) {
-      return allowed.includes(projectCode);
-    }
-
-    //    - Fallback: If no project role is found (e.g. Org Owner viewing projects), 
-    //      grant full access only if they are a global CLIENT (Owner/Super-Admin)
-    if (globalCode === "CLIENT") return true;
-
-    return false;
+    const code = FLAG_TO_CODE[permission];
+    return perm(code);
   };
 
   return {
     isLoading,
     isOrgAdmin,
     can,
-    canViewCompliance: can("viewCompliance"),
-    canViewFinance: can("viewFinance"),
-    canViewAudit: can("viewAudit"),
-    canViewProgramme: can("viewProgramme"),
-    canViewSettings: can("viewSettings"),
-    canEditTeamRoles: can("editTeamRoles"),
-    canManageTeam: isOrgAdmin || can("manageTeam"),
-    canManageSettings: can("manageSettings"),
-    canViewBilling: can("viewBilling"),
-    canManageIntegrations: can("manageIntegrations"),
-    canCreateProject: can("createProject"),
-    canEditProject: isOrgAdmin || can("editProject"),
-    canCreateTasks: can("createTasks"),
+    canViewCompliance:     perm("compliance.view"),
+    canViewFinance:        perm("finance.view"),
+    canViewAudit:          perm("audit.view"),
+    canViewProgramme:      perm("programme.view"),
+    canViewSettings:       perm("settings.view"),
+    canEditTeamRoles:      perm("settings.team.roles.edit"),
+    canManageTeam:         isOrgAdmin || perm("settings.team.manage"),
+    canManageSettings:     perm("settings.manage"),
+    canViewBilling:        perm("settings.billing.view"),
+    canManageIntegrations: perm("settings.integrations.manage"),
+    canCreateProject:      perm("project.create"),
+    canEditProject:        isOrgAdmin || perm("project.edit"),
+    canCreateTasks:        perm("task.create"),
   };
 }

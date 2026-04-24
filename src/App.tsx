@@ -26,6 +26,7 @@ import ProjectDetails from "./pages/settings/projectDetails";
 import Audit from "./pages/settings/audit";
 import AuditPage from "./pages/AuditPage";
 import Billing from "./pages/settings/billing";
+import Permissions from "./pages/settings/permissions";
 import DataManagement from "./pages/settings/dataManagement";
 import Integrations from "./pages/settings/integrations";
 import Notifications from "./pages/settings/notifications";
@@ -242,6 +243,7 @@ const App = () => (
             <Route path="audit" element={
               <Audit />
             } />
+            <Route path="permissions" element={<Permissions />} />
           </Route>
           <Route
             path="/onboarding"

@@ -89,11 +89,20 @@ export function DashboardSidebar() {
   )
   const meetingUnread = meetingUnreadData?.count || 0
 
+  const { data: docUnreadData, refetch: refetchDocUnread } = useFetch<{ count: number }>(
+    selectedProjectId ? `notifications/unread_count/?project_id=${selectedProjectId}&type=document_created,document_version_created` : "",
+    { refetchInterval: 30000 }
+  )
+  const docUnread = docUnreadData?.count || 0
+
   useEffect(() => {
-    const handler = () => refetchMeetingUnread();
+    const handler = () => {
+      refetchMeetingUnread();
+      refetchDocUnread();
+    };
     window.addEventListener("notifications-marked-read", handler);
     return () => window.removeEventListener("notifications-marked-read", handler);
-  }, [refetchMeetingUnread]);
+  }, [refetchMeetingUnread, refetchDocUnread]);
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -309,6 +318,7 @@ export function DashboardSidebar() {
                         const badge =
                           item.title === "Communications" && totalUnread > 0 ? totalUnread :
                           item.title === "Meetings" && meetingUnread > 0 ? meetingUnread :
+                          item.title === "Documents" && docUnread > 0 ? docUnread :
                           0;
                         return (
                           <SidebarMenuItem key={item.title}>

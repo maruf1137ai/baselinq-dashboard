@@ -4,6 +4,7 @@ import RolePermissions from "@/components/settings/Role&Permissions";
 import ApprovalChains from "@/components/settings/ApprovalChains";
 import AiRouting from "@/components/settings/AiRouting";
 import { usePermissions } from "@/hooks/usePermissions";
+import { RolesTab } from "./permissions";
 
 const TeamManagement = () => {
   const { canEditTeamRoles, canManageTeam } = usePermissions();
@@ -12,6 +13,7 @@ const TeamManagement = () => {
   const btns = [
     "Users",
     "Role Permissions",
+    "Roles",
     "Approval Chains",
     "AI Routing",
   ];
@@ -39,6 +41,7 @@ const TeamManagement = () => {
       <div className="mt-6">
         {activeTab === "Users" && <TeamMembersTable />}
         {activeTab === "Role Permissions" && <RolePermissions />}
+        {activeTab === "Roles" && <RolesTab />}
         {activeTab === "Approval Chains" && <ApprovalChains />}
         {activeTab === "AI Routing" && <AiRouting />}
       </div>

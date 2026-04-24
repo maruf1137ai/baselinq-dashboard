@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -74,6 +74,20 @@ const DocumentDetail = () => {
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (docId && projectId) {
+      postData({
+        url: `notifications/mark_document_read/?project_id=${projectId}`,
+        data: { documentId: docId }
+      }).then(() => {
+        // Dispatch event to update sidebar counts globally
+        window.dispatchEvent(new Event("notifications-marked-read"));
+      }).catch(err => {
+        console.error("Failed to mark document read:", err);
+      });
+    }
+  }, [docId, projectId]);
 
   const { data: findingsData, isLoading: findingsLoading } = useQuery({
     queryKey: ['findings', docId, projectId],

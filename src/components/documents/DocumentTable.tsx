@@ -68,6 +68,7 @@ interface DocumentTableProps {
   // Retained for backwards compat; no longer used.
   customDisciplines?: string[];
   onUploadToDiscipline?: (discipline: string) => void;
+  unreadDocIds?: Set<string>;
 }
 
 // Discipline chip colors — kept subtle so they don't overpower the table.
@@ -106,11 +107,13 @@ function DocumentRow({
   onRowClick,
   onVersionUpload,
   onDelete,
+  isUnread,
 }: {
   doc: ApiDocument;
   onRowClick: (id: string | number) => void;
   onVersionUpload?: (doc: ApiDocument) => void;
   onDelete?: (doc: ApiDocument) => void;
+  isUnread?: boolean;
 }) {
   const category = getCategoryForDoc(doc as any);
   const typeLabel = SUBCATEGORY_LABEL[doc.type] || doc.type || '—';
@@ -121,10 +124,15 @@ function DocumentRow({
       className="px-6 py-4 flex items-center hover:bg-muted/40 transition-colors cursor-pointer group"
     >
       {/* Name */}
-      <div className="flex-1 min-w-0 pr-4">
+      <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
         <span className="text-foreground text-sm font-normal block truncate">
           {doc.name}
         </span>
+        {isUnread && (
+          <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+            New
+          </span>
+        )}
       </div>
 
       {/* Reference */}
@@ -233,6 +241,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   onVersionUpload,
   onDelete,
   groupBy = 'none',
+  unreadDocIds,
 }) => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggle = (key: string) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
@@ -338,6 +347,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     onRowClick={onRowClick}
                     onVersionUpload={onVersionUpload}
                     onDelete={onDelete}
+                    isUnread={unreadDocIds?.has(String(doc._id))}
                   />
                 ))}
               </div>

@@ -20,9 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
-import { resolvePermissionCode } from "@/lib/roleUtils";
 import TaskFilterBar, { TaskFilters, defaultFilters } from '@/components/task/TaskFilterBar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 import {
   Tooltip,
   TooltipContent,
@@ -70,29 +70,6 @@ const btns = [
 ];
 
 const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
-
-// Role to document type mapping - keys are standardized backbone codes
-// Exact match with provided permission matrix
-const rolePermissions: Record<string, string[]> = {
-  CLIENT: ALL_TASK_TYPES,                      // Client/Owner - can create any task
-  CPM: ALL_TASK_TYPES,                         // Client Project Manager - can create any task
-  ARCH: ["SI", "VO", "RFI"],                   // Architect - SI, VO, RFI
-  PM: ["SI", "RFI", "CPI", "DC"],              // Project Manager - SI, RFI, CPI, DC
-  PRINCIPAL_PM: ["SI", "CPI", "DC"],           // Principal/PM - SI, CPI, DC
-  CM: ["SI", "RFI", "CPI", "DC"],              // Construction Manager - SI, RFI, CPI, DC
-  CONTRACTS_MGR: ["SI", "DC"],                 // Contracts Manager - SI, DC
-  SE: ["SI", "RFI"],                           // Site Engineer - SI, RFI
-  SS: ["RFI"],                                 // Site Supervisor - RFI only
-  FOREMAN: ["RFI"],                            // Foreman - RFI only
-  CQS: ["DC"],                                 // Consultant QS - DC only
-  QS: ["DC"],                                  // Quantity Surveyor - DC only
-  PLANNER: ["CPI", "DC"],                      // Planning Engineer - CPI, DC
-  CONS_PLANNER: ["CPI"],                       // Consultant Planning Engineer - CPI only
-  MECH_ENG: ["RFI"],                           // Mechanical Engineer - RFI only
-  ELEC_ENG: ["RFI"],                           // Electrical Engineer - RFI only
-  STRUCT_ENG: ["RFI"],                         // Structural Engineer - RFI only
-  ADMIN: ALL_TASK_TYPES,                       // Administrator - can create all tasks
-};
 
 // Timeline stages per task type — used to map board columns to entity status
 const taskTypeStages: Record<string, string[]> = {
@@ -263,6 +240,15 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   // Escalation level: 0=on track, 1=SLA breached (0-3d), 2=escalated to PM (3-7d)
   // Only apply to non-resolved tasks
   const escalationLevel = isResolved ? 0 : (!dueDateInfo.isOverdue ? 0 : overdueDays <= 3 ? 1 : 2);
+
+  // Fire escalation notification once per task when level reaches 2 and backend hasn't recorded it yet
+  useEffect(() => {
+    if (escalationLevel >= 2 && !task.is_escalated) {
+      postData({ url: `tasks/${task.id}/escalate/`, data: {} }).catch(() => {
+        // silent — best-effort, no user-facing error
+      });
+    }
+  }, [escalationLevel, task.id, task.is_escalated]);
 
   // Pending review: task where creator is current user and a response is awaiting their action
   const entityStatus = (task.entity_status || '').toLowerCase();
@@ -560,7 +546,6 @@ const applyFilters = (taskList: any[], filters: TaskFilters, currentUserName: st
 
 export default function Task() {
   const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || "");
-  const { userRole } = useUserRoleStore();
   const { data: currentUser } = useCurrentUser();
 
   // Fetch tasks from Django API - response structure: { count, next, previous, results: [] }
@@ -571,25 +556,15 @@ export default function Task() {
 
   const { mutateAsync: updateTask } = usePatch();
 
-  // Filter buttons based on user role
+  const { data: effectivePerms, isLoading: permsLoading } =
+    useEffectivePermissions(projectId ? parseInt(projectId) : null);
+
+  // Filter task type buttons using DB-driven permissions
   const filteredBtns = useMemo(() => {
-    if (!userRole) return [];
-
-    // Support composite roles like "Client / Owner"
-    const roles = userRole.split(/\s*\/\s*/).map((r) => r.trim());
-
-    // Collect all allowed task types across all roles
-    const allowedTypes = new Set<string>();
-
-    roles.forEach((role) => {
-      // Standardize the project-level role to its backbone permission code
-      const backbone = resolvePermissionCode(role);
-      const typesForRole = rolePermissions[backbone] || [];
-      typesForRole.forEach((type) => allowedTypes.add(type));
-    });
-
-    return btns.filter((btn) => allowedTypes.has(btn.code));
-  }, [userRole]);
+    if (permsLoading) return btns; // show all while loading
+    const perms = effectivePerms?.permissions ?? {};
+    return btns.filter((btn) => perms[`task.${btn.code.toLowerCase()}.create`] === true);
+  }, [effectivePerms, permsLoading]);
 
   // Check if user has permission to create any task type
   const canCreateTask = filteredBtns.length > 0;

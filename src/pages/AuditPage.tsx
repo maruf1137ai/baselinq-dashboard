@@ -40,7 +40,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
-import { useUserRoleStore } from "@/store/useUserRoleStore";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import CashIcon from "@/components/icons/CashIcon";
 import Asterisk from "@/components/icons/Asterisk";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
@@ -90,22 +90,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   GI: "General Instruction",
 };
 
-// Role-based access
-const auditAccessRoles = {
-  fullAccess: ["Project Manager", "Client Project Manager", "Contracts Manager", "Architect"],
-  viewOnly: ["Construction Manager", "Site Engineer", "Planning Engineer", "Consultant Quantity Surveyor"],
-  restricted: ["Subcontractor", "Supplier"],
-};
-
-const getAccessLevel = (userRole: string): "full" | "view" | "restricted" => {
-  const roles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
-  const fullAccessUpper = auditAccessRoles.fullAccess.map(r => r.toUpperCase());
-  const viewOnlyUpper = auditAccessRoles.viewOnly.map(r => r.toUpperCase());
-
-  if (roles.some((r) => fullAccessUpper.includes(r))) return "full";
-  if (roles.some((r) => viewOnlyUpper.includes(r))) return "view";
-  return "restricted";
-};
 
 const getDaysRemaining = (createdAt: string, deadlineDays: number): number => {
   const created = new Date(createdAt);
@@ -137,8 +121,16 @@ const getTaskType = (task: any): string => {
 
 export default function AuditPage() {
   const projectId = localStorage.getItem("selectedProjectId");
-  const { userRole } = useUserRoleStore();
-  const accessLevel = "full";
+  const pidNum = parseInt(projectId || "0") || null;
+  const { data: effectivePerms, isLoading: permsLoading } = useEffectivePermissions(pidNum);
+
+  const accessLevel: "full" | "view" | "restricted" = permsLoading
+    ? "full"
+    : effectivePerms?.permissions?.["audit.full_access"]
+      ? "full"
+      : effectivePerms?.permissions?.["audit.view"]
+        ? "view"
+        : "restricted";
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [deadlineFilter, setDeadlineFilter] = useState("all");

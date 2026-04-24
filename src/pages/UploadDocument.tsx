@@ -61,7 +61,9 @@ export default function UploadDocument() {
   const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');
   const [runAiAnalysis, setRunAiAnalysis] = useState(true);
+  const [notifyTeam, setNotifyTeam] = useState(false);
   const [certificateSubtype, setCertificateSubtype] = useState('');
+  const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
 
   // Linking
   const [linkSearch, setLinkSearch] = useState('');
@@ -102,6 +104,28 @@ export default function UploadDocument() {
       setDocType(allowed[0]);
     }
   }, [category]);
+
+  // Auto-generate reference from name
+  useEffect(() => {
+    if (!isReferenceManuallyEdited) {
+      if (name.trim()) {
+        const words = name.trim().split(/[\s\-_]+/);
+        const initials = words
+          .map((w) => w[0])
+          .join('')
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '');
+
+        if (initials) {
+          setReference(`${initials}-01`);
+        } else {
+          setReference('');
+        }
+      } else {
+        setReference('');
+      }
+    }
+  }, [name, isReferenceManuallyEdited]);
 
   const { data: capabilities } = useFetch<{
     documentTypes: string[];
@@ -198,12 +222,12 @@ export default function UploadDocument() {
           .map(entry => { const s3Key = s3Keys.get(entry.id); return s3Key ? { s3Key, fileName: entry.file.name, fileSize: entry.file.size } : null; })
           .filter(Boolean);
         if (!files.length) { toast.error('All file uploads failed'); return; }
-        await postData({ url: 'documents/new-upload/', data: { projectId: parseInt(projectId), files, type: docType, certificateSubtype: certificateSubtype || undefined, discipline: discipline || '', reference: reference || '', description: description || '', runAiAnalysis, linkIds } });
+        await postData({ url: 'documents/new-upload/', data: { projectId: parseInt(projectId), files, type: docType, certificateSubtype: certificateSubtype || undefined, discipline: discipline || '', reference: reference || '', description: description || '', runAiAnalysis, notifyTeam, linkIds } });
       } else {
         const entry = s3Upload.entries[0];
         const s3Key = s3Keys.get(entry.id);
         if (!s3Key) { toast.error(`Failed to upload ${entry.file.name}`); return; }
-        await postData({ url: 'documents/', data: { project_id: parseInt(projectId), name: name.trim(), type: docType, certificate_subtype: certificateSubtype || undefined, discipline: discipline || '', description: description || '', reference: reference || '', s3_key: s3Key, file_name: entry.file.name, file_size: entry.file.size, run_ai_analysis: runAiAnalysis, link_ids: linkIds } });
+        await postData({ url: 'documents/', data: { project_id: parseInt(projectId), name: name.trim(), type: docType, certificate_subtype: certificateSubtype || undefined, discipline: discipline || '', description: description || '', reference: reference || '', s3_key: s3Key, file_name: entry.file.name, file_size: entry.file.size, run_ai_analysis: runAiAnalysis, notify_team: notifyTeam, link_ids: linkIds } });
       }
 
       toast.success('Document uploaded successfully');
@@ -470,7 +494,10 @@ export default function UploadDocument() {
                     <Input
                       placeholder="e.g. ARC-DWG-0042"
                       value={reference}
-                      onChange={e => setReference(e.target.value)}
+                      onChange={e => {
+                        setReference(e.target.value);
+                        setIsReferenceManuallyEdited(true);
+                      }}
                       className="h-10 border-border rounded-lg"
                     />
                   </div>
@@ -503,6 +530,23 @@ export default function UploadDocument() {
                       setRunAiAnalysis(checked);
                       postData({ url: 'documents/run-ai/', data: { runAiAnalysis: checked } }).catch(() => {});
                     }}
+                  />
+                </div>
+
+                {/* Notify Team */}
+                <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-5 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 bg-white rounded-xl shadow-sm border border-border flex items-center justify-center text-primary">
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-normal text-foreground">Notify Team</p>
+                      <p className="text-xs text-muted-foreground">Send an email/system notification to all project members.</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={notifyTeam}
+                    onCheckedChange={setNotifyTeam}
                   />
                 </div>
               </div>
