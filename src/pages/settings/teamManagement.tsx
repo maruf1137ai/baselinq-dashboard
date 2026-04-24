@@ -18,7 +18,7 @@ const TeamManagement = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-normal tracking-tight text-foreground">Team Management</h2>
+      <h2 className="text-2xl font-normal tracking-tight text-foreground">User Management</h2>
       <p className="text-sm text-muted-foreground mt-1 mb-6">
         Manage users, roles, permissions, and approval workflows.
       </p>

@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, invitePersonnel, postData, createAssociatedCompany } from "@/lib/Api";
+import { validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, lookupCompany, inviteClient, inviteAppointedCompany, inviteUser, postData, createAssociatedCompany } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useCreateProject } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
@@ -513,7 +513,7 @@ export default function CreateProject() {
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<OrgUser | null>(null);
   const [selectedMemberRole, setSelectedMemberRole] = useState("");
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
-  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
+  const [inviteUserForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
   const [invitedPersonnelList, setInvitedPersonnelList] = useState<{ name: string; email: string; role_code: string }[]>([]);
 
   // Add Appointed Personnel modal
@@ -1072,7 +1072,7 @@ export default function CreateProject() {
         if (pId && invitedPersonnelSnapshot.length > 0) {
           await Promise.all(invitedPersonnelSnapshot.map(async (p) => {
             try {
-              await invitePersonnel({ name: p.name, email: p.email, role_code: p.role_code, project_id: pId });
+              await inviteUser({ name: p.name, email: p.email, role_code: p.role_code, project_id: pId });
             } catch (err: any) {
               toast.warning(`Could not invite ${p.email}: ${err?.response?.data?.error || err?.message}`);
             }
@@ -2553,7 +2553,7 @@ export default function CreateProject() {
         const alreadyInvitedEmails = new Set(invitedPersonnelList.map(e => e.email));
         const filteredOrgUsers = orgUsers.filter(u => !alreadyAddedIds.has(u.id));
         const canAddExisting = !!selectedMemberToAdd;
-        const canAddInvite = !!invitePersonnelForm.email.trim() && !!invitePersonnelForm.role_code;
+        const canAddInvite = !!inviteUserForm.email.trim() && !!inviteUserForm.role_code;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -2691,7 +2691,7 @@ export default function CreateProject() {
                         <input
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
                           placeholder="e.g. John Smith"
-                          value={invitePersonnelForm.name}
+                          value={inviteUserForm.name}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
                         />
                       </div>
@@ -2704,7 +2704,7 @@ export default function CreateProject() {
                           type="email"
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
                           placeholder="e.g. john@company.com"
-                          value={invitePersonnelForm.email}
+                          value={inviteUserForm.email}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
                         />
                       </div>
@@ -2713,7 +2713,7 @@ export default function CreateProject() {
                       <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                       <select
                         className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                        value={invitePersonnelForm.role_code}
+                        value={inviteUserForm.role_code}
                         onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
                         <option value="">Select role…</option>
                         {appRoles.map((r) => (
@@ -2760,10 +2760,10 @@ export default function CreateProject() {
                 ) : (
                   <button
                     type="button"
-                    disabled={!canAddInvite || alreadyInvitedEmails.has(invitePersonnelForm.email.trim())}
+                    disabled={!canAddInvite || alreadyInvitedEmails.has(inviteUserForm.email.trim())}
                     onClick={() => {
-                      if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
-                      setInvitedPersonnelList((prev) => [...prev, { ...invitePersonnelForm }]);
+                      if (!inviteUserForm.email.trim() || !inviteUserForm.role_code) return;
+                      setInvitedPersonnelList((prev) => [...prev, { ...inviteUserForm }]);
                       setInvitePersonnelForm({ name: "", email: "", role_code: "" });
                       setShowAddMemberModal(false);
                     }}

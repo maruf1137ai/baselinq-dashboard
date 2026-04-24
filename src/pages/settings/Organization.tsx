@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import OrgTeamTable from "@/components/settings/OrgTeamTable";
+import OrgUsersTable from "@/components/settings/OrgTeamTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -579,7 +579,7 @@ const OrganizationPage = () => {
             </form>
           </>
         ) : (
-          <OrgTeamTable />
+          <OrgUsersTable />
         )}
       </div>
     </div>

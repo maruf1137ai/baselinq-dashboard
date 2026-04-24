@@ -58,7 +58,7 @@ interface AppointedInviteEntry {
 }
 
 
-const AppointedCompanies = () => {
+const AssociatedCompanies = () => {
   const { canManageTeam } = usePermissions();
   const queryClient = useQueryClient();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
@@ -795,4 +795,4 @@ const AppointedCompanies = () => {
   );
 };
 
-export default AppointedCompanies;
+export default AssociatedCompanies;

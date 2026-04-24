@@ -571,7 +571,7 @@ const Index = () => {
             </div>
             <h2 className="text-lg font-medium text-[#111827] mb-1">No projects yet</h2>
             <p className="text-sm text-[#6b7280] mb-5 max-w-md leading-relaxed">
-              Create your first project to get started. You can manage tasks, documents, budgets, and team members all in one place.
+              Create your first project to get started. You can manage tasks, documents, budgets, and users all in one place.
             </p>
             <button
               onClick={() => navigate("/create-project")}

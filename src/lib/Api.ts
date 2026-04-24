@@ -194,7 +194,7 @@ export const inviteClient = async (payload: { client_name: string; client_email:
   return res.data;
 };
 
-export const invitePersonnel = async (data: {
+export const inviteUser = async (data: {
   name: string;
   email: string;
   role_code: string;

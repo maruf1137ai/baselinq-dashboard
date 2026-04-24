@@ -212,9 +212,9 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
                   <Command>
-                    <CommandInput placeholder="Search team members..." />
+                    <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No team member found.</CommandEmpty>
+                      <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
                         {availableUsers.map((member: any) => {
                           const memberName = member.user?.name || member.name || member.user?.email || "";

@@ -151,7 +151,7 @@ export function DashboardSidebar() {
     }
   }, [selectedProjectId, user?.id]);
 
-  // Listen for user-role-change event from team members table
+  // Listen for user-role-change event from users table
   useEffect(() => {
     const handleUserRoleChange = () => {
       if (selectedProjectId && user?.id) {

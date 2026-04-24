@@ -36,7 +36,7 @@ import {
   lookupCompany,
   inviteAppointedCompany,
   inviteClient,
-  invitePersonnel,
+  inviteUser,
   postData
 } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
@@ -793,22 +793,22 @@ export default function EditProject() {
 
   // Invite Personnel modal
   const [showInvitePersonnelModal, setShowInvitePersonnelModal] = useState(false);
-  const [invitePersonnelForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
-  const [invitePersonnelSubmitting, setInvitePersonnelSubmitting] = useState(false);
+  const [inviteUserForm, setInvitePersonnelForm] = useState({ name: "", email: "", role_code: "" });
+  const [inviteUserSubmitting, setInvitePersonnelSubmitting] = useState(false);
 
   const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
   const orgUsers: OrgUser[] = orgUsersData?.results || [];
 
   const handleInvitePersonnelSubmit = async () => {
-    if (!invitePersonnelForm.email.trim() || !invitePersonnelForm.role_code) return;
+    if (!inviteUserForm.email.trim() || !inviteUserForm.role_code) return;
     setInvitePersonnelSubmitting(true);
     try {
-      await invitePersonnel({
-        name: invitePersonnelForm.name,
-        email: invitePersonnelForm.email,
-        role_code: invitePersonnelForm.role_code,
+      await inviteUser({
+        name: inviteUserForm.name,
+        email: inviteUserForm.email,
+        role_code: inviteUserForm.role_code,
       });
-      toast.success(`Invitation sent to ${invitePersonnelForm.email}`);
+      toast.success(`Invitation sent to ${inviteUserForm.email}`);
       setShowInvitePersonnelModal(false);
       setInvitePersonnelForm({ name: "", email: "", role_code: "" });
     } catch (err: any) {
@@ -2664,7 +2664,7 @@ export default function EditProject() {
                   <input
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
                     placeholder="e.g. John Smith"
-                    value={invitePersonnelForm.name}
+                    value={inviteUserForm.name}
                     onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
                   />
                 </div>
@@ -2678,7 +2678,7 @@ export default function EditProject() {
                     type="email"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all text-left"
                     placeholder="e.g. john@company.com"
-                    value={invitePersonnelForm.email}
+                    value={inviteUserForm.email}
                     onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
                   />
                 </div>
@@ -2688,7 +2688,7 @@ export default function EditProject() {
                 <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                 <select
                   className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
-                  value={invitePersonnelForm.role_code}
+                  value={inviteUserForm.role_code}
                   onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
                   <option value="">Select role...</option>
                   {appRoles.map((r) => (
@@ -2709,9 +2709,9 @@ export default function EditProject() {
               <button
                 type="button"
                 onClick={handleInvitePersonnelSubmit}
-                disabled={invitePersonnelSubmitting}
+                disabled={inviteUserSubmitting}
                 className="px-6 py-2 bg-[#6c5ce7] text-white rounded-lg text-[13px] font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-                {invitePersonnelSubmitting ? "Inviting…" : "Invite User"}
+                {inviteUserSubmitting ? "Inviting…" : "Invite User"}
               </button>
             </div>
           </div>
