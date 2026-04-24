@@ -1376,7 +1376,7 @@ export default function TaskDetails() {
                           onClick={() => {
                             const assignedTo = currentTask?.assignedTo || [];
                             const preSelected = projectMembers.filter((m: any) =>
-                              assignedTo.some((a: any) => a.userId === m.userId)
+                              assignedTo.some((a: any) => String(a.userId) === String(m.userId))
                             );
                             setSelectedAssignUsers(preSelected);
                             setShowAssignModal(true);
