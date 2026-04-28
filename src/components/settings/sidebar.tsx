@@ -24,8 +24,13 @@ import {
   KeyRound,
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionKey } from "@/lib/roleUtils";
 
-const navItems = [
+const navItems: {
+  title: string;
+  items: { id: number; title: string; url: string; icon: React.ReactNode; permission?: PermissionKey }[];
+}[] = [
   {
     title: "Project",
     items: [
@@ -46,12 +51,14 @@ const navItems = [
         title: "Project Details",
         url: "/settings/project-details",
         icon: <Settings className="h-4 w-4 text-current" />,
+        permission: "manageSettings",
       },
       {
         id: 3,
         title: "Site Settings",
         url: "/settings/site",
         icon: <MapPin className="h-4 w-4 text-current" />,
+        permission: "manageSettings",
       },
     ],
   },
@@ -63,12 +70,14 @@ const navItems = [
         title: "Billing",
         url: "/settings/billing",
         icon: <CreditCard className="h-4 w-4 text-current" />,
+        permission: "viewBilling",
       },
       {
         id: 5,
         title: "Integrations",
         url: "/settings/integrations",
         icon: <Link2 className="h-4 w-4 text-current" />,
+        permission: "manageIntegrations",
       },
       {
         id: 6,
@@ -82,12 +91,6 @@ const navItems = [
         url: "/settings/notifications",
         icon: <Bell className="h-4 w-4 text-current" />,
       },
-      {
-        id: 11,
-        title: "Roles & Permissions",
-        url: "/settings/permissions",
-        icon: <KeyRound className="h-4 w-4 text-current" />,
-      },
     ],
   },
   {
@@ -98,12 +101,14 @@ const navItems = [
         title: "Data Management",
         url: "/settings/data-management",
         icon: <Database className="h-4 w-4 text-current" />,
+        permission: "manageSettings",
       },
       {
         id: 9,
         title: "Audit & Compliance",
         url: "/settings/audit",
         icon: <CircleCheckBig className="h-4 w-4 text-current" />,
+        permission: "viewAudit",
       },
     ],
   },
@@ -115,6 +120,7 @@ interface SidebarProps {
 
 export function Sidebar() {
   const location = useLocation();
+  const { can } = usePermissions();
 
   // All expanded initially
   const [openSections, setOpenSections] = useState(() =>
@@ -144,8 +150,13 @@ export function Sidebar() {
       <div className="flex-1 overflow-auto">
         <div className="menu p-3">
           {navItems?.map((item, index) => {
+            const visibleItems = item.items.filter(
+              (i) => !i.permission || can(i.permission)
+            );
+            if (visibleItems.length === 0) return null;
+
             const isOpen = openSections[index];
-            const { title, items } = item;
+            const { title } = item;
 
             return (
               <div className="item flex flex-col" key={index}>
@@ -163,7 +174,7 @@ export function Sidebar() {
                   className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-96" : "max-h-0"
                     }`}>
                   <div className="list flex flex-col gap-1 mt-1">
-                    {items?.map(({ id, title, icon, url }) => {
+                    {visibleItems.map(({ id, title, icon, url }) => {
                       const isActive = location.pathname === url;
 
                       return (

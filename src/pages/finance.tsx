@@ -11,6 +11,7 @@ import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import Forecast from "@/components/finance/forecast";
 import useFetch from "@/hooks/useFetch";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,20 @@ const formatDate = (dateStr: string): string => {
 };
 
 const Finance = () => {
-  const [activeTab, setActiveTab] = useState("Cost Ledger");
+  const {
+    canViewCostLedger,
+    canViewPaymentCertificate,
+    canViewVariationOrder,
+    canEditVariationOrder,
+  } = usePermissions();
+
+  const visibleTabs = [
+    canViewCostLedger         && "Cost Ledger",
+    canViewPaymentCertificate && "Payment Certificates",
+    canViewVariationOrder     && "Variation Orders",
+  ].filter(Boolean) as string[];
+
+  const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isVOModalOpen, setIsVOModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -171,7 +185,7 @@ const Finance = () => {
           </div>
           <header className="border-b border-border">
             <div className="flex items-center gap-2">
-              {TABS.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -194,9 +208,9 @@ const Finance = () => {
               ) : (
                 <VariationOrdersTable
                   orders={variationOrders}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onNew={() => setIsVOModalOpen(true)}
+                  onEdit={canEditVariationOrder ? handleEdit : undefined}
+                  onDelete={canEditVariationOrder ? handleDelete : undefined}
+                  onNew={canEditVariationOrder ? () => setIsVOModalOpen(true) : undefined}
                 />
               )}
             </main>
@@ -214,7 +228,7 @@ const Finance = () => {
       />
 
       {/* Create VO drawer */}
-      <Sheet open={isVOModalOpen} onOpenChange={setIsVOModalOpen}>
+      <Sheet open={canEditVariationOrder && isVOModalOpen} onOpenChange={setIsVOModalOpen}>
         <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
           <SheetHeader className="px-6 py-4 border-b shrink-0">
             <SheetTitle>New Variation Order</SheetTitle>
@@ -226,7 +240,7 @@ const Finance = () => {
       </Sheet>
 
       {/* Edit VO drawer */}
-      <Sheet open={isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
+      <Sheet open={canEditVariationOrder && isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
           <SheetHeader className="px-6 py-4 border-b shrink-0">
             <SheetTitle>Edit Variation Order</SheetTitle>
@@ -250,7 +264,7 @@ const Finance = () => {
       </Sheet>
 
       {/* Delete confirmation modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
+      <Dialog open={canEditVariationOrder && isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
         <DialogContent className="bg-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Variation Order</DialogTitle>

@@ -166,7 +166,9 @@ const App = () => (
           <Route path="/compliance" element={
             <ProtectedRoute>
               <ProjectProtectedRoute>
-                <Compliance />
+                <RoleRoute permission="viewCompliance">
+                  <Compliance />
+                </RoleRoute>
               </ProjectProtectedRoute>
             </ProtectedRoute>
           } />
@@ -174,7 +176,9 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ProjectProtectedRoute>
-                  <AuditPage />
+                  <RoleRoute permission="viewAudit">
+                    <AuditPage />
+                  </RoleRoute>
                 </ProjectProtectedRoute>
               </ProtectedRoute>
             }
@@ -229,21 +233,29 @@ const App = () => (
           }>
             <Route index element={<TeamManagement />} />
             <Route path="associated-companies" element={<AssociatedCompanies />} />
-            <Route path="project-details" element={<ProjectDetails />} />
-            <Route path="site" element={<Site />} />
+            <Route path="project-details" element={
+              <RoleRoute permission="manageSettings"><ProjectDetails /></RoleRoute>
+            } />
+            <Route path="site" element={
+              <RoleRoute permission="manageSettings"><Site /></RoleRoute>
+            } />
             <Route path="notifications" element={<Notifications />} />
             <Route path="billing" element={
-              <Billing />
+              <RoleRoute permission="viewBilling"><Billing /></RoleRoute>
             } />
             <Route path="integrations" element={
-              <Integrations />
+              <RoleRoute permission="manageIntegrations"><Integrations /></RoleRoute>
             } />
             <Route path="security" element={<Security />} />
-            <Route path="data-management" element={<DataManagement />} />
-            <Route path="audit" element={
-              <Audit />
+            <Route path="data-management" element={
+              <RoleRoute permission="manageSettings"><DataManagement /></RoleRoute>
             } />
-            <Route path="permissions" element={<Permissions />} />
+            <Route path="audit" element={
+              <RoleRoute permission="viewAudit"><Audit /></RoleRoute>
+            } />
+            <Route path="permissions" element={
+              <RoleRoute permission="viewPermissions"><Permissions /></RoleRoute>
+            } />
           </Route>
           <Route
             path="/onboarding"

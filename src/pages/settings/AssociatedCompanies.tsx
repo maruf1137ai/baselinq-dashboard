@@ -59,7 +59,7 @@ interface AppointedInviteEntry {
 
 
 const AssociatedCompanies = () => {
-  const { canManageTeam } = usePermissions();
+  const { canManageAssociatedCompanies, canAddCompanyMember, canEditCompanyMember } = usePermissions();
   const queryClient = useQueryClient();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { isLoading } = useProject(selectedProjectId ?? undefined);
@@ -117,7 +117,7 @@ const AssociatedCompanies = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedProjectId || !canManageTeam) return;
+    if (!selectedProjectId || !canManageAssociatedCompanies) return;
     const toInvite = appointedInvites.filter((e) => e.email.trim() && e.company_name.trim());
     if (toInvite.length === 0) {
       toast.info("No new companies to invite.");
@@ -286,7 +286,7 @@ const AssociatedCompanies = () => {
             </div>
             <h1 className="text-3xl font-normal text-foreground tracking-tight">Associated Companies</h1>
           </div>
-          {!canManageTeam && (
+          {!canManageAssociatedCompanies && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
               <Lock className="w-3.5 h-3.5" />
               <span>Read-only access</span>
@@ -361,7 +361,7 @@ const AssociatedCompanies = () => {
                             )}
 
                             {/* Remove company */}
-                            {canManageTeam && isNumericId && (
+                            {canManageAssociatedCompanies && isNumericId && (
                               removeConfirmId === comp.id ? (
                                 <div className="flex items-center gap-1">
                                   <button
@@ -394,8 +394,6 @@ const AssociatedCompanies = () => {
 
                         {/* Members panel */}
                         {isExpanded && (() => {
-                          const isCompanyMember = members.some((m: any) => String(m.id) === String(currentUser?.id));
-                          const canManageCompany = isCompanyMember;
                           return (
                             <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
                               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Users</p>
@@ -416,7 +414,7 @@ const AssociatedCompanies = () => {
                                       </div>
                                       <div className="flex items-center gap-2">
                                         {/* Role display or inline edit */}
-                                        {canManageCompany && m.team_member_id && editingMember?.teamMemberId === m.team_member_id ? (
+                                        {canEditCompanyMember && m.team_member_id && editingMember?.teamMemberId === m.team_member_id ? (
                                           <div className="flex items-center gap-1.5">
                                             <input
                                               autoFocus
@@ -438,10 +436,10 @@ const AssociatedCompanies = () => {
                                           </div>
                                         ) : (
                                           <span
-                                            className={cn("text-[10px] text-muted-foreground", canManageCompany && m.team_member_id && "cursor-pointer hover:text-primary hover:underline")}
-                                            title={canManageCompany && m.team_member_id ? "Click to edit role" : undefined}
+                                            className={cn("text-[10px] text-muted-foreground", canEditCompanyMember && m.team_member_id && "cursor-pointer hover:text-primary hover:underline")}
+                                            title={canEditCompanyMember && m.team_member_id ? "Click to edit role" : undefined}
                                             onClick={() => {
-                                              if (canManageCompany && m.team_member_id) {
+                                              if (canEditCompanyMember && m.team_member_id) {
                                                 setEditingMember({ teamMemberId: m.team_member_id, currentRole: m.role });
                                                 setEditingMemberRole(m.role || "");
                                               }
@@ -461,7 +459,7 @@ const AssociatedCompanies = () => {
                                           </span>
                                         )}
                                         {/* Remove active member */}
-                                        {canManageCompany && m.team_member_id && String(m.id) !== String(currentUser?.id) && (
+                                        {canEditCompanyMember && m.team_member_id && String(m.id) !== String(currentUser?.id) && (
                                           removingMemberId === m.team_member_id ? (
                                             <div className="flex items-center gap-1">
                                               <button
@@ -487,7 +485,7 @@ const AssociatedCompanies = () => {
                                           )
                                         )}
                                         {/* Revoke pending invitation */}
-                                        {canManageCompany && m.invitation_id && (
+                                        {canEditCompanyMember && m.invitation_id && (
                                           revokingInviteId === m.invitation_id ? (
                                             <div className="flex items-center gap-1">
                                               <button
@@ -519,7 +517,7 @@ const AssociatedCompanies = () => {
                               )}
 
                               {/* Inline invite form */}
-                              {canManageCompany && invitingForCompany === comp.id ? (
+                              {canAddCompanyMember && invitingForCompany === comp.id ? (
                                 <div className="mt-3 pt-3 border-t border-border space-y-3">
                                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Invite User</p>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -576,7 +574,7 @@ const AssociatedCompanies = () => {
                                     </button>
                                   </div>
                                 </div>
-                              ) : canManageCompany && (
+                              ) : canAddCompanyMember && (
                                 <button
                                   type="button"
                                   onClick={() => { setInvitingForCompany(comp.id); setMemberInviteForm({ name: "", email: "", position: "" }); }}
@@ -699,7 +697,7 @@ const AssociatedCompanies = () => {
             ) : null}
 
             {/* Invite forms — only shown to users who can manage team */}
-            {canManageTeam && appointedInvites.map((entry) => (
+            {canManageAssociatedCompanies && appointedInvites.map((entry) => (
               <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
                 <div className="flex items-center justify-end">
                   <button
@@ -758,7 +756,7 @@ const AssociatedCompanies = () => {
             ))}
 
             {/* Send Invitations button — shown inline after the forms */}
-            {canManageTeam && appointedInvites.length > 0 && (
+            {canManageAssociatedCompanies && appointedInvites.length > 0 && (
               <div className="flex justify-end">
                 <Button
                   onClick={handleSave}
@@ -772,7 +770,7 @@ const AssociatedCompanies = () => {
             )}
 
             {/* Add button — only shown to users who can manage team */}
-            {canManageTeam && (
+            {canManageAssociatedCompanies && (
               <button
                 type="button"
                 onClick={() =>

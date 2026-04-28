@@ -82,6 +82,12 @@ export const PERMISSIONS = {
   // Page-level access
   viewCompliance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER"],
   viewFinance: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  viewCostLedger:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  editCostLedger:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  viewPaymentCertificate: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  editPaymentCertificate: ["CLIENT", "CPM", "PM", "CQS", "CONTRACTS_MGR"],
+  viewVariationOrder:     ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
+  editVariationOrder:     ["CLIENT", "CPM", "PM", "ARCH"],
   viewAudit: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
   viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
   viewSettings: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH"],
@@ -96,6 +102,18 @@ export const PERMISSIONS = {
   editProject: ["CLIENT", "CPM", "PM", "CM"],
   // Task actions
   createTasks: ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
+  // Permissions matrix
+  viewPermissions: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH"],
+  editPermissions: ["CLIENT", "CPM"],
+  manageRoles:     ["CLIENT", "CPM", "PM", "CM"],
+  // Granular team member actions
+  addTeamMember:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  removeTeamMember: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  editTeamMember:   ["CLIENT", "CPM", "PM", "CM"],
+  // Associated Companies
+  manageAssociatedCompanies: ["CLIENT", "CPM", "PM", "CM"],
+  addCompanyMember:          ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
+  editCompanyMember:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

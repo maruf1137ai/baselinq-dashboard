@@ -4,7 +4,7 @@ import { Category, LedgerEntry } from "../finance/costLadger";
 import { MoreHorizontal, ChevronsUpDown, Check, User as UserIcon, Mail, X } from "lucide-react";
 import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { hasPermission, canManageMember } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import { postData, deleteData, patchData, orgInviteMember } from "@/lib/Api";
 import { toast } from "sonner";
@@ -116,8 +116,8 @@ interface ProjectUsersResponse {
 }
 
 interface TeamMembersTableProps {
-  entries: LedgerEntry[];
-  onDeleteEntry: (id: number) => void;
+  entries?: LedgerEntry[];
+  onDeleteEntry?: (id: number) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -130,12 +130,16 @@ const ActionsCell = ({
   onRefetch,
   onRefetchRoles,
   roles,
+  canEdit,
+  canRemove,
 }: {
   member: TeamMember;
   projectId: string;
   onRefetch: () => void;
   onRefetchRoles: () => void;
   roles: Role[];
+  canEdit: boolean;
+  canRemove: boolean;
 }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -213,16 +217,21 @@ const ActionsCell = ({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
-          <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
-            Edit Role
-          </DropdownMenuItem>
-          <DropdownMenuItem>Suspend</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => setShowDeleteDialog(true)}
-            className="text-red-600 focus:bg-red-50 focus:text-red-700">
-            Remove
-          </DropdownMenuItem>
+          {canEdit && (
+            <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
+              Edit Role
+            </DropdownMenuItem>
+          )}
+          {canRemove && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => setShowDeleteDialog(true)}
+                className="text-red-600 focus:bg-red-50 focus:text-red-700">
+                Remove
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -365,10 +374,8 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const roles = (rolesData || []).filter(r => r.code && r.is_active !== false).sort((a, b) => a.name.localeCompare(b.name));
 
   const { data: user } = useCurrentUser();
-  const currentMember = teamMembers.find((m) => String(m.user.id) === String(user?.id));
-  const myRole = currentMember?.roleName || user?.role?.code || "";
-  const isOrgAdmin = user?.account_type === 'organisation';
-  const canManageTeam = isOrgAdmin || hasPermission(myRole, "manageTeam");
+  const { canAddTeamMember, canRemoveTeamMember, canEditTeamMember } = usePermissions();
+  const canManageTeam = canAddTeamMember || canRemoveTeamMember || canEditTeamMember;
 
   const availableUsers = allUsers.filter(
     (u) => !teamMembers.some((member: TeamMember) => member.user.id === u.id)
@@ -447,7 +454,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           placeholder="Search users…"
         />
         <FilterBtns />
-        {canManageTeam && (
+        {canAddTeamMember && (
           <Button
             onClick={() => setShowAddMemberModal(true)}
             className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
@@ -671,7 +678,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   "Project Role",
                   "Company",
                   "Status",
-                  canManageTeam ? "Actions" : null,
+                  (canEditTeamMember || canRemoveTeamMember) ? "Actions" : null,
                 ]
                   .filter(Boolean)
                   .map((header) => (
@@ -720,13 +727,15 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </td>
                   {canManageTeam && (
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                      {canManageMember(myRole, member.roleName) ? (
+                      {(canEditTeamMember || canRemoveTeamMember) ? (
                         <ActionsCell
                           member={member}
                           projectId={projectId}
                           onRefetch={refetch}
                           onRefetchRoles={refetchRoles}
                           roles={roles}
+                          canEdit={canEditTeamMember}
+                          canRemove={canRemoveTeamMember}
                         />
                       ) : (
                         <span className="text-gray-300">—</span>
