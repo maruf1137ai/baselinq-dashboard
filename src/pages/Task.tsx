@@ -100,8 +100,9 @@ const DOC_TYPE_TEXT_COLORS: Record<string, string> = {
   GI: 'text-gray-500',
 };
 
-// Role to approval permission mapping per document type
-const approvalPermissions: Record<string, string[]> = {
+// Legacy hardcoded approval permissions - replaced with dynamic permission matrix
+// Kept for reference only, no longer used
+const LEGACY_approvalPermissions: Record<string, string[]> = {
   VO: ["Client", "Owner", "Client Project Manager", "Consultant Quantity Surveyor", "Architect"],
   SI: ["Construction Manager", "Project Manager", "Architect", "Client Project Manager"],
   RFI: ["Architect", "Construction Manager", "Project Manager", "Site Engineer"],
@@ -181,11 +182,14 @@ const getStatusDisplayName = (status: string | null) => {
 
 function TaskCard({ task, isDragging, currentUserId }: any) {
   const { userRole } = useUserRoleStore();
+  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+  const { data: effectivePerms } = useEffectivePermissions(projectId);
 
   const normalizedTaskType = task.type === "CRITICALPATHITEM" ? "CPI" : task.type;
-  const allowedApprovers = approvalPermissions[normalizedTaskType] || [];
-  const allowedApproversUpper = allowedApprovers.map(a => a.toUpperCase());
-  const userRoles = userRole ? userRole.split(/\s*\/\s*/).map((r) => r.trim().toUpperCase()) : [];
+
+  // Use permission matrix to determine if user can approve this task type
+  const approvePermissionCode = `task.approve_${normalizedTaskType.toLowerCase()}`;
+  const canApprove = effectivePerms?.permissions?.[approvePermissionCode] === true;
 
   // Tasks in a terminal state are locked — not draggable
   const TERMINAL_STATUSES = ['approved', 'closed', 'eot awarded', 'completed', 'acknowledged', 'done'];
@@ -261,11 +265,10 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
       (normalizedTaskType === 'DC' && (entityStatus === 'notice issued' || entityStatus === 'submitted'))
     );
 
-  // Sign-off required: Recommended VO and current user is a Client role
-  const clientRolesForSignOff = ["CLIENT", "OWNER", "CPM"];
+  // Sign-off required: Recommended VO and current user has VO approval permission
   const needsSignOff = normalizedTaskType === 'VO'
     && entityStatus === 'recommended'
-    && userRoles.some(r => clientRolesForSignOff.includes(r));
+    && canApprove;
 
   // Card border + background per escalation level (pending review takes priority over warnings)
   const cardBorder = needsSignOff ? 'border border-[#6c5ce7] bg-[#6c5ce7]/5 ring-1 ring-[#6c5ce7]/20' :

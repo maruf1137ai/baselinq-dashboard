@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { useUserRoleStore } from '@/store/useUserRoleStore';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
 import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from '@/lib/roleUtils';
+import { usePermission } from '@/hooks/usePermission';
 
 // Roles allowed to update/edit cost ledger entries (mirrors backend COST_LEDGER_UPDATE_ALLOWED_ROLES)
 const COST_LEDGER_EDIT_ROLES = new Set(["CQS", "CONTRACTS_MGR", "CPM", "CLIENT"]);
@@ -171,8 +172,10 @@ const CostLadger = () => {
   const projectId = localStorage.getItem('selectedProjectId') || '';
   const { userRole } = useUserRoleStore();
 
-  const canEdit = true;
-  const canCreate = true;
+  // Use permission matrix instead of hardcoded true
+  const projectIdNum = parseInt(projectId) || null;
+  const canEdit = usePermission("finance.edit_budget", projectIdNum);
+  const canCreate = usePermission("finance.edit_budget", projectIdNum);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

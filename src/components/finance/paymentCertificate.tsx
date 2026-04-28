@@ -7,6 +7,7 @@ import { postData } from "@/lib/Api";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { resolvePermissionCode } from "@/lib/roleUtils";
+import { usePermission } from "@/hooks/usePermission";
 
 interface PCListResponse {
   count: number;
@@ -53,7 +54,9 @@ const PaymentCertificate = () => {
   const certificates: PCEntry[] = data?.results ?? [];
   const { userRole } = useUserRoleStore();
 
-  const canCreatePC = true;
+  // Use permission matrix instead of hardcoded true
+  const projectIdNum = parseInt(projectId) || null;
+  const canCreatePC = usePermission("finance.approve_payment", projectIdNum);
 
   return (
     <main className="p-6">

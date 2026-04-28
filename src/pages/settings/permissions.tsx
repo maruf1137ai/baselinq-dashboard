@@ -154,7 +154,8 @@ function MatrixGrid({
   // Build grouped list
   const groups = useMemo(() => {
     const byGroup: Record<string, Record<string, Permission[]>> = {};
-    const hiddenGroups = ["audit", "compliance", "programme"];
+    // Show all permission groups (audit, compliance, programme now visible)
+    const hiddenGroups: string[] = [];
 
     for (const p of permissions) {
       if (hiddenGroups.includes(p.group.toLowerCase())) continue;
