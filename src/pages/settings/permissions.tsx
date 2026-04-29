@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { fetchData, putData } from "@/lib/Api";
 
@@ -137,20 +138,26 @@ function MatrixTab({ mode }: { mode: "org" }) {
   const roles = asArray<Role>(rolesRaw);
   const permissions = asArray<Permission>(permsRaw);
 
+  // Read project context from localStorage
+  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+
   if (roles.length === 0 || permissions.length === 0) return <AwesomeLoader message="Loading matrix" />;
 
-  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={null} />;
+  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={projectId} />;
 }
 
 function MatrixGrid({
   roles,
   permissions,
+  projectId,
 }: {
   mode: "org";
   roles: Role[];
   permissions: Permission[];
-  projectId: null;
+  projectId: number | null;
 }) {
+  const queryClient = useQueryClient();
+
   // Build grouped list
   const groups = useMemo(() => {
     const byGroup: Record<string, Record<string, Permission[]>> = {};
@@ -167,6 +174,7 @@ function MatrixGrid({
   }, [permissions]);
 
   const [matrix, setMatrix] = useState<Record<number, Record<string, boolean>>>({});
+  const [projectOverrides, setProjectOverrides] = useState<Record<number, Record<string, boolean>>>({});
   const [dirty, setDirty] = useState<Record<number, Set<string>>>({});
   const [loading, setLoading] = useState(true);
 
@@ -175,14 +183,26 @@ function MatrixGrid({
     setLoading(true);
     const load = async () => {
       const next: Record<number, Record<string, boolean>> = {};
+      const overrides: Record<number, Record<string, boolean>> = {};
+
       await Promise.all(
         roles.map(async (role) => {
-          const resp = await fetchData(`permissions/roles/${role.id}/matrix/`);
+          const url = projectId
+            ? `permissions/roles/${role.id}/matrix/?project_id=${projectId}`
+            : `permissions/roles/${role.id}/matrix/`;
+
+          const resp = await fetchData(url);
           next[role.id] = resp.orgMatrix ?? {};
+
+          if (projectId && resp.projectOverrides) {
+            overrides[role.id] = resp.projectOverrides;
+          }
         })
       );
+
       if (cancelled) return;
       setMatrix(next);
+      setProjectOverrides(overrides);
       setDirty({});
       setLoading(false);
     };
@@ -191,17 +211,39 @@ function MatrixGrid({
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [roles]);
+  }, [roles, projectId]);
 
-  const effective = (roleId: number, code: string): boolean =>
-    matrix[roleId]?.[code] ?? false;
+  // Check if permission is overridden at project level
+  const isOverridden = (roleId: number, code: string): boolean => {
+    if (!projectId) return false;
+    return projectOverrides[roleId]?.hasOwnProperty(code) ?? false;
+  };
+
+  // Get effective value (project override takes precedence over org default)
+  const effective = (roleId: number, code: string): boolean => {
+    if (projectId && isOverridden(roleId, code)) {
+      return projectOverrides[roleId][code];
+    }
+    return matrix[roleId]?.[code] ?? false;
+  };
 
   const handleToggle = (roleId: number, code: string) => {
     const target = !effective(roleId, code);
-    setMatrix((prev) => ({
-      ...prev,
-      [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
-    }));
+
+    if (projectId) {
+      // For project context, update project overrides
+      setProjectOverrides((prev) => ({
+        ...prev,
+        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+      }));
+    } else {
+      // For org context, update org matrix
+      setMatrix((prev) => ({
+        ...prev,
+        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+      }));
+    }
+
     setDirty((prev) => {
       const next = { ...prev };
       next[roleId] = new Set(next[roleId] ?? []);
@@ -224,12 +266,23 @@ function MatrixGrid({
       try {
         const items = codes.map((code) => ({
           code,
-          granted: matrix[roleId]?.[code] ?? false,
+          granted: projectId && isOverridden(roleId, code)
+            ? projectOverrides[roleId]?.[code] ?? false
+            : matrix[roleId]?.[code] ?? false,
         }));
+
+        const data = projectId
+          ? {
+              permissions: items,
+              project_id: projectId,
+            }
+          : { permissions: items };
+
         await putData({
           url: `permissions/roles/${roleId}/matrix/`,
-          data: { permissions: items },
+          data: data,
         });
+
         successCount++;
         setDirty((prev) => {
           const next = { ...prev };
@@ -244,6 +297,14 @@ function MatrixGrid({
 
     if (successCount > 0) {
       toast.success(`Successfully saved changes for ${successCount} role(s)`);
+
+      // Invalidate permission cache to refresh frontend immediately
+      queryClient.invalidateQueries(['effective-perms']);
+
+      // Also dispatch event for any other listeners
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('permissions-changed'));
+      }
     }
     setSavingAll(false);
   };
@@ -349,13 +410,25 @@ function MatrixGrid({
                           </td>
                           {roles.map((role) => {
                             const val = effective(role.id, perm.code);
+                            const override = isOverridden(role.id, perm.code);
                             return (
                               <td key={role.id} className="text-center px-3 py-2">
-                                <Checkbox
-                                  checked={val}
-                                  onCheckedChange={() => handleToggle(role.id, perm.code)}
-                                  className="h-4 w-4"
-                                />
+                                <div className="flex items-center justify-center gap-1">
+                                  <Checkbox
+                                    checked={val}
+                                    onCheckedChange={() => handleToggle(role.id, perm.code)}
+                                    className={`h-4 w-4 ${
+                                      override
+                                        ? "border-primary data-[state=checked]:bg-primary"
+                                        : projectId
+                                        ? "opacity-60"
+                                        : ""
+                                    }`}
+                                  />
+                                  {override && (
+                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" title="Project override" />
+                                  )}
+                                </div>
                               </td>
                             );
                           })}
@@ -371,7 +444,9 @@ function MatrixGrid({
       </Accordion>
 
       <p className="text-xs text-muted-foreground">
-        Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.
+        {projectId
+          ? `Changes affect only this project. Organization defaults are shown in gray, overrides are highlighted.`
+          : `Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.`}
       </p>
     </div>
   );
