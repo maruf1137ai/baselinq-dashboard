@@ -480,23 +480,29 @@ function MatrixTab({ mode, readOnly }: { mode: "org"; readOnly?: boolean }) {
   const roles = asArray<Role>(rolesRaw);
   const permissions = asArray<Permission>(permsRaw);
 
+  // Read project context from localStorage
+  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+
   if (roles.length === 0 || permissions.length === 0) return <AwesomeLoader message="Loading matrix" />;
 
-  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={null} readOnly={readOnly} />;
+  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={projectId} readOnly={readOnly} />;
 }
 
 function MatrixGrid({
   roles,
   permissions,
+  projectId,
   readOnly = false,
 }: {
   mode: "org";
   roles: Role[];
   permissions: Permission[];
-  projectId: null;
+  projectId: number | null;
   readOnly?: boolean;
 }) {
-  // Build flat per-group list (ignore subgroups for display — sort everything together)
+  const queryClient = useQueryClient();
+
+  // Build grouped list
   const groups = useMemo(() => {
     const byGroup: Record<string, Permission[]> = {};
     const hiddenGroups = ["audit", "compliance", "programme", "project"];
@@ -554,6 +560,7 @@ function MatrixGrid({
   }, [permissions]);
 
   const [matrix, setMatrix] = useState<Record<number, Record<string, boolean>>>({});
+  const [projectOverrides, setProjectOverrides] = useState<Record<number, Record<string, boolean>>>({});
   const [dirty, setDirty] = useState<Record<number, Set<string>>>({});
   const [loading, setLoading] = useState(true);
 
@@ -562,14 +569,26 @@ function MatrixGrid({
     setLoading(true);
     const load = async () => {
       const next: Record<number, Record<string, boolean>> = {};
+      const overrides: Record<number, Record<string, boolean>> = {};
+
       await Promise.all(
         roles.map(async (role) => {
-          const resp = await fetchData(`permissions/roles/${role.id}/matrix/`);
+          const url = projectId
+            ? `permissions/roles/${role.id}/matrix/?project_id=${projectId}`
+            : `permissions/roles/${role.id}/matrix/`;
+
+          const resp = await fetchData(url);
           next[role.id] = resp.orgMatrix ?? {};
+
+          if (projectId && resp.projectOverrides) {
+            overrides[role.id] = resp.projectOverrides;
+          }
         })
       );
+
       if (cancelled) return;
       setMatrix(next);
+      setProjectOverrides(overrides);
       setDirty({});
       setLoading(false);
     };
@@ -578,10 +597,21 @@ function MatrixGrid({
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [roles]);
+  }, [roles, projectId]);
 
-  const effective = (roleId: number, code: string): boolean =>
-    matrix[roleId]?.[code] ?? false;
+  // Check if permission is overridden at project level
+  const isOverridden = (roleId: number, code: string): boolean => {
+    if (!projectId) return false;
+    return projectOverrides[roleId]?.hasOwnProperty(code) ?? false;
+  };
+
+  // Get effective value (project override takes precedence over org default)
+  const effective = (roleId: number, code: string): boolean => {
+    if (projectId && isOverridden(roleId, code)) {
+      return projectOverrides[roleId][code];
+    }
+    return matrix[roleId]?.[code] ?? false;
+  };
 
   // A permission is disabled when its parent gate is unchecked OR itself disabled (recursive)
   const isDisabled = (roleId: number, code: string): boolean => {
@@ -592,10 +622,21 @@ function MatrixGrid({
 
   const handleToggle = (roleId: number, code: string) => {
     const target = !effective(roleId, code);
-    setMatrix((prev) => ({
-      ...prev,
-      [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
-    }));
+
+    if (projectId) {
+      // For project context, update project overrides
+      setProjectOverrides((prev) => ({
+        ...prev,
+        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+      }));
+    } else {
+      // For org context, update org matrix
+      setMatrix((prev) => ({
+        ...prev,
+        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+      }));
+    }
+
     setDirty((prev) => {
       const next = { ...prev };
       next[roleId] = new Set(next[roleId] ?? []);
@@ -605,7 +646,6 @@ function MatrixGrid({
   };
 
   const [savingAll, setSavingAll] = useState(false);
-  const queryClient = useQueryClient();
 
   const handleSaveAll = async () => {
     setSavingAll(true);
@@ -619,12 +659,23 @@ function MatrixGrid({
       try {
         const items = codes.map((code) => ({
           code,
-          granted: matrix[roleId]?.[code] ?? false,
+          granted: projectId && isOverridden(roleId, code)
+            ? projectOverrides[roleId]?.[code] ?? false
+            : matrix[roleId]?.[code] ?? false,
         }));
+
+        const data = projectId
+          ? {
+              permissions: items,
+              project_id: projectId,
+            }
+          : { permissions: items };
+
         await putData({
           url: `permissions/roles/${roleId}/matrix/`,
-          data: { permissions: items },
+          data: data,
         });
+
         successCount++;
         setDirty((prev) => {
           const next = { ...prev };
@@ -639,9 +690,15 @@ function MatrixGrid({
 
     if (successCount > 0) {
       toast.success(`Successfully saved changes for ${successCount} role(s)`);
+
       // Bust the effective-permissions cache so the rest of the app
       // immediately reflects the updated matrix without waiting for staleTime.
       queryClient.invalidateQueries({ queryKey: ["effective-perms"] });
+
+      // Also dispatch event for any other listeners
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('permissions-changed'));
+      }
     }
     setSavingAll(false);
   };
@@ -752,14 +809,26 @@ function MatrixGrid({
                           {roles.map((role) => {
                             const val = effective(role.id, perm.code);
                             const disabled = isDisabled(role.id, perm.code);
+                            const override = isOverridden(role.id, perm.code);
                             return (
                               <td key={role.id} className={`text-center px-3 py-2 ${disabled || readOnly ? "opacity-30" : ""}`}>
-                                <Checkbox
-                                  checked={val}
-                                  disabled={disabled || readOnly}
-                                  onCheckedChange={() => !disabled && !readOnly && handleToggle(role.id, perm.code)}
-                                  className="h-4 w-4"
-                                />
+                                <div className="flex items-center justify-center gap-1">
+                                  <Checkbox
+                                    checked={val}
+                                    disabled={disabled || readOnly}
+                                    onCheckedChange={() => !disabled && !readOnly && handleToggle(role.id, perm.code)}
+                                    className={`h-4 w-4 ${
+                                      override
+                                        ? "border-primary data-[state=checked]:bg-primary"
+                                        : projectId
+                                        ? "opacity-60"
+                                        : ""
+                                    }`}
+                                  />
+                                  {override && (
+                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" title="Project override" />
+                                  )}
+                                </div>
                               </td>
                             );
                           })}
@@ -774,7 +843,9 @@ function MatrixGrid({
       </Accordion>
 
       <p className="text-xs text-muted-foreground">
-        Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.
+        {projectId
+          ? `Changes affect only this project. Organization defaults are shown in gray, overrides are highlighted.`
+          : `Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.`}
       </p>
     </div>
   );

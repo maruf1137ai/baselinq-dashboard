@@ -63,9 +63,25 @@ export default function CreateRequestButton() {
   const filteredBtns = useMemo(() => {
     if (isLoading) return btns;
     const perms = effectivePerms?.permissions ?? {};
-    return btns.filter(
-      (btn) => perms[`task.${btn.code.toLowerCase()}.create`] === true
-    );
+
+    // DEBUG: Log effective permissions for task creation
+    console.log('[CreateRequestButton] Effective Permissions:', {
+      roleCode: effectivePerms?.roleCode,
+      projectId: effectivePerms?.projectId,
+      taskPermissions: Object.keys(perms)
+        .filter(k => k.startsWith('task.') && k.endsWith('.create'))
+        .reduce((acc, k) => ({ ...acc, [k]: perms[k] }), {}),
+    });
+
+    const filtered = btns.filter((btn) => {
+      const permCode = `task.${btn.code.toLowerCase()}.create`;
+      const hasPermission = perms[permCode] === true;
+      console.log(`[CreateRequestButton] ${btn.code}: ${permCode} = ${hasPermission}`);
+      return hasPermission;
+    });
+
+    console.log('[CreateRequestButton] Filtered task types:', filtered.map(b => b.code));
+    return filtered;
   }, [effectivePerms, isLoading]);
 
   if (!isLoading && filteredBtns.length === 0) return null;

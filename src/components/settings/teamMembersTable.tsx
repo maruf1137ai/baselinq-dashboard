@@ -360,7 +360,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const { data: projectUsersData, isLoading, refetch } = useFetch<ProjectUsersResponse>(
     `projects/${projectId}/team-members/`
   );
-  const { data: allUsersData } = useFetch<UsersResponse>("auth/users/?my_org=true&page_size=500");
+  const { data: allUsersData, isLoading: isLoadingUsers, error: usersError } = useFetch<UsersResponse>("auth/users/?page_size=500");
   const { data: rolesData, refetch: refetchRoles } = useFetch<Role[]>("auth/roles/");
 
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -380,6 +380,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const availableUsers = allUsers.filter(
     (u) => !teamMembers.some((member: TeamMember) => member.user.id === u.id)
   );
+
+  // Debug logging
+  console.log('[TeamMembersTable] Users Data:', {
+    allUsersCount: allUsers.length,
+    teamMembersCount: teamMembers.length,
+    availableUsersCount: availableUsers.length,
+    isLoadingUsers,
+    usersError,
+    rawResponse: allUsersData
+  });
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
