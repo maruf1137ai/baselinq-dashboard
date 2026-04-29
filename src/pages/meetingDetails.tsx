@@ -92,7 +92,10 @@ export default function MeetingDetails() {
   const [approvingIndex, setApprovingIndex] = useState<number | null>(null);
   const [aiNotesOpen, setAiNotesOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const [outcomeDismissed, setOutcomeDismissed] = useState(false);
+  const [outcomeDismissed, setOutcomeDismissed] = useState(
+    () => localStorage.getItem(`no_show_confirmed_${id}`) === "1"
+  );
+  const [startingBot, setStartingBot] = useState(false);
   const { mutateAsync: postRequest } = usePost();
   const { mutateAsync: patchRequest } = usePatch();
 
@@ -100,8 +103,11 @@ export default function MeetingDetails() {
     id ? `meetings/${id}/` : null,
     {
       refetchInterval: (query: any) => {
-        const s = query?.state?.data?.status;
-        return s === "starting_soon" || s === "live" ? 10000 : false;
+        const d = query?.state?.data;
+        if (!d) return false;
+        if (d.status === "starting_soon" || d.status === "live") return 10000;
+        if (d.artefact_status === "processing" || d.artefact_status === "transcribed") return 15000;
+        return false;
       },
     }
   );
@@ -140,6 +146,35 @@ export default function MeetingDetails() {
     }
   };
 
+  const handleStartBot = async () => {
+    setStartingBot(true);
+    try {
+      await postRequest({ url: `meetings/${id}/start-bot/`, data: {} });
+      toast.success("Bot is joining in ~30 seconds. Keep the meeting open.");
+      await refetch();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Failed to start bot.");
+    } finally {
+      setStartingBot(false);
+    }
+  };
+
+  const handleJoinMeeting = async () => {
+    if (meeting?.meeting_link) {
+      window.open(meeting.meeting_link, "_blank", "noopener,noreferrer");
+    }
+    const shouldTriggerBot =
+      !!meeting?.meeting_link &&
+      meeting.artefact_status === "none" &&
+      meeting.status !== "live" &&
+      meeting.status !== "completed" &&
+      meeting.status !== "cancelled" &&
+      meeting.status !== "no_show";
+    if (shouldTriggerBot) {
+      handleStartBot();
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -162,6 +197,7 @@ export default function MeetingDetails() {
   const isCompleted  = meeting.status === "completed";
   const isPast       = isCompleted || meeting.status === "no_show";
   const hasAiNotes   = meeting.artefact_status === "notes_ready";
+  const isTerminal   = meeting.status === "completed" || meeting.status === "cancelled" || (meeting.status === "no_show" && outcomeDismissed);
 
   return (
     <DashboardLayout>
@@ -208,15 +244,14 @@ export default function MeetingDetails() {
                 <Users className="h-3.5 w-3.5" /> {meeting.participants.length} participants
               </span>
             )}
-            {meeting.meeting_link && (
-              <a
-                href={meeting.meeting_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline"
+            {meeting.meeting_link && !isTerminal && (
+              <button
+                onClick={handleJoinMeeting}
+                disabled={startingBot}
+                className="flex items-center gap-1 text-primary hover:underline disabled:opacity-60"
               >
                 <ExternalLink className="h-3.5 w-3.5" /> Join Meeting
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -263,11 +298,10 @@ export default function MeetingDetails() {
             {!hasAiNotes && meeting.artefact_status !== "processing" && (
               <div className="py-4">
                 <p className="text-sm text-foreground mb-2">No Linq AI notes for this meeting.</p>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                  Linq AI attends any meeting that has a video-call link (Zoom, Meet or Teams). It joins as a bot, records, and generates a summary plus decisions and action items automatically within a few minutes of the meeting ending.
-                </p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  This meeting either had no link when it was scheduled, or the bot couldn&apos;t join. You can still add notes manually as a backup — see the Manual Transcript section below.
+                  {meeting.meeting_link
+                    ? "Click \"Join Meeting\" above to open the call — the bot will join automatically and generate notes after the meeting ends."
+                    : "This meeting had no link. You can still add notes manually — see the Manual Transcript section below."}
                 </p>
               </div>
             )}
@@ -445,12 +479,19 @@ export default function MeetingDetails() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setOutcomeDismissed(true)}
+                onClick={() => { localStorage.setItem(`no_show_confirmed_${id}`, "1"); setOutcomeDismissed(true); }}
                 disabled={statusUpdating}
               >
                 Confirm No Show
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Confirmed no-show message */}
+        {meeting.status === "no_show" && outcomeDismissed && (
+          <div className="p-4 border border-border rounded-lg bg-muted/30 text-sm text-muted-foreground">
+            This meeting was confirmed as a no-show. No recording or notes are available.
           </div>
         )}
 
