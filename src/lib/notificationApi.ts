@@ -47,16 +47,17 @@ export const getNotification = async (id: string): Promise<Notification> => {
 };
 
 /**
- * GET /api/notifications/unread_count/ (auth required)
+ * GET /api/notifications/unread-count/ (auth required)
  * Optional: project_id (or projectId) for project-wise count
+ * Note: Django REST Framework converts snake_case action names to kebab-case URLs
  */
 export const getUnreadCount = async (
   projectId?: string | number
 ): Promise<{ count: number }> => {
   const url =
     projectId != null
-      ? `notifications/unread_count/?project_id=${encodeURIComponent(String(projectId))}`
-      : "notifications/unread_count/";
+      ? `notifications/unread-count/?project_id=${encodeURIComponent(String(projectId))}`
+      : "notifications/unread-count/";
   return fetchData(url);
 };
 

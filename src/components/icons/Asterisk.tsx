@@ -6,9 +6,9 @@ const Asterisk = () => {
       <path
         d="M9.00008 3V15M14.25 6L3.75019 12M14.2498 12L3.75 6"
         stroke="#6B6B6B"
-        stroke-width="1.125"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="1.125"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

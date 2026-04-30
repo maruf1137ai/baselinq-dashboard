@@ -1,7 +1,10 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
 import DocumentTable from '@/components/documents/DocumentTable';
+import { ContractsTree } from '@/components/documents/ContractsTree';
 import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
+import { IssueRegisterModal } from '@/components/documents/IssueRegisterModal';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Search, Plus, ChevronDown } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,7 @@ import type { ApiDocument } from '@/components/documents/DocumentTable';
 import {
   getCategoryForDoc,
   type DocCategory,
+  CATEGORY_COLORS,
 } from '@/lib/documentTaxonomy';
 
 const SORT_OPTIONS = [
@@ -32,8 +36,6 @@ const SORT_OPTIONS = [
   { value: 'most_ai_flags', label: 'Most AI flags' },
   { value: 'oldest', label: 'Oldest first' },
 ];
-
-const CATEGORIES: Array<'All' | DocCategory> = ['All', 'Drawings', 'Documents', 'Contracts'];
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -45,8 +47,13 @@ const Documents = () => {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [docToDelete, setDocToDelete] = useState<any>(null);
 
+  // Issue Register modal state
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [registerFolderId, setRegisterFolderId] = useState('');
+  const [registerFolderName, setRegisterFolderName] = useState('');
+
   // Filter state
-  const [selectedCategory, setSelectedCategory] = useState<'All' | DocCategory>('All');
+  const [activeTab, setActiveTab] = useState<DocCategory>('Contracts');
   const [showAiFlagged, setShowAiFlagged] = useState(false);
   const [sortBy, setSortBy] = useState('recently_updated');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -131,14 +138,12 @@ const Documents = () => {
 
   // Category filter is client-side (derived from Document.type)
   const documents = useMemo(() => {
-    if (selectedCategory === 'All') return allFilteredDocs;
-    return allFilteredDocs.filter(d => getCategoryForDoc(d as any) === selectedCategory);
-  }, [allFilteredDocs, selectedCategory]);
+    return allFilteredDocs.filter(d => getCategoryForDoc(d as any) === activeTab);
+  }, [allFilteredDocs, activeTab]);
 
   // Category counts derived from unfiltered data
   const categoryCounts = useMemo(() => {
-    const counts: Record<'All' | DocCategory, number> = {
-      All: allDocuments.length,
+    const counts: Record<DocCategory, number> = {
       Drawings: 0,
       Documents: 0,
       Contracts: 0,
@@ -202,7 +207,7 @@ const Documents = () => {
             {canUploadAny && (
               <Button
                 className="bg-primary text-white hover:opacity-90 transition-all rounded-lg h-9 px-4 font-normal"
-                onClick={() => navigate('/documents/upload')}
+                onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}
               >
                 <Plus className="w-5 h-5 mr-1" />
                 Upload
@@ -211,78 +216,125 @@ const Documents = () => {
           </div>
         </div>
 
-        {/* Category filter pills — replaces the old Discipline row */}
+        {/* Three-tab layout */}
         <div className="flex flex-row gap-6 justify-between items-start">
-          <div className="flex items-center gap-2 flex-wrap flex-1">
-            <span className="text-xs text-muted-foreground mr-2 font-normal">Category</span>
-            {CATEGORIES.map(cat => {
-              const isActive = selectedCategory === cat;
-              const count = categoryCounts[cat];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as DocCategory)}
+            className="flex-1"
+          >
+            <div className="flex justify-between items-center">
+              <TabsList className="bg-white border border-border h-10">
+                <TabsTrigger
+                  value="Contracts"
                   className={cn(
-                    "px-3 h-8 rounded-lg text-xs transition-all whitespace-nowrap border font-normal flex items-center gap-1.5",
-                    isActive
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "bg-white border-border text-foreground hover:bg-zinc-50"
+                    "data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700",
+                    "data-[state=active]:border data-[state=active]:border-amber-200"
                   )}
                 >
-                  {cat}
-                  <span
-                    className={cn(
-                      "text-[10px] px-1.5 py-0 rounded-full tabular-nums",
-                      isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {count}
-                  </span>
+                  Contracts
+                  {categoryCounts.Contracts > 0 && (
+                    <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                      {categoryCounts.Contracts}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="Drawings"
+                  className={cn(
+                    "data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700",
+                    "data-[state=active]:border data-[state=active]:border-blue-200"
+                  )}
+                >
+                  Drawings
+                  {categoryCounts.Drawings > 0 && (
+                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                      {categoryCounts.Drawings}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="Documents"
+                  className={cn(
+                    "data-[state=active]:bg-slate-50 data-[state=active]:text-slate-700",
+                    "data-[state=active]:border data-[state=active]:border-slate-200"
+                  )}
+                >
+                  Documents
+                  {categoryCounts.Documents > 0 && (
+                    <span className="ml-2 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">
+                      {categoryCounts.Documents}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="relative flex items-center gap-2 shrink-0">
+                <span className="text-xs text-muted-foreground">Sort:</span>
+                <button
+                  onClick={() => setShowSortMenu(v => !v)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal whitespace-nowrap"
+                >
+                  {currentSortLabel} <ChevronDown className="w-4 h-4" />
                 </button>
-              );
-            })}
-          </div>
-
-          <div className="relative flex items-center gap-2 shrink-0 pt-2">
-            <span className="text-xs text-muted-foreground">Sort:</span>
-            <button
-              onClick={() => setShowSortMenu(v => !v)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal whitespace-nowrap"
-            >
-              {currentSortLabel} <ChevronDown className="w-4 h-4" />
-            </button>
-            {showSortMenu && (
-              <div className="absolute right-0 top-8 bg-white border border-border rounded-xl shadow-lg z-10 py-1 w-48">
-                {SORT_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setSortBy(opt.value); setShowSortMenu(false); }}
-                    className={cn(
-                      "w-full text-left px-4 py-2 text-sm transition-colors",
-                      sortBy === opt.value ? "text-primary font-normal" : "text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+                {showSortMenu && (
+                  <div className="absolute right-0 top-8 bg-white border border-border rounded-xl shadow-lg z-10 py-1 w-48">
+                    {SORT_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { setSortBy(opt.value); setShowSortMenu(false); }}
+                        className={cn(
+                          "w-full text-left px-4 py-2 text-sm transition-colors",
+                          sortBy === opt.value ? "text-primary font-normal" : "text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Document table */}
-        <div className="mt-4">
-          <DocumentTable
-            documents={documents}
-            isLoading={isLoading}
-            onRowClick={handleOpenDetail}
-            onVersionUpload={handleVersionUpload}
-            onDelete={(doc) => setDocToDelete(doc)}
-            groupBy={selectedCategory === 'All' ? 'category' : 'discipline'}
-            customDisciplines={[]}
-            onUploadToDiscipline={handleOpenUploadWithDiscipline}
-            unreadDocIds={unreadDocIds}
-          />
+            <TabsContent value="Contracts" className="mt-4">
+              <ContractsTree
+                projectId={projectId}
+                onViewRegister={(folderId, folderName) => {
+                  setRegisterFolderId(folderId);
+                  setRegisterFolderName(folderName);
+                  setIsRegisterModalOpen(true);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="Drawings" className="mt-4">
+              <DocumentTable
+                documents={documents}
+                isLoading={isLoading}
+                onRowClick={handleOpenDetail}
+                onVersionUpload={handleVersionUpload}
+                onDelete={(doc) => setDocToDelete(doc)}
+                groupBy="discipline"
+                customDisciplines={[]}
+                onUploadToDiscipline={handleOpenUploadWithDiscipline}
+                unreadDocIds={unreadDocIds}
+              />
+            </TabsContent>
+
+            <TabsContent value="Documents" className="mt-4">
+              <DocumentTable
+                documents={documents}
+                isLoading={isLoading}
+                onRowClick={handleOpenDetail}
+                onVersionUpload={handleVersionUpload}
+                onDelete={(doc) => setDocToDelete(doc)}
+                groupBy="discipline"
+                customDisciplines={[]}
+                onUploadToDiscipline={handleOpenUploadWithDiscipline}
+                unreadDocIds={unreadDocIds}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
@@ -316,6 +368,15 @@ const Documents = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Issue Register Modal */}
+      <IssueRegisterModal
+        open={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        folderId={registerFolderId}
+        folderName={registerFolderName}
+        projectId={projectId || ''}
+      />
     </DashboardLayout>
   );
 };

@@ -38,7 +38,7 @@ import ProjectProtectedRoute from "./components/ProjectProtectedRoute";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
 import DocumentDetail from "./pages/DocumentDetail";
-import UploadDocument from "./pages/UploadDocument";
+import UploadDocument from "./pages/UploadDocumentWizard";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import AcceptAppointedInvitation from "./pages/AcceptAppointedInvitation";
 import OnboardingDashboard from "./pages/OnboardingDashboard";

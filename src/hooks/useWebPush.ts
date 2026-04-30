@@ -35,6 +35,12 @@ export function useWebPush() {
         return;
       }
 
+      // Validate the public key before proceeding
+      if (!publicKey || typeof publicKey !== "string" || publicKey.length === 0) {
+        console.warn("Invalid VAPID public key received, skipping push notifications");
+        return;
+      }
+
       // 2. Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== "granted") return;
@@ -43,20 +49,25 @@ export function useWebPush() {
       const registration = await navigator.serviceWorker.register("/sw.js");
 
       // 4. Subscribe via Push API
-      const applicationServerKey = urlBase64ToUint8Array(publicKey);
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
-
-      // 5. Send subscription to backend
-      const json = subscription.toJSON();
-      if (json.endpoint && json.keys) {
-        await subscribeToPush({
-          endpoint: json.endpoint,
-          keys: json.keys as { p256dh: string; auth: string },
-          user_agent: navigator.userAgent,
+      try {
+        const applicationServerKey = urlBase64ToUint8Array(publicKey);
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
         });
+
+        // 5. Send subscription to backend
+        const json = subscription.toJSON();
+        if (json.endpoint && json.keys) {
+          await subscribeToPush({
+            endpoint: json.endpoint,
+            keys: json.keys as { p256dh: string; auth: string },
+            user_agent: navigator.userAgent,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to subscribe to push notifications:", error);
+        // Don't throw - allow app to continue without push notifications
       }
     })();
   }, []);
