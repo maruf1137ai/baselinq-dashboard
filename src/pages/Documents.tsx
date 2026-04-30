@@ -1,6 +1,7 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
 import DocumentTable from '@/components/documents/DocumentTable';
 import { ContractsTree } from '@/components/documents/ContractsTree';
+import { FoldersView } from '@/components/documents/FoldersView';
 import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
 import { IssueRegisterModal } from '@/components/documents/IssueRegisterModal';
 import { Button } from '@/components/ui/button';
@@ -299,6 +300,8 @@ const Documents = () => {
             <TabsContent value="Contracts" className="mt-4">
               <ContractsTree
                 projectId={projectId}
+                documents={documents}
+                onDocumentClick={handleOpenDetail}
                 onViewRegister={(folderId, folderName) => {
                   setRegisterFolderId(folderId);
                   setRegisterFolderName(folderName);
@@ -308,30 +311,30 @@ const Documents = () => {
             </TabsContent>
 
             <TabsContent value="Drawings" className="mt-4">
-              <DocumentTable
+              <FoldersView
+                projectId={projectId || ''}
+                tab="drawings"
                 documents={documents}
-                isLoading={isLoading}
-                onRowClick={handleOpenDetail}
-                onVersionUpload={handleVersionUpload}
-                onDelete={(doc) => setDocToDelete(doc)}
-                groupBy="discipline"
-                customDisciplines={[]}
-                onUploadToDiscipline={handleOpenUploadWithDiscipline}
-                unreadDocIds={unreadDocIds}
+                onDocumentClick={(id) => handleOpenDetail(id)}
+                onViewRegister={(folderId, folderName) => {
+                  setRegisterFolderId(folderId);
+                  setRegisterFolderName(folderName);
+                  setIsRegisterModalOpen(true);
+                }}
               />
             </TabsContent>
 
             <TabsContent value="Documents" className="mt-4">
-              <DocumentTable
+              <FoldersView
+                projectId={projectId || ''}
+                tab="documents"
                 documents={documents}
-                isLoading={isLoading}
-                onRowClick={handleOpenDetail}
-                onVersionUpload={handleVersionUpload}
-                onDelete={(doc) => setDocToDelete(doc)}
-                groupBy="discipline"
-                customDisciplines={[]}
-                onUploadToDiscipline={handleOpenUploadWithDiscipline}
-                unreadDocIds={unreadDocIds}
+                onDocumentClick={(id) => handleOpenDetail(id)}
+                onViewRegister={(folderId, folderName) => {
+                  setRegisterFolderId(folderId);
+                  setRegisterFolderName(folderName);
+                  setIsRegisterModalOpen(true);
+                }}
               />
             </TabsContent>
           </Tabs>

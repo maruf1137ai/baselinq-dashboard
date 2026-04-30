@@ -27,6 +27,7 @@ import {
 export interface ApiDocument {
   _id: string;
   projectId: string;
+  folderId: string | null;
   name: string;
   type: string;
   reference: string;
