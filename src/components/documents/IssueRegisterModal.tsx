@@ -8,10 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { IssueRegisterTable, type IssueRegisterRow } from './IssueRegisterTable';
-import { Download } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchData } from '@/lib/Api';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import type { FolderTab } from '@/types/folder';
 
 interface IssueRegisterModalProps {
   open: boolean;
@@ -19,6 +21,7 @@ interface IssueRegisterModalProps {
   folderId: string;
   folderName: string;
   projectId: string;
+  tab?: FolderTab;
 }
 
 export function IssueRegisterModal({
@@ -27,7 +30,9 @@ export function IssueRegisterModal({
   folderId,
   folderName,
   projectId,
+  tab,
 }: IssueRegisterModalProps) {
+  const navigate = useNavigate();
   const { data: rows } = useQuery<IssueRegisterRow[]>({
     queryKey: ['issue-register', folderId, projectId],
     queryFn: () =>
@@ -99,7 +104,7 @@ export function IssueRegisterModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0 bg-white dark:bg-zinc-900 z-[60] shadow-xl border">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="text-xl">Issue Register</DialogTitle>
           <DialogDescription>
@@ -115,10 +120,26 @@ export function IssueRegisterModal({
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={exportToCSV} className="gap-2">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          {rows && rows.length > 0 ? (
+            <Button onClick={exportToCSV} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (tab) params.set('tab', tab);
+                params.set('folder_id', folderId);
+                navigate(`/documents/upload?${params.toString()}`);
+                onClose();
+              }}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Documents
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

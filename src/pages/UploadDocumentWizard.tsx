@@ -50,7 +50,9 @@ export default function UploadDocumentWizard() {
       // Priority 1: folder_id (skip to Step 3)
       if (folderIdParam) {
         try {
-          const folder: Folder = await fetchData(`documents/folders/${folderIdParam}/`);
+          const folder: Folder = await fetchData(
+            `documents/folders/${folderIdParam}/${projectId ? `?project_id=${projectId}` : ''}`
+          );
           setSelectedTab(folder.tab);
           setSelectedDiscipline(folder.discipline || '');
           setSelectedFolderId(folder._id);
@@ -183,6 +185,8 @@ export default function UploadDocumentWizard() {
             runAiAnalysis: formData.runAiAnalysis,
             notifyTeam: formData.notifyTeam,
             linkIds: formData.linkIds,
+            issuedTo: formData.issuedTo,
+            issueStatus: formData.issueStatus,
           },
         });
       } else {
@@ -212,6 +216,8 @@ export default function UploadDocumentWizard() {
             run_ai_analysis: formData.runAiAnalysis,
             notify_team: formData.notifyTeam,
             link_ids: formData.linkIds,
+            issued_to: formData.issuedTo,
+            issue_status: formData.issueStatus,
           },
         });
       }

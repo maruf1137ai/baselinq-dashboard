@@ -84,13 +84,13 @@ export function DashboardSidebar() {
     : 0
 
   const { data: meetingUnreadData, refetch: refetchMeetingUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread_count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
+    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
     { refetchInterval: 30000 }
   )
   const meetingUnread = meetingUnreadData?.count || 0
 
   const { data: docUnreadData, refetch: refetchDocUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread_count/?project_id=${selectedProjectId}&type=document_created,document_version_created` : "",
+    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=document_created,document_version_created` : "",
     { refetchInterval: 30000 }
   )
   const docUnread = docUnreadData?.count || 0

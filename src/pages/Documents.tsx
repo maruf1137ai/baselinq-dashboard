@@ -52,6 +52,7 @@ const Documents = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [registerFolderId, setRegisterFolderId] = useState('');
   const [registerFolderName, setRegisterFolderName] = useState('');
+  const [registerFolderTab, setRegisterFolderTab] = useState<'contracts' | 'drawings' | 'documents'>('contracts');
 
   // Filter state
   const [activeTab, setActiveTab] = useState<DocCategory>('Contracts');
@@ -305,6 +306,7 @@ const Documents = () => {
                 onViewRegister={(folderId, folderName) => {
                   setRegisterFolderId(folderId);
                   setRegisterFolderName(folderName);
+                  setRegisterFolderTab('contracts');
                   setIsRegisterModalOpen(true);
                 }}
               />
@@ -319,6 +321,7 @@ const Documents = () => {
                 onViewRegister={(folderId, folderName) => {
                   setRegisterFolderId(folderId);
                   setRegisterFolderName(folderName);
+                  setRegisterFolderTab('drawings');
                   setIsRegisterModalOpen(true);
                 }}
               />
@@ -333,6 +336,7 @@ const Documents = () => {
                 onViewRegister={(folderId, folderName) => {
                   setRegisterFolderId(folderId);
                   setRegisterFolderName(folderName);
+                  setRegisterFolderTab('documents');
                   setIsRegisterModalOpen(true);
                 }}
               />
@@ -379,6 +383,7 @@ const Documents = () => {
         folderId={registerFolderId}
         folderName={registerFolderName}
         projectId={projectId || ''}
+        tab={registerFolderTab}
       />
     </DashboardLayout>
   );

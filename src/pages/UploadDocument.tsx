@@ -75,6 +75,8 @@ export default function UploadDocument() {
   const typeParam = searchParams.get('type');
   const certSubtypeParam = searchParams.get('certificateSubtype');
   const namePrefillParam = searchParams.get('namePrefill');
+  const tabParam = searchParams.get('tab');                 // contracts|drawings|documents
+  const folderIdParam = searchParams.get('folder_id');      // pre-selected folder when launched from a tree leaf
 
   useEffect(() => {
     if (docType !== 'Certificate') setCertificateSubtype('');
@@ -90,8 +92,53 @@ export default function UploadDocument() {
       // Prevent the reference-auto-generation effect from overriding the
       // stable name we just set.
     }
+    // Pre-fill category from tab when launched from a Documents-page tree leaf
+    if (tabParam && !category) {
+      const tabToCategory: Record<string, DocCategory> = {
+        contracts: 'Contracts',
+        drawings: 'Drawings',
+        documents: 'Documents',
+      };
+      const mapped = tabToCategory[tabParam.toLowerCase()];
+      if (mapped) setCategory(mapped);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disciplineParam, typeParam, certSubtypeParam, namePrefillParam]);
+  }, [disciplineParam, typeParam, certSubtypeParam, namePrefillParam, tabParam]);
+
+  // Fetch folder details when launched with ?folder_id= so we can show the
+  // breadcrumb path and auto-fill discipline/category from the folder.
+  // The folder viewset requires project_id as a query param for visibility filtering.
+  const { data: folderData } = useFetch<{
+    _id: string;
+    tab: string;
+    name: string;
+    discipline: string;
+    breadcrumb: { id: string; name: string }[];
+  }>(
+    folderIdParam && projectId
+      ? `documents/folders/${folderIdParam}/?project_id=${projectId}`
+      : ''
+  );
+
+  useEffect(() => {
+    if (!folderData) return;
+    if (folderData.tab && !category) {
+      const tabToCategory: Record<string, DocCategory> = {
+        contracts: 'Contracts',
+        drawings: 'Drawings',
+        documents: 'Documents',
+      };
+      const mapped = tabToCategory[folderData.tab.toLowerCase()];
+      if (mapped) setCategory(mapped);
+    }
+    if (folderData.discipline && !discipline) setDiscipline(folderData.discipline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folderData]);
+
+  const folderBreadcrumb = folderData?.breadcrumb
+    ?.map((b) => b.name.replace(/_/g, ' '))
+    .join(' / ');
+  const hasFolderLock = !!folderIdParam; // category is fixed when uploading into a chosen folder
 
   // Reset docType if the selected category no longer allows it
   useEffect(() => {
@@ -222,12 +269,12 @@ export default function UploadDocument() {
           .map(entry => { const s3Key = s3Keys.get(entry.id); return s3Key ? { s3Key, fileName: entry.file.name, fileSize: entry.file.size } : null; })
           .filter(Boolean);
         if (!files.length) { toast.error('All file uploads failed'); return; }
-        await postData({ url: 'documents/new-upload/', data: { projectId: parseInt(projectId), files, type: docType, certificateSubtype: certificateSubtype || undefined, discipline: discipline || '', reference: reference || '', description: description || '', runAiAnalysis, notifyTeam, linkIds } });
+        await postData({ url: 'documents/new-upload/', data: { projectId: parseInt(projectId), files, type: docType, certificateSubtype: certificateSubtype || undefined, discipline: discipline || '', reference: reference || '', description: description || '', runAiAnalysis, notifyTeam, linkIds, folder_id: folderIdParam || undefined } });
       } else {
         const entry = s3Upload.entries[0];
         const s3Key = s3Keys.get(entry.id);
         if (!s3Key) { toast.error(`Failed to upload ${entry.file.name}`); return; }
-        await postData({ url: 'documents/', data: { project_id: parseInt(projectId), name: name.trim(), type: docType, certificate_subtype: certificateSubtype || undefined, discipline: discipline || '', description: description || '', reference: reference || '', s3_key: s3Key, file_name: entry.file.name, file_size: entry.file.size, run_ai_analysis: runAiAnalysis, notify_team: notifyTeam, link_ids: linkIds } });
+        await postData({ url: 'documents/', data: { project_id: parseInt(projectId), name: name.trim(), type: docType, certificate_subtype: certificateSubtype || undefined, discipline: discipline || '', description: description || '', reference: reference || '', s3_key: s3Key, file_name: entry.file.name, file_size: entry.file.size, run_ai_analysis: runAiAnalysis, notify_team: notifyTeam, link_ids: linkIds, folder_id: folderIdParam || undefined } });
       }
 
       toast.success('Document uploaded successfully');
@@ -396,10 +443,17 @@ export default function UploadDocument() {
                   <Label className="text-sm font-normal text-muted-foreground">
                     Category <span className="text-red-500">*</span>
                   </Label>
+                  {folderBreadcrumb && (
+                    <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      <span className="font-medium text-amber-900">Uploading to:</span>{' '}
+                      <span className="text-foreground">{folderBreadcrumb}</span>
+                    </div>
+                  )}
                   <div
                     className={cn(
                       "inline-flex gap-2 p-1 rounded-xl border",
-                      showFieldErrors && missingCategory ? "border-red-400" : "border-border"
+                      showFieldErrors && missingCategory ? "border-red-400" : "border-border",
+                      hasFolderLock && "opacity-60 pointer-events-none"
                     )}
                   >
                     {CATEGORIES.map((c) => {
@@ -408,7 +462,8 @@ export default function UploadDocument() {
                         <button
                           key={c}
                           type="button"
-                          onClick={() => setCategory(c)}
+                          onClick={() => !hasFolderLock && setCategory(c)}
+                          disabled={hasFolderLock}
                           className={cn(
                             "px-4 py-2 rounded-lg text-sm font-normal transition-all border",
                             active

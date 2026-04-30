@@ -58,10 +58,20 @@ export interface UploadFormData {
   s3Entries: Array<{ id: string; file: File }>;
   visibility: FolderVisibility;
   visibilityUsers: string[];
+  issuedTo: string;
+  issueStatus: string;
 }
 
 const DONE_STATUSES = ['done', 'Done', 'DONE', 'Closed', 'closed', 'CLOSED', 'Approved', 'approved'];
 const TYPE_FILTERS = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'];
+
+const ISSUE_STATUSES = [
+  'For Information',
+  'For Approval',
+  'For Construction',
+  'For Tender',
+  'For Construction Issue',
+];
 
 /**
  * Step 3: File Upload and Metadata
@@ -93,6 +103,8 @@ export function UploadStep3FileMetadata({
   const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
   const [visibility, setVisibility] = useState<FolderVisibility>('all');
   const [visibilityUsers, setVisibilityUsers] = useState<string[]>([]);
+  const [issuedTo, setIssuedTo] = useState('All');
+  const [issueStatus, setIssueStatus] = useState('For Information');
 
   // Linking
   const [linkSearch, setLinkSearch] = useState('');
@@ -185,10 +197,27 @@ export function UploadStep3FileMetadata({
     uploadableDocTypes.length === 0 ? true : uploadableDocTypes.includes(t)
   );
 
+  // Auto-select the type when only one option is available — e.g. Drawings → Drawing,
+  // Contracts/Tender_Docs (after permission filter) → Contract.
+  useEffect(() => {
+    if (!docType && typeOptions.length === 1) {
+      setDocType(typeOptions[0]);
+    }
+  }, [typeOptions, docType]);
+
   const missingType = !docType;
   const missingName = !name.trim();
+  // Drawings — Issued To and Status are required per the documents-folder plan
+  const missingIssuedTo = selectedTab === 'drawings' && !issuedTo.trim();
+  const missingIssueStatus = selectedTab === 'drawings' && !issueStatus;
   const showFieldErrors = attemptedSubmit;
-  const canSubmit = !missingType && !missingName && s3Upload.entries.length > 0 && !s3Upload.hasUploading;
+  const canSubmit =
+    !missingType &&
+    !missingName &&
+    !missingIssuedTo &&
+    !missingIssueStatus &&
+    s3Upload.entries.length > 0 &&
+    !s3Upload.hasUploading;
 
   const errCls = (missing: boolean) =>
     showFieldErrors && missing ? 'border-red-400 ring-1 ring-red-300' : '';
@@ -213,6 +242,8 @@ export function UploadStep3FileMetadata({
       s3Entries: s3Upload.entries,
       visibility,
       visibilityUsers,
+      issuedTo: issuedTo.trim() || 'All',
+      issueStatus,
     });
   };
 
@@ -303,54 +334,21 @@ export function UploadStep3FileMetadata({
           <div className="bg-white rounded-xl border border-border p-5 space-y-4">
             <h3 className="text-sm font-normal text-foreground">Document Details</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">
-                  Type <span className="text-red-500">*</span>
-                </Label>
-                <Select value={docType} onValueChange={setDocType}>
-                  <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingType))}>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeOptions.map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-normal text-muted-foreground">
-                    Certificate Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select value={certificateSubtype} onValueChange={setCertificateSubtype}>
-                    <SelectTrigger className="h-10 border-border rounded-lg">
-                      <SelectValue placeholder="Select certificate type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {uploadableCertSubtypes.map(subtype => (
-                        <SelectItem key={subtype} value={subtype}>{subtype} Certificate</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+            {/* Document Name — full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-normal text-muted-foreground">
+                Document Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="Enter document name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className={cn("h-10 border-border rounded-lg", errCls(missingName))}
+              />
             </div>
 
+            {/* Reference + Type */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">
-                  Document Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  placeholder="Enter document name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className={cn("h-10 border-border rounded-lg", errCls(missingName))}
-                />
-              </div>
               <div className="space-y-2">
                 <Label className="text-sm font-normal text-muted-foreground">Reference</Label>
                 <Input
@@ -363,8 +361,55 @@ export function UploadStep3FileMetadata({
                   className="h-10 border-border rounded-lg"
                 />
               </div>
+
+              {typeOptions.length > 1 ? (
+                <div className="space-y-2">
+                  <Label className="text-sm font-normal text-muted-foreground">
+                    Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={docType} onValueChange={setDocType}>
+                    <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingType))}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {typeOptions.map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                docType && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-normal text-muted-foreground">Type</Label>
+                    <div className="h-10 px-3 rounded-lg border border-border bg-muted/30 flex items-center text-sm text-foreground">
+                      {docType}
+                    </div>
+                  </div>
+                )
+              )}
             </div>
 
+            {/* Certificate subtype — only for Certificate doc type */}
+            {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">
+                  Certificate Type <span className="text-red-500">*</span>
+                </Label>
+                <Select value={certificateSubtype} onValueChange={setCertificateSubtype}>
+                  <SelectTrigger className="h-10 border-border rounded-lg">
+                    <SelectValue placeholder="Select certificate type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uploadableCertSubtypes.map(subtype => (
+                      <SelectItem key={subtype} value={subtype}>{subtype} Certificate</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Description — full width */}
             <div className="space-y-2">
               <Label className="text-sm font-normal text-muted-foreground">Description (Optional)</Label>
               <Textarea
@@ -373,6 +418,38 @@ export function UploadStep3FileMetadata({
                 onChange={e => setDescription(e.target.value)}
                 className="min-h-[64px] border-border rounded-lg resize-none"
               />
+            </div>
+
+            {/* Issue Register fields — required for drawings, optional otherwise */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">
+                  Issued To
+                  {selectedTab === 'drawings' && <span className="text-red-500"> *</span>}
+                </Label>
+                <Input
+                  placeholder="e.g. Contractor, All, Architect"
+                  value={issuedTo}
+                  onChange={e => setIssuedTo(e.target.value)}
+                  className={cn("h-10 border-border rounded-lg", errCls(missingIssuedTo))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">
+                  Status
+                  {selectedTab === 'drawings' && <span className="text-red-500"> *</span>}
+                </Label>
+                <Select value={issueStatus} onValueChange={setIssueStatus}>
+                  <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingIssueStatus))}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ISSUE_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* AI Analysis */}
@@ -413,8 +490,9 @@ export function UploadStep3FileMetadata({
             </div>
           </div>
 
-          {/* Folder Visibility (only shown for new folders) */}
-          {isNewFolder && (
+          {/* Folder Visibility — only when creating a NEW folder in Drawings/Documents.
+              Contracts tree is locked (cannot create new folders), so never show here. */}
+          {isNewFolder && selectedTab !== 'contracts' && (
             <div className="bg-white rounded-xl border border-border p-5 space-y-4">
               <div>
                 <h3 className="text-sm font-normal text-foreground">Folder Visibility</h3>

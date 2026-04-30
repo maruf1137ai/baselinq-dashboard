@@ -41,8 +41,16 @@ export function UserMultiSelect({ projectId, value, onChange }: UserMultiSelectP
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ['project-users', projectId],
     queryFn: async () => {
-      const response = await fetchData(`project/${projectId}/team-members/`);
-      return response?.results || response || [];
+      const response = await fetchData(`projects/${projectId}/team-members/`);
+      // The endpoint returns { teamMembers: [...], totalMembers: N }
+      const members = response?.teamMembers || response?.results || response || [];
+      // Flatten to the shape this dropdown expects: { id, name, email, role }
+      return members.map((m: any) => ({
+        id: m.user?.id ?? m.id,
+        name: m.user?.name || m.user?.email || m.name || 'Unknown',
+        email: m.user?.email || m.email || '',
+        role: m.role,
+      }));
     },
     enabled: !!projectId,
   });
@@ -78,7 +86,11 @@ export function UserMultiSelect({ projectId, value, onChange }: UserMultiSelectP
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent
+          className="p-0"
+          align="start"
+          style={{ width: 'var(--radix-popover-trigger-width)' }}
+        >
           <Command>
             <CommandInput placeholder="Search users..." />
             <CommandEmpty>
