@@ -412,12 +412,21 @@ const DocumentDetail = () => {
         <div className="border-t border-border pt-2">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="bg-transparent h-auto p-0 gap-8 border-b-0">
+              {/* 5 tabs -> 2. AI / Linked / Obligations / Versions are now
+                  stacked sections inside the single Activity tab — one
+                  scroll, no tab-flicking, with anchor-style headings.
+                  Count chips follow each tab to surface unread / flagged
+                  state at a glance. */}
               {[
                 { id: 'overview', label: 'Overview' },
-                { id: 'ai', label: 'AI Analysis', count: doc.aiFlags > 0 ? doc.aiFlags : undefined, severity: doc.aiSeverity },
-                { id: 'linked', label: 'Linked', count: doc.linkedCount > 0 ? doc.linkedCount : undefined },
-                { id: 'obligations', label: 'Obligations' },
-                { id: 'versions', label: 'Versions' },
+                {
+                  id: 'activity',
+                  label: 'Activity',
+                  count:
+                    (doc.aiFlags || 0) + (doc.linkedCount || 0) +
+                    (versions.length || 0) + (obligations.length || 0) || undefined,
+                  severity: doc.aiFlags > 0 ? doc.aiSeverity : undefined,
+                },
               ].map(tab => (
                 <TabsTrigger
                   key={tab.id}
@@ -440,48 +449,57 @@ const DocumentDetail = () => {
               ))}
             </TabsList>
 
-            {/* Overview — Procore / ClickUp style split:
-                  LEFT  (~66%): file preview — the document itself is the
-                                hero of the page.
-                  RIGHT (~33%): metadata stack (Description & file + Key
-                                dates), always visible alongside the
-                                preview. No tab-switching, no scroll.
-
-                Document Details card omits Reference / Category / Type /
-                Discipline because those live in the header's compact
-                strip — single source of truth, no duplication. */}
+            {/* Overview — Procore / ClickUp split. Wider right rail
+                (40%) so the Description has room to breathe instead of
+                being squashed into a label-value row. */}
             <TabsContent value="overview" className="mt-5">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-                {/* LEFT: preview */}
-                <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+                {/* LEFT (60%): preview */}
+                <div className="lg:col-span-3">
                   <DocumentPreviewCard doc={doc} onPreview={(file) => setPreviewFile(file)} />
                 </div>
 
-                {/* RIGHT: metadata stack */}
-                <div className="space-y-4">
+                {/* RIGHT (40%): metadata. Description is a prominent
+                    multi-line block — the most-read field on this page,
+                    treated as content not as a metadata row. File name +
+                    size live in the preview card header (single source of
+                    truth for file-level facts). */}
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Description block — prominent, full width of rail */}
                   <div className="bg-white rounded-xl border border-border p-4">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-5 bg-primary rounded-full" />
-                      <h3 className="text-sm font-medium text-foreground">Description & file</h3>
+                      <h3 className="text-sm font-medium text-foreground">About</h3>
                     </div>
-                    <div className="space-y-1">
-                      <DetailItem label="Description" value={doc.description} />
-                      <DetailItem label="File name" value={doc.fileName} />
-                      <DetailItem label="File size" value={fileSizeMB} />
-                      {/* Contract-specific fields — only render when populated */}
-                      <DetailItem label="Standard" value={null} />
-                      <DetailItem label="Parties" value={null} />
-                      <DetailItem label="Contract value" value={null} />
-                    </div>
+                    {doc.description ? (
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                        {doc.description}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No description yet — click Edit to add one.
+                      </p>
+                    )}
+
+                    {/* Contract-specific fields render below the prose
+                        when populated. DetailItem hides nulls so empty
+                        contracts don't show empty rows. */}
+                    {(null /* Standard */ || null /* Parties */ || null /* Contract value */) && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-1">
+                        <DetailItem label="Standard" value={null} />
+                        <DetailItem label="Parties" value={null} />
+                        <DetailItem label="Contract value" value={null} />
+                      </div>
+                    )}
                   </div>
 
+                  {/* Key dates */}
                   <div className="bg-white rounded-xl border border-border p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
                       <h3 className="text-sm font-medium text-foreground">Key dates</h3>
                     </div>
                     <div className="space-y-1">
-                      {/* "Uploaded" omitted — already in the header strip */}
                       <DetailItem label="Executed" value={null} />
                       <DetailItem label="Commencement" value={null} />
                       <DetailItem label="Practical completion" value={null} />
@@ -495,7 +513,11 @@ const DocumentDetail = () => {
             </TabsContent>
 
             {/* AI Analysis */}
-            <TabsContent value="ai" className="mt-5 space-y-5">
+            {/* Activity tab — AI findings, Linked items, Obligations, and
+                Versions stacked as sections in a single scrollable view. */}
+            <TabsContent value="activity" className="mt-5 space-y-6">
+              {/* AI findings */}
+              <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-normal text-muted-foreground normal-case">
                   Findings ({findings.length})
@@ -594,10 +616,10 @@ const DocumentDetail = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
+              </section>
 
-            {/* Linked */}
-            <TabsContent value="linked" className="mt-5 space-y-5">
+              {/* Linked items */}
+              <section className="space-y-4 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-normal text-muted-foreground normal-case">Linked Items ({links.length})</h3>
                 <Button
@@ -647,10 +669,10 @@ const DocumentDetail = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
+              </section>
 
-            {/* Obligations */}
-            <TabsContent value="obligations" className="mt-5 space-y-5">
+              {/* Obligations */}
+              <section className="space-y-4 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-normal text-muted-foreground normal-case">
                   Obligations ({obligations.length})
@@ -808,10 +830,10 @@ const DocumentDetail = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
+              </section>
 
-            {/* Versions */}
-            <TabsContent value="versions" className="mt-5 space-y-5">
+              {/* Versions */}
+              <section className="space-y-4 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-normal text-muted-foreground normal-case">Version History ({versions.length})</h3>
                 <Button
@@ -893,6 +915,7 @@ const DocumentDetail = () => {
                   })}
                 </div>
               )}
+              </section>
             </TabsContent>
           </Tabs>
         </div>

@@ -5,12 +5,21 @@ import { Button } from '@/components/ui/button';
 interface DocumentPreviewCardProps {
   doc: {
     fileName?: string;
+    fileSize?: number;
     downloadUrl?: string;
     streamUrl?: string;
     [k: string]: unknown;
   };
   /** Click "Open" / preview — host opens the FilePreviewModal. */
   onPreview: (file: { name: string; url: string; streamUrl?: string }) => void;
+}
+
+function formatBytes(bytes: number | undefined): string | null {
+  if (!bytes || bytes <= 0) return null;
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(2)} MB`;
+  const kb = bytes / 1024;
+  return `${kb.toFixed(0)} KB`;
 }
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
@@ -52,11 +61,18 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
 
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
-      {/* Header strip — file name + quick actions */}
+      {/* Header strip — file name + size + quick actions. Size moved here
+          so the right-rail metadata cards don't carry it as a separate row
+          (kept all file-level info next to the file itself). */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2 min-w-0">
           <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
           <span className="text-sm text-foreground truncate">{fileName}</span>
+          {formatBytes(doc.fileSize) && (
+            <span className="text-xs text-muted-foreground shrink-0 ml-1">
+              · {formatBytes(doc.fileSize)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {url && (
