@@ -70,12 +70,12 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
     folderDocs.map((doc) => (
       <div
         key={doc._id}
-        className="flex items-center gap-2 py-2 px-4 hover:bg-amber-50/50 cursor-pointer transition-colors group/doc border-t border-border/50"
+        className="flex items-center gap-2 py-2 px-4 hover:bg-muted/40 cursor-pointer transition-colors group/doc border-t border-border/50"
         style={{ paddingLeft: `${(depth + 1) * 16 + 16}px` }}
         onClick={() => onDocumentClick?.(doc._id)}
       >
         <div className="flex-shrink-0 w-4" />
-        <File className="w-4 h-4 text-slate-400 flex-shrink-0" />
+        <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         <span className="text-sm text-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
           <span className="text-xs text-muted-foreground font-mono">{doc.reference}</span>
@@ -91,8 +91,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
           <CollapsibleTrigger asChild>
             <div
               className={cn(
-                "flex items-center gap-2 py-3 px-4 hover:bg-amber-50 cursor-pointer transition-colors group",
-                isOpen && "bg-amber-50/50"
+                "flex items-center gap-2 py-3 px-4 hover:bg-muted/40 cursor-pointer transition-colors group",
+                isOpen && "bg-muted/20"
               )}
               style={indentStyle}
             >
@@ -104,11 +104,11 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
                 )}
               </div>
 
-              <div className="flex-shrink-0 text-amber-600">
+              <div className="flex-shrink-0 text-muted-foreground">
                 {isOpen ? (
-                  <FolderOpen className="w-5 h-5" />
+                  <FolderOpen className="w-4 h-4" />
                 ) : (
-                  <FolderIcon className="w-5 h-5" />
+                  <FolderIcon className="w-4 h-4" />
                 )}
               </div>
 
@@ -119,8 +119,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
               <span className={cn(
                 "text-xs px-2 py-0.5 rounded-full",
                 docCount > 0
-                  ? "bg-amber-100 text-amber-700 font-medium"
-                  : "bg-slate-100 text-muted-foreground"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "bg-muted text-muted-foreground"
               )}>
                 {docCount}
               </span>
@@ -154,7 +154,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <div className="border-l border-amber-200 ml-4">
+            <div className="border-l border-border ml-4">
               {folder.children.map((child) => (
                 <FolderNode
                   key={child._id}
@@ -174,17 +174,17 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
       ) : (
         // Pure leaf with no docs — just the row with hover actions
         <div
-          className="flex items-center gap-2 py-3 px-4 hover:bg-amber-50 transition-colors group"
+          className="flex items-center gap-2 py-3 px-4 hover:bg-muted/40 transition-colors group"
           style={indentStyle}
         >
           <div className="flex-shrink-0 w-4" />
-          <div className="flex-shrink-0 text-amber-600">
-            <FolderIcon className="w-5 h-5" />
+          <div className="flex-shrink-0 text-muted-foreground">
+            <FolderIcon className="w-4 h-4" />
           </div>
           <span className="text-sm text-foreground flex-1">
             {folder.name.replace(/_/g, ' ')}
           </span>
-          <span className="text-xs text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
             0
           </span>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -220,6 +220,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
  * Displays the read-only hierarchical folder structure for Contracts tab.
  */
 export function ContractsTree({ projectId, documents, onDocumentClick, onViewRegister }: ContractsTreeProps) {
+  const [headerOpen, setHeaderOpen] = useState(true);
   const { data, isLoading, error } = useContractsFolders(projectId);
 
   // Ensure folders is always an array
@@ -289,68 +290,81 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
   return (
     <div className="bg-white rounded-lg border border-border overflow-hidden">
-      {/* Header */}
-      <div className="px-4 py-3 bg-amber-50/50 border-b border-border">
-        <h3 className="text-sm font-semibold text-amber-900">
-          Contracts Folder Structure
-        </h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Read-only folder hierarchy. Click on a folder to expand/collapse, or upload files to leaf folders.
-        </p>
-      </div>
+      {/* Header — collapsible */}
+      <button
+        type="button"
+        onClick={() => setHeaderOpen((v) => !v)}
+        className="w-full px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between hover:bg-muted/40 transition-colors text-left"
+      >
+        <div>
+          <h3 className="text-sm font-medium text-foreground">
+            Contracts Folder Structure
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Read-only folder hierarchy. Click on a folder to expand or upload files to leaf folders.
+          </p>
+        </div>
+        {headerOpen
+          ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+      </button>
 
-      {/* Tree */}
-      <div className="divide-y divide-border">
-        {folders.map((folder) => (
-          <FolderNode
-            key={folder._id}
-            folder={folder}
-            depth={0}
-            projectId={projectId}
-            docsByFolderId={docsByFolderId}
-            descendantCountById={descendantCountById}
-            onDocumentClick={onDocumentClick}
-            onViewRegister={onViewRegister}
-          />
-        ))}
-      </div>
+      {headerOpen && (
+        <>
+          {/* Tree */}
+          <div className="divide-y divide-border">
+            {folders.map((folder) => (
+              <FolderNode
+                key={folder._id}
+                folder={folder}
+                depth={0}
+                projectId={projectId}
+                docsByFolderId={docsByFolderId}
+                descendantCountById={descendantCountById}
+                onDocumentClick={onDocumentClick}
+                onViewRegister={onViewRegister}
+              />
+            ))}
+          </div>
 
-      {/* Unfiled documents — orphans uploaded before folder linkage existed */}
-      {(documents ?? []).some((d) => !d.folderId) && (
-        <div className="border-t-2 border-amber-200">
-          <div className="px-4 py-2 bg-amber-50/30">
-            <p className="text-xs font-medium text-amber-900">
-              Unfiled Contracts ({(documents ?? []).filter((d) => !d.folderId).length})
-            </p>
+          {/* Unfiled documents — orphans uploaded before folder linkage existed */}
+          {(documents ?? []).some((d) => !d.folderId) && (
+            <div className="border-t-2 border-border">
+              <div className="px-4 py-2 bg-muted/20">
+                <p className="text-xs font-medium text-foreground">
+                  Unfiled Contracts ({(documents ?? []).filter((d) => !d.folderId).length})
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Uploaded before folder structure was set up. Re-upload to file under a specific folder.
+                </p>
+              </div>
+              {(documents ?? [])
+                .filter((d) => !d.folderId)
+                .map((doc) => (
+                  <div
+                    key={doc._id}
+                    className="flex items-center gap-2 py-2 px-4 hover:bg-muted/40 cursor-pointer transition-colors border-t border-border/50"
+                    onClick={() => onDocumentClick?.(doc._id)}
+                  >
+                    <File className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-6" />
+                    <span className="text-sm text-foreground truncate flex-1">{doc.name}</span>
+                    {doc.reference && (
+                      <span className="text-xs text-muted-foreground font-mono">{doc.reference}</span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* Footer info */}
+          <div className="px-4 py-3 bg-muted/20 border-t border-border">
             <p className="text-xs text-muted-foreground">
-              Uploaded before folder structure was set up. Re-upload to file under a specific folder.
+              <span className="font-medium text-foreground">{folders.length}</span> top-level folders.
+              This structure is automatically seeded and cannot be modified.
             </p>
           </div>
-          {(documents ?? [])
-            .filter((d) => !d.folderId)
-            .map((doc) => (
-              <div
-                key={doc._id}
-                className="flex items-center gap-2 py-2 px-4 hover:bg-amber-50/50 cursor-pointer transition-colors border-t border-border/50"
-                onClick={() => onDocumentClick?.(doc._id)}
-              >
-                <File className="w-4 h-4 text-slate-400 flex-shrink-0 ml-6" />
-                <span className="text-sm text-foreground truncate flex-1">{doc.name}</span>
-                {doc.reference && (
-                  <span className="text-xs text-muted-foreground font-mono">{doc.reference}</span>
-                )}
-              </div>
-            ))}
-        </div>
+        </>
       )}
-
-      {/* Footer info */}
-      <div className="px-4 py-3 bg-slate-50 border-t border-border">
-        <p className="text-xs text-muted-foreground">
-          <strong>{folders.length}</strong> top-level folders loaded.
-          This structure is automatically seeded and cannot be modified.
-        </p>
-      </div>
     </div>
   );
 }

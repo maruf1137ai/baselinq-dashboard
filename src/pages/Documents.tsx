@@ -229,42 +229,33 @@ const Documents = () => {
               <TabsList className="bg-white border border-border h-10">
                 <TabsTrigger
                   value="Contracts"
-                  className={cn(
-                    "data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700",
-                    "data-[state=active]:border data-[state=active]:border-amber-200"
-                  )}
+                  className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
                 >
                   Contracts
                   {categoryCounts.Contracts > 0 && (
-                    <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs bg-muted text-foreground px-2 py-0.5 rounded-full">
                       {categoryCounts.Contracts}
                     </span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger
                   value="Drawings"
-                  className={cn(
-                    "data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700",
-                    "data-[state=active]:border data-[state=active]:border-blue-200"
-                  )}
+                  className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
                 >
                   Drawings
                   {categoryCounts.Drawings > 0 && (
-                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs bg-muted text-foreground px-2 py-0.5 rounded-full">
                       {categoryCounts.Drawings}
                     </span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger
                   value="Documents"
-                  className={cn(
-                    "data-[state=active]:bg-slate-50 data-[state=active]:text-slate-700",
-                    "data-[state=active]:border data-[state=active]:border-slate-200"
-                  )}
+                  className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
                 >
                   Documents
                   {categoryCounts.Documents > 0 && (
-                    <span className="ml-2 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs bg-muted text-foreground px-2 py-0.5 rounded-full">
                       {categoryCounts.Documents}
                     </span>
                   )}

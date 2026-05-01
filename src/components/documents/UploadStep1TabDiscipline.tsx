@@ -19,26 +19,21 @@ interface UploadStep1Props {
   onTabChange: (tab: FolderTab) => void;
   onDisciplineChange: (discipline: string) => void;
   onNext: () => void;
+  hideNav?: boolean;
 }
 
-const TAB_CONFIG: Record<FolderTab, { label: string; color: string; bgActive: string; borderActive: string }> = {
+const TAB_CONFIG: Record<FolderTab, { label: string; description: string }> = {
   contracts: {
     label: 'Contracts',
-    color: 'text-amber-700',
-    bgActive: 'bg-amber-50',
-    borderActive: 'border-amber-300',
+    description: 'Signed agreements & tender documents',
   },
   drawings: {
     label: 'Drawings',
-    color: 'text-blue-700',
-    bgActive: 'bg-blue-50',
-    borderActive: 'border-blue-300',
+    description: 'Architectural & engineering drawings',
   },
   documents: {
     label: 'Documents',
-    color: 'text-slate-700',
-    bgActive: 'bg-slate-50',
-    borderActive: 'border-slate-300',
+    description: 'Reports, specifications & certificates',
   },
 };
 
@@ -54,6 +49,7 @@ export function UploadStep1TabDiscipline({
   onTabChange,
   onDisciplineChange,
   onNext,
+  hideNav = false,
 }: UploadStep1Props) {
   const { data: suggestions, isLoading } = useFolderSuggestions();
 
@@ -92,20 +88,18 @@ export function UploadStep1TabDiscipline({
                 className={cn(
                   "p-6 rounded-xl border-2 transition-all text-center hover:scale-[1.02]",
                   isActive
-                    ? `${config.bgActive} ${config.borderActive} shadow-sm`
+                    ? "bg-primary/5 border-primary shadow-sm"
                     : "bg-white border-border hover:border-primary/30"
                 )}
               >
                 <p className={cn(
                   "text-lg font-medium",
-                  isActive ? config.color : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}>
                   {config.label}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {tab === 'contracts' && 'Signed agreements & tender documents'}
-                  {tab === 'drawings' && 'Architectural & engineering drawings'}
-                  {tab === 'documents' && 'Reports, specifications & certificates'}
+                  {config.description}
                 </p>
               </button>
             );
@@ -143,25 +137,27 @@ export function UploadStep1TabDiscipline({
 
       {/* Contracts Info Note */}
       {selectedTab === 'contracts' && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-900">
-            <strong>Contracts Tab:</strong> You'll select from pre-defined folders in the next step.
+        <div className="rounded-xl border border-border bg-muted/30 p-4">
+          <p className="text-sm text-foreground">
+            <span className="font-medium">Contracts Tab:</span> You'll select from pre-defined folders in the next step.
             Discipline will be inferred from your folder selection.
           </p>
         </div>
       )}
 
       {/* Next Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={onNext}
-          disabled={!canProceed}
-          className="h-11 px-6 gap-2 font-normal"
-        >
-          Next: Select Folder
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      </div>
+      {!hideNav && (
+        <div className="flex justify-end">
+          <Button
+            onClick={onNext}
+            disabled={!canProceed}
+            className="h-11 px-6 gap-2 font-normal"
+          >
+            Next: Select Folder
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

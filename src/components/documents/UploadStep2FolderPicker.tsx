@@ -18,6 +18,7 @@ interface UploadStep2Props {
   onFolderSelect: (folderId: string, folderName: string, isNew: boolean) => void;
   onBack: () => void;
   onNext: () => void;
+  hideNav?: boolean;
 }
 
 /**
@@ -128,6 +129,7 @@ export function UploadStep2FolderPicker({
   onFolderSelect,
   onBack,
   onNext,
+  hideNav = false,
 }: UploadStep2Props) {
   const { data: foldersData, isLoading: foldersLoading } = useFolders({
     projectId,
@@ -305,25 +307,27 @@ export function UploadStep2FolderPicker({
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center pt-4">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="h-11 px-6 gap-2 font-normal"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back
-        </Button>
+      {!hideNav && (
+        <div className="flex justify-between items-center pt-4">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            className="h-11 px-6 gap-2 font-normal"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </Button>
 
-        <Button
-          onClick={onNext}
-          disabled={!canProceed}
-          className="h-11 px-6 gap-2 font-normal"
-        >
-          Next: Upload Files
-          <ChevronRight className="w-4 h-4" />
-        </Button>
-      </div>
+          <Button
+            onClick={onNext}
+            disabled={!canProceed}
+            className="h-11 px-6 gap-2 font-normal"
+          >
+            Next: Upload Files
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

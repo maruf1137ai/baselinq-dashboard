@@ -29,6 +29,7 @@ import AiIcon from '@/components/icons/AiIcon';
 import { useS3Upload } from '@/hooks/useS3Upload';
 import { validateFile, postData } from '@/lib/Api';
 import useFetch from '@/hooks/useFetch';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CATEGORY_TO_TYPES, type DocCategory } from '@/lib/documentTaxonomy';
 import type { FolderTab, FolderVisibility } from '@/types/folder';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -44,6 +45,13 @@ interface UploadStep3Props {
   onBack: () => void;
   onSubmit: (data: UploadFormData) => Promise<void>;
   submitting: boolean;
+  hideBackButton?: boolean;
+  /**
+   * Slot rendered between the "Upload Files & Details" header and the
+   * file/details grid. Used by the single-page upload to inline the tab
+   * switcher and folder picker without an extra surrounding card.
+   */
+  headerSlot?: React.ReactNode;
 }
 
 export interface UploadFormData {
@@ -88,6 +96,8 @@ export function UploadStep3FileMetadata({
   onBack,
   onSubmit,
   submitting,
+  hideBackButton = false,
+  headerSlot,
 }: UploadStep3Props) {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
@@ -103,6 +113,16 @@ export function UploadStep3FileMetadata({
   const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
   const [visibility, setVisibility] = useState<FolderVisibility>('all');
   const [visibilityUsers, setVisibilityUsers] = useState<string[]>([]);
+  const { data: currentUser } = useCurrentUser();
+
+  // When the user picks "Specific users" visibility, preselect themselves
+  // so the creator always retains access to a folder they just made.
+  useEffect(() => {
+    if (visibility !== 'individual') return;
+    if (!currentUser?.id) return;
+    const meId = String(currentUser.id);
+    setVisibilityUsers((prev) => (prev.includes(meId) ? prev : [...prev, meId]));
+  }, [visibility, currentUser?.id]);
   const [issuedTo, setIssuedTo] = useState('All');
   const [issueStatus, setIssueStatus] = useState('For Information');
 
@@ -249,14 +269,19 @@ export function UploadStep3FileMetadata({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-normal text-foreground">Upload Files & Details</h2>
-        <p className="text-sm text-muted-foreground">
-          Uploading to: <strong>{selectedFolderName.replace(/_/g, ' ')}</strong>
-          {isNewFolder && <span className="text-primary ml-1">(New folder)</span>}
-        </p>
-      </div>
+      {/* Header — hidden entirely when headerSlot is provided so the host
+          page can render its own context (tabs, folder picker, etc.) */}
+      {!headerSlot && (
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-normal text-foreground">Upload Files & Details</h2>
+          <p className="text-sm text-muted-foreground">
+            Uploading to: <strong>{selectedFolderName.replace(/_/g, ' ')}</strong>
+            {isNewFolder && <span className="text-primary ml-1">(New folder)</span>}
+          </p>
+        </div>
+      )}
+
+      {headerSlot}
 
       <div className="grid grid-cols-5 gap-6 items-start">
         {/* Left: File Upload */}
@@ -648,16 +673,18 @@ export function UploadStep3FileMetadata({
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center pt-4">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="h-11 px-6 gap-2 font-normal"
-          disabled={submitting}
-        >
-          <ChevronLeft className="w-4 w-4" />
-          Back
-        </Button>
+      <div className={cn("flex items-center pt-4", hideBackButton ? "justify-end" : "justify-between")}>
+        {!hideBackButton && (
+          <Button
+            onClick={onBack}
+            variant="outline"
+            className="h-11 px-6 gap-2 font-normal"
+            disabled={submitting}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </Button>
+        )}
 
         <Button
           onClick={handleSubmit}
