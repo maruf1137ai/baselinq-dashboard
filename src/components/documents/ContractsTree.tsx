@@ -131,47 +131,60 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
     </div>
   ));
 
-  // Folder row (the clickable header). Style varies dramatically with depth.
-  // Folders always sit on a warm muted band so they're instantly
-  // distinguishable from the white document rows below them.
+  // Three depth treatments — type sizes match Drawings/Documents tabs
+  // for cross-tab consistency, but bg + weight stair-step here so the
+  // user can tell the levels apart in a deep tree:
+  //   depth 0 (e.g. "01 Main Contractor"): bg-muted/50 + font-medium —
+  //     same visual weight as a Drawings discipline header.
+  //   depth 1 (e.g. "02 Contract Documentation"): bg-muted/25 + normal.
+  //   depth 2+ (e.g. "Signed Contract"): bg-muted/10 + muted text colour.
+  // All rows have explicit pr-4 so right-side content (count chip,
+  // ref pill, chevron) never touches the container edge.
+  const isMidLevel = depth === 1;
+  const isDeepLevel = depth >= 2;
   const folderRow = (
     <div
       className={cn(
-        "flex items-center gap-2 cursor-pointer transition-colors group relative",
-        isTopLevel
-          ? "py-3 px-4 bg-muted/40 hover:bg-muted/55"
-          : "py-2 bg-muted/20 hover:bg-muted/35",
+        "flex items-center gap-2 pr-4 cursor-pointer transition-colors group relative",
+        isTopLevel  && "py-3 px-4 bg-muted/50 hover:bg-muted/65 border-b border-border",
+        isMidLevel  && "py-2.5 bg-muted/25 hover:bg-muted/40",
+        isDeepLevel && "py-2 bg-muted/10 hover:bg-muted/25",
       )}
       style={indentStyle}
     >
-      {/* Top-level folders get a primary-colour accent stripe on the left */}
+      {/* Top-level folders get a primary-colour accent stripe */}
       {isTopLevel && (
         <div className={cn(
-          "absolute left-0 top-2 bottom-2 w-0.5 rounded-r transition-colors",
-          isOpen ? "bg-primary" : "bg-primary/20"
+          "absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r transition-colors",
+          isOpen ? "bg-primary" : "bg-primary/30"
         )} />
       )}
 
-      <div className="flex-shrink-0 text-muted-foreground">
+      <div className={cn(
+        "flex-shrink-0",
+        isTopLevel ? "text-foreground" : "text-muted-foreground"
+      )}>
         {isOpen
-          ? <ChevronDown className={cn("w-4 h-4 transition-transform", isTopLevel && "text-foreground")} />
+          ? <ChevronDown className="w-4 h-4 transition-transform" />
           : <ChevronRight className="w-4 h-4 transition-transform" />}
       </div>
 
       <div className={cn(
         "flex-shrink-0",
-        isTopLevel ? "text-primary" : "text-muted-foreground"
+        isTopLevel  ? "text-primary"
+        : isMidLevel ? "text-muted-foreground"
+        : "text-muted-foreground/70"
       )}>
         {isOpen
-          ? <FolderOpen className={isTopLevel ? "w-4 h-4" : "w-3.5 h-3.5"} />
-          : <FolderIcon className={isTopLevel ? "w-4 h-4" : "w-3.5 h-3.5"} />}
+          ? <FolderOpen className="w-3.5 h-3.5" />
+          : <FolderIcon className="w-3.5 h-3.5" />}
       </div>
 
       <span className={cn(
         "flex-1 truncate",
-        isTopLevel
-          ? "text-sm font-medium text-foreground tracking-tight"
-          : "text-sm text-foreground"
+        isTopLevel  && "text-sm font-medium text-foreground tracking-tight",
+        isMidLevel  && "text-sm text-foreground",
+        isDeepLevel && "text-sm text-muted-foreground",
       )}>
         {folder.name.replace(/_/g, ' ')}
       </span>
