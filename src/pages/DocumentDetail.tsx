@@ -321,37 +321,37 @@ const DocumentDetail = () => {
               {doc.userPermissions?.canEdit !== false && (
                 <Button
                   variant="outline"
-                  className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
                   onClick={() => setIsEditModalOpen(true)}
                 >
-                  <Pencil className="w-4 h-4" /> Edit
+                  <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
                 </Button>
               )}
               {doc.userPermissions?.canDownload !== false && (
                 <Button
                   variant="outline"
-                  className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
                   onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
                   disabled={!doc.downloadUrl}
                 >
-                  <Download className="w-4 h-4" /> Download
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Download
                 </Button>
               )}
-              <Button variant="outline" className="bg-white border-gray-200 text-[#1A1A1A] hover:bg-gray-50 h-9 px-4 rounded-lg transition-all flex gap-2">
-                <Share2 className="w-4 h-4" /> Share
+              <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
+                <Share2 className="w-3.5 h-3.5 mr-1.5" /> Share
               </Button>
               {doc.userPermissions?.canDelete !== false && (
                 <Button
                   variant="outline"
-                  className="bg-white border-red-200 text-red-600 hover:bg-red-50 h-9 px-4 rounded-lg transition-all flex gap-2"
+                  className="h-8 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
-                  <Trash2 className="w-4 h-4" /> Delete
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
                 </Button>
               )}
               {doc.userPermissions?.canUploadVersion !== false && (
                 <Button
-                  className="bg-primary text-white hover:opacity-90 h-9 px-4 rounded-lg transition-all font-normal"
+                  className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
                   onClick={() => setIsVersionUploadOpen(true)}
                 >
                   Upload revision
