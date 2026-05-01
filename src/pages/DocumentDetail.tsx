@@ -260,56 +260,59 @@ const DocumentDetail = () => {
     <DashboardLayout>
       <div className="space-y-6">
 
-        {/* Breadcrumbs */}
+        {/* Breadcrumbs — design tokens, not hardcoded grays */}
         <div className="flex items-center justify-between">
-          <nav className="flex items-center gap-2 text-sm text-gray-500">
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground">
             <button
               onClick={() => navigate('/documents')}
-              className="hover:text-[#1A1A1A] transition-colors flex items-center gap-1.5"
+              className="hover:text-foreground transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
               Documents
             </button>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
-            <span className="text-gray-400">{doc.discipline || '—'}</span>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
-            <span className="text-[#1A1A1A] font-normal">{doc.reference}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <span className="text-muted-foreground">{doc.discipline || '—'}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <span className="text-foreground font-normal">{doc.reference}</span>
           </nav>
         </div>
 
-        {/* Header */}
+        {/* Header — canonical title size + neutralised badge palette.
+            Was text-4xl with hardcoded #1A1A1A and three different badge
+            colours (amber/gray/purple). Now text-2xl matching every other
+            page, badges differentiated by label not colour. */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-4 flex-1">
-            <h1 className="text-4xl font-normal tracking-tight text-[#1A1A1A] leading-tight">
+          <div className="space-y-3 flex-1">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground leading-tight">
               {doc.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Badge className="bg-amber-50 text-[#B45309] border-amber-100 px-3 py-1 font-normal">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary px-2.5 py-0.5 text-xs font-mono font-normal">
                 {doc.reference}
               </Badge>
-              <Badge variant="outline" className="bg-gray-50 border-gray-200 text-gray-600 px-3 py-1 font-normal">
+              <Badge variant="outline" className="bg-muted/40 border-border text-muted-foreground px-2.5 py-0.5 text-xs font-normal">
                 {doc.type}
               </Badge>
               {doc.discipline && (
-                <Badge variant="outline" className="bg-purple-50 border-purple-100 text-[#6D28D9] px-3 py-1 font-normal">
+                <Badge variant="outline" className="bg-muted/40 border-border text-muted-foreground px-2.5 py-0.5 text-xs font-normal">
                   {doc.discipline}
                 </Badge>
               )}
-              <Badge className={cn(
-                "px-3 py-1 font-normal flex items-center gap-1.5 border-0",
-                doc.status === 'Active' ? "bg-emerald-50 text-emerald-700" :
-                  doc.status === 'Archived' ? "bg-gray-100 text-gray-500" :
-                    "bg-amber-50 text-amber-700"
+              <Badge variant="outline" className={cn(
+                "px-2.5 py-0.5 text-xs font-normal flex items-center gap-1.5 border",
+                doc.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                  doc.status === 'Archived' ? "bg-muted/40 text-muted-foreground border-border" :
+                    "bg-amber-50 text-amber-700 border-amber-100"
               )}>
                 <div className={cn(
                   "w-1.5 h-1.5 rounded-full",
                   doc.status === 'Active' ? "bg-emerald-500" :
-                    doc.status === 'Archived' ? "bg-gray-400" : "bg-amber-500"
+                    doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
                 )} />
                 {doc.status}
               </Badge>
               {doc.isGated && (
-                <Badge className="bg-amber-50 text-[#B45309] border-amber-100 px-3 py-1 font-normal">
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 px-2.5 py-0.5 text-xs font-normal">
                   Finance Gated
                 </Badge>
               )}
@@ -359,12 +362,12 @@ const DocumentDetail = () => {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full border border-gray-200">
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-muted/40 rounded-full border border-border">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-xs font-normal text-gray-700">{doc.currentVersion}, current</span>
+                <span className="text-xs font-normal text-foreground">{doc.currentVersion}, current</span>
               </div>
               {doc.uploadedBy && (
-                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <User className="w-3 h-3" />
                   {uploadedAgo ? `Uploaded ${uploadedAgo} by ${doc.uploadedBy.name}` : `Uploaded by ${doc.uploadedBy.name}`}
                 </span>
