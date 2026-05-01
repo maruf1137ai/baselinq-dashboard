@@ -17,7 +17,7 @@ import type { FolderTab, Folder } from '@/types/folder';
  * Upload Document Wizard (PR 5)
  *
  * 3-step guided upload process:
- * 1. Select Tab & Discipline
+ * 1. Select Category & Discipline
  * 2. Select/Create Folder
  * 3. Upload Files & Metadata
  */
@@ -84,7 +84,7 @@ export default function UploadDocumentWizard() {
   // Step navigation handlers
   const handleStep1Next = () => {
     if (!selectedTab) {
-      toast.error('Please select a tab');
+      toast.error('Please select a category');
       return;
     }
     if ((selectedTab === 'drawings' || selectedTab === 'documents') && !selectedDiscipline) {

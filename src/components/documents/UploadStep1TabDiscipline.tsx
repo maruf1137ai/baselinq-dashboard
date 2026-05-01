@@ -31,11 +31,16 @@ const TAB_CONFIG: Record<FolderTab, { label: string; description: string }> = {
 };
 
 /**
- * Step 1: Tab and Discipline Selection
+ * Step 1: Category and Discipline Selection
  *
- * Users select which tab they're uploading to (Contracts/Drawings/Documents)
- * and optionally select a discipline (required for Drawings/Documents,
- * skipped for Contracts).
+ * Users select which category they're uploading to
+ * (Contracts/Drawings/Documents) and optionally select an engineering
+ * discipline (required for Drawings/Documents, skipped for Contracts —
+ * Contracts disciplines are inferred from the folder path in Step 2).
+ *
+ * "Category" is the user-facing label here. Internally these map to the
+ * `tab` field on Folder records (`contracts` | `drawings` | `documents`)
+ * which the backend uses for tree filtering.
  */
 export function UploadStep1TabDiscipline({
   selectedTab,
@@ -57,16 +62,16 @@ export function UploadStep1TabDiscipline({
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
       <div className="text-center space-y-1">
-        <h2 className="text-xl font-normal text-foreground">Choose Upload Location</h2>
+        <h2 className="text-xl font-normal text-foreground">Where does this document belong?</h2>
         <p className="text-sm text-muted-foreground">
-          Select which tab you're uploading to and the discipline category
+          Pick a category, then the engineering discipline
         </p>
       </div>
 
-      {/* Tab Selection */}
+      {/* Category Selection (maps to backend `tab`: contracts | drawings | documents) */}
       <div className="space-y-2">
         <Label className="text-sm font-normal text-muted-foreground">
-          Tab <span className="text-red-500">*</span>
+          Category <span className="text-red-500">*</span>
         </Label>
         <div className="grid grid-cols-3 gap-3">
           {(Object.keys(TAB_CONFIG) as FolderTab[]).map((tab) => {
