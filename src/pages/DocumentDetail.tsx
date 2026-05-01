@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Download,
-  Share2,
   ChevronRight,
   Link2,
   FileClock,
@@ -20,7 +19,15 @@ import {
   Plus,
   Calendar,
   CheckCircle2,
+  MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
 import { getCategoryForDoc, SUBCATEGORY_LABEL } from '@/lib/documentTaxonomy';
 import AiIcon from '@/components/icons/AiIcon';
@@ -229,6 +236,18 @@ const DocumentDetail = () => {
     );
   };
 
+  // Compact, labeled metadata cell for the header strip. Each cell renders
+  // as "label: value" with the label muted and the value at full weight,
+  // so a quick scan tells the user what each piece is (Ref vs Type vs
+  // Discipline) — fixes the "unlabeled chip soup" complaint.
+  const MetaField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground/50" aria-hidden>·</span>
+      {children}
+    </span>
+  );
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -277,102 +296,130 @@ const DocumentDetail = () => {
           </nav>
         </div>
 
-        {/* Header — canonical title size + neutralised badge palette.
-            Was text-4xl with hardcoded #1A1A1A and three different badge
-            colours (amber/gray/purple). Now text-2xl matching every other
-            page, badges differentiated by label not colour. */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-3 flex-1">
+        {/* Header — single labeled metadata line under the title, with a
+            consolidated action group (one primary, one secondary, kebab
+            for everything else). Replaces the previous strip of unlabeled
+            coloured chips + 5-button row that read as visual noise.
+
+            The dead "Share" button (no onClick, no backend) has been
+            removed entirely. */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-2 flex-1 min-w-0">
             <h1 className="text-2xl font-normal tracking-tight text-foreground leading-tight">
               {doc.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary px-2.5 py-0.5 text-xs font-mono font-normal">
-                {doc.reference}
-              </Badge>
-              <Badge variant="outline" className="bg-muted/40 border-border text-muted-foreground px-2.5 py-0.5 text-xs font-normal">
-                {doc.type}
-              </Badge>
-              {doc.discipline && (
-                <Badge variant="outline" className="bg-muted/40 border-border text-muted-foreground px-2.5 py-0.5 text-xs font-normal">
-                  {doc.discipline}
-                </Badge>
-              )}
-              <Badge variant="outline" className={cn(
-                "px-2.5 py-0.5 text-xs font-normal flex items-center gap-1.5 border",
-                doc.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                  doc.status === 'Archived' ? "bg-muted/40 text-muted-foreground border-border" :
-                    "bg-amber-50 text-amber-700 border-amber-100"
-              )}>
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  doc.status === 'Active' ? "bg-emerald-500" :
-                    doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
-                )} />
-                {doc.status}
-              </Badge>
-              {doc.isGated && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-100 px-2.5 py-0.5 text-xs font-normal">
-                  Finance Gated
-                </Badge>
-              )}
-            </div>
-          </div>
 
-          <div className="flex flex-col items-end gap-3">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {doc.userPermissions?.canEdit !== false && (
-                <Button
-                  variant="outline"
-                  className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
-                  onClick={() => setIsEditModalOpen(true)}
-                >
-                  <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
-                </Button>
+            {/* Labeled metadata strip. Each piece tells the user what it is
+                so "Architectural" doesn't get confused with "Contract" or
+                "VO-CONT-001". Status keeps its semantic colour (green/amber)
+                — that's the one place colour carries meaning. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+              <MetaField label="Ref">
+                <span className="font-mono text-foreground">{doc.reference || '—'}</span>
+              </MetaField>
+              <MetaField label="Category">
+                <span className="text-foreground">{getCategoryForDoc(doc as any)}</span>
+              </MetaField>
+              <MetaField label="Type">
+                <span className="text-foreground">{SUBCATEGORY_LABEL[doc.type ?? ''] || doc.type || '—'}</span>
+              </MetaField>
+              {doc.discipline && (
+                <MetaField label="Discipline">
+                  <span className="text-foreground">{doc.discipline}</span>
+                </MetaField>
               )}
-              {doc.userPermissions?.canDownload !== false && (
-                <Button
-                  variant="outline"
-                  className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
-                  onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
-                  disabled={!doc.downloadUrl}
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Download
-                </Button>
-              )}
-              <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
-                <Share2 className="w-3.5 h-3.5 mr-1.5" /> Share
-              </Button>
-              {doc.userPermissions?.canDelete !== false && (
-                <Button
-                  variant="outline"
-                  className="h-8 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
-                </Button>
-              )}
-              {doc.userPermissions?.canUploadVersion !== false && (
-                <Button
-                  className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-                  onClick={() => setIsVersionUploadOpen(true)}
-                >
-                  Upload revision
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-muted/40 rounded-full border border-border">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-xs font-normal text-foreground">{doc.currentVersion}, current</span>
-              </div>
-              {doc.uploadedBy && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <User className="w-3 h-3" />
-                  {uploadedAgo ? `Uploaded ${uploadedAgo} by ${doc.uploadedBy.name}` : `Uploaded by ${doc.uploadedBy.name}`}
+              <MetaField label="Status">
+                <span className={cn(
+                  "inline-flex items-center gap-1.5",
+                  doc.status === 'Active' ? "text-emerald-700" :
+                    doc.status === 'Archived' ? "text-muted-foreground" : "text-amber-700"
+                )}>
+                  <span className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    doc.status === 'Active' ? "bg-emerald-500" :
+                      doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
+                  )} />
+                  {doc.status}
+                </span>
+              </MetaField>
+              {doc.isGated && (
+                <span className="inline-flex items-center gap-1 text-amber-700 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100">
+                  <AlertCircle className="w-3 h-3" /> Finance Gated
                 </span>
               )}
             </div>
+
+            {/* Version + author — quiet line below metadata. Single source
+                of truth for revision/author rather than a separate pill. */}
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+              <FileClock className="w-3 h-3 shrink-0" />
+              <span className="text-foreground font-medium">{doc.currentVersion}</span>
+              {doc.uploadedBy && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{uploadedAgo ? `${uploadedAgo}` : 'recently'}</span>
+                  <span aria-hidden>·</span>
+                  <span>by {doc.uploadedBy.name}</span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Action group: 1 primary, 1 secondary, kebab for the rest.
+              All existing actions preserved (Edit / Download / Delete /
+              Upload revision) — just reorganised. Dead "Share" button
+              removed. */}
+          <div className="flex items-center gap-2 shrink-0">
+            {doc.userPermissions?.canDownload !== false && (
+              <Button
+                variant="outline"
+                className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
+                onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
+                disabled={!doc.downloadUrl}
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" /> Download
+              </Button>
+            )}
+            {doc.userPermissions?.canUploadVersion !== false && (
+              <Button
+                className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                onClick={() => setIsVersionUploadOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Upload revision
+              </Button>
+            )}
+            {(doc.userPermissions?.canEdit !== false || doc.userPermissions?.canDelete !== false) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border-border text-foreground hover:bg-muted"
+                    aria-label="More actions"
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  {doc.userPermissions?.canEdit !== false && (
+                    <DropdownMenuItem onClick={() => setIsEditModalOpen(true)} className="text-xs">
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit details
+                    </DropdownMenuItem>
+                  )}
+                  {doc.userPermissions?.canEdit !== false && doc.userPermissions?.canDelete !== false && (
+                    <DropdownMenuSeparator />
+                  )}
+                  {doc.userPermissions?.canDelete !== false && (
+                    <DropdownMenuItem
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="text-xs text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete document
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
