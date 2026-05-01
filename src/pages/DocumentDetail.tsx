@@ -217,11 +217,11 @@ const DocumentDetail = () => {
   }) => {
     if (!value) return null;
     return (
-      <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2 rounded-lg">
-        <span className="text-xs text-gray-500 font-normal tracking-wide">{label}</span>
+      <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-muted/30 transition-colors px-2 rounded-lg">
+        <span className="text-xs text-muted-foreground font-normal tracking-wide">{label}</span>
         <span className={cn(
           "text-sm font-normal",
-          isActionable ? "text-[#B45309] hover:underline cursor-pointer" : "text-[#1A1A1A]",
+          isActionable ? "text-amber-700 hover:underline cursor-pointer" : "text-foreground",
         )}>
           {value}
         </span>
@@ -240,7 +240,7 @@ const DocumentDetail = () => {
   if (isError || !doc) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-96 gap-3 text-gray-400">
+        <div className="flex flex-col items-center justify-center h-96 gap-3 text-muted-foreground">
           <FileText className="w-10 h-10" />
           <p className="text-sm">Document not found.</p>
           <Button variant="outline" size="sm" onClick={() => navigate('/documents')}>
@@ -376,8 +376,10 @@ const DocumentDetail = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-t border-gray-100 pt-2">
+        {/* Tabs — design tokens, no hardcoded grays. Underline pattern is
+            kept (matches Finance page nav), but colours align with the
+            rest of the app. */}
+        <div className="border-t border-border pt-2">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="bg-transparent h-auto p-0 gap-8 border-b-0">
               {[
@@ -391,15 +393,15 @@ const DocumentDetail = () => {
                   key={tab.id}
                   value={tab.id}
                   className={cn(
-                    "px-0 py-4 border-b-2 border-transparent text-[#6B7280] bg-transparent font-normal shadow-none rounded-none transition-all",
-                    "data-[state=active]:border-primary data-[state=active]:text-[#1A1A1A] flex items-center gap-2"
+                    "px-0 py-3 border-b-2 border-transparent text-muted-foreground bg-transparent font-normal text-sm shadow-none rounded-none transition-all",
+                    "data-[state=active]:border-primary data-[state=active]:text-foreground flex items-center gap-2"
                   )}
                 >
                   {tab.label}
                   {(tab as any).count !== undefined && (
                     <span className={cn(
                       "text-xs px-2 py-0.5 rounded-full font-normal",
-                      (tab as any).severity === 'high' ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"
+                      (tab as any).severity === 'high' ? "bg-red-50 text-red-600" : "bg-muted/40 text-muted-foreground"
                     )}>
                       {(tab as any).count}
                     </span>
@@ -408,12 +410,13 @@ const DocumentDetail = () => {
               ))}
             </TabsList>
 
-            {/* Overview */}
-            <TabsContent value="overview" className="mt-6 space-y-6">
+            {/* Overview — section cards aligned to canonical p-4 (was p-6)
+                with design-token borders. */}
+            <TabsContent value="overview" className="mt-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="w-1.5 h-6 bg-primary rounded-full" />
+                <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-5 bg-primary rounded-full" />
                     <h3 className="text-sm font-medium text-foreground">Document Details</h3>
                   </div>
                   <div className="space-y-1">
@@ -430,9 +433,9 @@ const DocumentDetail = () => {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
+                <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
                     <h3 className="text-sm font-medium text-foreground">Key Dates</h3>
                   </div>
                   <div className="space-y-1">
@@ -449,9 +452,9 @@ const DocumentDetail = () => {
             </TabsContent>
 
             {/* AI Analysis */}
-            <TabsContent value="ai" className="mt-6 space-y-6">
+            <TabsContent value="ai" className="mt-5 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 normal-case">
+                <h3 className="text-sm font-normal text-muted-foreground normal-case">
                   Findings ({findings.length})
                 </h3>
                 <Button
@@ -480,7 +483,7 @@ const DocumentDetail = () => {
               )}
 
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                   <AiIcon size={32} />
                   <p className="text-sm">No AI findings for this document</p>
                 </div>
@@ -492,14 +495,14 @@ const DocumentDetail = () => {
                     <div
                       key={finding._id}
                       className={cn(
-                        "p-5 rounded-xl border bg-white transition-all",
+                        "p-4 rounded-xl border bg-white transition-all",
                         finding.isResolved
-                          ? "border-gray-100 opacity-60"
+                          ? "border-border opacity-60"
                           : finding.severity === 'high'
                             ? "border-red-100"
                             : finding.severity === 'medium'
                               ? "border-amber-100"
-                              : "border-gray-100"
+                              : "border-border"
                       )}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -508,26 +511,26 @@ const DocumentDetail = () => {
                             <span className={cn(
                               "text-xs px-2 py-0.5 rounded-full font-normal capitalize",
                               finding.severity === 'high' ? "bg-red-50 text-red-600" :
-                                finding.severity === 'medium' ? "bg-amber-50 text-[#B45309]" :
-                                  "bg-gray-100 text-gray-500"
+                                finding.severity === 'medium' ? "bg-amber-50 text-amber-700" :
+                                  "bg-muted/40 text-muted-foreground"
                             )}>
                               {finding.severity}
                             </span>
                             {finding.clauseReference && (
-                              <span className="text-xs text-gray-400 font-normal">{finding.clauseReference}</span>
+                              <span className="text-xs text-muted-foreground font-normal">{finding.clauseReference}</span>
                             )}
                           </div>
                           <p className={cn(
-                            "text-sm font-normal text-[#1A1A1A]",
-                            finding.isResolved && "line-through text-gray-400"
+                            "text-sm font-normal text-foreground",
+                            finding.isResolved && "line-through text-muted-foreground"
                           )}>
                             {finding.title}
                           </p>
                           {finding.description && (
-                            <p className="text-xs text-gray-500 font-normal leading-relaxed">{finding.description}</p>
+                            <p className="text-xs text-muted-foreground font-normal leading-relaxed">{finding.description}</p>
                           )}
                           {finding.isResolved && finding.resolvedBy && (
-                            <p className="text-xs text-gray-400 font-normal mt-1">
+                            <p className="text-xs text-muted-foreground font-normal mt-1">
                               Resolved by {finding.resolvedBy.name ?? finding.resolvedBy}
                               {finding.resolvedAt ? ` · ${formatDistanceToNow(new Date(finding.resolvedAt), { addSuffix: true }).replace('about ', '')}` : ''}
                             </p>
@@ -537,7 +540,7 @@ const DocumentDetail = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs font-normal border-gray-200 rounded-lg shrink-0"
+                            className="h-7 text-xs font-normal border-border rounded-lg shrink-0"
                             onClick={() => resolveFinding(finding._id)}
                           >
                             Resolve
@@ -551,13 +554,13 @@ const DocumentDetail = () => {
             </TabsContent>
 
             {/* Linked */}
-            <TabsContent value="linked" className="mt-6 space-y-6">
+            <TabsContent value="linked" className="mt-5 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 normal-case">Linked Items ({links.length})</h3>
+                <h3 className="text-sm font-normal text-muted-foreground normal-case">Linked Items ({links.length})</h3>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-lg"
+                  className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
                   <Link2 className="h-3.5 w-3.5" /> Add Link
@@ -567,7 +570,7 @@ const DocumentDetail = () => {
               {linksLoading ? (
                 <AwesomeLoader message="Loading Links" />
               ) : links.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                   <Link2 className="w-8 h-8" />
                   <p className="text-sm">No linked items yet</p>
                 </div>
@@ -577,25 +580,25 @@ const DocumentDetail = () => {
                     <div
                       key={link._id}
                       onClick={() => link.taskId && navigate(`/tasks/${link.taskId}`)}
-                      className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white hover:border-primary/20 hover:shadow-sm transition-all group/link cursor-pointer"
+                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-white hover:border-primary/20 hover:shadow-sm transition-all group/link cursor-pointer"
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="h-10 w-10 bg-gray-50 rounded-xl flex items-center justify-center group-hover/link:bg-primary/5 transition-colors">
                           <span className="text-primary text-xs font-normal">{link.itemType}</span>
                         </div>
                         <div>
-                          <p className="text-sm font-normal text-[#1A1A1A]">{link.itemReference}</p>
-                          <p className="text-xs text-gray-400 font-normal">{link.itemTitle}</p>
+                          <p className="text-sm font-normal text-foreground">{link.itemReference}</p>
+                          <p className="text-xs text-muted-foreground font-normal">{link.itemTitle}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); setLinkToDelete({ id: link._id, ref: link.itemReference }); }}
-                          className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500"
+                          className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <ChevronRight className="w-4 h-4 text-gray-300 group-hover/link:text-primary transition-colors" />
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
                       </div>
                     </div>
                   ))}
@@ -604,9 +607,9 @@ const DocumentDetail = () => {
             </TabsContent>
 
             {/* Obligations */}
-            <TabsContent value="obligations" className="mt-6 space-y-6">
+            <TabsContent value="obligations" className="mt-5 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 normal-case">
+                <h3 className="text-sm font-normal text-muted-foreground normal-case">
                   Obligations ({obligations.length})
                 </h3>
                 <div className="flex items-center gap-2">
@@ -616,7 +619,7 @@ const DocumentDetail = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-lg"
+                    className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                     onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                   >
                     <Plus className="h-3.5 w-3.5" /> Add Obligation
@@ -625,33 +628,33 @@ const DocumentDetail = () => {
               </div>
 
               {showObligationForm && (
-                <div className="p-5 rounded-xl border border-primary/20 bg-primary/[0.02] space-y-4">
+                <div className="p-4 rounded-xl border border-primary/20 bg-primary/[0.02] space-y-3">
                   <div>
-                    <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Title <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-normal text-muted-foreground uppercase block mb-1.5">Title <span className="text-red-500">*</span></label>
                     <input
                       value={obligationTitle}
                       onChange={(e) => setObligationTitle(e.target.value)}
                       placeholder="e.g. Submit monthly progress report"
-                      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                      className="w-full h-10 px-3 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Due Date</label>
+                      <label className="text-xs font-normal text-muted-foreground uppercase block mb-1.5">Due Date</label>
                       <input
                         type="date"
                         value={obligationDueDate}
                         onChange={(e) => setObligationDueDate(e.target.value)}
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                        className="w-full h-10 px-3 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-normal text-gray-400 uppercase block mb-1.5">Responsible Role</label>
+                      <label className="text-xs font-normal text-muted-foreground uppercase block mb-1.5">Responsible Role</label>
                       <input
                         value={obligationRole}
                         onChange={(e) => setObligationRole(e.target.value)}
                         placeholder="e.g. Contractor"
-                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                        className="w-full h-10 px-3 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                       />
                     </div>
                   </div>
@@ -678,26 +681,26 @@ const DocumentDetail = () => {
               {obligationsLoading ? (
                 <AwesomeLoader message="Loading Obligations" />
               ) : obligations.length === 0 && !showObligationForm ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                   <AlertCircle className="w-8 h-8" />
                   <p className="text-sm">No obligations extracted yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {obligations.map((ob: any) => (
-                    <div key={ob._id} className="p-5 rounded-xl border border-gray-100 bg-white hover:shadow-sm transition-all">
+                    <div key={ob._id} className="p-5 rounded-xl border border-border bg-white hover:shadow-sm transition-all">
                       {editingObligation?._id === ob._id ? (
                         <div className="space-y-3">
                           <input
                             value={editingObligation.title}
                             onChange={(e) => setEditingObligation({ ...editingObligation, title: e.target.value })}
-                            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                            className="w-full h-10 px-3 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                           />
                           <div className="flex items-center justify-between">
                             <select
                               value={editingObligation.status || 'Pending'}
                               onChange={(e) => setEditingObligation({ ...editingObligation, status: e.target.value })}
-                              className="h-10 px-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
+                              className="h-10 px-3 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary/20"
                             >
                               <option value="Pending">Pending</option>
                               <option value="In Progress">In Progress</option>
@@ -725,8 +728,8 @@ const DocumentDetail = () => {
                       ) : (
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-1.5">
-                            <p className="text-sm font-normal text-[#1A1A1A]">{ob.title}</p>
-                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                            <p className="text-sm font-normal text-foreground">{ob.title}</p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               {ob.dueDate && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" /> Due: {ob.dueDate}
@@ -742,7 +745,7 @@ const DocumentDetail = () => {
                                 ob.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
                                   ob.status === 'Overdue' ? "bg-red-50 text-red-600" :
                                     ob.status === 'In Progress' ? "bg-blue-50 text-blue-600" :
-                                      "bg-gray-100 text-gray-500"
+                                      "bg-muted/40 text-muted-foreground"
                               )}>
                                 {ob.status || 'Pending'}
                               </Badge>
@@ -751,7 +754,7 @@ const DocumentDetail = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs font-normal border-gray-200 rounded-lg shrink-0"
+                            className="h-7 text-xs font-normal border-border rounded-lg shrink-0"
                             onClick={() => setEditingObligation({ ...ob })}
                           >
                             Edit
@@ -765,13 +768,13 @@ const DocumentDetail = () => {
             </TabsContent>
 
             {/* Versions */}
-            <TabsContent value="versions" className="mt-6 space-y-6">
+            <TabsContent value="versions" className="mt-5 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-gray-400 normal-case">Version History ({versions.length})</h3>
+                <h3 className="text-sm font-normal text-muted-foreground normal-case">Version History ({versions.length})</h3>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-normal gap-1.5 border-gray-200 rounded-lg"
+                  className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                   onClick={() => setIsVersionHistoryOpen(true)}
                 >
                   <FileClock className="w-3.5 h-3.5" /> Full Audit Log
@@ -781,7 +784,7 @@ const DocumentDetail = () => {
               {versionsLoading ? (
                 <AwesomeLoader message="Loading Versions" />
               ) : versions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                   <FileClock className="w-8 h-8" />
                   <p className="text-sm">No versions found</p>
                 </div>
@@ -792,20 +795,20 @@ const DocumentDetail = () => {
                     return (
                       <div key={v._id} className={cn(
                         "flex flex-col p-4 rounded-xl border bg-white shadow-sm",
-                        v.isCurrent ? "border-primary/20" : "border-gray-100"
+                        v.isCurrent ? "border-primary/20" : "border-border"
                       )}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className={cn(
                               "h-10 w-10 rounded-xl flex items-center justify-center text-xs font-normal",
-                              v.isCurrent ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+                              v.isCurrent ? "bg-primary text-white" : "bg-muted/40 text-muted-foreground"
                             )}>
                               v{v.versionNumber}
                             </div>
                             <div>
-                              <p className="text-sm font-normal text-[#1A1A1A]">{formatDate(v.createdAt)}</p>
+                              <p className="text-sm font-normal text-foreground">{formatDate(v.createdAt)}</p>
                               {v.uploadedBy && (
-                                <p className="text-xs text-gray-500 font-normal flex items-center gap-1.5 mt-0.5">
+                                <p className="text-xs text-muted-foreground font-normal flex items-center gap-1.5 mt-0.5">
                                   <User className="h-3 w-3" /> {v.uploadedBy.name}
                                 </p>
                               )}
@@ -822,7 +825,7 @@ const DocumentDetail = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 text-xs font-normal border-gray-200 rounded-lg gap-1.5"
+                                  className="h-7 text-xs font-normal border-border rounded-lg gap-1.5"
                                   onClick={() => setPreviewFile({ name: v.fileName, url: v.downloadUrl })}
                                 >
                                   <Eye className="w-3 h-3" /> View
@@ -830,7 +833,7 @@ const DocumentDetail = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 text-xs font-normal border-gray-200 rounded-lg gap-1.5"
+                                  className="h-7 text-xs font-normal border-border rounded-lg gap-1.5"
                                   onClick={() => window.open(v.downloadUrl, '_blank')}
                                 >
                                   <Download className="w-3 h-3" /> Download
@@ -839,7 +842,7 @@ const DocumentDetail = () => {
                             )}
                           </div>
                         </div>
-                        <p className="mt-4 text-xs text-gray-500 font-normal bg-gray-50/50 p-2.5 rounded-lg border border-gray-100/50">
+                        <p className="mt-4 text-xs text-muted-foreground font-normal bg-muted/30 p-2.5 rounded-lg border border-border/50">
                           {v.fileName}{sizeMB ? ` · ${sizeMB}` : ''}{v.changelog ? ` · ${v.changelog}` : ''}
                         </p>
                       </div>
@@ -865,7 +868,7 @@ const DocumentDetail = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Link</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the link to <span className="font-medium text-[#1A1A1A]">{linkToDelete?.ref}</span>. This action cannot be undone.
+              This will remove the link to <span className="font-medium text-foreground">{linkToDelete?.ref}</span>. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -911,7 +914,7 @@ const DocumentDetail = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-medium text-[#1A1A1A]">{doc.name}</span> and all its versions, findings, and obligations. This action cannot be undone.
+              This will permanently delete <span className="font-medium text-foreground">{doc.name}</span> and all its versions, findings, and obligations. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
