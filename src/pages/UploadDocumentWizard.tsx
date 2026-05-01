@@ -42,12 +42,26 @@ export default function UploadDocumentWizard() {
   // Query param pre-fill
   const tabParam = searchParams.get('tab') as FolderTab | null;
   const folderIdParam = searchParams.get('folder_id');
+  const folderNameParam = searchParams.get('folder_name');
+  const folderDisciplineParam = searchParams.get('folder_discipline');
   const disciplineParam = searchParams.get('discipline');
 
   // Initialize wizard state from URL params
   useEffect(() => {
     const initializeFromParams = async () => {
-      // Priority 1: folder_id (skip to Step 3)
+      // Priority 1a: folder_id + folder_name both present (from tree view) — skip fetch
+      if (folderIdParam && folderNameParam) {
+        const tabFromParam = (tabParam ?? 'contracts') as FolderTab;
+        setSelectedTab(tabFromParam);
+        setSelectedDiscipline(folderDisciplineParam ?? '');
+        setSelectedFolderId(folderIdParam);
+        setSelectedFolderName(folderNameParam);
+        setIsNewFolder(false);
+        setCurrentStep(3);
+        return;
+      }
+
+      // Priority 1b: folder_id only — legacy path, fetch from backend
       if (folderIdParam) {
         try {
           const folder: Folder = await fetchData(

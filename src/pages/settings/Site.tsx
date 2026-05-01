@@ -32,7 +32,24 @@ const Site = () => {
     setCurrentProject(project);
     if (project) {
       setSiteAddress(project.location || "");
-      if (project.coordinates) setCoordinates(project.coordinates);
+      if (project.coordinates?.lat && project.coordinates?.lng) {
+        setCoordinates(project.coordinates);
+      } else if (project.location) {
+        // No saved coordinates — geocode the location string to place the map correctly
+        fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(project.location)}`
+        )
+          .then((r) => r.json())
+          .then((results) => {
+            if (results?.length) {
+              setCoordinates({
+                lat: parseFloat(results[0].lat),
+                lng: parseFloat(results[0].lon),
+              });
+            }
+          })
+          .catch(() => {});
+      }
     }
     setIsDirty(false);
   }, [projects, isLoading, selectedProjectId]);
