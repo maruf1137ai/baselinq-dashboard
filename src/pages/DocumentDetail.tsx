@@ -581,15 +581,92 @@ const DocumentDetail = () => {
               </div>
             </TabsContent>
 
-            {/* AI Analysis */}
-            {/* Activity tab — AI findings, Linked items, Obligations, and
-                Versions stacked as sections in a single scrollable view. */}
+            {/* Activity tab — three sections (AI findings, Linked items,
+                Obligations) stacked as a single scroll. Topped with a
+                summary strip that surfaces "what's actually in here" at
+                a glance, so the user doesn't have to scan three lists
+                to know if anything needs attention. */}
             <TabsContent value="activity" className="mt-5 space-y-6">
+              {/* Summary strip — 3 mini-cards with counts + primary action.
+                  Acts as both navigation (visual hierarchy) and dashboard
+                  ("any issues? any links? any todos?"). */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* AI summary */}
+                <div className={cn(
+                  "rounded-xl border bg-white p-4 flex items-center gap-3",
+                  doc.aiSeverity === 'high' && doc.aiFlags > 0
+                    ? "border-red-100"
+                    : doc.aiSeverity === 'medium' && doc.aiFlags > 0
+                      ? "border-amber-100"
+                      : "border-border"
+                )}>
+                  <div className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                    doc.aiSeverity === 'high' && doc.aiFlags > 0
+                      ? "bg-red-50 text-red-600"
+                      : doc.aiSeverity === 'medium' && doc.aiFlags > 0
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-muted/40 text-muted-foreground"
+                  )}>
+                    <AiIcon size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-foreground tabular-nums">
+                      {findings.length === 0 && doc.aiStatus !== 'running' ? 'No findings' : findings.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {findings.length > 0
+                        ? `${findings.filter((f: any) => f.severity === 'high').length} high · ${findings.filter((f: any) => f.severity === 'medium').length} med · ${findings.filter((f: any) => f.severity === 'low').length} low`
+                        : doc.aiStatus === 'running' ? 'AI is analysing…' : 'Run AI to surface issues'
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Linked summary */}
+                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
+                    <Link2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-foreground tabular-nums">
+                      {links.length === 0 ? 'Not linked' : links.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {links.length > 0
+                        ? `${links.length} task${links.length === 1 ? '' : 's'} linked`
+                        : 'Connect to a VO, RFI, or task'
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Obligations summary */}
+                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-foreground tabular-nums">
+                      {obligations.length === 0 ? 'No obligations' : obligations.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {obligations.length > 0
+                        ? `${obligations.filter((o: any) => o.status !== 'Completed').length} open`
+                        : 'Action items extracted from this doc'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* AI findings */}
-              <section className="space-y-4">
+              <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-muted-foreground normal-case">
-                  Findings ({findings.length})
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <AiIcon size={14} />
+                  AI findings
+                  <span className="text-xs text-muted-foreground font-normal">({findings.length})</span>
                 </h3>
                 <Button
                   variant="ghost"
@@ -600,7 +677,7 @@ const DocumentDetail = () => {
                 >
                   {(isAnalysisRunning || doc.aiStatus === 'running')
                     ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running...</>
-                    : <><AiIcon size={14} /> Re-run Analysis</>
+                    : <><AiIcon size={14} /> Re-run analysis</>
                   }
                 </Button>
               </div>
@@ -617,9 +694,25 @@ const DocumentDetail = () => {
               )}
 
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <AiIcon size={32} />
-                  <p className="text-sm">No AI findings for this document</p>
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
+                    <AiIcon size={20} />
+                  </div>
+                  <div className="text-center px-4">
+                    <p className="text-sm font-medium text-foreground">No AI findings yet</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
+                      Run AI analysis to surface missing clauses, dates, or compliance issues in this document.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                    onClick={() => runAnalysis()}
+                    disabled={isAnalysisRunning || doc.aiStatus === 'running'}
+                  >
+                    <AiIcon size={14} />
+                    <span className="ml-1.5">Run AI analysis</span>
+                  </Button>
                 </div>
               )}
 
@@ -688,49 +781,68 @@ const DocumentDetail = () => {
               </section>
 
               {/* Linked items */}
-              <section className="space-y-4 pt-6 border-t border-border">
+              <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-muted-foreground normal-case">Linked Items ({links.length})</h3>
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Link2 className="w-3.5 h-3.5" />
+                  Linked items
+                  <span className="text-xs text-muted-foreground font-normal">({links.length})</span>
+                </h3>
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <Link2 className="h-3.5 w-3.5" /> Add Link
+                  <Plus className="h-3.5 w-3.5" /> Add link
                 </Button>
               </div>
 
               {linksLoading ? (
                 <AwesomeLoader message="Loading Links" />
               ) : links.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <Link2 className="w-8 h-8" />
-                  <p className="text-sm">No linked items yet</p>
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
+                    <Link2 className="w-4 h-4" strokeWidth={1.5} />
+                  </div>
+                  <div className="text-center px-4">
+                    <p className="text-sm font-medium text-foreground">Nothing linked yet</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
+                      Connect this document to its parent task or related VO/RFI/SI for traceability.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                    onClick={() => setIsLinkModalOpen(true)}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Link to a task
+                  </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   {links.map((link: any) => (
                     <div
                       key={link._id}
                       onClick={() => link.taskId && navigate(`/tasks/${link.taskId}`)}
-                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-white hover:border-primary/20 hover:shadow-sm transition-all group/link cursor-pointer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:border-primary/30 hover:bg-muted/20 transition-all group/link cursor-pointer"
                     >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="h-10 w-10 bg-gray-50 rounded-xl flex items-center justify-center group-hover/link:bg-primary/5 transition-colors">
-                          <span className="text-primary text-xs font-normal">{link.itemType}</span>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-8 w-12 bg-primary/5 border border-primary/10 rounded-md flex items-center justify-center shrink-0">
+                          <span className="text-primary text-[10px] font-medium tracking-wide uppercase">{link.itemType}</span>
                         </div>
-                        <div>
-                          <p className="text-sm font-normal text-foreground">{link.itemReference}</p>
-                          <p className="text-xs text-muted-foreground font-normal">{link.itemTitle}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{link.itemReference}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link.itemTitle}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); setLinkToDelete({ id: link._id, ref: link.itemReference }); }}
                           className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
+                          aria-label="Remove link"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
                       </div>
@@ -741,13 +853,15 @@ const DocumentDetail = () => {
               </section>
 
               {/* Obligations */}
-              <section className="space-y-4 pt-6 border-t border-border">
+              <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-muted-foreground normal-case">
-                  Obligations ({obligations.length})
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Obligations
+                  <span className="text-xs text-muted-foreground font-normal">({obligations.length})</span>
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 font-normal border-0 text-xs">
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-xs font-normal">
                     Auto-synced to Programme
                   </Badge>
                   <Button
@@ -756,7 +870,7 @@ const DocumentDetail = () => {
                     className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                     onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                   >
-                    <Plus className="h-3.5 w-3.5" /> Add Obligation
+                    <Plus className="h-3.5 w-3.5" /> Add obligation
                   </Button>
                 </div>
               </div>
@@ -815,9 +929,23 @@ const DocumentDetail = () => {
               {obligationsLoading ? (
                 <AwesomeLoader message="Loading Obligations" />
               ) : obligations.length === 0 && !showObligationForm ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <AlertCircle className="w-8 h-8" />
-                  <p className="text-sm">No obligations extracted yet</p>
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+                  </div>
+                  <div className="text-center px-4">
+                    <p className="text-sm font-medium text-foreground">No obligations yet</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
+                      Add the action items this document creates — they'll auto-sync to the project Programme.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                    onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add an obligation
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
