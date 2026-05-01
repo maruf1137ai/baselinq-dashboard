@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, Search, Wand2, Command, X, LogOut } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -31,16 +31,6 @@ export function DashboardHeader() {
     markAllAsRead,
     fetchNotifications,
   } = useNotifications();
-
-  const [showWeather, setShowWeather] = useState(
-    localStorage.getItem("weatherFeed") === "true",
-  );
-
-  useEffect(() => {
-    const handler = (e: Event) => setShowWeather((e as CustomEvent<boolean>).detail);
-    window.addEventListener("weather-feed-change", handler);
-    return () => window.removeEventListener("weather-feed-change", handler);
-  }, []);
 
   const handleNotificationClick = async (item: (typeof notifications)[0]) => {
     if (!item.isRead) {
@@ -73,7 +63,7 @@ export function DashboardHeader() {
       <header className="h-16 border-b border-border bg-sidebar flex items-center justify-between px-6 z-50 sticky top-0">
         <div className="flex items-center gap-4 flex-1">
           <SidebarTrigger />
-          {showWeather && <NavbarWeather />}
+          <NavbarWeather />
         </div>
 
         <div className="flex items-center gap-2">

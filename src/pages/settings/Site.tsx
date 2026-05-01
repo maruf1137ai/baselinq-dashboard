@@ -1,7 +1,6 @@
 import { useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { LocationMap } from "@/components/LocationMap";
@@ -18,10 +17,6 @@ const Site = () => {
   const [siteAddress, setSiteAddress] = useState("");
   const [coordinates, setCoordinates] = useState({ lat: -33.9249, lng: 18.4241 });
   const [isDirty, setIsDirty] = useState(false);
-  const [weatherFeed, setWeatherFeed] = useState(() => {
-    const saved = localStorage.getItem("weatherFeed");
-    return saved !== null ? saved === "true" : false;
-  });
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -58,13 +53,6 @@ const Site = () => {
     setCoordinates({ lat, lng });
     reverseGeocode(lat, lng);
     setIsDirty(true);
-  };
-
-  const handleWeatherFeedToggle = (checked: boolean) => {
-    setWeatherFeed(checked);
-    localStorage.setItem("weatherFeed", String(checked));
-    window.dispatchEvent(new CustomEvent("weather-feed-change", { detail: checked }));
-    toast.success(`Weather feed ${checked ? "enabled" : "disabled"}`);
   };
 
   const handleSave = () => {
@@ -142,7 +130,7 @@ const Site = () => {
           </p>
         </div>
 
-        <div className="mb-6">
+        <div>
           <label className="block text-sm font-normal text-foreground mb-2">
             Coordinates (Lat, Long)
           </label>
@@ -155,14 +143,6 @@ const Site = () => {
           <p className="text-xs text-muted-foreground/50 mt-1">
             Updated automatically when you move the map marker.
           </p>
-        </div>
-
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div>
-            <h4 className="text-sm font-normal text-foreground">Weather Feed</h4>
-            <p className="text-sm text-muted-foreground mt-1">Show real-time weather data in header</p>
-          </div>
-          <Switch checked={weatherFeed} onCheckedChange={handleWeatherFeedToggle} />
         </div>
       </div>
     </div>
