@@ -88,15 +88,27 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   // Indentation for non-top-level rows. Top-level rows sit flush.
   const indentStyle = isTopLevel ? undefined : { paddingLeft: `${(depth - 1) * 16 + 14}px` };
 
-  // Document leaf rendering — same row treatment regardless of folder depth.
-  const renderDocuments = () => folderDocs.map((doc) => (
+  // Document leaf rendering. Documents are visually MUSCULARLY distinct
+  // from folders: white background, primary accent strip down the left
+  // edge, and a small bottom border between consecutive docs.
+  const renderDocuments = () => folderDocs.map((doc, idx) => (
     <div
       key={doc._id}
-      className="flex items-center gap-3 py-2.5 pr-4 hover:bg-primary/[0.02] cursor-pointer transition-colors group/doc"
+      className={cn(
+        "flex items-center gap-3 py-2.5 pr-4 bg-white cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
+        idx > 0 && "border-t border-border/40"
+      )}
       style={{ paddingLeft: `${depth * 16 + 14}px` }}
       onClick={() => onDocumentClick?.(doc._id)}
     >
-      <div className="h-8 w-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/10 transition-colors">
+      {/* Primary accent stripe on the left makes documents visually
+          unmistakable from folder rows — folders sit on a muted band,
+          documents pop on white with a vertical primary indicator. */}
+      <div
+        className="absolute top-0 bottom-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors"
+        style={{ left: `${depth * 16 + 8}px` }}
+      />
+      <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
         <FileText className="w-3.5 h-3.5 text-primary" />
       </div>
       <div className="min-w-0 flex-1">
@@ -129,14 +141,15 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   ));
 
   // Folder row (the clickable header). Style varies dramatically with depth.
+  // Folders always sit on a warm muted band so they're instantly
+  // distinguishable from the white document rows below them.
   const folderRow = (
     <div
       className={cn(
         "flex items-center gap-2 cursor-pointer transition-colors group relative",
         isTopLevel
-          ? "py-3 px-4 hover:bg-muted/40"
-          : "py-2 hover:bg-muted/20",
-        isTopLevel && isOpen && "bg-muted/25",
+          ? "py-3 px-4 bg-muted/40 hover:bg-muted/55"
+          : "py-2 bg-muted/20 hover:bg-muted/35",
       )}
       style={indentStyle}
     >

@@ -72,8 +72,9 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
       <CollapsibleTrigger asChild>
         <div
           className={cn(
-            'flex items-center gap-2 py-2.5 px-4 hover:bg-muted/40 cursor-pointer transition-colors group border-t border-border/50',
-            isOpen && 'bg-muted/20',
+            // Folder rows always sit on a warm muted band so they're
+            // visually distinct from the white document rows below.
+            'flex items-center gap-2 py-2.5 px-4 bg-muted/20 hover:bg-muted/35 cursor-pointer transition-colors group border-t border-border/50',
           )}
         >
           <div className="flex-shrink-0 text-muted-foreground">
@@ -134,14 +135,21 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
             No documents in this folder yet.
           </div>
         ) : (
-          <div className="border-l border-border/60 ml-7">
-            {docs.map((doc) => (
+          <div className="ml-7">
+            {docs.map((doc, idx) => (
               <div
                 key={doc._id}
-                className="flex items-center gap-3 py-2.5 pr-4 pl-3 hover:bg-primary/[0.02] cursor-pointer transition-colors group/doc"
+                className={cn(
+                  "flex items-center gap-3 py-2.5 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
+                  idx > 0 && "border-t border-border/40"
+                )}
                 onClick={() => onDocumentClick?.(doc._id)}
               >
-                <div className="h-8 w-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/10 transition-colors">
+                {/* Primary accent stripe down the left — same indicator
+                    used in ContractsTree, makes documents pop against
+                    the muted folder bands. */}
+                <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
+                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
                   <FileText className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -294,10 +302,10 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
 
         return (
           <div key={discipline} className="border-b border-border last:border-b-0">
-            {/* Discipline header — top-level visual band, mirrors the
-                Contracts tree's top-level treatment so the tabs feel
-                visually consistent. */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-muted/25 relative">
+            {/* Discipline header — strong visual band at the top of each
+                discipline section. Stone/warm tint so the section reads
+                as a "header strip" against the white doc rows below. */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 relative border-b border-border">
               <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary rounded-r" />
               <span className="text-sm font-medium text-foreground tracking-tight">{discipline}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
