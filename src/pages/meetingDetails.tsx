@@ -1,12 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, Calendar, MapPin, Users, FileText, MoreHorizontal, Loader2, ExternalLink } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink } from "lucide-react";
 import AiIcon from "@/components/icons/AiIcon";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -95,6 +89,27 @@ export default function MeetingDetails() {
   const [outcomeDismissed, setOutcomeDismissed] = useState(
     () => localStorage.getItem(`no_show_confirmed_${id}`) === "1"
   );
+
+  // Track which action items have been approved/declined (persisted per meeting).
+  // Keyed by item id so reordering doesn't break it.
+  const actionDecisionKey = `meeting_action_decisions_${id}`;
+  const [actionDecisions, setActionDecisions] = useState<Record<string, "approved" | "declined">>(
+    () => {
+      try {
+        return JSON.parse(localStorage.getItem(actionDecisionKey) || "{}");
+      } catch {
+        return {};
+      }
+    }
+  );
+
+  const persistDecision = (itemId: string, decision: "approved" | "declined") => {
+    setActionDecisions((prev) => {
+      const next = { ...prev, [itemId]: decision };
+      localStorage.setItem(actionDecisionKey, JSON.stringify(next));
+      return next;
+    });
+  };
   const [startingBot, setStartingBot] = useState(false);
   const { mutateAsync: postRequest } = usePost();
   const { mutateAsync: patchRequest } = usePatch();
@@ -125,12 +140,18 @@ export default function MeetingDetails() {
           data: { project: parseInt(projectId), taskId: result?.task?.id, taskType: result?.task?.taskType, name: item.text, channel_type: "public" },
         });
       } catch { /* non-fatal */ }
+      persistDecision(String(item.id), "approved");
       toast.success(`${config.type} task created successfully.`);
     } catch (err: any) {
       toast.error(err?.response?.data?.detail ?? err?.message ?? "Failed to create task.");
     } finally {
       setApprovingIndex(null);
     }
+  };
+
+  const handleDecline = (item: ActionItem) => {
+    persistDecision(String(item.id), "declined");
+    toast.success("Action item declined.");
   };
 
   const handleStatusUpdate = async (newStatus: string) => {
@@ -357,7 +378,7 @@ export default function MeetingDetails() {
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5">Action</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-40">Owner</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-28">Due</th>
-                    <th className="w-10"></th>
+                    <th className="text-right text-xs text-muted-foreground font-normal px-4 py-2.5 w-44">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -377,25 +398,39 @@ export default function MeetingDetails() {
                         </td>
                         <td className="text-sm text-muted-foreground px-4 py-3">{item.owner}</td>
                         <td className="text-sm text-muted-foreground px-4 py-3">{item.due}</td>
-                        <td className="pr-3 py-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                disabled={isCreating}
-                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                <MoreHorizontal className="w-5 h-5" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-36" align="end">
-                              <DropdownMenuItem onSelect={() => handleApprove(item, i)}>
-                                Approve
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                                Decline
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            {actionDecisions[String(item.id)] === "approved" ? (
+                              <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                                Approved
+                              </span>
+                            ) : actionDecisions[String(item.id)] === "declined" ? (
+                              <span className="text-xs text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
+                                Declined
+                              </span>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleApprove(item, i)}
+                                  disabled={isCreating}
+                                  className="h-8 px-3 text-xs font-normal"
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDecline(item)}
+                                  disabled={isCreating}
+                                  className="h-8 px-3 text-xs font-normal text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                >
+                                  Decline
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
