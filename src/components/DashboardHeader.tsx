@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, Search, Wand2, Command, X, LogOut } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -33,8 +33,14 @@ export function DashboardHeader() {
   } = useNotifications();
 
   const [showWeather, setShowWeather] = useState(
-    localStorage.getItem("weatherFeed") === "true" ? true : false,
+    localStorage.getItem("weatherFeed") === "true",
   );
+
+  useEffect(() => {
+    const handler = (e: Event) => setShowWeather((e as CustomEvent<boolean>).detail);
+    window.addEventListener("weather-feed-change", handler);
+    return () => window.removeEventListener("weather-feed-change", handler);
+  }, []);
 
   const handleNotificationClick = async (item: (typeof notifications)[0]) => {
     if (!item.isRead) {
