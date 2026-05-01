@@ -422,9 +422,12 @@ const DocumentDetail = () => {
                 {
                   id: 'activity',
                   label: 'Activity',
+                  // Versions live in the Overview rail (always-visible
+                  // legal record), so they're not counted here. Activity
+                  // counts AI flags + linked items + obligations only.
                   count:
                     (doc.aiFlags || 0) + (doc.linkedCount || 0) +
-                    (versions.length || 0) + (obligations.length || 0) || undefined,
+                    (obligations.length || 0) || undefined,
                   severity: doc.aiFlags > 0 ? doc.aiSeverity : undefined,
                 },
               ].map(tab => (
@@ -459,13 +462,13 @@ const DocumentDetail = () => {
                   <DocumentPreviewCard doc={doc} onPreview={(file) => setPreviewFile(file)} />
                 </div>
 
-                {/* RIGHT (40%): metadata. Description is a prominent
-                    multi-line block — the most-read field on this page,
-                    treated as content not as a metadata row. File name +
-                    size live in the preview card header (single source of
-                    truth for file-level facts). */}
+                {/* RIGHT (40%): three stacked cards. Version history sits
+                    between About and Key dates — for construction docs
+                    versions are the legal record, so they get prime
+                    real-estate alongside the preview, not buried in a
+                    secondary tab. */}
                 <div className="lg:col-span-2 space-y-4">
-                  {/* Description block — prominent, full width of rail */}
+                  {/* About — description as a prose block */}
                   <div className="bg-white rounded-xl border border-border p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-5 bg-primary rounded-full" />
@@ -480,15 +483,81 @@ const DocumentDetail = () => {
                         No description yet — click Edit to add one.
                       </p>
                     )}
+                  </div>
 
-                    {/* Contract-specific fields render below the prose
-                        when populated. DetailItem hides nulls so empty
-                        contracts don't show empty rows. */}
-                    {(null /* Standard */ || null /* Parties */ || null /* Contract value */) && (
-                      <div className="mt-3 pt-3 border-t border-border space-y-1">
-                        <DetailItem label="Standard" value={null} />
-                        <DetailItem label="Parties" value={null} />
-                        <DetailItem label="Contract value" value={null} />
+                  {/* Version history — top 5 inline, "View all" opens the
+                      existing VersionHistoryModal for the full audit log.
+                      Always visible: versions are the legal record for
+                      construction docs. */}
+                  <div className="bg-white rounded-xl border border-border overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <FileClock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <h3 className="text-sm font-medium text-foreground">Version history</h3>
+                        <span className="text-xs text-muted-foreground">({versions.length})</span>
+                      </div>
+                      {versions.length > 5 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsVersionHistoryOpen(true)}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          View all
+                        </button>
+                      )}
+                    </div>
+
+                    {versionsLoading ? (
+                      <div className="px-4 py-6">
+                        <AwesomeLoader message="Loading Versions" />
+                      </div>
+                    ) : versions.length === 0 ? (
+                      <p className="px-4 py-6 text-sm text-muted-foreground text-center">
+                        No versions yet.
+                      </p>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {versions.slice(0, 5).map((v: any) => (
+                          <div key={v._id} className="flex items-center gap-3 px-4 py-2.5">
+                            <div className={cn(
+                              "h-7 px-2 rounded-md flex items-center justify-center text-xs font-medium shrink-0",
+                              v.isCurrent ? "bg-primary text-white" : "bg-muted/40 text-muted-foreground"
+                            )}>
+                              v{v.versionNumber}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-foreground">{formatDate(v.createdAt)}</p>
+                              {v.uploadedBy && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  by {v.uploadedBy.name}
+                                  {v.changelog && <span className="text-muted-foreground/70"> · {v.changelog}</span>}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {v.downloadUrl && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewFile({ name: v.fileName, url: v.downloadUrl })}
+                                    className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
+                                    title="View this version"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => window.open(v.downloadUrl, '_blank')}
+                                    className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
+                                    title="Download this version"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -828,91 +897,6 @@ const DocumentDetail = () => {
                       )}
                     </div>
                   ))}
-                </div>
-              )}
-              </section>
-
-              {/* Versions */}
-              <section className="space-y-4 pt-6 border-t border-border">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-normal text-muted-foreground normal-case">Version History ({versions.length})</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
-                  onClick={() => setIsVersionHistoryOpen(true)}
-                >
-                  <FileClock className="w-3.5 h-3.5" /> Full Audit Log
-                </Button>
-              </div>
-
-              {versionsLoading ? (
-                <AwesomeLoader message="Loading Versions" />
-              ) : versions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <FileClock className="w-8 h-8" />
-                  <p className="text-sm">No versions found</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {versions.map((v: any) => {
-                    const sizeMB = v.fileSize ? `${(v.fileSize / (1024 * 1024)).toFixed(2)} MB` : null;
-                    return (
-                      <div key={v._id} className={cn(
-                        "flex flex-col p-4 rounded-xl border bg-white shadow-sm",
-                        v.isCurrent ? "border-primary/20" : "border-border"
-                      )}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "h-10 w-10 rounded-xl flex items-center justify-center text-xs font-normal",
-                              v.isCurrent ? "bg-primary text-white" : "bg-muted/40 text-muted-foreground"
-                            )}>
-                              v{v.versionNumber}
-                            </div>
-                            <div>
-                              <p className="text-sm font-normal text-foreground">{formatDate(v.createdAt)}</p>
-                              {v.uploadedBy && (
-                                <p className="text-xs text-muted-foreground font-normal flex items-center gap-1.5 mt-0.5">
-                                  <User className="h-3 w-3" /> {v.uploadedBy.name}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {v.isCurrent && (
-                              <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-0 text-xs font-normal uppercase py-1">
-                                Current
-                              </Badge>
-                            )}
-                            {v.downloadUrl && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs font-normal border-border rounded-lg gap-1.5"
-                                  onClick={() => setPreviewFile({ name: v.fileName, url: v.downloadUrl })}
-                                >
-                                  <Eye className="w-3 h-3" /> View
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs font-normal border-border rounded-lg gap-1.5"
-                                  onClick={() => window.open(v.downloadUrl, '_blank')}
-                                >
-                                  <Download className="w-3 h-3" /> Download
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <p className="mt-4 text-xs text-muted-foreground font-normal bg-muted/30 p-2.5 rounded-lg border border-border/50">
-                          {v.fileName}{sizeMB ? ` · ${sizeMB}` : ''}{v.changelog ? ` · ${v.changelog}` : ''}
-                        </p>
-                      </div>
-                    );
-                  })}
                 </div>
               )}
               </section>
