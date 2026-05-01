@@ -402,7 +402,7 @@ export default function MeetingDetails() {
                           <div className="flex items-center justify-end gap-2">
                             {actionDecisions[String(item.id)] === "approved" ? (
                               <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                                Approved
+                                Task created
                               </span>
                             ) : actionDecisions[String(item.id)] === "declined" ? (
                               <span className="text-xs text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">

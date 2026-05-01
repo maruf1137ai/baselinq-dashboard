@@ -5,6 +5,7 @@ import {
   getUnreadCount as fetchUnreadCount,
   markAsRead as apiMarkAsRead,
   markAllAsRead as apiMarkAllAsRead,
+  deleteNotification as apiDeleteNotification,
 } from "@/lib/notificationApi";
 
 type GetNotificationsOptions =
@@ -20,6 +21,7 @@ interface NotificationState {
   fetchUnreadCount: (projectId?: string | number) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   addNotification: (notification: Notification) => void;
   refresh: (projectId?: string | number) => Promise<void>;
 }
@@ -85,6 +87,24 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
+  deleteNotification: async (id: string) => {
+    // Optimistic remove. Decrement unreadCount only if the deleted item
+    // was unread, otherwise leave the count alone.
+    const wasUnread = !get().notifications.find((n) => n._id === id)?.isRead;
+    const previous = get().notifications;
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n._id !== id),
+      unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+    }));
+    try {
+      await apiDeleteNotification(id);
+    } catch {
+      // Revert on failure
+      set({ notifications: previous });
+      get().refresh();
+    }
+  },
+
   addNotification: (notification: Notification) => {
     set((state) => ({
       notifications: [notification, ...state.notifications],
@@ -94,6 +114,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   refresh: async (projectId?: string | number) => {
     const { fetchNotifications, fetchUnreadCount } = get();
-    await Promise.all([fetchNotifications(), fetchUnreadCount(projectId)]);
+    // Pass projectId to BOTH calls so the list and the count are scoped
+    // to the same project. Previously only the count was project-filtered,
+    // which made the bell badge and the dropdown show different data.
+    await Promise.all([
+      fetchNotifications(projectId != null ? { projectId } : undefined),
+      fetchUnreadCount(projectId),
+    ]);
   },
 }));

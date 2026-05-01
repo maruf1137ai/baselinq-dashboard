@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, Wand2, Command, X, LogOut } from "lucide-react";
+import { Bell, Search, Wand2, Command, X, LogOut, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export function DashboardHeader() {
     isLoading,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     fetchNotifications,
   } = useNotifications();
 
@@ -54,7 +55,10 @@ export function DashboardHeader() {
   const handleDropdownOpen = (isOpen: boolean) => {
     setOpen(isOpen);
     if (isOpen) {
-      fetchNotifications();
+      // Always fetch scoped to the currently selected project so the bell
+      // dropdown matches the unread-count badge and the rest of the app.
+      const projectId = localStorage.getItem("selectedProjectId") || undefined;
+      fetchNotifications(projectId ? { projectId } : undefined);
     }
   };
 
@@ -143,23 +147,39 @@ export function DashboardHeader() {
             </div>
           ) : (
             notifications.map((item) => (
-              <button
+              <div
                 key={item._id}
-                onClick={() => handleNotificationClick(item)}
-                className={`w-full text-left border-b border-border p-4 hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}>
-                <div className="flex items-start gap-3">
-                  {!item.isRead && (
-                    <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm text-foreground">{item.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                    </p>
+                className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}
+              >
+                <button
+                  onClick={() => handleNotificationClick(item)}
+                  className="w-full text-left p-4 pr-10"
+                >
+                  <div className="flex items-start gap-3">
+                    {!item.isRead && (
+                      <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm text-foreground">{item.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Delete notification"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNotification(item._id);
+                  }}
+                  className="absolute right-2 top-3 p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-opacity"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))
           )}
         </ScrollArea>
