@@ -46,6 +46,15 @@ export function DashboardHeader() {
     if (!item.isRead) {
       markAsRead(item._id);
     }
+    if (item.link) {
+      // Switch project context if the notification belongs to a different project
+      const notifProjectId = item.data?.projectId ?? item.projectId;
+      if (notifProjectId) {
+        localStorage.setItem('selectedProjectId', String(notifProjectId));
+      }
+      setOpen(false);
+      navigate(item.link);
+    }
   };
 
   const handleMarkAllAsRead = async () => {

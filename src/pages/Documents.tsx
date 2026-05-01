@@ -174,44 +174,47 @@ const Documents = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-4 p-4">
+      {/* Canonical page wrapper — matches Compliance / Meetings / Finance.
+          DashboardLayout already supplies the outer p-6, so we don't add
+          max-w / mx-auto / extra padding here. */}
+      <div className="space-y-6">
         <AskRegulationsDrawer
           isOpen={isAskOpen}
           onClose={() => setIsAskOpen(false)}
         />
 
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-normal tracking-tight text-foreground">Documents</h1>
-            <span className="text-muted-foreground text-lg mt-1">
-              {isLoading ? '...' : `${documents.length} document${documents.length !== 1 ? 's' : ''}`}
+        {/* Header — canonical pattern (text-2xl title, h-8 text-xs buttons) */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">Documents</h1>
+            <span className="text-sm text-muted-foreground">
+              {isLoading ? '…' : `${documents.length} document${documents.length !== 1 ? 's' : ''}`}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="bg-white border border-border rounded-lg py-2.5 pl-10 pr-4 w-[300px] text-sm focus:ring-1 focus:ring-primary/20 transition-all outline-none"
+                className="bg-white border border-border rounded-lg h-8 pl-9 pr-3 w-[260px] text-xs focus:ring-1 focus:ring-primary/20 transition-all outline-none"
                 placeholder="Search by name, ref, or type"
               />
             </div>
             <Button
               variant="outline"
-              className="bg-white border-border text-foreground hover:bg-muted transition-all rounded-lg h-9 px-4 font-normal"
+              className="h-8 text-xs rounded-lg border-border text-foreground"
               onClick={() => setIsAskOpen(true)}
             >
               Ask AI
             </Button>
             {canUploadAny && (
               <Button
-                className="bg-primary text-white hover:opacity-90 transition-all rounded-lg h-9 px-4 font-normal"
+                className="h-8 text-xs rounded-lg bg-primary text-white"
                 onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}
               >
-                <Plus className="w-5 h-5 mr-1" />
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Upload
               </Button>
             )}

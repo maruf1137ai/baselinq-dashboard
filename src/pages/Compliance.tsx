@@ -158,8 +158,8 @@ const Compliance = () => {
               className="h-10 pl-10 bg-white border-border rounded-lg text-sm placeholder:text-muted-foreground"
             />
           </div>
-          <Button variant="outline" className="h-10 text-sm rounded-lg border-border text-foreground hover:bg-muted">
-            <Sparkles className="w-4 h-4 mr-2" /> Analyse with AI
+          <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Analyse with AI
           </Button>
         </div>
 
