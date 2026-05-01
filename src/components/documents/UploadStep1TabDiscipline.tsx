@@ -19,29 +19,23 @@ interface UploadStep1Props {
   onTabChange: (tab: FolderTab) => void;
   onDisciplineChange: (discipline: string) => void;
   onNext: () => void;
-  hideNav?: boolean;
 }
 
+// Neutral active state — per-tab amber/blue/slate clashed with the brand
+// design system (purple primary, stone neutrals). Tabs stay distinguishable
+// by label + description.
 const TAB_CONFIG: Record<FolderTab, { label: string; description: string }> = {
-  contracts: {
-    label: 'Contracts',
-    description: 'Signed agreements & tender documents',
-  },
-  drawings: {
-    label: 'Drawings',
-    description: 'Architectural & engineering drawings',
-  },
-  documents: {
-    label: 'Documents',
-    description: 'Reports, specifications & certificates',
-  },
+  contracts: { label: 'Contracts', description: 'Signed agreements & tender documents' },
+  drawings: { label: 'Drawings', description: 'Architectural & engineering drawings' },
+  documents: { label: 'Documents', description: 'Reports, specifications & certificates' },
 };
 
 /**
  * Step 1: Tab and Discipline Selection
  *
  * Users select which tab they're uploading to (Contracts/Drawings/Documents)
- * and optionally select a discipline (required for Drawings/Documents, skipped for Contracts).
+ * and optionally select a discipline (required for Drawings/Documents,
+ * skipped for Contracts).
  */
 export function UploadStep1TabDiscipline({
   selectedTab,
@@ -49,7 +43,6 @@ export function UploadStep1TabDiscipline({
   onTabChange,
   onDisciplineChange,
   onNext,
-  hideNav = false,
 }: UploadStep1Props) {
   const { data: suggestions, isLoading } = useFolderSuggestions();
 
@@ -61,17 +54,17 @@ export function UploadStep1TabDiscipline({
   const canProceed = selectedTab && (!requiresDiscipline || selectedDiscipline);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-5">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-normal text-foreground">Choose Upload Location</h2>
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-normal text-foreground">Choose Upload Location</h2>
         <p className="text-sm text-muted-foreground">
           Select which tab you're uploading to and the discipline category
         </p>
       </div>
 
       {/* Tab Selection */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <Label className="text-sm font-normal text-muted-foreground">
           Tab <span className="text-red-500">*</span>
         </Label>
@@ -86,19 +79,19 @@ export function UploadStep1TabDiscipline({
                 type="button"
                 onClick={() => onTabChange(tab)}
                 className={cn(
-                  "p-6 rounded-xl border-2 transition-all text-center hover:scale-[1.02]",
+                  "px-4 py-3 rounded-lg border transition-colors text-center",
                   isActive
-                    ? "bg-primary/5 border-primary shadow-sm"
+                    ? "bg-primary/5 border-primary/40"
                     : "bg-white border-border hover:border-primary/30"
                 )}
               >
                 <p className={cn(
-                  "text-lg font-medium",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  "text-sm font-medium",
+                  isActive ? "text-primary" : "text-foreground"
                 )}>
                   {config.label}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {config.description}
                 </p>
               </button>
@@ -109,7 +102,7 @@ export function UploadStep1TabDiscipline({
 
       {/* Discipline Selection (Drawings/Documents only) */}
       {requiresDiscipline && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Label className="text-sm font-normal text-muted-foreground">
             Discipline <span className="text-red-500">*</span>
           </Label>
@@ -118,7 +111,7 @@ export function UploadStep1TabDiscipline({
             onValueChange={onDisciplineChange}
             disabled={isLoading}
           >
-            <SelectTrigger className="h-12 border-border rounded-xl">
+            <SelectTrigger className="h-10 border-border rounded-lg">
               <SelectValue placeholder={isLoading ? "Loading disciplines..." : "Select discipline"} />
             </SelectTrigger>
             <SelectContent>
@@ -130,34 +123,30 @@ export function UploadStep1TabDiscipline({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Choose the primary discipline for this document (e.g., Architectural, Structural)
+            Choose the primary discipline (e.g., Architectural, Structural)
           </p>
         </div>
       )}
 
-      {/* Contracts Info Note */}
+      {/* Contracts Info Note — neutral, no amber */}
       {selectedTab === 'contracts' && (
-        <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-sm text-foreground">
-            <span className="font-medium">Contracts Tab:</span> You'll select from pre-defined folders in the next step.
-            Discipline will be inferred from your folder selection.
-          </p>
-        </div>
+        <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2">
+          <span className="text-foreground font-medium">Contracts:</span>{' '}
+          you'll select from pre-defined folders in the next step. Discipline will be inferred from your folder selection.
+        </p>
       )}
 
       {/* Next Button */}
-      {!hideNav && (
-        <div className="flex justify-end">
-          <Button
-            onClick={onNext}
-            disabled={!canProceed}
-            className="h-11 px-6 gap-2 font-normal"
-          >
-            Next: Select Folder
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button
+          onClick={onNext}
+          disabled={!canProceed}
+          className="h-9 px-5 gap-2 font-normal"
+        >
+          Next: Select Folder
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }

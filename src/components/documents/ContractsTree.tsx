@@ -290,20 +290,18 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
   return (
     <div className="bg-white rounded-lg border border-border overflow-hidden">
-      {/* Header — collapsible */}
+      {/* Collapsible section header. Earlier UX feedback removed the explainer
+          subtitle ("Read-only folder hierarchy. Click on a folder to expand…")
+          — it was dev jargon, not user-facing copy. The folder UI is
+          self-explanatory. */}
       <button
         type="button"
         onClick={() => setHeaderOpen((v) => !v)}
         className="w-full px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between hover:bg-muted/40 transition-colors text-left"
       >
-        <div>
-          <h3 className="text-sm font-medium text-foreground">
-            Contracts Folder Structure
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Read-only folder hierarchy. Click on a folder to expand or upload files to leaf folders.
-          </p>
-        </div>
+        <h3 className="text-sm font-medium text-foreground">
+          Contracts Folder Structure
+        </h3>
         {headerOpen
           ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
           : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}

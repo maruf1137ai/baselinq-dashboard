@@ -208,17 +208,17 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
 
   if (!hasAnyFolders && !hasAnyDocs) {
     return (
-      <div className="bg-white rounded-lg border border-border p-12 text-center">
-        <FolderPlus className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-        <p className="text-sm font-medium text-foreground mb-1">No {tab} folders yet</p>
+      <div className="bg-white rounded-lg border border-border py-10 text-center">
+        <FolderPlus className="w-6 h-6 mx-auto mb-3 text-muted-foreground" strokeWidth={1.5} />
+        <p className="text-sm text-foreground mb-1">No {tab} yet</p>
         <p className="text-xs text-muted-foreground mb-4">
-          Upload your first document to create a folder.
+          Upload your first {tabLabel.replace(/s$/, '').toLowerCase()} to create a folder.
         </p>
         <Button
-          className="bg-primary text-white hover:opacity-90"
+          className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
           onClick={() => navigate(`/documents/upload?tab=${tab}`)}
         >
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-3.5 h-3.5 mr-1.5" />
           Upload {tabLabel.replace(/s$/, '')}
         </Button>
       </div>
