@@ -88,49 +88,40 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   // Indentation for non-top-level rows. Top-level rows sit flush.
   const indentStyle = isTopLevel ? undefined : { paddingLeft: `${(depth - 1) * 16 + 14}px` };
 
-  // Document leaf rendering. Documents are visually MUSCULARLY distinct
-  // from folders: white background, primary accent strip down the left
-  // edge, and a small bottom border between consecutive docs.
+  // Document leaf rendering. Single-line layout that uses the wide
+  // horizontal space — name on the left, type/uploader/when in muted
+  // grey to its right, ref chip + chevron pinned right. White bg with
+  // a primary accent stripe makes docs unmistakeable from the muted
+  // folder bands above.
   const renderDocuments = () => folderDocs.map((doc, idx) => (
     <div
       key={doc._id}
       className={cn(
-        "flex items-center gap-3 py-2.5 pr-4 bg-white cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
+        "flex items-center gap-3 py-2 pr-4 bg-white cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
         idx > 0 && "border-t border-border/40"
       )}
       style={{ paddingLeft: `${depth * 16 + 14}px` }}
       onClick={() => onDocumentClick?.(doc._id)}
     >
-      {/* Primary accent stripe on the left makes documents visually
-          unmistakable from folder rows — folders sit on a muted band,
-          documents pop on white with a vertical primary indicator. */}
+      {/* Primary accent stripe on the left edge of the row */}
       <div
         className="absolute top-0 bottom-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors"
         style={{ left: `${depth * 16 + 8}px` }}
       />
-      <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
+      <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
         <FileText className="w-3.5 h-3.5 text-primary" />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-foreground truncate group-hover/doc:text-primary transition-colors">
-          {doc.name}
-        </p>
-        <p className="text-xs text-muted-foreground truncate">
-          {doc.type || '—'}
-          {doc.uploadedBy?.name && (
-            <>
-              <span aria-hidden className="mx-1">·</span>
-              {doc.uploadedBy.name}
-            </>
-          )}
-          {doc.createdAt && (
-            <>
-              <span aria-hidden className="mx-1">·</span>
-              {formatRelative(doc.createdAt)}
-            </>
-          )}
-        </p>
-      </div>
+      {/* Name + meta on a single truncating line. Name reads first;
+          meta (type · uploader · when) extends to the right in muted
+          grey and is the first thing to clip on narrow widths. */}
+      <p className="text-sm truncate flex-1 min-w-0">
+        <span className="text-foreground group-hover/doc:text-primary transition-colors">{doc.name}</span>
+        <span className="text-muted-foreground ml-2 hidden sm:inline">
+          {' · '}{doc.type || '—'}
+          {doc.uploadedBy?.name && <>{' · '}{doc.uploadedBy.name}</>}
+          {doc.createdAt && <>{' · '}{formatRelative(doc.createdAt)}</>}
+        </span>
+      </p>
       {doc.reference && (
         <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
           {doc.reference}

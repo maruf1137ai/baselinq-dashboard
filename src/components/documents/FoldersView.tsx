@@ -140,38 +140,31 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
               <div
                 key={doc._id}
                 className={cn(
-                  "flex items-center gap-3 py-2.5 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
+                  "flex items-center gap-3 py-2 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
                   idx > 0 && "border-t border-border/40"
                 )}
                 onClick={() => onDocumentClick?.(doc._id)}
               >
-                {/* Primary accent stripe down the left — same indicator
-                    used in ContractsTree, makes documents pop against
-                    the muted folder bands. */}
+                {/* Primary accent stripe down the left — matches the
+                    treatment in ContractsTree so docs read consistent
+                    across all three tabs. */}
                 <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
-                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
+                <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
                   <FileText className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-foreground truncate group-hover/doc:text-primary transition-colors">
+                {/* Single-line name + meta — uses the wide horizontal
+                    space instead of stacking. Meta clips first when
+                    narrow. */}
+                <p className="text-sm truncate flex-1 min-w-0">
+                  <span className="text-foreground group-hover/doc:text-primary transition-colors">
                     {doc.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {doc.type || '—'}
-                    {doc.uploadedBy?.name && (
-                      <>
-                        <span aria-hidden className="mx-1">·</span>
-                        {doc.uploadedBy.name}
-                      </>
-                    )}
-                    {doc.createdAt && (
-                      <>
-                        <span aria-hidden className="mx-1">·</span>
-                        {formatRelative(doc.createdAt)}
-                      </>
-                    )}
-                  </p>
-                </div>
+                  </span>
+                  <span className="text-muted-foreground ml-2 hidden sm:inline">
+                    {' · '}{doc.type || '—'}
+                    {doc.uploadedBy?.name && <>{' · '}{doc.uploadedBy.name}</>}
+                    {doc.createdAt && <>{' · '}{formatRelative(doc.createdAt)}</>}
+                  </span>
+                </p>
                 {doc.reference && (
                   <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
                     {doc.reference}
