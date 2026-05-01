@@ -297,12 +297,17 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
           <div key={discipline} className="border-b border-border last:border-b-0">
             {/* Discipline header — strong visual band at the top of each
                 discipline section. Stone/warm tint so the section reads
-                as a "header strip" against the white doc rows below. */}
+                as a "header strip" against the white doc rows below.
+
+                Only the doc count is shown — the folder count was
+                redundant (folder names are listed right below) and
+                usually 1, adding noise rather than information. */}
             <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 relative border-b border-border">
               <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary rounded-r" />
               <span className="text-sm font-medium text-foreground tracking-tight">{discipline}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {folders.length} folder{folders.length !== 1 ? 's' : ''} · {totalDocs} doc{totalDocs !== 1 ? 's' : ''}
+                {totalDocs} doc{totalDocs !== 1 ? 's' : ''}
+                {folders.length > 1 && <> · {folders.length} folders</>}
               </span>
               {hasRecent && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
