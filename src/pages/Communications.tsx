@@ -145,7 +145,11 @@ const Communications = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
+        {/* Header inset matches the canonical 24px top padding used by every
+            other page (Tasks/Compliance/Meetings/Documents). DashboardLayout
+            uses padding="p-0" here because the chat below needs full-bleed —
+            so we apply the canonical 24px on the header itself. */}
+        <div className="px-6 pt-6 pb-4 border-b border-border">
           <h1 className="text-2xl font-normal tracking-tight text-foreground">Communications</h1>
         </div>
         <div className="flex flex-1 overflow-hidden">
