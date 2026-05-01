@@ -46,6 +46,7 @@ import { LinkDocumentModal } from '@/components/documents/LinkDocumentModal';
 import { VersionHistoryModal } from '@/components/documents/VersionHistoryModal';
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { EditDocumentModal } from '@/components/documents/EditDocumentModal';
+import { DocumentPreviewCard } from '@/components/documents/DocumentPreviewCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData, patchData, deleteData } from '@/lib/Api';
 import type { LinkItem } from '@/components/documents/LinkDocumentModal';
@@ -236,18 +237,6 @@ const DocumentDetail = () => {
     );
   };
 
-  // Compact, labeled metadata cell for the header strip. Each cell renders
-  // as "label: value" with the label muted and the value at full weight,
-  // so a quick scan tells the user what each piece is (Ref vs Type vs
-  // Discipline) — fixes the "unlabeled chip soup" complaint.
-  const MetaField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-muted-foreground/50" aria-hidden>·</span>
-      {children}
-    </span>
-  );
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -296,73 +285,67 @@ const DocumentDetail = () => {
           </nav>
         </div>
 
-        {/* Header — single labeled metadata line under the title, with a
-            consolidated action group (one primary, one secondary, kebab
-            for everything else). Replaces the previous strip of unlabeled
-            coloured chips + 5-button row that read as visual noise.
-
-            The dead "Share" button (no onClick, no backend) has been
-            removed entirely. */}
+        {/* Header — title + compact one-line metadata strip + actions.
+            Categorical metadata (Category · Type · Discipline) lives ONLY
+            here. The Document Details card on the Overview tab focuses on
+            content (description, file info, contract-specifics) so there's
+            no duplication. Status keeps its semantic colour as the single
+            colour cue on this strip. */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div className="space-y-2 flex-1 min-w-0">
+          <div className="space-y-1.5 flex-1 min-w-0">
             <h1 className="text-2xl font-normal tracking-tight text-foreground leading-tight">
               {doc.name}
             </h1>
 
-            {/* Labeled metadata strip. Each piece tells the user what it is
-                so "Architectural" doesn't get confused with "Contract" or
-                "VO-CONT-001". Status keeps its semantic colour (green/amber)
-                — that's the one place colour carries meaning. */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-              <MetaField label="Ref">
-                <span className="font-mono text-foreground">{doc.reference || '—'}</span>
-              </MetaField>
-              <MetaField label="Category">
-                <span className="text-foreground">{getCategoryForDoc(doc as any)}</span>
-              </MetaField>
-              <MetaField label="Type">
-                <span className="text-foreground">{SUBCATEGORY_LABEL[doc.type ?? ''] || doc.type || '—'}</span>
-              </MetaField>
+            {/* Compact identity strip — values only, dot-separated, in
+                muted grey. The values themselves carry their own meaning
+                (a category name reads as a category, a discipline reads
+                as a discipline) so explicit labels would be redundant
+                noise. Status uses semantic colour. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              <span className="text-foreground">{getCategoryForDoc(doc as any)}</span>
+              <span aria-hidden>·</span>
+              <span>{SUBCATEGORY_LABEL[doc.type ?? ''] || doc.type || '—'}</span>
               {doc.discipline && (
-                <MetaField label="Discipline">
-                  <span className="text-foreground">{doc.discipline}</span>
-                </MetaField>
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{doc.discipline}</span>
+                </>
               )}
-              <MetaField label="Status">
-                <span className={cn(
-                  "inline-flex items-center gap-1.5",
-                  doc.status === 'Active' ? "text-emerald-700" :
-                    doc.status === 'Archived' ? "text-muted-foreground" : "text-amber-700"
-                )}>
-                  <span className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    doc.status === 'Active' ? "bg-emerald-500" :
-                      doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
-                  )} />
-                  {doc.status}
-                </span>
-              </MetaField>
-              {doc.isGated && (
-                <span className="inline-flex items-center gap-1 text-amber-700 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100">
-                  <AlertCircle className="w-3 h-3" /> Finance Gated
-                </span>
-              )}
-            </div>
-
-            {/* Version + author — quiet line below metadata. Single source
-                of truth for revision/author rather than a separate pill. */}
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
-              <FileClock className="w-3 h-3 shrink-0" />
+              <span aria-hidden>·</span>
+              <span className="font-mono text-foreground">{doc.reference || '—'}</span>
+              <span aria-hidden>·</span>
               <span className="text-foreground font-medium">{doc.currentVersion}</span>
               {doc.uploadedBy && (
                 <>
                   <span aria-hidden>·</span>
-                  <span>{uploadedAgo ? `${uploadedAgo}` : 'recently'}</span>
+                  <span>{uploadedAgo || 'recently'}</span>
                   <span aria-hidden>·</span>
                   <span>by {doc.uploadedBy.name}</span>
                 </>
               )}
-            </p>
+              <span aria-hidden className="mx-1">·</span>
+              <span className={cn(
+                "inline-flex items-center gap-1.5",
+                doc.status === 'Active' ? "text-emerald-700" :
+                  doc.status === 'Archived' ? "text-muted-foreground" : "text-amber-700"
+              )}>
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  doc.status === 'Active' ? "bg-emerald-500" :
+                    doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
+                )} />
+                {doc.status}
+              </span>
+              {doc.isGated && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="inline-flex items-center gap-1 text-amber-700">
+                    <AlertCircle className="w-3 h-3" /> Finance Gated
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Action group: 1 primary, 1 secondary, kebab for the rest.
@@ -457,42 +440,55 @@ const DocumentDetail = () => {
               ))}
             </TabsList>
 
-            {/* Overview — section cards aligned to canonical p-4 (was p-6)
-                with design-token borders. */}
-            <TabsContent value="overview" className="mt-5 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-1 h-5 bg-primary rounded-full" />
-                    <h3 className="text-sm font-medium text-foreground">Document Details</h3>
-                  </div>
-                  <div className="space-y-1">
-                    <DetailItem label="Reference" value={doc.reference} isActionable />
-                    <DetailItem label="Category" value={getCategoryForDoc(doc as any)} />
-                    <DetailItem label="Type" value={SUBCATEGORY_LABEL[doc.type ?? ""] || doc.type} />
-                    <DetailItem label="Discipline" value={doc.discipline} />
-                    <DetailItem label="Description" value={doc.description} />
-                    <DetailItem label="File name" value={doc.fileName} />
-                    <DetailItem label="File size" value={fileSizeMB} />
-                    <DetailItem label="Standard" value={null} />
-                    <DetailItem label="Parties" value={null} />
-                    <DetailItem label="Contract value" value={null} />
-                  </div>
+            {/* Overview — Procore / ClickUp style split:
+                  LEFT  (~66%): file preview — the document itself is the
+                                hero of the page.
+                  RIGHT (~33%): metadata stack (Description & file + Key
+                                dates), always visible alongside the
+                                preview. No tab-switching, no scroll.
+
+                Document Details card omits Reference / Category / Type /
+                Discipline because those live in the header's compact
+                strip — single source of truth, no duplication. */}
+            <TabsContent value="overview" className="mt-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                {/* LEFT: preview */}
+                <div className="lg:col-span-2">
+                  <DocumentPreviewCard doc={doc} onPreview={(file) => setPreviewFile(file)} />
                 </div>
 
-                <div className="bg-white rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
-                    <h3 className="text-sm font-medium text-foreground">Key Dates</h3>
+                {/* RIGHT: metadata stack */}
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl border border-border p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1 h-5 bg-primary rounded-full" />
+                      <h3 className="text-sm font-medium text-foreground">Description & file</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <DetailItem label="Description" value={doc.description} />
+                      <DetailItem label="File name" value={doc.fileName} />
+                      <DetailItem label="File size" value={fileSizeMB} />
+                      {/* Contract-specific fields — only render when populated */}
+                      <DetailItem label="Standard" value={null} />
+                      <DetailItem label="Parties" value={null} />
+                      <DetailItem label="Contract value" value={null} />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <DetailItem label="Executed" value={null} />
-                    <DetailItem label="Commencement" value={null} />
-                    <DetailItem label="Practical completion" value={null} />
-                    <DetailItem label="Defects liability" value={null} />
-                    <DetailItem label="Next obligation due" value={null} isActionable />
-                    <DetailItem label="Uploaded" value={doc.createdAt ? formatDate(doc.createdAt) : null} />
-                    <DetailItem label="Last updated" value={doc.updatedAt ? formatDate(doc.updatedAt) : null} />
+
+                  <div className="bg-white rounded-xl border border-border p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
+                      <h3 className="text-sm font-medium text-foreground">Key dates</h3>
+                    </div>
+                    <div className="space-y-1">
+                      {/* "Uploaded" omitted — already in the header strip */}
+                      <DetailItem label="Executed" value={null} />
+                      <DetailItem label="Commencement" value={null} />
+                      <DetailItem label="Practical completion" value={null} />
+                      <DetailItem label="Defects liability" value={null} />
+                      <DetailItem label="Next obligation due" value={null} isActionable />
+                      <DetailItem label="Last updated" value={doc.updatedAt ? formatDate(doc.updatedAt) : null} />
+                    </div>
                   </div>
                 </div>
               </div>
