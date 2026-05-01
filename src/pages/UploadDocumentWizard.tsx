@@ -252,29 +252,27 @@ export default function UploadDocumentWizard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1800px] mx-auto space-y-6 p-4">
-        {/* Header */}
+      {/* Canonical page wrapper — matches Compliance / Meetings / Finance.
+          DashboardLayout already supplies the outer p-6. */}
+      <div className="space-y-6">
+        {/* Header — canonical pattern (text-2xl title, h-8 buttons, no
+            bespoke max-w or extra padding). */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/documents')}
-              className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-white hover:bg-muted transition-colors"
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-white hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+              <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
-            <div>
-              <h1 className="text-2xl font-normal tracking-tight text-foreground">Upload Document</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Pick the destination, then add document details below.
-              </p>
-            </div>
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">Upload Document</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => navigate('/documents')}
-              className="h-9 px-5 font-normal border-border"
+              className="h-8 text-xs rounded-lg border-border text-foreground"
               disabled={submitting}
             >
               Cancel
