@@ -1,6 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useProjects } from "@/hooks/useProjects";
 
+const OWM_KEY = "8dda08a209080b44cdc3566edffcfbc4";
+
+const fetchWeatherByCoords = async (lat: number, lon: number) => {
+  const res = await fetch(
+    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${OWM_KEY}`
+  );
+  const data = await res.json();
+  if (!res.ok || (String(data.cod) !== "200" && data.cod !== 200)) return null;
+  return data;
+};
+
+const geocodeAddress = async (address: string): Promise<{ lat: number; lon: number } | null> => {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+    );
+    const results = await res.json();
+    if (!results?.length) return null;
+    return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+  } catch {
+    return null;
+  }
+};
+
 const NavbarWeather = () => {
   const [weather, setWeather] = useState<any>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -10,7 +34,6 @@ const NavbarWeather = () => {
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const currentProject = projects.find((p: any) => p._id === selectedProjectId);
 
-  // Listen for project changes
   useEffect(() => {
     const handleProjectChange = () => {
       setSelectedProjectId(localStorage.getItem("selectedProjectId"));
@@ -22,75 +45,50 @@ const NavbarWeather = () => {
   const fetchByGeolocation = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const geoUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=8dda08a209080b44cdc3566edffcfbc4`;
-          const response = await fetch(geoUrl);
-          const data = await response.json();
-          if (!response.ok || String(data.cod) !== "200" && data.cod !== 200) return;
-          setWeather(data);
-        } catch {
-          // silently fail
-        }
+      async ({ coords }) => {
+        const data = await fetchWeatherByCoords(coords.latitude, coords.longitude);
+        if (data) setWeather(data);
       },
-      () => {} // silently fail if user denies location
+      () => {}
     );
   };
 
   useEffect(() => {
-    const fetchWeather = async () => {
-      if (projectsLoading) return;
+    if (projectsLoading) return;
 
-      try {
-        // Priority 1: Use project coordinates if available
-        if (currentProject?.coordinates) {
-          const { lat, lng } = currentProject.coordinates;
-          const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=8dda08a209080b44cdc3566edffcfbc4`
-          );
-          const data = await response.json();
-          if (!response.ok || String(data.cod) !== "200" && data.cod !== 200) { fetchByGeolocation(); return; }
-          setWeather(data);
-          return;
-        }
-
-        // Priority 2: Use project location name if available
-        if (currentProject?.location) {
-          const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(currentProject.location)}&units=metric&appid=8dda08a209080b44cdc3566edffcfbc4`
-          );
-          const data = await response.json();
-          if (!response.ok || String(data.cod) !== "200" && data.cod !== 200) {
-            // Location name not found — fall back to geolocation silently
-            fetchByGeolocation();
-            return;
-          }
-          setWeather(data);
-          return;
-        }
-
-        // Priority 3: Fallback to geolocation
-        fetchByGeolocation();
-      } catch {
-        fetchByGeolocation();
+    const run = async () => {
+      // 1. Project has saved coordinates — best case
+      if (currentProject?.coordinates?.lat && currentProject?.coordinates?.lng) {
+        const data = await fetchWeatherByCoords(
+          currentProject.coordinates.lat,
+          currentProject.coordinates.lng
+        );
+        if (data) { setWeather(data); return; }
       }
+
+      // 2. Project has a location address — geocode it to lat/lon
+      if (currentProject?.location) {
+        const coords = await geocodeAddress(currentProject.location);
+        if (coords) {
+          const data = await fetchWeatherByCoords(coords.lat, coords.lon);
+          if (data) { setWeather(data); return; }
+        }
+      }
+
+      // 3. Browser geolocation fallback
+      fetchByGeolocation();
     };
 
-    fetchWeather();
+    run();
   }, [currentProject, projectsLoading]);
 
-  const locationLabel = currentProject?.location || weather?.name;
+  if (!weather) return null;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem" }}>
-      {weather && (
-        <>
-          {locationLabel && <span>{locationLabel}</span>}
-          <span>•</span>
-          <span>{Math.round(weather.main.temp)}°C</span>
-        </>
-      )}
+      <span>{weather.name}</span>
+      <span>•</span>
+      <span>{Math.round(weather.main.temp)}°C</span>
     </div>
   );
 };

@@ -442,6 +442,7 @@ const ProjectDetails = () => {
                 placeholder="e.g. PRJ-2024-001"
               />
             </Field>
+            {/* Project Site Location map temporarily hidden
             <div className="md:col-span-2">
               <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5">
                 Project Site Location
@@ -456,6 +457,7 @@ const ProjectDetails = () => {
                 }
               />
             </div>
+            */}
             <Field label="Contract Type">
               <select
                 disabled={!canEditProject}
