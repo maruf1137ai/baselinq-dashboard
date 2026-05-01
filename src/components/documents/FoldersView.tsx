@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFolders } from '@/hooks/useFolders';
 import type { Folder, FolderTab } from '@/types/folder';
@@ -21,14 +21,6 @@ interface FoldersViewProps {
   onViewRegister?: (folderId: string, folderName: string) => void;
 }
 
-// Neutral palette, consistent across all tabs — primary purple is the only accent.
-const NEUTRAL_THEME = {
-  fg: 'text-muted-foreground',
-  bgSoft: 'bg-muted/20',
-  chip: 'bg-primary/10 text-primary',
-  dot: 'bg-primary/30',
-};
-
 interface FolderRowProps {
   folder: Folder;
   docs: ApiDocument[];
@@ -37,6 +29,27 @@ interface FolderRowProps {
   onViewRegister?: (folderId: string, folderName: string) => void;
 }
 
+/** Compact relative-time formatter — matches ContractsTree. */
+function formatRelative(iso?: string): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffDay = Math.floor((Date.now() - then) / 86_400_000);
+  if (diffDay < 1) return 'today';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+}
+
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Folder row for Drawings / Documents. Two visual levels:
+ *   - Folder header: subtle bg, folder icon, name, count chip,
+ *     activity dot + AI-flag indicator, hover actions.
+ *   - Document rows inside: distinct styling — file icon in primary
+ *     well, two-line layout (name + type · uploader · when), monospace
+ *     ref chip on right. Visually unmistakeable from a folder.
+ */
 function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: FolderRowProps) {
   const [isOpen, setIsOpen] = useState(docs.length > 0);
   const navigate = useNavigate();
@@ -51,37 +64,51 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
     onViewRegister?.(folder._id, folder.name.replace(/_/g, ' '));
   };
 
+  const hasRecent = docs.some(d => new Date(d.createdAt).getTime() > Date.now() - SEVEN_DAYS);
+  const hasAiFlags = docs.some(d => (d.aiFlags ?? 0) > 0);
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
         <div
           className={cn(
             'flex items-center gap-2 py-2.5 px-4 hover:bg-muted/40 cursor-pointer transition-colors group border-t border-border/50',
-            isOpen && NEUTRAL_THEME.bgSoft,
+            isOpen && 'bg-muted/20',
           )}
         >
           <div className="flex-shrink-0 text-muted-foreground">
             {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </div>
           <div className="flex-shrink-0 text-muted-foreground">
-            {isOpen ? <FolderOpen className="w-4 h-4" /> : <FolderIcon className="w-4 h-4" />}
+            {isOpen ? <FolderOpen className="w-3.5 h-3.5" /> : <FolderIcon className="w-3.5 h-3.5" />}
           </div>
-          <span className="text-sm text-foreground flex-1">{folder.name.replace(/_/g, ' ')}</span>
+          <span className="text-sm text-foreground flex-1 truncate">{folder.name.replace(/_/g, ' ')}</span>
+
+          {hasAiFlags && (
+            <span className="text-amber-600 shrink-0" title="Contains AI findings">
+              <Sparkles className="w-3 h-3" />
+            </span>
+          )}
+          {hasRecent && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Recent activity" />
+          )}
+
           <span
             className={cn(
-              'text-xs px-2 py-0.5 rounded-full',
+              'text-xs px-2 py-0.5 rounded-full tabular-nums shrink-0',
               docs.length > 0
-                ? `${NEUTRAL_THEME.chip} font-medium`
-                : 'bg-muted text-muted-foreground',
+                ? 'bg-primary/10 text-primary'
+                : 'bg-muted/40 text-muted-foreground',
             )}
           >
             {docs.length}
           </span>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 px-2 text-xs"
+              className="h-6 px-2 text-xs"
               onClick={handleViewRegister}
               title="View Issue Register"
             >
@@ -91,7 +118,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 px-2 text-xs"
+              className="h-6 px-2 text-xs"
               onClick={handleUpload}
               title="Upload Document"
             >
@@ -103,23 +130,49 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
       </CollapsibleTrigger>
       <CollapsibleContent>
         {docs.length === 0 ? (
-          <div className="py-3 px-4 pl-12 text-xs text-muted-foreground border-t border-border/30">
+          <div className="py-3 px-4 pl-12 text-xs text-muted-foreground italic border-t border-border/30">
             No documents in this folder yet.
           </div>
         ) : (
-          docs.map((doc) => (
-            <div
-              key={doc._id}
-              className="flex items-center gap-2 py-2 px-4 pl-12 hover:bg-muted/30 cursor-pointer transition-colors border-t border-border/30"
-              onClick={() => onDocumentClick?.(doc._id)}
-            >
-              <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm text-foreground truncate flex-1">{doc.name}</span>
-              {doc.reference && (
-                <span className="text-xs text-muted-foreground font-mono">{doc.reference}</span>
-              )}
-            </div>
-          ))
+          <div className="border-l border-border/60 ml-7">
+            {docs.map((doc) => (
+              <div
+                key={doc._id}
+                className="flex items-center gap-3 py-2.5 pr-4 pl-3 hover:bg-primary/[0.02] cursor-pointer transition-colors group/doc"
+                onClick={() => onDocumentClick?.(doc._id)}
+              >
+                <div className="h-8 w-8 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/10 transition-colors">
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground truncate group-hover/doc:text-primary transition-colors">
+                    {doc.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {doc.type || '—'}
+                    {doc.uploadedBy?.name && (
+                      <>
+                        <span aria-hidden className="mx-1">·</span>
+                        {doc.uploadedBy.name}
+                      </>
+                    )}
+                    {doc.createdAt && (
+                      <>
+                        <span aria-hidden className="mx-1">·</span>
+                        {formatRelative(doc.createdAt)}
+                      </>
+                    )}
+                  </p>
+                </div>
+                {doc.reference && (
+                  <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
+                    {doc.reference}
+                  </span>
+                )}
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+              </div>
+            ))}
+          </div>
         )}
       </CollapsibleContent>
     </Collapsible>
@@ -128,16 +181,20 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
 
 /**
  * Discipline → Folder → Documents view for Drawings and Documents tabs.
- * Mirrors the ContractsTree visual language but for the flat suggestion-based
- * folder structure created by the upload wizard.
+ *
+ * Visual hierarchy:
+ *   - Discipline group header (e.g. "Architectural"): prominent — accent
+ *     stripe, bigger label, doc count summary.
+ *   - Folder rows within each discipline: secondary — folder icon, name,
+ *     count chip, activity indicators.
+ *   - Document rows inside each folder: distinct file-card style, two
+ *     lines, primary-coloured icon well, monospace ref chip.
  */
 export function FoldersView({ projectId, tab, documents, onDocumentClick, onViewRegister }: FoldersViewProps) {
-  const [headerOpen, setHeaderOpen] = useState(true);
   const { data, isLoading, error } = useFolders({ projectId, tab });
   const navigate = useNavigate();
 
   // For drawings/documents the seeded tree is empty; folders are created flat.
-  // We still recurse via children just in case.
   const allFolders = useMemo(() => {
     const flat: Folder[] = [];
     const walk = (nodes: Folder[]) => {
@@ -162,7 +219,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
     return map;
   }, [documents]);
 
-  // Group folders by discipline (the logical grouping for Drawings/Documents)
+  // Group folders by discipline.
   const foldersByDiscipline = useMemo(() => {
     const map = new Map<string, Folder[]>();
     allFolders.forEach((f) => {
@@ -174,10 +231,6 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
     return map;
   }, [allFolders]);
 
-  // Any doc we can't place under a visible folder — either no folderId (truly
-  // unfiled) OR folderId points to a folder not in the fetched tree (e.g. a
-  // doc whose Document.type maps to this tab but whose folder lives under a
-  // different tab, or was deleted).
   const visibleFolderIds = useMemo(
     () => new Set(allFolders.map((f) => f._id)),
     [allFolders],
@@ -225,7 +278,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
     );
   }
 
-  // Sort disciplines alphabetically; Uncategorized last
+  // Sort disciplines alphabetically; Uncategorized last.
   const disciplineKeys = Array.from(foldersByDiscipline.keys()).sort((a, b) => {
     if (a === 'Uncategorized') return 1;
     if (b === 'Uncategorized') return -1;
@@ -234,78 +287,65 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
 
   return (
     <div className="bg-white rounded-lg border border-border overflow-hidden">
-      {/* Header — collapsible */}
-      <button
-        type="button"
-        onClick={() => setHeaderOpen((v) => !v)}
-        className="w-full px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between hover:bg-muted/40 transition-colors text-left"
-      >
-        <div>
-          <h3 className="text-sm font-medium text-foreground">{tabLabel} by Folder</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Folders are grouped by discipline. Click a folder to see its documents.
-          </p>
-        </div>
-        {headerOpen
-          ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-          : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-      </button>
+      {disciplineKeys.map((discipline) => {
+        const folders = foldersByDiscipline.get(discipline) ?? [];
+        const totalDocs = folders.reduce((sum, f) => sum + (docsByFolderId.get(f._id)?.length ?? 0), 0);
+        const hasRecent = folders.some(f => (docsByFolderId.get(f._id) ?? []).some(d => new Date(d.createdAt).getTime() > Date.now() - SEVEN_DAYS));
 
-      {headerOpen && (
-        <>
-          {disciplineKeys.map((discipline) => {
-            const folders = foldersByDiscipline.get(discipline) ?? [];
-            const totalDocs = folders.reduce((sum, f) => sum + (docsByFolderId.get(f._id)?.length ?? 0), 0);
-
-            return (
-              <div key={discipline} className="border-b border-border last:border-b-0">
-                {/* Discipline header */}
-                <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 border-b border-border/50">
-                  <div className={cn('w-1.5 h-1.5 rounded-full', NEUTRAL_THEME.dot)} />
-                  <span className="text-xs font-medium text-foreground">{discipline}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {folders.length} folder{folders.length !== 1 ? 's' : ''} · {totalDocs} doc{totalDocs !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                {folders.map((folder) => (
-                  <FolderRow
-                    key={folder._id}
-                    folder={folder}
-                    docs={docsByFolderId.get(folder._id) ?? []}
-                    tab={tab}
-                    onDocumentClick={onDocumentClick}
-                    onViewRegister={onViewRegister}
-                  />
-                ))}
-              </div>
-            );
-          })}
-
-          {unfiledDocs.length > 0 && (
-            <div className="border-t-2 border-border">
-              <div className="px-4 py-2 bg-muted/20">
-                <p className="text-xs font-medium text-foreground">Unfiled ({unfiledDocs.length})</p>
-                <p className="text-xs text-muted-foreground">
-                  Uploaded before folder structure was set up. Re-upload to file under a folder.
-                </p>
-              </div>
-              {unfiledDocs.map((doc) => (
-                <div
-                  key={doc._id}
-                  className="flex items-center gap-2 py-2 px-4 pl-10 hover:bg-muted/40 cursor-pointer transition-colors border-t border-border/30"
-                  onClick={() => onDocumentClick?.(doc._id)}
-                >
-                  <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm text-foreground truncate flex-1">{doc.name}</span>
-                  {doc.reference && (
-                    <span className="text-xs text-muted-foreground font-mono">{doc.reference}</span>
-                  )}
-                </div>
-              ))}
+        return (
+          <div key={discipline} className="border-b border-border last:border-b-0">
+            {/* Discipline header — top-level visual band, mirrors the
+                Contracts tree's top-level treatment so the tabs feel
+                visually consistent. */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/25 relative">
+              <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary rounded-r" />
+              <span className="text-sm font-medium text-foreground tracking-tight">{discipline}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {folders.length} folder{folders.length !== 1 ? 's' : ''} · {totalDocs} doc{totalDocs !== 1 ? 's' : ''}
+              </span>
+              {hasRecent && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
+              )}
             </div>
-          )}
-        </>
+
+            {folders.map((folder) => (
+              <FolderRow
+                key={folder._id}
+                folder={folder}
+                docs={docsByFolderId.get(folder._id) ?? []}
+                tab={tab}
+                onDocumentClick={onDocumentClick}
+                onViewRegister={onViewRegister}
+              />
+            ))}
+          </div>
+        );
+      })}
+
+      {unfiledDocs.length > 0 && (
+        <div className="border-t-2 border-border bg-muted/10">
+          <div className="px-4 py-2.5">
+            <p className="text-xs font-medium text-foreground">Unfiled ({unfiledDocs.length})</p>
+            <p className="text-[11px] text-muted-foreground">
+              Uploaded before folder structure was set up. Re-upload to file under a folder.
+            </p>
+          </div>
+          {unfiledDocs.map((doc) => (
+            <div
+              key={doc._id}
+              className="flex items-center gap-3 py-2 px-4 hover:bg-muted/30 cursor-pointer transition-colors"
+              onClick={() => onDocumentClick?.(doc._id)}
+            >
+              <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
+              <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
+              {doc.reference && (
+                <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+                  {doc.reference}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
