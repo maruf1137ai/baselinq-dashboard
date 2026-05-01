@@ -18,7 +18,6 @@ interface UploadStep2Props {
   onFolderSelect: (folderId: string, folderName: string, isNew: boolean) => void;
   onBack: () => void;
   onNext: () => void;
-  hideNav?: boolean;
 }
 
 /**
@@ -129,7 +128,6 @@ export function UploadStep2FolderPicker({
   onFolderSelect,
   onBack,
   onNext,
-  hideNav = false,
 }: UploadStep2Props) {
   const { data: foldersData, isLoading: foldersLoading } = useFolders({
     projectId,
@@ -185,10 +183,10 @@ export function UploadStep2FolderPicker({
     : !!customInput.trim();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-normal text-foreground">Select Folder</h2>
+        <h2 className="text-xl font-normal text-foreground">Select Folder</h2>
         <p className="text-sm text-muted-foreground">
           {selectedTab === 'contracts'
             ? 'Choose a folder from the contracts structure'
@@ -198,16 +196,16 @@ export function UploadStep2FolderPicker({
 
       {/* Contracts: Tree Picker */}
       {selectedTab === 'contracts' && (
-        <div className="bg-white rounded-xl border border-border p-6 max-h-[500px] overflow-y-auto">
+        <div className="bg-white rounded-lg border border-border p-3 max-h-[420px] overflow-y-auto">
           {foldersLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-10">
               <AwesomeLoader />
             </div>
           ) : folders && folders.length > 0 ? (
             <>
-              <div className="mb-4 pb-4 border-b border-border">
+              <div className="mb-3 pb-3 border-b border-border">
                 <p className="text-xs text-muted-foreground">
-                  <strong>Tip:</strong> Click on a leaf folder (folders without children) to select it.
+                  Click a leaf folder (one with no children) to select it.
                 </p>
               </div>
               <FolderTreePicker
@@ -217,7 +215,7 @@ export function UploadStep2FolderPicker({
               />
             </>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-12">
+            <p className="text-sm text-muted-foreground text-center py-10">
               No folders found. Please contact support.
             </p>
           )}
@@ -244,9 +242,9 @@ export function UploadStep2FolderPicker({
                       type="button"
                       onClick={() => handleSuggestionClick(suggestion)}
                       className={cn(
-                        "p-3 rounded-lg border-2 transition-all text-left hover:scale-[1.02]",
+                        "px-3 py-2 rounded-lg border transition-colors text-left",
                         isSelected
-                          ? "bg-primary/10 border-primary"
+                          ? "bg-primary/5 border-primary/40"
                           : "bg-white border-border hover:border-primary/30"
                       )}
                     >
@@ -288,7 +286,7 @@ export function UploadStep2FolderPicker({
               value={customInput}
               onChange={(e) => handleCustomInputChange(e.target.value)}
               placeholder="e.g., Site_Photos, Meeting_Minutes"
-              className="h-12 border-border rounded-xl"
+              className="h-10 border-border rounded-lg"
             />
             {isNewFolder && (
               <div className="flex items-center gap-2 text-sm text-primary">
@@ -307,27 +305,25 @@ export function UploadStep2FolderPicker({
       )}
 
       {/* Navigation Buttons */}
-      {!hideNav && (
-        <div className="flex justify-between items-center pt-4">
-          <Button
-            onClick={onBack}
-            variant="outline"
-            className="h-11 px-6 gap-2 font-normal"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back
-          </Button>
+      <div className="flex justify-between items-center pt-2">
+        <Button
+          onClick={onBack}
+          variant="outline"
+          className="h-9 px-5 gap-2 font-normal"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </Button>
 
-          <Button
-            onClick={onNext}
-            disabled={!canProceed}
-            className="h-11 px-6 gap-2 font-normal"
-          >
-            Next: Upload Files
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+        <Button
+          onClick={onNext}
+          disabled={!canProceed}
+          className="h-9 px-5 gap-2 font-normal"
+        >
+          Next: Upload Files
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }

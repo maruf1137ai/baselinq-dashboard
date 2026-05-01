@@ -29,7 +29,6 @@ import AiIcon from '@/components/icons/AiIcon';
 import { useS3Upload } from '@/hooks/useS3Upload';
 import { validateFile, postData } from '@/lib/Api';
 import useFetch from '@/hooks/useFetch';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CATEGORY_TO_TYPES, type DocCategory } from '@/lib/documentTaxonomy';
 import type { FolderTab, FolderVisibility } from '@/types/folder';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -45,13 +44,6 @@ interface UploadStep3Props {
   onBack: () => void;
   onSubmit: (data: UploadFormData) => Promise<void>;
   submitting: boolean;
-  hideBackButton?: boolean;
-  /**
-   * Slot rendered between the "Upload Files & Details" header and the
-   * file/details grid. Used by the single-page upload to inline the tab
-   * switcher and folder picker without an extra surrounding card.
-   */
-  headerSlot?: React.ReactNode;
 }
 
 export interface UploadFormData {
@@ -96,8 +88,6 @@ export function UploadStep3FileMetadata({
   onBack,
   onSubmit,
   submitting,
-  hideBackButton = false,
-  headerSlot,
 }: UploadStep3Props) {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
@@ -113,16 +103,6 @@ export function UploadStep3FileMetadata({
   const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
   const [visibility, setVisibility] = useState<FolderVisibility>('all');
   const [visibilityUsers, setVisibilityUsers] = useState<string[]>([]);
-  const { data: currentUser } = useCurrentUser();
-
-  // When the user picks "Specific users" visibility, preselect themselves
-  // so the creator always retains access to a folder they just made.
-  useEffect(() => {
-    if (visibility !== 'individual') return;
-    if (!currentUser?.id) return;
-    const meId = String(currentUser.id);
-    setVisibilityUsers((prev) => (prev.includes(meId) ? prev : [...prev, meId]));
-  }, [visibility, currentUser?.id]);
   const [issuedTo, setIssuedTo] = useState('All');
   const [issueStatus, setIssueStatus] = useState('For Information');
 
@@ -268,29 +248,24 @@ export function UploadStep3FileMetadata({
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header — hidden entirely when headerSlot is provided so the host
-          page can render its own context (tabs, folder picker, etc.) */}
-      {!headerSlot && (
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-normal text-foreground">Upload Files & Details</h2>
-          <p className="text-sm text-muted-foreground">
-            Uploading to: <strong>{selectedFolderName.replace(/_/g, ' ')}</strong>
-            {isNewFolder && <span className="text-primary ml-1">(New folder)</span>}
-          </p>
-        </div>
-      )}
+    <div className="max-w-5xl mx-auto space-y-4">
+      {/* Header */}
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-normal text-foreground">Upload Files & Details</h2>
+        <p className="text-sm text-muted-foreground">
+          Uploading to: <strong>{selectedFolderName.replace(/_/g, ' ')}</strong>
+          {isNewFolder && <span className="text-primary ml-1">(New folder)</span>}
+        </p>
+      </div>
 
-      {headerSlot}
-
-      <div className="grid grid-cols-5 gap-6 items-start">
+      <div className="grid grid-cols-5 gap-4 items-start">
         {/* Left: File Upload */}
         <div className="col-span-2 space-y-4">
-          <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+          <div className="bg-white rounded-xl border border-border p-4 space-y-3">
             <h3 className="text-sm font-normal text-foreground">Files</h3>
 
             <div
-              className="border border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 hover:border-primary/30 transition-all cursor-pointer group"
+              className="border border-dashed border-border rounded-xl px-6 py-5 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 hover:border-primary/30 transition-all cursor-pointer group"
               onClick={() => document.getElementById('file-upload-step3')?.click()}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
@@ -303,12 +278,12 @@ export function UploadStep3FileMetadata({
                 accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
                 onChange={handleFileChange}
               />
-              <div className="h-10 w-10 bg-white rounded-xl shadow-sm border border-border flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <Upload className="h-5 w-5 text-primary" />
+              <div className="h-9 w-9 bg-white rounded-lg shadow-sm border border-border flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                <Upload className="h-4 w-4 text-primary" />
               </div>
               <p className="text-sm font-normal text-foreground">Drop your documents here</p>
-              <p className="text-xs text-muted-foreground mt-1">PDF, XLSX, images up to 20MB</p>
-              <Button variant="outline" className="mt-4 h-8 text-xs font-normal border-border bg-white" type="button">
+              <p className="text-xs text-muted-foreground mt-0.5">PDF, XLSX, images up to 20MB</p>
+              <Button variant="outline" className="mt-3 h-7 text-xs font-normal border-border bg-white" type="button">
                 Browse Files
               </Button>
             </div>
@@ -319,10 +294,10 @@ export function UploadStep3FileMetadata({
                   {s3Upload.entries.length} file{s3Upload.entries.length !== 1 ? 's' : ''} selected
                 </p>
                 {s3Upload.entries.map(entry => (
-                  <div key={entry.id} className="rounded-lg border border-border bg-white p-4 space-y-3">
+                  <div key={entry.id} className="rounded-lg border border-border bg-white p-3 space-y-2">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-9 w-9 bg-primary/5 rounded-lg flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="h-8 w-8 bg-primary/5 rounded-lg flex items-center justify-center shrink-0">
                           {entry.status === 'error'
                             ? <AlertCircle className="h-4 w-4 text-red-500" />
                             : <FileText className="h-4 w-4 text-primary" />}
@@ -356,7 +331,7 @@ export function UploadStep3FileMetadata({
 
         {/* Right: Metadata */}
         <div className="col-span-3 space-y-4">
-          <div className="bg-white rounded-xl border border-border p-5 space-y-4">
+          <div className="bg-white rounded-xl border border-border p-4 space-y-3">
             <h3 className="text-sm font-normal text-foreground">Document Details</h3>
 
             {/* Document Name — full width */}
@@ -441,7 +416,7 @@ export function UploadStep3FileMetadata({
                 placeholder="Enter a brief description of the document"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                className="min-h-[64px] border-border rounded-lg resize-none"
+                className="min-h-[56px] border-border rounded-lg resize-none"
               />
             </div>
 
@@ -478,10 +453,10 @@ export function UploadStep3FileMetadata({
             </div>
 
             {/* AI Analysis */}
-            <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-5 py-4">
+            <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/10 px-4 py-2.5">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 bg-white rounded-xl shadow-sm border border-border flex items-center justify-center text-primary">
-                  <AiIcon size={20} />
+                  <AiIcon size={16} />
                 </div>
                 <div>
                   <p className="text-sm font-normal text-foreground">Run AI Analysis</p>
@@ -498,10 +473,10 @@ export function UploadStep3FileMetadata({
             </div>
 
             {/* Notify Team */}
-            <div className="flex items-center justify-between rounded-xl bg-primary/5 border border-primary/10 px-5 py-4">
+            <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/10 px-4 py-2.5">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 bg-white rounded-xl shadow-sm border border-border flex items-center justify-center text-primary">
-                  <Upload className="h-5 w-5" />
+                  <Upload className="h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-sm font-normal text-foreground">Notify Team</p>
@@ -518,7 +493,7 @@ export function UploadStep3FileMetadata({
           {/* Folder Visibility — only when creating a NEW folder in Drawings/Documents.
               Contracts tree is locked (cannot create new folders), so never show here. */}
           {isNewFolder && selectedTab !== 'contracts' && (
-            <div className="bg-white rounded-xl border border-border p-5 space-y-4">
+            <div className="bg-white rounded-xl border border-border p-4 space-y-3">
               <div>
                 <h3 className="text-sm font-normal text-foreground">Folder Visibility</h3>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -528,7 +503,7 @@ export function UploadStep3FileMetadata({
 
               <RadioGroup value={visibility} onValueChange={(v) => setVisibility(v as FolderVisibility)}>
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer">
+                  <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer">
                     <RadioGroupItem value="all" id="vis-all" />
                     <Label htmlFor="vis-all" className="flex-1 cursor-pointer">
                       <span className="text-sm font-normal text-foreground">All project members</span>
@@ -536,7 +511,7 @@ export function UploadStep3FileMetadata({
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer">
+                  <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer">
                     <RadioGroupItem value="professional_team" id="vis-prof" />
                     <Label htmlFor="vis-prof" className="flex-1 cursor-pointer">
                       <span className="text-sm font-normal text-foreground">Professional team only</span>
@@ -544,7 +519,7 @@ export function UploadStep3FileMetadata({
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer">
+                  <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer">
                     <RadioGroupItem value="contractor" id="vis-contractor" />
                     <Label htmlFor="vis-contractor" className="flex-1 cursor-pointer">
                       <span className="text-sm font-normal text-foreground">Contractor only</span>
@@ -552,7 +527,7 @@ export function UploadStep3FileMetadata({
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer">
+                  <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer">
                     <RadioGroupItem value="individual" id="vis-individual" />
                     <Label htmlFor="vis-individual" className="flex-1 cursor-pointer">
                       <span className="text-sm font-normal text-foreground">Specific users</span>
@@ -582,7 +557,7 @@ export function UploadStep3FileMetadata({
             <button
               type="button"
               onClick={() => setShowLinking(!showLinking)}
-              className="w-full flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary" />
@@ -593,14 +568,14 @@ export function UploadStep3FileMetadata({
             </button>
 
             {showLinking && (
-              <div className="px-6 pb-6 space-y-4 border-t border-border">
-                <div className="relative mt-4">
+              <div className="px-4 pb-4 space-y-3 border-t border-border">
+                <div className="relative mt-3">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search VOs, RFIs, or other documents..."
                     value={linkSearch}
                     onChange={e => setLinkSearch(e.target.value)}
-                    className="pl-10 h-10 border-border rounded-lg"
+                    className="pl-10 h-9 border-border rounded-lg"
                   />
                 </div>
 
@@ -610,9 +585,9 @@ export function UploadStep3FileMetadata({
                       key={filter}
                       onClick={() => setActiveFilter(filter)}
                       className={cn(
-                        'px-4 py-1.5 rounded-full text-xs uppercase tracking-wide transition-all border font-normal',
+                        'px-3 py-1 rounded-full text-xs uppercase tracking-wide transition-all border font-normal',
                         activeFilter === filter
-                          ? 'bg-primary text-white border-primary'
+                          ? 'bg-primary/10 text-primary border-primary/30'
                           : 'bg-white text-muted-foreground border-border hover:border-foreground/30'
                       )}
                     >
@@ -623,12 +598,12 @@ export function UploadStep3FileMetadata({
 
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {tasksLoading ? (
-                    <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+                    <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span className="text-sm">Loading tasks...</span>
                     </div>
                   ) : filteredTasks.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 gap-1 text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center py-6 gap-1 text-muted-foreground">
                       <Search className="h-5 w-5" />
                       <p className="text-sm">{linkSearch.trim() ? `No results for "${linkSearch}"` : 'No open tasks found.'}</p>
                     </div>
@@ -640,14 +615,14 @@ export function UploadStep3FileMetadata({
                           key={task.id}
                           onClick={() => toggleLink(task.id)}
                           className={cn(
-                            "flex items-center justify-between gap-3 p-4 rounded-lg border cursor-pointer transition-all",
+                            "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all",
                             isSelected
                               ? "border-primary/30 bg-primary/5"
                               : "border-border bg-white hover:border-border hover:bg-muted/30"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-muted border border-border flex items-center justify-center">
+                            <div className="h-7 w-7 rounded-lg bg-muted border border-border flex items-center justify-center">
                               <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
                             </div>
                             <div>
@@ -673,22 +648,20 @@ export function UploadStep3FileMetadata({
       </div>
 
       {/* Navigation Buttons */}
-      <div className={cn("flex items-center pt-4", hideBackButton ? "justify-end" : "justify-between")}>
-        {!hideBackButton && (
-          <Button
-            onClick={onBack}
-            variant="outline"
-            className="h-11 px-6 gap-2 font-normal"
-            disabled={submitting}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back
-          </Button>
-        )}
+      <div className="flex justify-between items-center pt-2">
+        <Button
+          onClick={onBack}
+          variant="outline"
+          className="h-9 px-5 gap-2 font-normal"
+          disabled={submitting}
+        >
+          <ChevronLeft className="w-4 w-4" />
+          Back
+        </Button>
 
         <Button
           onClick={handleSubmit}
-          className="h-11 px-6 gap-2 font-normal"
+          className="h-9 px-5 gap-2 font-normal"
           disabled={submitting || !canSubmit}
         >
           {submitting ? (
