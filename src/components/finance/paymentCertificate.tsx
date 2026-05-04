@@ -8,6 +8,8 @@ import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { resolvePermissionCode } from "@/lib/roleUtils";
 import { usePermission } from "@/hooks/usePermission";
+import { useNavigate } from "react-router-dom";
+import { BarChart2 } from "lucide-react";
 
 interface PCListResponse {
   count: number;
@@ -43,6 +45,7 @@ const summaryData: SummaryData = {
 };
 
 const PaymentCertificate = () => {
+  const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -60,6 +63,19 @@ const PaymentCertificate = () => {
 
   return (
     <main className="p-6">
+      {/* Programme link banner */}
+      <div className="flex items-center justify-between mb-4 p-3 rounded-lg border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="h-4 w-4 text-primary" />
+          <span className="text-sm text-foreground">Payment certificates are linked to programme phases on the timeline.</span>
+        </div>
+        <button
+          onClick={() => navigate("/programme")}
+          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+          View Programme Timeline →
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <AwesomeLoader message="Verifying Certificates" />

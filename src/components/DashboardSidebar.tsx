@@ -186,7 +186,7 @@ export function DashboardSidebar() {
 
     window.dispatchEvent(new Event("project-change"));
     setIsSwitchingProject(true);
-    window.location.reload();
+    navigate("/");
   };
 
   const selectedProject = projects.find((p: any) => (p._id || p.id) === selectedProjectId);
