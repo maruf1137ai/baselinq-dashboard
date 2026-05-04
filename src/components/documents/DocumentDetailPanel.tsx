@@ -80,7 +80,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                 <TabsList className="bg-transparent h-12 w-full justify-start gap-6 rounded-none p-0">
                   <TabsTrigger value="info" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Info</TabsTrigger>
                   <TabsTrigger value="ai" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal flex gap-1.5 grayscale data-[state=active]:grayscale-0">
-                    <AiIcon size={14} className="text-amber-500" /> AI Analysis
+                    <AiIcon size={14} className="text-primary" /> AI Analysis
                   </TabsTrigger>
                   <TabsTrigger value="versions" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Versions</TabsTrigger>
                   <TabsTrigger value="links" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Links</TabsTrigger>
