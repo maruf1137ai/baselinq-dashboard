@@ -1,6 +1,8 @@
 import React from 'react';
 import { FileText, Download, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DocViewer, { DocViewerRenderers } from '@cyntler/react-doc-viewer';
+import '@cyntler/react-doc-viewer/dist/index.css';
 
 interface DocumentPreviewCardProps {
   doc: {
@@ -38,9 +40,17 @@ const PDF_EXTS = new Set(['pdf']);
  * when the URL isn't available yet.
  */
 export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, onPreview }) => {
-  const fileName = (doc.fileName as string) || 'document';
+  const fileName =
+    (doc.fileName as string) || (doc.file_name as string) || (doc.name as string) || 'document';
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
-  const url = (doc.streamUrl as string) || (doc.downloadUrl as string) || '';
+  const url =
+    (doc.streamUrl as string) ||
+    (doc.stream_url as string) ||
+    (doc.downloadUrl as string) ||
+    (doc.download_url as string) ||
+    (doc.file_url as string) ||
+    '';
+  const fileSize = (doc.fileSize as number | undefined) ?? (doc.file_size as number | undefined);
 
   const isImage = IMAGE_EXTS.has(ext);
   const isPdf = PDF_EXTS.has(ext);
@@ -68,9 +78,9 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
         <div className="flex items-center gap-2 min-w-0">
           <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
           <span className="text-sm text-foreground truncate">{fileName}</span>
-          {formatBytes(doc.fileSize) && (
+          {formatBytes(fileSize) && (
             <span className="text-xs text-muted-foreground shrink-0 ml-1">
-              · {formatBytes(doc.fileSize)}
+              · {formatBytes(fileSize)}
             </span>
           )}
         </div>
@@ -114,10 +124,12 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
           </div>
         )}
         {url && isPdf && (
-          <iframe
-            src={`${url}#toolbar=0&navpanes=0`}
-            title={fileName}
-            className="w-full h-[640px] border-0"
+          <DocViewer
+            documents={[{ uri: url, fileName }]}
+            pluginRenderers={DocViewerRenderers}
+            config={{ header: { disableHeader: true, disableFileName: true } }}
+            style={{ height: '640px' }}
+            className="w-full"
           />
         )}
         {url && !isImage && !isPdf && (
