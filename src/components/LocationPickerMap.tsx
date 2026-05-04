@@ -273,13 +273,13 @@ export function LocationPickerMap({
         </div>
       )}
 
-      {/* Map */}
+      {/* Map — isolation:isolate keeps Leaflet's internal z-indexes (200-700) scoped here */}
       <div
         className={cn(
           "rounded-xl overflow-hidden border border-[#e2e5ea]",
           readOnly && "pointer-events-none opacity-90"
         )}
-        style={{ height: mapHeight }}
+        style={{ height: mapHeight, isolation: "isolate" }}
       >
         <MapContainer
           center={[mapCenter.lat, mapCenter.lng]}
