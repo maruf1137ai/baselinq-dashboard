@@ -197,13 +197,28 @@ export function UploadStep3FileMetadata({
     uploadableDocTypes.length === 0 ? true : uploadableDocTypes.includes(t)
   );
 
-  // Auto-select the type when only one option is available — e.g. Drawings → Drawing,
-  // Contracts/Tender_Docs (after permission filter) → Contract.
+  // Auto-select docType when the user shouldn't see the dropdown.
+  //
+  //   Drawings  -> always "Drawing" (only one type).
+  //   Contracts -> default to "Contract". Folder path carries the real
+  //                filing meaning (Tender Docs / Variation Orders /
+  //                Signed Contract / etc.); the legacy Contract vs
+  //                Contract Agreement enum split is not Werner's
+  //                taxonomy. Power-users can still flip this in the
+  //                Edit modal post-upload.
+  //   Documents -> user picks from typeOptions (Spec / Report / Cert)
+  //                because that's a genuine choice the folder doesn't
+  //                determine.
   useEffect(() => {
-    if (!docType && typeOptions.length === 1) {
+    if (docType) return;
+    if (selectedTab === 'drawings' && typeOptions.includes('Drawing')) {
+      setDocType('Drawing');
+    } else if (selectedTab === 'contracts' && typeOptions.includes('Contract')) {
+      setDocType('Contract');
+    } else if (typeOptions.length === 1) {
       setDocType(typeOptions[0]);
     }
-  }, [typeOptions, docType]);
+  }, [selectedTab, typeOptions, docType]);
 
   const missingType = !docType;
   const missingName = !name.trim();
@@ -347,7 +362,25 @@ export function UploadStep3FileMetadata({
               />
             </div>
 
-            {/* Reference + Type */}
+            {/* Reference + Type
+                ─────────────────
+                Per Werner's redesign proposal (docs/DOCUMENTS_REDESIGN_PROPOSAL.md),
+                the FOLDER PATH is the filing taxonomy. A doc dropped into
+                "Tender Docs" is a tender document by virtue of where it
+                sits — asking the user to additionally pick a "Type" from
+                a stale 6-value enum (Contract / Contract Agreement /
+                Drawing / Specification / Report / Certificate) is
+                redundant noise.
+
+                Type field shows ONLY when there's a genuine choice the
+                folder doesn't carry:
+                  - Drawings:  always "Drawing" (auto-set, hidden).
+                  - Contracts: defaulted to "Contract" (auto-set, hidden) —
+                               folder path identifies it (Tender Docs vs
+                               Variation Orders vs Signed Contract etc.).
+                  - Documents: 3 distinct values (Spec / Report / Cert)
+                               that aren't determined by discipline folder,
+                               so the dropdown stays visible. */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-normal text-muted-foreground">Reference</Label>
@@ -362,7 +395,7 @@ export function UploadStep3FileMetadata({
                 />
               </div>
 
-              {typeOptions.length > 1 ? (
+              {selectedTab === 'documents' && typeOptions.length > 1 && (
                 <div className="space-y-2">
                   <Label className="text-sm font-normal text-muted-foreground">
                     Type <span className="text-red-500">*</span>
@@ -378,15 +411,6 @@ export function UploadStep3FileMetadata({
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
-                docType && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-normal text-muted-foreground">Type</Label>
-                    <div className="h-10 px-3 rounded-lg border border-border bg-muted/30 flex items-center text-sm text-foreground">
-                      {docType}
-                    </div>
-                  </div>
-                )
               )}
             </div>
 
