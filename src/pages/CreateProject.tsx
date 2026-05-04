@@ -56,6 +56,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -152,6 +162,35 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",
+};
+
+// ── Weather helper (reuses same OWM key as NavbarWeather) ─────────────────────
+
+const OWM_KEY = "8dda08a209080b44cdc3566edffcfbc4";
+
+const WEATHER_ICON: Record<string, string> = {
+  Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Drizzle: "🌦️",
+  Thunderstorm: "⛈️", Snow: "❄️", Mist: "🌫️", Fog: "🌫️",
+  Haze: "🌫️", Dust: "💨", Sand: "💨", Ash: "🌋", Squall: "💨", Tornado: "🌪️",
+};
+
+const WEATHER_LABEL: Record<string, string> = {
+  Clear: "Sunny", Clouds: "Cloudy", Rain: "Rainy", Drizzle: "Drizzle",
+  Thunderstorm: "Stormy", Snow: "Snowy", Mist: "Misty", Fog: "Foggy",
+  Haze: "Hazy", Dust: "Dusty", Sand: "Sandy", Ash: "Ash", Squall: "Squall", Tornado: "Tornado",
+};
+
+const fetchWeatherForLocation = async (lat: string, lng: string) => {
+  try {
+    const res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${OWM_KEY}`
+    );
+    const data = await res.json();
+    if (!res.ok || (String(data.cod) !== "200" && data.cod !== 200)) return null;
+    return data;
+  } catch {
+    return null;
+  }
 };
 
 const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
@@ -540,6 +579,10 @@ export default function CreateProject() {
   const files = s3Upload.entries;
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLocationWarning, setShowLocationWarning] = useState(false);
+  const [showEmptyLocationWarning, setShowEmptyLocationWarning] = useState(false);
+  const [locationWeather, setLocationWeather] = useState<any>(null);
+  const [locationWeatherLoading, setLocationWeatherLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New steps state
@@ -920,6 +963,24 @@ export default function CreateProject() {
 
   const handleNext = () => {
     if (!validateStep(currentStep)) return;
+    if (currentStep === 1) {
+      if (form.location.trim()) {
+        setLocationWeatherLoading(true);
+        setLocationWeather(null);
+        setShowLocationWarning(true);
+        if (form.latitude && form.longitude) {
+          fetchWeatherForLocation(form.latitude, form.longitude).then((data) => {
+            setLocationWeather(data);
+            setLocationWeatherLoading(false);
+          });
+        } else {
+          setLocationWeatherLoading(false);
+        }
+      } else {
+        setShowEmptyLocationWarning(true);
+      }
+      return;
+    }
     goToStep(currentStep + 1);
   };
 
@@ -2777,6 +2838,115 @@ export default function CreateProject() {
           </div>
         );
       })()}
+      {/* ── Location confirmation dialog ── */}
+      <AlertDialog open={showLocationWarning} onOpenChange={setShowLocationWarning}>
+        <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px] font-semibold text-[#101828]">
+              Are you sure about your project location?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                <p className="text-[13px] font-medium text-[#374151]">{form.location}</p>
+
+                {locationWeatherLoading && (
+                  <div className="flex items-center gap-2 text-[12px] text-[#6b7280]">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Loading weather…
+                  </div>
+                )}
+
+                {!locationWeatherLoading && locationWeather && (() => {
+                  const main = locationWeather.weather?.[0]?.main ?? "";
+                  const description = locationWeather.weather?.[0]?.description ?? "";
+                  const icon = WEATHER_ICON[main] ?? "🌡️";
+                  const label = WEATHER_LABEL[main] ?? main;
+                  const temp = Math.round(locationWeather.main.temp);
+                  const feelsLike = Math.round(locationWeather.main.feels_like);
+                  const humidity = locationWeather.main.humidity;
+                  const windSpeed = Math.round(locationWeather.wind?.speed ?? 0);
+                  return (
+                    <div className="bg-[#f8f9fb] border border-[#e2e5ea] rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{icon}</span>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#101828]">{label}</p>
+                          <p className="text-[11px] text-[#6b7280] capitalize">{description}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
+                        <span className="text-[#6b7280]">Temperature</span>
+                        <span className="font-medium text-[#374151]">{temp}°C</span>
+                        <span className="text-[#6b7280]">Feels like</span>
+                        <span className="font-medium text-[#374151]">{feelsLike}°C</span>
+                        <span className="text-[#6b7280]">Humidity</span>
+                        <span className="font-medium text-[#374151]">{humidity}%</span>
+                        <span className="text-[#6b7280]">Wind</span>
+                        <span className="font-medium text-[#374151]">{windSpeed} m/s</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <p className="text-[11px] text-[#9ca3af]">
+                  you can edit your project location in settings → site settings
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setShowLocationWarning(false)}
+              className="text-[13px] rounded-lg">
+              No
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowLocationWarning(false);
+                goToStep(2);
+              }}
+              className="text-[13px] rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              Yes, confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Empty location warning dialog ── */}
+      <AlertDialog open={showEmptyLocationWarning} onOpenChange={setShowEmptyLocationWarning}>
+        <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px] font-semibold text-[#101828]">
+              No project location added
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 pt-1">
+                <p className="text-[13px] text-[#6b7280]">
+                  You haven't selected a project location yet. You can skip for now and add it later, or go back and fill it in.
+                </p>
+                <p className="text-[11px] text-[#9ca3af]">
+                  you can edit your project location in settings → site settings
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setShowEmptyLocationWarning(false)}
+              className="text-[13px] rounded-lg">
+              Fill it up
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowEmptyLocationWarning(false);
+                goToStep(2);
+              }}
+              className="text-[13px] rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              Skip for now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
