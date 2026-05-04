@@ -8,22 +8,6 @@ const legendItems = [
   { colour: "bg-primary", title: "Forecast" },
 ];
 
-// Placeholder Gantt bars
-const activities = [
-  { name: "Foundation", start: 0, end: 20, status: "complete" },
-  { name: "Structure", start: 15, end: 45, status: "complete" },
-  { name: "Roof", start: 40, end: 60, status: "at_risk" },
-  { name: "MEP First Fix", start: 55, end: 75, status: "upcoming" },
-  { name: "Finishes", start: 70, end: 90, status: "upcoming" },
-  { name: "Handover", start: 88, end: 100, status: "upcoming" },
-];
-
-const statusColour = {
-  complete: "bg-primary",
-  at_risk: "bg-amber-400",
-  upcoming: "bg-muted-foreground/20",
-};
-
 const Timeline = () => {
   return (
     <div className="space-y-4">
@@ -40,33 +24,30 @@ const Timeline = () => {
         </div>
       </div>
 
-      {/* Gantt Placeholder */}
+      {/* Gantt Chart */}
       <div className="p-4 border border-border rounded-lg">
-        <div className="space-y-3">
-          {activities.map((activity) => (
-            <div key={activity.name} className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-24 shrink-0">{activity.name}</span>
-              <div className="flex-1 bg-muted h-6 rounded relative">
-                <div
-                  className={`absolute top-0 h-full rounded ${statusColour[activity.status as keyof typeof statusColour]}`}
-                  style={{ left: `${activity.start}%`, width: `${activity.end - activity.start}%` }}
-                />
-              </div>
-            </div>
-          ))}
+        {/* Timeline header */}
+        <div className="flex justify-between mb-3 text-xs text-muted-foreground border-b border-border pb-2">
+          <span>Q1</span>
+          <span>Q2</span>
+          <span>Q3</span>
+          <span>Q4</span>
         </div>
-        <div className="flex justify-between mt-3 text-xs text-muted-foreground">
-          <span>Sep 2024</span>
-          <span>Dec 2024</span>
-          <span>Mar 2025</span>
-          <span>Jun 2025</span>
+
+        {/* Empty state */}
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Calendar className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">No activities scheduled yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Activities will appear here once the programme is set up</p>
+        </div>
+
+        {/* Timeline footer */}
+        <div className="flex justify-between mt-2 text-xs text-muted-foreground border-t border-border pt-2">
+          <span>Start</span>
+          <span>Mid</span>
+          <span>End</span>
         </div>
       </div>
-
-      {/* Note */}
-      <p className="text-xs text-muted-foreground text-center">
-        Interactive Gantt chart with drag-and-drop, dependencies, and critical path highlighting, coming soon.
-      </p>
     </div>
   );
 };

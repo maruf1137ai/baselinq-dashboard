@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, X } from "lucide-react";
 import DocViewer, { DocViewerRenderers } from "@cyntler/react-doc-viewer";
+import "@cyntler/react-doc-viewer/dist/index.css";
 
 interface FilePreviewModalProps {
   isOpen: boolean;

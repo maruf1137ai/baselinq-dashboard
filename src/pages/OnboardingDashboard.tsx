@@ -28,6 +28,8 @@ import {
   Info,
 } from "lucide-react";
 import { hasPermission } from "@/lib/roleUtils";
+import { useProjectsHealth } from "@/hooks/useProjectsHealth";
+import { HealthBadge } from "@/components/HealthBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
@@ -91,6 +93,7 @@ const OnboardingDashboard = () => {
   );
 
   const projects: any[] = projectsData?.results || projectsData || [];
+  const { healthMap } = useProjectsHealth();
 
   const [activeTab, setActiveTab] = useState<Tab>("project");
   const [isSaving, setIsSaving] = useState(false);
@@ -315,8 +318,10 @@ const OnboardingDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {projects.map((project: any) => {
                   const pId = String(project._id || project.id);
+                  const numericId = Number(project._id || project.id);
                   const isActive = localStorage.getItem("selectedProjectId") === pId;
                   const isDraft = project.status === "Draft" || project.status === "draft";
+                  const healthDetail = healthMap.get(numericId);
                   return (
                     <button
                       key={pId}
@@ -351,11 +356,14 @@ const OnboardingDashboard = () => {
                             </div>
                           </div>
                         </div>
-                        <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all",
-                          isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                        )}>
-                          {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {healthDetail && <HealthBadge status={healthDetail.health} detail={healthDetail} />}
+                          <div className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                            isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          )}>
+                            {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          </div>
                         </div>
                       </div>
                     </button>

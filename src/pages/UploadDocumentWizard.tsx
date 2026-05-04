@@ -3,35 +3,23 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { ArrowLeft, FolderIcon, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { postData, fetchData } from '@/lib/Api';
 import { useS3Upload } from '@/hooks/useS3Upload';
-import { useFolderSuggestions } from '@/hooks/useFolderSuggestions';
+import { UploadWizardSteps } from '@/components/documents/UploadWizardSteps';
+import { UploadStep1TabDiscipline } from '@/components/documents/UploadStep1TabDiscipline';
 import { UploadStep2FolderPicker } from '@/components/documents/UploadStep2FolderPicker';
 import { UploadStep3FileMetadata, type UploadFormData } from '@/components/documents/UploadStep3FileMetadata';
 import type { FolderTab, Folder } from '@/types/folder';
 
 /**
- * Upload Document — single-page form with top tabs.
- * Folder is selected via a modal so the page stays compact.
+ * Upload Document Wizard (PR 5)
+ *
+ * 3-step guided upload process:
+ * 1. Select Category & Discipline
+ * 2. Select/Create Folder
+ * 3. Upload Files & Metadata
  */
 export default function UploadDocumentWizard() {
   const navigate = useNavigate();
@@ -39,52 +27,41 @@ export default function UploadDocumentWizard() {
   const projectId = localStorage.getItem('selectedProjectId') || '';
   const [searchParams] = useSearchParams();
 
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [submitting, setSubmitting] = useState(false);
-  const [folderModalOpen, setFolderModalOpen] = useState(false);
 
-  // Form state
-  const [selectedTab, setSelectedTab] = useState<FolderTab>('contracts');
+  // Wizard state
+  const [selectedTab, setSelectedTab] = useState<FolderTab | ''>('');
   const [selectedDiscipline, setSelectedDiscipline] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState('');
   const [selectedFolderName, setSelectedFolderName] = useState('');
-  const [folderBreadcrumb, setFolderBreadcrumb] = useState<string>('');
   const [isNewFolder, setIsNewFolder] = useState(false);
 
-  // Modal-local picker state — only commits to main state on "Confirm"
-  const [pendingFolderId, setPendingFolderId] = useState('');
-  const [pendingFolderName, setPendingFolderName] = useState('');
-  const [pendingIsNew, setPendingIsNew] = useState(false);
-
   const s3Upload = useS3Upload('project-documents/pending');
-  const { data: suggestions } = useFolderSuggestions();
-  const disciplines = suggestions?.disciplines || [];
 
   // Query param pre-fill
   const tabParam = searchParams.get('tab') as FolderTab | null;
   const folderIdParam = searchParams.get('folder_id');
+  const folderNameParam = searchParams.get('folder_name');
+  const folderDisciplineParam = searchParams.get('folder_discipline');
   const disciplineParam = searchParams.get('discipline');
 
-  const requiresDiscipline = selectedTab === 'drawings' || selectedTab === 'documents';
-
-  // Fetch breadcrumb whenever an existing folder is selected (skip for newly-typed folders).
-  useEffect(() => {
-    if (!selectedFolderId || isNewFolder || !projectId) {
-      setFolderBreadcrumb('');
-      return;
-    }
-    fetchData(`documents/folders/${selectedFolderId}/?project_id=${projectId}`)
-      .then((folder: any) => {
-        const chain = (folder?.breadcrumb ?? [])
-          .map((b: { name: string }) => b.name.replace(/_/g, ' '))
-          .join(' / ');
-        setFolderBreadcrumb(chain);
-      })
-      .catch(() => setFolderBreadcrumb(''));
-  }, [selectedFolderId, isNewFolder, projectId]);
-
-  // Initialize state from URL params on mount
+  // Initialize wizard state from URL params
   useEffect(() => {
     const initializeFromParams = async () => {
+      // Priority 1a: folder_id + folder_name both present (from tree view) — skip fetch
+      if (folderIdParam && folderNameParam) {
+        const tabFromParam = (tabParam ?? 'contracts') as FolderTab;
+        setSelectedTab(tabFromParam);
+        setSelectedDiscipline(folderDisciplineParam ?? '');
+        setSelectedFolderId(folderIdParam);
+        setSelectedFolderName(folderNameParam);
+        setIsNewFolder(false);
+        setCurrentStep(3);
+        return;
+      }
+
+      // Priority 1b: folder_id only — legacy path, fetch from backend
       if (folderIdParam) {
         try {
           const folder: Folder = await fetchData(
@@ -95,48 +72,61 @@ export default function UploadDocumentWizard() {
           setSelectedFolderId(folder._id);
           setSelectedFolderName(folder.name);
           setIsNewFolder(false);
+          setCurrentStep(3);
           return;
         } catch (err) {
           toast.error('Failed to load folder details');
           console.error(err);
         }
       }
+
+      // Priority 2: tab param (start at Step 1 with tab pre-filled)
       if (tabParam && (tabParam === 'contracts' || tabParam === 'drawings' || tabParam === 'documents')) {
         setSelectedTab(tabParam);
       }
-      if (disciplineParam) setSelectedDiscipline(disciplineParam);
+
+      // Priority 3: discipline param (pre-fill discipline in Step 1)
+      if (disciplineParam) {
+        setSelectedDiscipline(disciplineParam);
+      }
     };
+
     initializeFromParams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Run only on mount
 
-  // Reset folder when the user switches tab — folders don't carry across tabs.
-  const handleTabChange = (tab: FolderTab) => {
-    if (tab === selectedTab) return;
-    setSelectedTab(tab);
-    setSelectedFolderId('');
-    setSelectedFolderName('');
-    setIsNewFolder(false);
-    setFolderBreadcrumb('');
+  // Step navigation handlers
+  const handleStep1Next = () => {
+    if (!selectedTab) {
+      toast.error('Please select a category');
+      return;
+    }
+    if ((selectedTab === 'drawings' || selectedTab === 'documents') && !selectedDiscipline) {
+      toast.error('Please select a discipline');
+      return;
+    }
+    setCurrentStep(2);
   };
 
-  // When the modal is opened, mirror current selection into pending state
-  const openFolderModal = () => {
-    setPendingFolderId(selectedFolderId);
-    setPendingFolderName(selectedFolderName);
-    setPendingIsNew(isNewFolder);
-    setFolderModalOpen(true);
-  };
-
-  const confirmFolderSelection = () => {
-    if (!pendingFolderId && !pendingFolderName) {
+  const handleStep2Next = () => {
+    if (!selectedFolderId && !selectedFolderName) {
       toast.error('Please select or enter a folder name');
       return;
     }
-    setSelectedFolderId(pendingFolderId);
-    setSelectedFolderName(pendingFolderName);
-    setIsNewFolder(pendingIsNew);
-    setFolderModalOpen(false);
+    setCurrentStep(3);
+  };
+
+  const handleFolderSelect = (folderId: string, folderName: string, isNew: boolean) => {
+    setSelectedFolderId(folderId);
+    setSelectedFolderName(folderName);
+    setIsNewFolder(isNew);
+  };
+
+  const handleStepClick = (step: 1 | 2 | 3) => {
+    // Allow navigation back to completed steps
+    if (step < currentStep) {
+      setCurrentStep(step);
+    }
   };
 
   const handleSubmit = async (formData: UploadFormData) => {
@@ -144,17 +134,23 @@ export default function UploadDocumentWizard() {
       toast.error('No project selected');
       return;
     }
-    if (!selectedFolderId && !selectedFolderName) {
-      toast.error('Please choose a folder before uploading');
-      return;
-    }
 
     setSubmitting(true);
+
     try {
       let folderId = selectedFolderId;
 
-      // Create folder if new (Drawings/Documents only)
+      // Create folder if new (for Drawings/Documents)
       if (isNewFolder && selectedTab !== 'contracts') {
+        console.log('[UploadWizard] Creating new folder with data:', {
+          projectId: parseInt(projectId),
+          tab: selectedTab,
+          name: selectedFolderName,
+          discipline: selectedDiscipline,
+          visibility: formData.visibility || 'all',
+          visibilityUsers: formData.visibilityUsers || [],
+        });
+
         const newFolder: Folder = await postData({
           url: 'documents/folders/',
           data: {
@@ -170,10 +166,13 @@ export default function UploadDocumentWizard() {
         toast.success(`Created new folder: ${selectedFolderName.replace(/_/g, ' ')}`);
       }
 
+      // Wait for all S3 uploads to complete
       const ids = formData.s3Entries.map(e => e.id);
       const s3Keys = await s3Upload.waitForAll(ids);
 
+      // Upload document(s)
       if (formData.s3Entries.length > 1) {
+        // Batch upload
         const files = formData.s3Entries
           .map(entry => {
             const s3Key = s3Keys.get(entry.id);
@@ -205,12 +204,15 @@ export default function UploadDocumentWizard() {
           },
         });
       } else {
+        // Single file upload
         const entry = formData.s3Entries[0];
         const s3Key = s3Keys.get(entry.id);
+
         if (!s3Key) {
           toast.error(`Failed to upload ${entry.file.name}`);
           return;
         }
+
         await postData({
           url: 'documents/',
           data: {
@@ -245,36 +247,27 @@ export default function UploadDocumentWizard() {
     }
   };
 
-  const folderDisplay = folderBreadcrumb
-    || (selectedFolderName ? selectedFolderName.replace(/_/g, ' ') : '');
-  const folderIsChosen = !!(selectedFolderId || selectedFolderName);
-  const noop = () => {};
-
   return (
     <DashboardLayout>
-      <div className="max-w-[1800px] mx-auto space-y-6 p-4">
-        {/* Header */}
+      {/* Canonical page wrapper — DashboardLayout supplies p-6, no max-w. */}
+      <div className="space-y-4">
+        {/* Header — canonical (text-2xl title, h-8 buttons, no subtitle) */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/documents')}
-              className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-white hover:bg-muted transition-colors"
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-white hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+              <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
-            <div>
-              <h1 className="text-2xl font-normal tracking-tight text-foreground">Upload Document</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Pick the destination, then add document details below.
-              </p>
-            </div>
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">Upload Document</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => navigate('/documents')}
-              className="h-9 px-5 font-normal border-border"
+              className="h-8 text-xs rounded-lg border-border text-foreground"
               disabled={submitting}
             >
               Cancel
@@ -282,142 +275,52 @@ export default function UploadDocumentWizard() {
           </div>
         </div>
 
-        {/* Single section: Upload Files & Details — with tabs + folder picker inline at the top */}
-        <div className="bg-white rounded-xl border border-border p-6">
-          <UploadStep3FileMetadata
-            projectId={projectId}
-            selectedTab={selectedTab}
-            selectedFolderId={selectedFolderId}
-            selectedFolderName={selectedFolderName}
-            isNewFolder={isNewFolder}
-            s3Upload={s3Upload}
-            onBack={noop}
-            onSubmit={handleSubmit}
-            submitting={submitting}
-            hideBackButton
-            headerSlot={
-              <div className="space-y-4 w-full">
-                <Tabs value={selectedTab} onValueChange={(v) => handleTabChange(v as FolderTab)}>
-                  <TabsList className="bg-white border border-border h-10">
-                    <TabsTrigger
-                      value="contracts"
-                      className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
-                    >
-                      Contracts
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="drawings"
-                      className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
-                    >
-                      Drawings
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="documents"
-                      className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground font-normal"
-                    >
-                      Documents
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {requiresDiscipline && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-normal text-muted-foreground">
-                        Discipline <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline}>
-                        <SelectTrigger className="h-10 border-border rounded-lg">
-                          <SelectValue placeholder="Select discipline" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {disciplines.map((d) => (
-                            <SelectItem key={d} value={d}>{d}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div className={cn('space-y-2', !requiresDiscipline && 'md:col-span-2')}>
-                    <Label className="text-sm font-normal text-muted-foreground">
-                      Folder <span className="text-red-500">*</span>
-                    </Label>
-                    <button
-                      type="button"
-                      onClick={openFolderModal}
-                      disabled={requiresDiscipline && !selectedDiscipline}
-                      className={cn(
-                        'w-full h-10 px-3 rounded-lg border flex items-center justify-between text-left transition-colors',
-                        folderIsChosen
-                          ? 'bg-white border-border hover:border-primary/50'
-                          : 'bg-muted/20 border-border hover:bg-muted/40',
-                        'disabled:opacity-50 disabled:cursor-not-allowed'
-                      )}
-                    >
-                      <span className="flex items-center gap-2 min-w-0">
-                        <FolderIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className={cn('text-sm truncate', folderIsChosen ? 'text-foreground' : 'text-muted-foreground')}>
-                          {folderIsChosen ? folderDisplay : 'Choose a folder…'}
-                        </span>
-                      </span>
-                      <span className="text-xs text-primary shrink-0 ml-2">
-                        {folderIsChosen ? 'Change' : 'Select'}
-                      </span>
-                    </button>
-                    {requiresDiscipline && !selectedDiscipline && (
-                      <p className="text-xs text-muted-foreground">Pick a discipline first.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            }
-          />
+        {/* Wizard Steps Indicator (the 3-step indicator at the top — your
+            approved layout) */}
+        <div className="bg-white rounded-xl border border-border px-4 py-3">
+          <UploadWizardSteps currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
-        {/* Folder picker modal */}
-        <Dialog open={folderModalOpen} onOpenChange={setFolderModalOpen}>
-          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col bg-white">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base font-medium">
-                Choose a folder
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground capitalize">{selectedTab}</span>
-              </DialogTitle>
-            </DialogHeader>
+        {/* Step Content — height driven by content (no min-h forcing dead
+            space) */}
+        <div className="bg-white rounded-xl border border-border p-5">
+          {currentStep === 1 && (
+            <UploadStep1TabDiscipline
+              selectedTab={selectedTab}
+              selectedDiscipline={selectedDiscipline}
+              onTabChange={setSelectedTab}
+              onDisciplineChange={setSelectedDiscipline}
+              onNext={handleStep1Next}
+            />
+          )}
 
-            <div className="flex-1 overflow-auto -mx-6 px-6">
-              <UploadStep2FolderPicker
-                projectId={projectId}
-                selectedTab={selectedTab}
-                selectedDiscipline={selectedDiscipline}
-                selectedFolderId={pendingFolderId}
-                selectedFolderName={pendingFolderName}
-                onFolderSelect={(id, name, isNew) => {
-                  setPendingFolderId(id);
-                  setPendingFolderName(name);
-                  setPendingIsNew(isNew);
-                }}
-                onBack={noop}
-                onNext={noop}
-                hideNav
-              />
-            </div>
+          {currentStep === 2 && (
+            <UploadStep2FolderPicker
+              projectId={projectId}
+              selectedTab={selectedTab as FolderTab}
+              selectedDiscipline={selectedDiscipline}
+              selectedFolderId={selectedFolderId}
+              selectedFolderName={selectedFolderName}
+              onFolderSelect={handleFolderSelect}
+              onBack={() => setCurrentStep(1)}
+              onNext={handleStep2Next}
+            />
+          )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setFolderModalOpen(false)} className="font-normal">
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmFolderSelection}
-                disabled={!pendingFolderId && !pendingFolderName}
-                className="font-normal"
-              >
-                Confirm folder
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          {currentStep === 3 && (
+            <UploadStep3FileMetadata
+              projectId={projectId}
+              selectedTab={selectedTab as FolderTab}
+              selectedFolderId={selectedFolderId}
+              selectedFolderName={selectedFolderName}
+              isNewFolder={isNewFolder}
+              s3Upload={s3Upload}
+              onBack={() => setCurrentStep(2)}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+            />
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

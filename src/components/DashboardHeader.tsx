@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, Wand2, Command, X, LogOut } from "lucide-react";
+import { Bell, Search, Wand2, Command, X, LogOut, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -29,22 +29,22 @@ export function DashboardHeader() {
     isLoading,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     fetchNotifications,
   } = useNotifications();
-
-  const [showWeather, setShowWeather] = useState(
-    localStorage.getItem("weatherFeed") === "true",
-  );
-
-  useEffect(() => {
-    const handler = (e: Event) => setShowWeather((e as CustomEvent<boolean>).detail);
-    window.addEventListener("weather-feed-change", handler);
-    return () => window.removeEventListener("weather-feed-change", handler);
-  }, []);
 
   const handleNotificationClick = async (item: (typeof notifications)[0]) => {
     if (!item.isRead) {
       markAsRead(item._id);
+    }
+    if (item.link) {
+      // Switch project context if the notification belongs to a different project
+      const notifProjectId = item.data?.projectId ?? item.projectId;
+      if (notifProjectId) {
+        localStorage.setItem('selectedProjectId', String(notifProjectId));
+      }
+      setOpen(false);
+      navigate(item.link);
     }
   };
 
@@ -55,7 +55,10 @@ export function DashboardHeader() {
   const handleDropdownOpen = (isOpen: boolean) => {
     setOpen(isOpen);
     if (isOpen) {
-      fetchNotifications();
+      // Always fetch scoped to the currently selected project so the bell
+      // dropdown matches the unread-count badge and the rest of the app.
+      const projectId = localStorage.getItem("selectedProjectId") || undefined;
+      fetchNotifications(projectId ? { projectId } : undefined);
     }
   };
 
@@ -64,7 +67,7 @@ export function DashboardHeader() {
       <header className="h-16 border-b border-border bg-sidebar flex items-center justify-between px-6 z-50 sticky top-0">
         <div className="flex items-center gap-4 flex-1">
           <SidebarTrigger />
-          {showWeather && <NavbarWeather />}
+          <NavbarWeather />
         </div>
 
         <div className="flex items-center gap-2">
@@ -144,23 +147,39 @@ export function DashboardHeader() {
             </div>
           ) : (
             notifications.map((item) => (
-              <button
+              <div
                 key={item._id}
-                onClick={() => handleNotificationClick(item)}
-                className={`w-full text-left border-b border-border p-4 hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}>
-                <div className="flex items-start gap-3">
-                  {!item.isRead && (
-                    <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm text-foreground">{item.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                    </p>
+                className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}
+              >
+                <button
+                  onClick={() => handleNotificationClick(item)}
+                  className="w-full text-left p-4 pr-10"
+                >
+                  <div className="flex items-start gap-3">
+                    {!item.isRead && (
+                      <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm text-foreground">{item.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Delete notification"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNotification(item._id);
+                  }}
+                  className="absolute right-2 top-3 p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-opacity"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))
           )}
         </ScrollArea>

@@ -100,8 +100,8 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-10 bg-primary text-white rounded-lg hover:bg-primary/90">
-          <PlusIcon className="w-5 h-5" />
+        <Button className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90">
+          <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
           Schedule Meeting
         </Button>
       </DialogTrigger>

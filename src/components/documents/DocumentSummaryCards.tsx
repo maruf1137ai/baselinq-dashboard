@@ -122,7 +122,7 @@ export const DocumentSummaryCards: React.FC = () => {
         value={String(totalFlags)}
         subtitle={`${highFlags} high · ${mediumFlags} medium`}
         badge={{ text: `${flaggedDocs.length} flagged`, variant: 'warning' }}
-        icon={<AiIcon size={16} className="text-amber-500" />}
+        icon={<AiIcon size={16} className="text-primary" />}
       />
       <SummaryCard
         title="Overdue Obligations"

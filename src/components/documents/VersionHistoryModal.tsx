@@ -131,7 +131,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                           <div className="flex items-center justify-between pt-2 border-t border-gray-100/50">
                             <div className="flex items-center gap-3">
                               <p className="text-xs font-normal text-gray-400 normal-case flex items-center gap-1.5">
-                                <AiIcon size={12} className="text-amber-500" /> AI Analysis
+                                <AiIcon size={12} className="text-primary" /> AI Analysis
                               </p>
                               {ver.aiFlags !== undefined && ver.aiFlags > 0 && (
                                 <Badge variant="outline" className="text-xs font-normal border-gray-200 bg-white">

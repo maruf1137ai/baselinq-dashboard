@@ -148,8 +148,8 @@ const AccountProfile = () => {
           </div>
           <div className="flex items-center gap-3">
 
-            <Button type="submit" disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <Button type="submit" disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </div>

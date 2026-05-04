@@ -194,8 +194,8 @@ const AccountOrganization = () => {
           <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
         </div>
         {canEdit ? (
-          <Button onClick={handleSave} disabled={isSaving} className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <Button onClick={handleSave} disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         ) : (
@@ -371,8 +371,8 @@ const AccountOrganization = () => {
                 Add another user
               </button>
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-                <Button type="submit" disabled={inviting} className="h-9 px-5 rounded-xl bg-[#6c5ce7] hover:bg-[#6c6de9] text-white text-sm font-normal flex items-center gap-2">
-                  {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Button type="submit" disabled={inviting} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90">
+                  {inviting && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                   {inviting ? "Sending..." : "Send Invitation"}
                 </Button>
                 <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors">

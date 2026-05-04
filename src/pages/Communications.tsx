@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { postData, fetchData } from "@/lib/Api";
 import { Loader2, Check, X, Hash, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -20,6 +21,7 @@ import {
 
 const Communications = () => {
   const [projectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
@@ -128,11 +130,20 @@ const Communications = () => {
     }
   };
 
+  // Auto-select channel from URL param (?channel=5) — used by notification deep links
+  const channelParamId = searchParams.get("channel");
   useEffect(() => {
-    if (channels.length > 0 && !selectedChannel) {
+    if (!channels.length) return;
+    if (channelParamId) {
+      const target = channels.find((c: any) => String(c.id) === channelParamId);
+      if (target) {
+        handleSelectChannel(target);
+        setSearchParams({}, { replace: true }); // clean up URL
+      }
+    } else if (!selectedChannel) {
       handleSelectChannel(channels[0]);
     }
-  }, [channels, selectedChannel]);
+  }, [channels, channelParamId]);
 
   const { data: projectData } = useFetch(projectId ? `projects/${projectId}/` : "");
   const projectName = projectData?.name || "Project";
@@ -145,7 +156,11 @@ const Communications = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
+        {/* Header inset matches the canonical 24px top padding used by every
+            other page (Tasks/Compliance/Meetings/Documents). DashboardLayout
+            uses padding="p-0" here because the chat below needs full-bleed —
+            so we apply the canonical 24px on the header itself. */}
+        <div className="px-6 pt-6 pb-4 border-b border-border">
           <h1 className="text-2xl font-normal tracking-tight text-foreground">Communications</h1>
         </div>
         <div className="flex flex-1 overflow-hidden">

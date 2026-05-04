@@ -8,7 +8,7 @@ interface UploadWizardStepsProps {
 }
 
 const STEPS = [
-  { number: 1, label: 'Tab & Discipline', shortLabel: 'Setup' },
+  { number: 1, label: 'Category & Discipline', shortLabel: 'Category' },
   { number: 2, label: 'Select Folder', shortLabel: 'Folder' },
   { number: 3, label: 'Upload & Details', shortLabel: 'Upload' },
 ] as const;

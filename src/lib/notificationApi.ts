@@ -1,4 +1,4 @@
-import { fetchData, postData } from "./Api";
+import { fetchData, postData, deleteData } from "./Api";
 import type { Notification, PushSubscriptionPayload } from "@/types/notification";
 
 /**
@@ -73,4 +73,12 @@ export const markAsRead = async (id: string): Promise<Notification> => {
  */
 export const markAllAsRead = async (): Promise<{ marked: number }> => {
   return postData({ url: "notifications/mark_all_read/" });
+};
+
+/**
+ * DELETE /api/notifications/{id}/ (auth required)
+ * Scoped to the requesting user on the backend.
+ */
+export const deleteNotification = async (id: string): Promise<void> => {
+  return deleteData({ url: `notifications/${id}/`, data: undefined });
 };
