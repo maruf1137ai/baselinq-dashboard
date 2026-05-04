@@ -1,8 +1,6 @@
-import React from 'react';
-import { FileText, Download, Maximize2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import DocViewer, { DocViewerRenderers } from '@cyntler/react-doc-viewer';
-import '@cyntler/react-doc-viewer/dist/index.css';
 
 interface DocumentPreviewCardProps {
   doc: {
@@ -54,6 +52,32 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
 
   const isImage = IMAGE_EXTS.has(ext);
   const isPdf = PDF_EXTS.has(ext);
+
+  // Fetch PDF bytes and create a local blob URL so the iframe has no
+  // Content-Disposition: attachment header (S3 presigned URLs carry that
+  // header, which causes the browser to download instead of display inline).
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
+
+  useEffect(() => {
+    if (!url || !isPdf) return;
+    let objectUrl: string | null = null;
+    setPdfLoading(true);
+    setPdfError(false);
+    setPdfBlobUrl(null);
+
+    fetch(url)
+      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.blob(); })
+      .then(blob => {
+        objectUrl = URL.createObjectURL(blob);
+        setPdfBlobUrl(objectUrl);
+      })
+      .catch(() => setPdfError(true))
+      .finally(() => setPdfLoading(false));
+
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [url, isPdf]);
 
   const handleOpen = () => {
     if (!url) return;
@@ -123,13 +147,20 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
             />
           </div>
         )}
-        {url && isPdf && (
-          <DocViewer
-            documents={[{ uri: url, fileName, fileType: ext }]}
-            pluginRenderers={DocViewerRenderers}
-            config={{ header: { disableHeader: true, disableFileName: true } }}
+        {url && isPdf && pdfLoading && (
+          <div className="flex items-center justify-center min-h-[420px]">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {url && isPdf && pdfError && (
+          <EmptyState message="Could not load PDF preview. Use Full view or Download." />
+        )}
+        {url && isPdf && pdfBlobUrl && (
+          <iframe
+            src={pdfBlobUrl}
+            title={fileName}
+            className="w-full border-0"
             style={{ height: '640px' }}
-            className="w-full"
           />
         )}
         {url && !isImage && !isPdf && (
