@@ -125,7 +125,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
         )}
         {url && isPdf && (
           <DocViewer
-            documents={[{ uri: url, fileName }]}
+            documents={[{ uri: url, fileName, fileType: ext }]}
             pluginRenderers={DocViewerRenderers}
             config={{ header: { disableHeader: true, disableFileName: true } }}
             style={{ height: '640px' }}
