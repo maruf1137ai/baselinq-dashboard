@@ -830,11 +830,14 @@ const SelectProject = () => {
                 const isDraft = project.status === "Draft" || project.status === "draft";
                 const healthDetail = healthMap.get(numericId);
                 return (
-                  <button
+                  <div
                     key={pId}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelectProject(project)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectProject(project); }}
                     className={cn(
-                      "group text-left border rounded-xl bg-white shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200",
+                      "group text-left border rounded-xl bg-white shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer",
                       isActive ? "border-primary/40 ring-1 ring-primary/20" : "border-border"
                     )}
                   >
@@ -882,7 +885,7 @@ const SelectProject = () => {
                         </button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
