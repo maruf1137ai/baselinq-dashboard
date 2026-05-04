@@ -146,8 +146,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
     <div
       className={cn(
         "flex items-center gap-2 pr-4 cursor-pointer transition-colors group relative",
-        isTopLevel  && "py-3 px-4 bg-muted/50 hover:bg-muted/65 border-b border-border",
-        isMidLevel  && "py-2.5 bg-muted/25 hover:bg-muted/40",
+        isTopLevel && "py-3 px-4 bg-muted/50 hover:bg-muted/65 border-b border-border",
+        isMidLevel && "py-2.5 bg-muted/25 hover:bg-muted/40",
         isDeepLevel && "py-2 bg-muted/10 hover:bg-muted/25",
       )}
       style={indentStyle}
@@ -171,9 +171,9 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
       <div className={cn(
         "flex-shrink-0",
-        isTopLevel  ? "text-primary"
-        : isMidLevel ? "text-muted-foreground"
-        : "text-muted-foreground/70"
+        isTopLevel ? "text-primary"
+          : isMidLevel ? "text-muted-foreground"
+            : "text-muted-foreground/70"
       )}>
         {isOpen
           ? <FolderOpen className="w-3.5 h-3.5" />
@@ -182,8 +182,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
       <span className={cn(
         "flex-1 truncate",
-        isTopLevel  && "text-sm font-medium text-foreground tracking-tight",
-        isMidLevel  && "text-sm text-foreground",
+        isTopLevel && "text-sm font-medium text-foreground tracking-tight",
+        isMidLevel && "text-sm text-foreground",
         isDeepLevel && "text-sm text-muted-foreground",
       )}>
         {folder.name.replace(/_/g, ' ')}
@@ -191,7 +191,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
       {/* AI flags indicator — sparkle icon when any nested doc has flags */}
       {hasAiFlags && (
-        <span className="text-amber-600" title="Contains AI findings">
+        <span className="text-primary" title="Contains AI findings">
           <Sparkles className="w-3 h-3" />
         </span>
       )}

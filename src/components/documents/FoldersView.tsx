@@ -86,7 +86,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
           <span className="text-sm text-foreground flex-1 truncate">{folder.name.replace(/_/g, ' ')}</span>
 
           {hasAiFlags && (
-            <span className="text-amber-600 shrink-0" title="Contains AI findings">
+            <span className="text-primary shrink-0" title="Contains AI findings">
               <Sparkles className="w-3 h-3" />
             </span>
           )}
