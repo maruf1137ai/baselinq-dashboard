@@ -381,38 +381,38 @@ export function UploadStep3FileMetadata({
                   - Documents: 3 distinct values (Spec / Report / Cert)
                                that aren't determined by discipline folder,
                                so the dropdown stays visible. */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">Reference</Label>
-                <Input
-                  placeholder="e.g. ARC-DWG-0042"
-                  value={reference}
-                  onChange={e => {
-                    setReference(e.target.value);
-                    setIsReferenceManuallyEdited(true);
-                  }}
-                  className="h-10 border-border rounded-lg"
-                />
-              </div>
-
-              {selectedTab === 'documents' && typeOptions.length > 1 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-normal text-muted-foreground">
-                    Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select value={docType} onValueChange={setDocType}>
-                    <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingType))}>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {typeOptions.map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+            {/* Reference — full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-normal text-muted-foreground">Reference</Label>
+              <Input
+                placeholder="e.g. ARC-DWG-0042"
+                value={reference}
+                onChange={e => {
+                  setReference(e.target.value);
+                  setIsReferenceManuallyEdited(true);
+                }}
+                className="h-10 border-border rounded-lg"
+              />
             </div>
+
+            {/* Type — full width, only shown for Documents tab with multiple type options */}
+            {selectedTab === 'documents' && typeOptions.length > 1 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">
+                  Type <span className="text-red-500">*</span>
+                </Label>
+                <Select value={docType} onValueChange={setDocType}>
+                  <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingType))}>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeOptions.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Certificate subtype — only for Certificate doc type */}
             {docType === 'Certificate' && uploadableCertSubtypes.length > 0 && (
