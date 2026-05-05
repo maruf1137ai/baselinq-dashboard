@@ -90,30 +90,31 @@ export const PERMISSIONS = {
   editVariationOrder:     ["CLIENT", "CPM", "PM", "ARCH"],
   viewAudit: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
   viewProgramme: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS"],
-  viewSettings: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH"],
-  // Settings actions
-  editTeamRoles: ["CLIENT", "CPM", "PM", "CM"],
-  manageTeam: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  manageSettings: ["CLIENT", "CPM", "PM"],
-  viewBilling: ["CLIENT", "CPM"],
+  // Settings — 2 permission tiers
+  // view: management + senior technical/consultant
+  viewSettings:  ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER"],
+  // edit: management tier only (backbone codes; ADMIN→CLIENT, PROJECT_ADMIN→CPM, PRINCIPAL_PM→PM, SUPER_USER→CPM)
+  editSettings:  ["CLIENT", "CPM", "PM"],
+  // Legacy settings flags — all resolve to the 2 new tiers
+  editTeamRoles:      ["CLIENT", "CPM", "PM"],
+  manageTeam:         ["CLIENT", "CPM", "PM"],
+  manageSettings:     ["CLIENT", "CPM", "PM"],
+  viewBilling:        ["CLIENT", "CPM", "PM"],
   manageIntegrations: ["CLIENT", "CPM", "PM"],
+  viewPermissions:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER"],
+  editPermissions:    ["CLIENT", "CPM", "PM"],
+  manageRoles:        ["CLIENT", "CPM", "PM"],
+  addTeamMember:      ["CLIENT", "CPM", "PM"],
+  removeTeamMember:   ["CLIENT", "CPM", "PM"],
+  editTeamMember:     ["CLIENT", "CPM", "PM"],
+  manageAssociatedCompanies: ["CLIENT", "CPM", "PM"],
+  addCompanyMember:          ["CLIENT", "CPM", "PM"],
+  editCompanyMember:         ["CLIENT", "CPM", "PM"],
   // Project actions
   createProject: ["CLIENT", "CPM", "PM", "CM"],
   editProject: ["CLIENT", "CPM", "PM", "CM"],
   // Task actions
   createTasks: ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
-  // Permissions matrix
-  viewPermissions: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH"],
-  editPermissions: ["CLIENT", "CPM"],
-  manageRoles:     ["CLIENT", "CPM", "PM", "CM"],
-  // Granular team member actions
-  addTeamMember:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  removeTeamMember: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  editTeamMember:   ["CLIENT", "CPM", "PM", "CM"],
-  // Associated Companies
-  manageAssociatedCompanies: ["CLIENT", "CPM", "PM", "CM"],
-  addCompanyMember:          ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
-  editCompanyMember:         ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

@@ -32,25 +32,15 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 import useFetch from "@/hooks/useFetch";
 
 const PERM_DESCRIPTIONS: Record<string, string> = {
   // Settings
-  "settings.view":                  "Can open and navigate the Settings section",
-  "settings.billing.view":          "Can view subscription plan, invoices and billing details",
-  "settings.integrations.manage":   "Can connect, configure and remove third-party integrations",
-  "settings.permissions.edit":      "Can change what each role is allowed to do",
-  "settings.permissions.view":      "Can view the permission matrix (read-only)",
-  "settings.roles.manage":          "Can create, rename and delete custom roles",
-  "settings.team.manage":           "Can add and remove members from the project team",
-  "settings.team.member.add":       "Can add new users to the project team",
-  "settings.team.member.remove":    "Can remove users from the project team",
-  "settings.team.member.edit":      "Can change the role of any team member",
-  "settings.team.roles.edit":       "Can change the role assigned to any team member",
-  "settings.associated_companies.manage":      "Can invite and remove associated companies from the project",
-  "settings.associated_companies.member.add":  "Can invite users to an associated company",
-  "settings.associated_companies.member.edit": "Can edit roles and remove users from an associated company",
+  "settings.view": "Can open and read everything in the Settings section (team, roles, permissions, billing)",
+  "settings.edit": "Can manage everything in Settings — add/remove team members, edit roles, change permissions, billing, integrations",
   // Documents — upload
   "document.upload.contract":               "Can upload main contract documents",
   "document.upload.contract_agreement":     "Can upload contract agreement documents",
@@ -112,25 +102,10 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
 
 // If a parent permission is OFF, its children are meaningless — disable them in the UI
 const PERMISSION_PARENTS: Record<string, string> = {
-  "settings.billing.view":         "settings.view",
-  "settings.integrations.manage":  "settings.view",
-  "settings.permissions.view":     "settings.view",
-  "settings.permissions.edit":     "settings.permissions.view",
-  "settings.team.manage":          "settings.view",
-  // granular team member actions require team.manage
-  "settings.team.member.add":      "settings.team.manage",
-  "settings.team.member.remove":   "settings.team.manage",
-  "settings.team.member.edit":     "settings.team.manage",
-  // managing custom roles requires permission-edit access
-  "settings.roles.manage":         "settings.permissions.edit",
-  // associated companies under settings
-  "settings.associated_companies.manage":      "settings.view",
-  "settings.associated_companies.member.add":  "settings.associated_companies.manage",
-  "settings.associated_companies.member.edit": "settings.associated_companies.manage",
-  // project edit lives under settings
-  "project.edit":                  "settings.view",
-  // team.roles.edit still lives under team.manage
-  "settings.team.roles.edit":      "settings.team.manage",
+  // settings.edit requires settings.view (edit implies view)
+  "settings.edit":  "settings.view",
+  // project edit is a settings-level action
+  "project.edit":   "settings.view",
   // Finance parent-child
   "finance.cost_ledger.view":         "finance.view",
   "finance.cost_ledger.edit":         "finance.cost_ledger.view",
@@ -139,14 +114,14 @@ const PERMISSION_PARENTS: Record<string, string> = {
   "finance.variation_order.view":     "finance.view",
   "finance.variation_order.edit":     "finance.variation_order.view",
   // Tasks
-  "task.vo.create":                "task.create",
-  "task.si.create":                "task.create",
-  "task.rfi.create":               "task.create",
-  "task.dc.create":                "task.create",
-  "task.cpi.create":               "task.create",
-  "task.gi.create":                "task.create",
-  "task.vo.recommend":             "task.create",
-  "task.vo.approve":               "task.create",
+  "task.vo.create":    "task.create",
+  "task.si.create":    "task.create",
+  "task.rfi.create":   "task.create",
+  "task.dc.create":    "task.create",
+  "task.cpi.create":   "task.create",
+  "task.gi.create":    "task.create",
+  "task.vo.recommend": "task.create",
+  "task.vo.approve":   "task.create",
 };
 
 interface Role {
@@ -506,7 +481,7 @@ function MatrixGrid({
   const groups = useMemo(() => {
     const byGroup: Record<string, Permission[]> = {};
     const hiddenGroups = ["audit", "compliance", "programme", "project"];
-    const hiddenCodes = ["settings.manage", "settings.team.roles.edit", "project.create"];
+    const hiddenCodes = ["project.create"];
     // Remap certain permissions into a different display group
     const GROUP_OVERRIDES: Record<string, string> = {
       "project.edit": "settings",
@@ -523,18 +498,9 @@ function MatrixGrid({
     // Explicit priority order — lower number = appears earlier, rest alphabetical
     const SORT_ORDER: Record<string, number> = {
       // Settings
-      "settings.view":               0,
-      "settings.team.manage":        1,
-      "settings.team.member.add":    2,
-      "settings.team.member.edit":   3,
-      "settings.team.member.remove": 4,
-      "settings.associated_companies.manage":      5,
-      "settings.associated_companies.member.add":  6,
-      "settings.associated_companies.member.edit": 7,
-      "settings.permissions.view":   8,
-      "settings.permissions.edit":   9,
-      "settings.roles.manage":       10,
-      "project.edit":                8,
+      "settings.view":  0,
+      "settings.edit":  1,
+      "project.edit":   2,
       // Finance
       "finance.view":                        0,
       "finance.cost_ledger.view":            1,
@@ -783,12 +749,7 @@ function MatrixGrid({
                           key={r.id}
                           className="text-center font-normal text-muted-foreground text-xs px-3 py-2.5 min-w-[100px]"
                         >
-                          <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-foreground font-medium">{r.name}</span>
-                            {r.code && (
-                              <span className="text-[10px] font-mono text-muted-foreground">{r.code}</span>
-                            )}
-                          </div>
+                          <span className="text-foreground font-medium">{r.name}</span>
                         </th>
                       ))}
                     </tr>
@@ -797,12 +758,19 @@ function MatrixGrid({
                     {perms.map((perm) => (
                         <tr key={perm.code} className="border-t border-border hover:bg-muted/20">
                           <td className="sticky left-0 z-10 bg-white px-4 py-2 border-r border-border">
-                            <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-sm">{perm.label}</span>
                               {(perm.description || PERM_DESCRIPTIONS[perm.code]) && (
-                                <span className="text-[11px] text-muted-foreground leading-tight">
-                                  {perm.description || PERM_DESCRIPTIONS[perm.code]}
-                                </span>
+                                <TooltipProvider delayDuration={100}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-[260px] text-xs leading-relaxed">
+                                      {perm.description || PERM_DESCRIPTIONS[perm.code]}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                           </td>

@@ -3,9 +3,17 @@ import React, { useEffect } from 'react';
 import MeetingsList from '@/components/meetings/meetingList';
 import { postData } from '@/lib/Api';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { ScheduleNewMeetingDialog } from '@/components/meetings/scheduleMeetingDialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Meetings = () => {
   const refreshNotifications = useNotificationStore((state) => state.refresh);
+  const qc = useQueryClient();
+
+  const handleCreated = () => {
+    const projectId = localStorage.getItem("selectedProjectId");
+    if (projectId) qc.invalidateQueries({ queryKey: [`meetings/?project_id=${projectId}`] });
+  };
 
   useEffect(() => {
     const projectId = localStorage.getItem("selectedProjectId");
@@ -22,7 +30,10 @@ const Meetings = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-normal tracking-tight text-foreground">Meetings</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-normal tracking-tight text-foreground">Meetings</h1>
+          <ScheduleNewMeetingDialog onCreated={handleCreated} />
+        </div>
         <MeetingsList />
       </div>
     </DashboardLayout>

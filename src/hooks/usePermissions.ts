@@ -5,26 +5,38 @@ import { PermissionKey } from "@/lib/roleUtils";
 /**
  * Central permissions hook — backed by the DB permission matrix.
  *
- * Each flag maps to a permission code that is resolved server-side via
- * `has_perm(user, code, project)`.  Admins can edit the matrix from
- * Settings → Role Permissions and changes take effect immediately.
+ * Settings are gated by two codes only:
+ *   settings.view  → read-only access to everything in Settings
+ *   settings.edit  → full edit access to everything in Settings
  *
+ * All legacy flag names are preserved so existing components need no changes.
  * While permissions are loading, all flags return `true` to prevent false
  * redirects during page reload before auth data is available.
  */
 
-// Map legacy flag names to DB permission codes
 const FLAG_TO_CODE: Record<PermissionKey, string> = {
   viewCompliance:      "compliance.view",
   viewFinance:         "finance.view",
   viewAudit:           "audit.view",
   viewProgramme:       "programme.view",
   viewSettings:        "settings.view",
-  editTeamRoles:       "settings.team.roles.edit",
-  manageTeam:          "settings.team.manage",
-  manageSettings:      "settings.manage",
-  viewBilling:         "settings.billing.view",
-  manageIntegrations:  "settings.integrations.manage",
+  editSettings:        "settings.edit",
+  // Legacy settings flags — all resolve to the 2 new codes
+  editTeamRoles:       "settings.edit",
+  manageTeam:          "settings.edit",
+  manageSettings:      "settings.edit",
+  viewBilling:         "settings.edit",
+  manageIntegrations:  "settings.edit",
+  viewPermissions:     "settings.view",
+  editPermissions:     "settings.edit",
+  manageRoles:         "settings.edit",
+  addTeamMember:       "settings.edit",
+  removeTeamMember:    "settings.edit",
+  editTeamMember:      "settings.edit",
+  manageAssociatedCompanies: "settings.edit",
+  addCompanyMember:          "settings.edit",
+  editCompanyMember:         "settings.edit",
+  // Non-settings flags unchanged
   createProject:       "project.create",
   editProject:         "project.edit",
   createTasks:         "task.create",
@@ -34,15 +46,6 @@ const FLAG_TO_CODE: Record<PermissionKey, string> = {
   editPaymentCertificate: "finance.payment_certificate.edit",
   viewVariationOrder:     "finance.variation_order.view",
   editVariationOrder:     "finance.variation_order.edit",
-  viewPermissions:     "settings.permissions.view",
-  editPermissions:     "settings.permissions.edit",
-  manageRoles:         "settings.roles.manage",
-  addTeamMember:       "settings.team.member.add",
-  removeTeamMember:    "settings.team.member.remove",
-  editTeamMember:      "settings.team.member.edit",
-  manageAssociatedCompanies: "settings.associated_companies.manage",
-  addCompanyMember:          "settings.associated_companies.member.add",
-  editCompanyMember:         "settings.associated_companies.member.edit",
 };
 
 export function usePermissions() {
@@ -67,37 +70,48 @@ export function usePermissions() {
     return perm(code);
   };
 
+  // settings.edit implies settings.view — check both so edit-tier users can always see settings
+  const canViewSettings = perm("settings.view") || perm("settings.edit");
+  const canEditSettings = isOrgAdmin || perm("settings.edit");
+
   return {
     isLoading,
     isOrgAdmin,
     can,
+    // Module access
     canViewCompliance:     perm("compliance.view"),
     canViewFinance:        perm("finance.view"),
     canViewAudit:          perm("audit.view"),
     canViewProgramme:      perm("programme.view"),
-    canViewSettings:       perm("settings.view"),
-    canEditTeamRoles:      perm("settings.team.roles.edit"),
-    canManageTeam:         isOrgAdmin || perm("settings.team.manage"),
-    canManageSettings:     perm("settings.manage"),
-    canViewBilling:        perm("settings.billing.view"),
-    canManageIntegrations: perm("settings.integrations.manage"),
+    // Settings — 2 primary flags
+    canViewSettings,
+    canEditSettings,
+    // Legacy flags — all map to the 2 new settings codes
+    canEditTeamRoles:      canEditSettings,
+    canManageTeam:         canEditSettings,
+    canManageSettings:     canEditSettings,
+    canViewBilling:        canEditSettings,
+    canManageIntegrations: canEditSettings,
+    canViewPermissions:    canViewSettings,
+    canEditPermissions:    canEditSettings,
+    canManageRoles:        canEditSettings,
+    canAddTeamMember:      canEditSettings,
+    canRemoveTeamMember:   canEditSettings,
+    canEditTeamMember:     canEditSettings,
+    canManageAssociatedCompanies: canEditSettings,
+    canAddCompanyMember:          canEditSettings,
+    canEditCompanyMember:         canEditSettings,
+    // Project
     canCreateProject:      perm("project.create"),
     canEditProject:        isOrgAdmin || perm("project.edit"),
+    // Tasks
     canCreateTasks:        perm("task.create"),
-    canViewPermissions:    perm("settings.permissions.view"),
-    canEditPermissions:    perm("settings.permissions.edit"),
-    canManageRoles:        perm("settings.roles.manage"),
+    // Finance
     canViewCostLedger:         perm("finance.cost_ledger.view"),
     canEditCostLedger:         perm("finance.cost_ledger.edit"),
     canViewPaymentCertificate: perm("finance.payment_certificate.view"),
     canEditPaymentCertificate: perm("finance.payment_certificate.edit"),
     canViewVariationOrder:     perm("finance.variation_order.view"),
     canEditVariationOrder:     perm("finance.variation_order.edit"),
-    canAddTeamMember:      isOrgAdmin || perm("settings.team.member.add"),
-    canRemoveTeamMember:   isOrgAdmin || perm("settings.team.member.remove"),
-    canEditTeamMember:     isOrgAdmin || perm("settings.team.member.edit"),
-    canManageAssociatedCompanies: perm("settings.associated_companies.manage"),
-    canAddCompanyMember:          perm("settings.associated_companies.member.add"),
-    canEditCompanyMember:         perm("settings.associated_companies.member.edit"),
   };
 }

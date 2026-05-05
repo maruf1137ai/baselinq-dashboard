@@ -25,7 +25,7 @@ export function useEffectivePermissions(projectId?: number | null) {
       return raw as EffectivePermissions;
     },
     enabled,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 
   return query;

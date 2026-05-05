@@ -7,12 +7,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { RolesTab } from "./permissions";
 
 const TeamManagement = () => {
-  const { canManageTeam, canViewPermissions, canEditPermissions, canManageRoles } = usePermissions();
+  const { canViewSettings, canEditSettings } = usePermissions();
 
   const allTabs = [
-    { id: "Users",            show: canManageTeam },
-    { id: "Role Permissions", show: canViewPermissions },
-    { id: "Custom Roles",     show: canManageRoles },
+    { id: "Users",            show: canViewSettings },
+    { id: "Role Permissions", show: canViewSettings },
+    { id: "Custom Roles",     show: canEditSettings },
     { id: "Approval Chains",  show: true },
     { id: "AI Routing",       show: true },
   ];
@@ -45,7 +45,7 @@ const TeamManagement = () => {
 
       <div className="mt-6">
         {resolvedTab === "Users" && <TeamMembersTable />}
-        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditPermissions} />}
+        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditSettings} />}
         {resolvedTab === "Custom Roles" && <RolesTab />}
         {resolvedTab === "Approval Chains" && <ApprovalChains />}
         {resolvedTab === "AI Routing" && <AiRouting />}

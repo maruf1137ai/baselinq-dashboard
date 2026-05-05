@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink, X } from "lucide-react";
 import AiIcon from "@/components/icons/AiIcon";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
+import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
 
 import { formatMeetingDateTime } from "@/lib/dateUtils";
 import { LifecycleBadge, ArtefactBadge } from "@/components/meetings/MeetingStatusBadges";
@@ -30,6 +31,7 @@ interface MeetingDetail {
   scheduled_utc?: string;
   location: string;
   meeting_link?: string;
+  my_rsvp: RsvpStatus | null;
   summary: { overview: string; sections: { title: string; body: string }[] };
   decisions: Decision[];
   action_items: ActionItem[];
@@ -113,6 +115,7 @@ export default function MeetingDetails() {
   const [startingBot, setStartingBot] = useState(false);
   const { mutateAsync: postRequest } = usePost();
   const { mutateAsync: patchRequest } = usePatch();
+  const { mutate: rsvpMutate, isPending: isRsvping } = useMeetingRsvp(id ?? "");
 
   const { data: meeting, isLoading, isError, refetch } = useFetch<MeetingDetail>(
     id ? `meetings/${id}/` : null,
@@ -241,14 +244,42 @@ export default function MeetingDetails() {
               {isCompleted && <ArtefactBadge artefactStatus={meeting.artefact_status} />}
             </div>
             {(meeting.status === "scheduled" || meeting.status === "starting_soon") && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleStatusUpdate("cancelled")}
-                disabled={statusUpdating}
-              >
-                Cancel Meeting
-              </Button>
+              meeting.my_rsvp === "invited" ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    disabled={isRsvping}
+                    onClick={() => rsvpMutate("accepted", {
+                      onSuccess: () => { toast.success("Meeting accepted"); refetch(); },
+                      onError: () => toast.error("Failed to update RSVP"),
+                    })}
+                    className="gap-1.5 bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Accept
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isRsvping}
+                    onClick={() => rsvpMutate("declined", {
+                      onSuccess: () => { toast.success("Meeting declined"); refetch(); },
+                      onError: () => toast.error("Failed to update RSVP"),
+                    })}
+                    className="gap-1.5 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
+                  >
+                    <X className="h-3.5 w-3.5" /> Decline
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleStatusUpdate("cancelled")}
+                  disabled={statusUpdating}
+                >
+                  Cancel Meeting
+                </Button>
+              )
             )}
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">

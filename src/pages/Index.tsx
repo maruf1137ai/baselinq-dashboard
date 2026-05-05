@@ -26,6 +26,8 @@ import CashIcon from '@/components/icons/CashIcon';
 import Calander2 from '@/components/icons/Calander2';
 import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useMilestonePhaseCosts } from "@/hooks/useMilestones";
+import type { MilestoneWithCost } from "@/hooks/useMilestones";
 import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
 import { hasPermission, COMPANY_TYPES } from "@/lib/roleUtils";
@@ -241,6 +243,9 @@ const Index = () => {
     projectId ? `meetings/?project_id=${projectId}` : "",
     { enabled: !!projectId }
   );
+  const { data: phaseCostsData, isLoading: loadingMilestones } = useMilestonePhaseCosts(projectId || null);
+  const allMilestones: MilestoneWithCost[] = phaseCostsData?.milestones ?? [];
+
   const upcomingMeetings = (
     (Array.isArray(meetingsResponse) ? meetingsResponse : meetingsResponse?.results ?? []) as any[]
   )
@@ -790,6 +795,9 @@ const Index = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Programme Milestones */}
+        <ProgrammeMilestonesCard milestones={allMilestones} isLoading={loadingMilestones} onViewAll={() => navigate("/programme")} />
 
         {/* Recent Documents */}
         <Card>
@@ -1416,5 +1424,136 @@ const Index = () => {
     </DashboardLayout>
   );
 };
+
+const MILESTONE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  planned:     { label: "Planned",     color: "#6B7280", bg: "bg-gray-50",    border: "border-gray-200" },
+  in_progress: { label: "In Progress", color: "#6c5ce7", bg: "bg-primary/5",  border: "border-primary/20" },
+  completed:   { label: "Completed",   color: "#10B981", bg: "bg-emerald-50", border: "border-emerald-200" },
+  delayed:     { label: "Delayed",     color: "#EF4444", bg: "bg-red-50",     border: "border-red-200" },
+};
+
+function milestoneProgress(startDate: string, endDate: string): number {
+  const start = new Date(startDate).getTime();
+  const end   = new Date(endDate).getTime();
+  const now   = Date.now();
+  if (now <= start) return 0;
+  if (now >= end)   return 100;
+  return Math.round(((now - start) / (end - start)) * 100);
+}
+
+function ProgrammeMilestonesCard({
+  milestones,
+  isLoading,
+  onViewAll,
+}: {
+  milestones: MilestoneWithCost[];
+  isLoading: boolean;
+  onViewAll: () => void;
+}) {
+  const statusCounts = (["planned", "in_progress", "completed", "delayed"] as const).map((key) => ({
+    key,
+    count: milestones.filter((m) => m.status === key).length,
+    ...MILESTONE_STATUS_CONFIG[key],
+  })).filter((s) => s.count > 0);
+
+  const visibleMilestones = milestones
+    .filter((m) => m.status !== "completed")
+    .slice(0, 5)
+    .concat(
+      milestones.filter((m) => m.status === "completed").slice(0, Math.max(0, 5 - milestones.filter((m) => m.status !== "completed").length))
+    )
+    .slice(0, 5);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+            <Calander2 />
+          </div>
+          <h3 className="text-sm text-gray2">Programme Milestones</h3>
+        </div>
+        <button
+          onClick={onViewAll}
+          className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group"
+        >
+          View Programme
+          <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </CardHeader>
+      <CardContent className="bg-white p-2 mx-2 rounded-md">
+        {isLoading ? (
+          <AwesomeLoader message="Loading milestones" />
+        ) : milestones.length === 0 ? (
+          <div className="p-4 text-center text-gray-500 text-sm">No programme phases added yet</div>
+        ) : (
+          <>
+            {/* Status count chips */}
+            {statusCounts.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap px-2 pt-2 pb-3">
+                {statusCounts.map(({ key, count, label, color, bg, border }) => (
+                  <span
+                    key={key}
+                    className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${bg} ${border}`}
+                    style={{ color }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    {count} {label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Milestone rows */}
+            <div className="divide-y divide-border/50">
+              {visibleMilestones.map((m) => {
+                const cfg = MILESTONE_STATUS_CONFIG[m.status] ?? MILESTONE_STATUS_CONFIG.planned;
+                const pct = milestoneProgress(m.startDate, m.endDate);
+                const start = new Date(m.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                const end   = new Date(m.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" });
+                return (
+                  <div key={m._id} className="flex items-center gap-3 px-2 py-3">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <p className="text-sm text-foreground truncate">{m.name}</p>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full border shrink-0 ${cfg.bg} ${cfg.border}`}
+                          style={{ color: cfg.color }}
+                        >
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: cfg.color, opacity: 0.7 }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                          {start} – {end}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {milestones.length > 5 && (
+              <button
+                onClick={onViewAll}
+                className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                +{milestones.length - 5} more phases — View Programme
+              </button>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default Index;

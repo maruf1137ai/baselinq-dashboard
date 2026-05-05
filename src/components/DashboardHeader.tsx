@@ -2,20 +2,115 @@
 
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, Search, Wand2, Command, X, LogOut, Trash2 } from "lucide-react";
+import { Bell, Check, X, LogOut, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreateDocumentDialog } from "./header/createDocument";
 import CreateRequestButton from "./header/CreateRequestButton";
-import AskAI from "./icons/AskAI";
 import AiButton from "./AiButton";
-import WeatherWidget from "./NavbarWeather";
 import NavbarWeather from "./NavbarWeather";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useLogout } from "@/hooks/useLogout";
+import { useMeetingRsvp } from "@/hooks/useMeetingRsvp";
+import useFetch from "@/hooks/useFetch";
+import { toast } from "sonner";
+
+function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
+  const { mutate, isPending } = useMeetingRsvp(meetingId);
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <button
+        disabled={isPending}
+        onClick={(e) => {
+          e.stopPropagation();
+          mutate("accepted", {
+            onSuccess: () => toast.success("Meeting accepted"),
+            onError: () => toast.error("Failed to update RSVP"),
+          });
+        }}
+        className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
+      >
+        <Check className="h-3 w-3" /> Accept
+      </button>
+      <button
+        disabled={isPending}
+        onClick={(e) => {
+          e.stopPropagation();
+          mutate("declined", {
+            onSuccess: () => toast.success("Meeting declined"),
+            onError: () => toast.error("Failed to update RSVP"),
+          });
+        }}
+        className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+      >
+        <X className="h-3 w-3" /> Decline
+      </button>
+    </div>
+  );
+}
+
+function NotificationItem({
+  item,
+  onNavigate,
+  onDelete,
+}: {
+  item: any;
+  onNavigate: (item: any) => void;
+  onDelete: (id: string) => void;
+}) {
+  const meetingId: number | undefined = item.data?.meeting_id;
+  const isMeetingInvite = item.type === "meeting_invited" && !!meetingId;
+
+  // Always call useFetch (hooks can't be conditional); disable when not a meeting invite
+  const { data: meetingData } = useFetch<{ my_rsvp: string | null }>(
+    isMeetingInvite ? `meetings/${meetingId}/` : "",
+    { enabled: isMeetingInvite, staleTime: 30000 }
+  );
+
+  // Hide buttons once the user has responded (fetched from server, survives panel close/reopen)
+  const alreadyRsvpd = meetingData?.my_rsvp === "accepted" || meetingData?.my_rsvp === "declined";
+  const showRsvp = isMeetingInvite && !alreadyRsvpd;
+
+  return (
+    <div
+      className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}
+    >
+      <button
+        onClick={() => onNavigate(item)}
+        className="w-full text-left p-4 pr-10"
+      >
+        <div className="flex items-start gap-3">
+          {!item.isRead && (
+            <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-foreground">{item.title}</p>
+            <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+            </p>
+            {showRsvp && (
+              <MeetingRsvpButtons meetingId={meetingId!} />
+            )}
+          </div>
+        </div>
+      </button>
+      <button
+        type="button"
+        aria-label="Delete notification"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(item._id);
+        }}
+        className="absolute right-2 top-3 p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-opacity"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export function DashboardHeader() {
   const [open, setOpen] = useState(false);
@@ -147,39 +242,12 @@ export function DashboardHeader() {
             </div>
           ) : (
             notifications.map((item) => (
-              <div
+              <NotificationItem
                 key={item._id}
-                className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}
-              >
-                <button
-                  onClick={() => handleNotificationClick(item)}
-                  className="w-full text-left p-4 pr-10"
-                >
-                  <div className="flex items-start gap-3">
-                    {!item.isRead && (
-                      <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
-                    )}
-                    <div>
-                      <p className="text-sm text-foreground">{item.title}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  aria-label="Delete notification"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteNotification(item._id);
-                  }}
-                  className="absolute right-2 top-3 p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-opacity"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+                item={item}
+                onNavigate={handleNotificationClick}
+                onDelete={deleteNotification}
+              />
             ))
           )}
         </ScrollArea>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { LocationMap } from "@/components/LocationMap";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { MapPin } from "lucide-react";
 
 const Site = () => {
   const { data: projects = [], isLoading } = useProjects();
@@ -15,7 +16,8 @@ const Site = () => {
   const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
 
   const [siteAddress, setSiteAddress] = useState("");
-  const [coordinates, setCoordinates] = useState({ lat: -33.9249, lng: 18.4241 });
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [hasLocation, setHasLocation] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
@@ -34,7 +36,9 @@ const Site = () => {
       setSiteAddress(project.location || "");
       if (project.coordinates?.lat && project.coordinates?.lng) {
         setCoordinates(project.coordinates);
+        setHasLocation(true);
       } else if (project.location) {
+        setHasLocation(true);
         // No saved coordinates — geocode the location string to place the map correctly
         fetch(
           `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(project.location)}`
@@ -49,6 +53,9 @@ const Site = () => {
             }
           })
           .catch(() => {});
+      } else {
+        setCoordinates(null);
+        setHasLocation(false);
       }
     }
     setIsDirty(false);
@@ -68,6 +75,7 @@ const Site = () => {
 
   const handleLocationChange = (lat: number, lng: number) => {
     setCoordinates({ lat, lng });
+    setHasLocation(true);
     reverseGeocode(lat, lng);
     setIsDirty(true);
   };
@@ -78,7 +86,7 @@ const Site = () => {
       return;
     }
     updateProject(
-      { id: currentProject._id, name: currentProject.name, location: siteAddress, coordinates },
+      { id: currentProject._id, name: currentProject.name, location: siteAddress, coordinates: coordinates ?? undefined },
       {
         onSuccess: () => {
           toast.success("Site settings saved");
@@ -120,12 +128,30 @@ const Site = () => {
         )}
       </div>
 
+      {/* No location banner */}
+      {!hasLocation && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+          <MapPin className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-normal text-amber-800">No site location added</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Click anywhere on the map below to pin your project site. The address will auto-fill, and site weather in the navigation bar will update to reflect your project location.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Map */}
       <div className="mb-6">
-        <LocationMap coordinates={coordinates} onLocationChange={handleLocationChange} />
+        <LocationMap
+          coordinates={coordinates ?? { lat: -33.9249, lng: 18.4241 }}
+          onLocationChange={handleLocationChange}
+        />
         <div className="mt-2 px-4 py-3 bg-muted rounded-lg border border-border">
           <p className="text-sm text-muted-foreground">
-            Click on the map or drag the marker to set site coordinates
+            {hasLocation
+              ? "Click on the map or drag the marker to update site coordinates"
+              : "Click anywhere on the map to set your project site location"}
           </p>
         </div>
       </div>
@@ -152,7 +178,7 @@ const Site = () => {
             Coordinates (Lat, Long)
           </label>
           <Input
-            value={coordinates.lat && coordinates.lng ? `${coordinates.lat}, ${coordinates.lng}` : ""}
+            value={coordinates ? `${coordinates.lat}, ${coordinates.lng}` : ""}
             readOnly
             placeholder="Set via map"
             className="w-full bg-muted cursor-default text-muted-foreground"

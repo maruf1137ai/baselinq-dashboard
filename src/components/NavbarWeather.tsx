@@ -62,6 +62,7 @@ const geocodeAddress = async (address: string): Promise<{ lat: number; lon: numb
 const NavbarWeather = () => {
   const [weather, setWeather] = useState<any>(null);
   const [hovered, setHovered] = useState(false);
+  const [fromProjectLocation, setFromProjectLocation] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => localStorage.getItem("selectedProjectId")
   );
@@ -78,17 +79,6 @@ const NavbarWeather = () => {
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
-  const fetchByGeolocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const data = await fetchWeatherByCoords(coords.latitude, coords.longitude);
-        if (data) setWeather(data);
-      },
-      () => {}
-    );
-  };
-
   useEffect(() => {
     if (projectsLoading) return;
     const run = async () => {
@@ -97,16 +87,18 @@ const NavbarWeather = () => {
           currentProject.coordinates.lat,
           currentProject.coordinates.lng
         );
-        if (data) { setWeather(data); return; }
+        if (data) { setWeather(data); setFromProjectLocation(true); return; }
       }
       if (currentProject?.location) {
         const coords = await geocodeAddress(currentProject.location);
         if (coords) {
           const data = await fetchWeatherByCoords(coords.lat, coords.lon);
-          if (data) { setWeather(data); return; }
+          if (data) { setWeather(data); setFromProjectLocation(true); return; }
         }
       }
-      fetchByGeolocation();
+      // No project location — don't show weather
+      setWeather(null);
+      setFromProjectLocation(false);
     };
     run();
   }, [currentProject, projectsLoading]);
@@ -146,6 +138,9 @@ const NavbarWeather = () => {
             <div>
               <p className="font-medium text-foreground">{weather.name}</p>
               <p className="text-muted-foreground capitalize text-xs">{description}</p>
+              {fromProjectLocation && (
+                <p className="text-[10px] text-primary/70 mt-0.5">Site weather</p>
+              )}
             </div>
           </div>
           <div className="space-y-1.5 text-xs text-foreground">

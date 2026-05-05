@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -34,13 +33,11 @@ import Help from "./icons/Help";
 import Document2 from "./icons/Document2";
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
-import { deleteProject, fetchData } from "@/lib/Api";
-import { toast } from "sonner";
+import { fetchData } from "@/lib/Api";
 import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
-import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 
 const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
@@ -63,12 +60,10 @@ const settingsItems: { title: string; url: string; icon: React.ReactElement; per
 export function DashboardSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser(); // Django auth hook
-  const { can } = usePermissions();
-  const { data: projectsData, isLoading, refetch } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
+  const { can, canViewSettings } = usePermissions();
+  const { data: projectsData, isLoading } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
-  const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
   const { setUserRole, clearUserRole } = useUserRoleStore();
@@ -179,14 +174,12 @@ export function DashboardSidebar() {
     localStorage.setItem("selectedProjectId", pId);
     localStorage.setItem("projectLocation", project?.location || "");
 
-    // Fetch user role for the selected project
-    if (user?.id) {
-      await fetchUserRole(pId, user.id);
-    }
-
     window.dispatchEvent(new Event("project-change"));
-    setIsSwitchingProject(true);
     navigate("/");
+
+    if (user?.id) {
+      fetchUserRole(pId, user.id);
+    }
   };
 
   const selectedProject = projects.find((p: any) => (p._id || p.id) === selectedProjectId);
@@ -200,7 +193,6 @@ export function DashboardSidebar() {
 
   return (
     <>
-      {isSwitchingProject && <AwesomeLoader fullPage message="Switching Project" />}
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
           <div className="p-4">
@@ -356,7 +348,7 @@ export function DashboardSidebar() {
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {settingsItems.filter((item) => !item.permission || can(item.permission)).map((item) => {
+                      {settingsItems.filter((item) => !item.permission || (item.permission === "viewSettings" ? canViewSettings : can(item.permission))).map((item) => {
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                         return (
                           <SidebarMenuItem key={item.title}>
