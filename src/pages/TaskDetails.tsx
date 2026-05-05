@@ -1524,8 +1524,8 @@ export default function TaskDetails() {
               )}
 
 
-              {/* Response Form — hidden when locked, hidden for creator until a response exists */}
-              {!isTaskLocked && (!canApprove || displayTask.responses?.length > 0) && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
+              {/* Response Form — hidden only when the task is locked */}
+              {!isTaskLocked && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   {displayTask.type === "RFI"
                     ? "Response"
