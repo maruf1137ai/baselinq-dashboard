@@ -91,6 +91,18 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          {/* General project chat — no task context. :sessionId is optional;
+              when absent the page initialises a new session. */}
+          <Route
+            path="/ai-workspace/project/:projectId/:sessionId?"
+            element={
+              <ProtectedRoute>
+                <ProjectProtectedRoute>
+                  <AiWorkSpace />
+                </ProjectProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/communications"
             element={
