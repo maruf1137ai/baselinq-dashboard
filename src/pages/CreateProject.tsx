@@ -2842,7 +2842,7 @@ export default function CreateProject() {
       <AlertDialog open={showLocationWarning} onOpenChange={setShowLocationWarning}>
         <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[15px] font-semibold text-[#101828]">
+            <AlertDialogTitle className="text-[15px] font-normal text-[#101828]">
               Are you sure about your project location?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -2916,7 +2916,7 @@ export default function CreateProject() {
       <AlertDialog open={showEmptyLocationWarning} onOpenChange={setShowEmptyLocationWarning}>
         <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[15px] font-semibold text-[#101828]">
+            <AlertDialogTitle className="text-[15px] font-normal text-[#101828]">
               No project location added
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
