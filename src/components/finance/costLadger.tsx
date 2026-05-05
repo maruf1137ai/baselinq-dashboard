@@ -174,8 +174,8 @@ const CostLadger = () => {
 
   // Use permission matrix instead of hardcoded true
   const projectIdNum = parseInt(projectId) || null;
-  const canEdit = usePermission("finance.edit_budget", projectIdNum);
-  const canCreate = usePermission("finance.edit_budget", projectIdNum);
+  const canEdit = usePermission("finance.edit", projectIdNum);
+  const canCreate = usePermission("finance.edit", projectIdNum);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

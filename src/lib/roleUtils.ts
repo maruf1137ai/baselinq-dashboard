@@ -115,6 +115,9 @@ export const PERMISSIONS = {
   editProject: ["CLIENT", "CPM", "PM", "CM"],
   // Task actions
   createTasks: ["CLIENT", "CPM", "PM", "CM", "ARCH", "CQS", "CONTRACTS_MGR", "CONS_PLANNER", "PLANNER"],
+  // Meeting actions
+  scheduleMeeting: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS", "ARCH"],
+  updateMeeting:   ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS", "ARCH"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

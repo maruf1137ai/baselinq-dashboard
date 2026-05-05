@@ -234,10 +234,10 @@ const App = () => (
             <Route index element={<TeamManagement />} />
             <Route path="associated-companies" element={<AssociatedCompanies />} />
             <Route path="project-details" element={
-              <RoleRoute permission="manageSettings"><ProjectDetails /></RoleRoute>
+              <RoleRoute permission="viewSettings"><ProjectDetails /></RoleRoute>
             } />
             <Route path="site" element={
-              <RoleRoute permission="manageSettings"><Site /></RoleRoute>
+              <RoleRoute permission="viewSettings"><Site /></RoleRoute>
             } />
             <Route path="notifications" element={<Notifications />} />
             <Route path="billing" element={

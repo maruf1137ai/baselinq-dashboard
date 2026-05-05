@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { LocationMap } from "@/components/LocationMap";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { MapPin } from "lucide-react";
+import { MapPin, Lock } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const Site = () => {
+  const { canEditProject } = usePermissions();
   const { data: projects = [], isLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState(() =>
     localStorage.getItem("selectedProjectId") || ""
@@ -74,6 +76,7 @@ const Site = () => {
   };
 
   const handleLocationChange = (lat: number, lng: number) => {
+    if (!canEditProject) return;
     setCoordinates({ lat, lng });
     setHasLocation(true);
     reverseGeocode(lat, lng);
@@ -81,6 +84,7 @@ const Site = () => {
   };
 
   const handleSave = () => {
+    if (!canEditProject) return;
     if (!currentProject) {
       toast.error("No project selected");
       return;
@@ -117,14 +121,21 @@ const Site = () => {
             Manage site location, photos, and environmental settings.
           </p>
         </div>
-        {isDirty && (
-          <Button
-            onClick={handleSave}
-            disabled={isUpdatingProject}
-            className="bg-primary text-white hover:opacity-90 rounded-lg h-9 px-4 font-normal"
-          >
-            {isUpdatingProject ? "Saving..." : "Save Details"}
-          </Button>
+        {canEditProject ? (
+          isDirty && (
+            <Button
+              onClick={handleSave}
+              disabled={isUpdatingProject}
+              className="bg-primary text-white hover:opacity-90 rounded-lg h-9 px-4 font-normal"
+            >
+              {isUpdatingProject ? "Saving..." : "Save Details"}
+            </Button>
+          )
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Read-only access</span>
+          </div>
         )}
       </div>
 
@@ -164,9 +175,10 @@ const Site = () => {
           <label className="block text-sm font-normal text-foreground mb-2">Site Address</label>
           <Input
             value={siteAddress}
-            onChange={(e) => { setSiteAddress(e.target.value); setIsDirty(true); }}
+            readOnly={!canEditProject}
+            onChange={(e) => { if (!canEditProject) return; setSiteAddress(e.target.value); setIsDirty(true); }}
             placeholder="123 Main Street, Cape Town, South Africa"
-            className="w-full"
+            className={`w-full ${!canEditProject ? "bg-slate-50/50 cursor-not-allowed" : ""}`}
           />
           <p className="text-xs text-muted-foreground/50 mt-1">
             Auto-filled when you pin a location on the map. Editable.

@@ -39,43 +39,15 @@ import useFetch from "@/hooks/useFetch";
 
 const PERM_DESCRIPTIONS: Record<string, string> = {
   // Settings
-  "settings.view": "Can open and read everything in the Settings section (team, roles, permissions, billing)",
-  "settings.edit": "Can manage everything in Settings — add/remove team members, edit roles, change permissions, billing, integrations",
-  // Documents — upload
-  "document.upload.contract":               "Can upload main contract documents",
-  "document.upload.contract_agreement":     "Can upload contract agreement documents",
-  "document.upload.drawing":                "Can upload architectural and engineering drawings",
-  "document.upload.specification":          "Can upload project specifications",
-  "document.upload.report":                 "Can upload reports and assessments",
-  "document.upload.certificate":            "Can upload general certificates",
-  "document.upload.certificate.payment":    "Can upload payment certificates",
-  "document.upload.certificate.test":       "Can upload test and inspection certificates",
-  "document.upload.certificate.insurance":  "Can upload insurance certificates",
-  "document.upload.certificate.compliance": "Can upload compliance certificates",
-  // Documents — download
-  "document.download.contract":             "Can download contract documents",
-  "document.download.contract_agreement":   "Can download contract agreement documents",
-  "document.download.certificate.payment":  "Can download payment certificates",
-  "document.download.certificate.insurance":"Can download insurance certificates",
-  // Documents — status
-  "document.status.gate":    "Can lock a document to prevent further changes",
-  "document.status.ungate":  "Can unlock a gated document",
-  "document.status.archive": "Can archive documents",
-  "document.status.restore": "Can restore archived documents",
-  // Documents — edit / delete / version
-  "document.edit.any":           "Can edit details of any document",
-  "document.delete.any":         "Can delete any document",
-  "document.delete.unlinked":    "Can delete documents not linked to a task",
-  "document.version.upload.any": "Can upload new versions of any document",
-  // Documents — findings & AI
-  "document.findings.create":      "Can create findings or issues on a document",
-  "document.findings.resolve.any": "Can mark findings as resolved",
-  "document.ai.retrigger":         "Can re-run AI analysis on a document",
-  // Documents — AI chat
-  "document.chat.contract":      "Can use AI chat on contract documents",
-  "document.chat.drawing":       "Can use AI chat on drawings",
-  "document.chat.specification": "Can use AI chat on specifications",
-  "document.chat.certificate":   "Can use AI chat on certificates",
+  "settings.view": "View-only access to every page in Settings, including project details. Cannot add, edit or delete anything.",
+  "settings.edit": "Edit everything in Settings — team, roles, permissions, billing, integrations. Does NOT include editing project details.",
+  "project.edit":  "View AND update project details (Project Details + Site Settings pages under Settings).",
+  // Documents
+  "document.view":   "Read and download any document in the project.",
+  "document.upload": "Upload new documents and new versions of existing documents.",
+  "document.edit":   "Edit document metadata, manage findings, AI chat and analysis.",
+  "document.delete": "Delete documents from the project.",
+  "document.manage": "Change document status — gate, un-gate, archive, restore.",
   // Tasks — creation
   "task.create":     "Can create tasks (general access gate)",
   "task.vo.create":  "Can create Variation Order (VO) tasks",
@@ -88,31 +60,30 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   "task.vo.recommend": "Can recommend a priced VO to the client for approval",
   "task.vo.approve":   "Can give final sign-off on a recommended VO",
   // Finance
-  "finance.view":                      "Can access the Finance module",
-  "finance.cost_ledger.view":          "Can open the Cost Ledger tab",
-  "finance.cost_ledger.edit":          "Can add and edit cost ledger entries",
-  "finance.payment_certificate.view":  "Can open the Payment Certificates tab",
-  "finance.payment_certificate.edit":  "Can create and edit payment certificates",
-  "finance.variation_order.view":      "Can open the Variation Orders tab",
-  "finance.variation_order.edit":      "Can create and edit variation orders",
+  "finance.view":            "View-only access to every Finance page — Cost Ledger, Payment Certificates, Variation Orders, project budget.",
+  "finance.edit":            "Edit everything in Finance — cost ledger entries, payment certificates, variation orders, project budget.",
+  "finance.approve_payment": "Final sign-off authority on payment certificates. Independent of edit access.",
+  // Meetings
+  "meeting.schedule": "Can schedule new meetings. Without this, the Schedule Meeting button is hidden.",
+  "meeting.update":   "Can update meeting status — cancel, mark completed, mark cancelled, confirm no-show.",
   // Project
   "project.create": "Can create new projects",
-  "project.edit":   "Can edit project details and configuration",
 };
 
 // If a parent permission is OFF, its children are meaningless — disable them in the UI
 const PERMISSION_PARENTS: Record<string, string> = {
-  // settings.edit requires settings.view (edit implies view)
+  // Both settings.edit and project.edit are children of settings.view. Project
+  // details lives under Settings, so without view access neither edit makes sense.
   "settings.edit":  "settings.view",
-  // project edit is a settings-level action
   "project.edit":   "settings.view",
-  // Finance parent-child
-  "finance.cost_ledger.view":         "finance.view",
-  "finance.cost_ledger.edit":         "finance.cost_ledger.view",
-  "finance.payment_certificate.view": "finance.view",
-  "finance.payment_certificate.edit": "finance.payment_certificate.view",
-  "finance.variation_order.view":     "finance.view",
-  "finance.variation_order.edit":     "finance.variation_order.view",
+  // Finance: edit + approve both depend on view (can't edit/approve what you can't see)
+  "finance.edit":            "finance.view",
+  "finance.approve_payment": "finance.view",
+  // Documents: every action hangs off view (can't act on what you can't see)
+  "document.upload": "document.view",
+  "document.edit":   "document.view",
+  "document.delete": "document.view",
+  "document.manage": "document.view",
   // Tasks
   "task.vo.create":    "task.create",
   "task.si.create":    "task.create",
@@ -502,13 +473,18 @@ function MatrixGrid({
       "settings.edit":  1,
       "project.edit":   2,
       // Finance
-      "finance.view":                        0,
-      "finance.cost_ledger.view":            1,
-      "finance.cost_ledger.edit":            2,
-      "finance.payment_certificate.view":    3,
-      "finance.payment_certificate.edit":    4,
-      "finance.variation_order.view":        5,
-      "finance.variation_order.edit":        6,
+      "finance.view":            0,
+      "finance.edit":            1,
+      "finance.approve_payment": 2,
+      // Meeting
+      "meeting.schedule": 0,
+      "meeting.update":   1,
+      // Document
+      "document.view":   0,
+      "document.upload": 1,
+      "document.edit":   2,
+      "document.delete": 3,
+      "document.manage": 4,
       // Task
       "task.create":    0,
     };
@@ -757,7 +733,7 @@ function MatrixGrid({
                   <tbody>
                     {perms.map((perm) => (
                         <tr key={perm.code} className="border-t border-border hover:bg-muted/20">
-                          <td className="sticky left-0 z-10 bg-white px-4 py-2 border-r border-border">
+                          <td className="sticky left-0 z-20 bg-white px-4 py-2 border-r border-border">
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm">{perm.label}</span>
                               {(perm.description || PERM_DESCRIPTIONS[perm.code]) && (
@@ -766,7 +742,7 @@ function MatrixGrid({
                                     <TooltipTrigger asChild>
                                       <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
                                     </TooltipTrigger>
-                                    <TooltipContent side="right" className="max-w-[260px] text-xs leading-relaxed">
+                                    <TooltipContent side="top" align="start" sideOffset={6} className="max-w-[280px] text-xs leading-relaxed z-[200]">
                                       {perm.description || PERM_DESCRIPTIONS[perm.code]}
                                     </TooltipContent>
                                   </Tooltip>

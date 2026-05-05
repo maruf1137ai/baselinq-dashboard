@@ -15,6 +15,7 @@ import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
 import { formatMeetingDateTime } from "@/lib/dateUtils";
 import { LifecycleBadge, ArtefactBadge } from "@/components/meetings/MeetingStatusBadges";
 import type { LifecycleStatus, ArtefactStatus } from "@/components/meetings/MeetingStatusBadges";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
@@ -84,6 +85,7 @@ const TASK_CONFIGS = [
 
 export default function MeetingDetails() {
   const { id } = useParams<{ id: string }>();
+  const { canUpdateMeeting } = usePermissions();
   const [showTranscript, setShowTranscript] = useState(false);
   const [approvingIndex, setApprovingIndex] = useState<number | null>(null);
   const [aiNotesOpen, setAiNotesOpen] = useState(false);
@@ -270,7 +272,7 @@ export default function MeetingDetails() {
                     <X className="h-3.5 w-3.5" /> Decline
                   </Button>
                 </div>
-              ) : (
+              ) : canUpdateMeeting ? (
                 <Button
                   variant="destructive"
                   size="sm"
@@ -279,7 +281,7 @@ export default function MeetingDetails() {
                 >
                   Cancel Meeting
                 </Button>
-              )
+              ) : null
             )}
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
@@ -522,7 +524,7 @@ export default function MeetingDetails() {
         )}
 
         {/* Pending outcome — no_show */}
-        {meeting.status === "no_show" && !outcomeDismissed && (
+        {meeting.status === "no_show" && !outcomeDismissed && canUpdateMeeting && (
           <div className="p-6 border border-amber-200 bg-amber-50 rounded-lg">
             <p className="text-sm font-medium text-amber-800 mb-1">Awaiting outcome</p>
             <p className="text-sm text-amber-700 mb-4">The scheduled time has passed. What happened with this meeting?</p>

@@ -54,18 +54,12 @@ const formatDate = (dateStr: string): string => {
 };
 
 const Finance = () => {
-  const {
-    canViewCostLedger,
-    canViewPaymentCertificate,
-    canViewVariationOrder,
-    canEditVariationOrder,
-  } = usePermissions();
+  const { canViewFinance, canEditFinance } = usePermissions();
+  const canEditVariationOrder = canEditFinance;
 
-  const visibleTabs = [
-    canViewCostLedger         && "Cost Ledger",
-    canViewPaymentCertificate && "Payment Certificates",
-    canViewVariationOrder     && "Variation Orders",
-  ].filter(Boolean) as string[];
+  const visibleTabs = canViewFinance
+    ? ["Cost Ledger", "Payment Certificates", "Variation Orders"]
+    : [];
 
   const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

@@ -5,29 +5,39 @@ import { PermissionKey } from "@/lib/roleUtils";
 /**
  * Central permissions hook — backed by the DB permission matrix.
  *
- * Settings are gated by two codes only:
- *   settings.view  → read-only access to everything in Settings
- *   settings.edit  → full edit access to everything in Settings
+ * Settings are gated by three codes:
+ *   settings.view  → read-only access to every page in Settings (incl. project details)
+ *   settings.edit  → edit everything in Settings EXCEPT project details
+ *   project.edit   → view AND update project details (Project Details + Site Settings)
  *
- * All legacy flag names are preserved so existing components need no changes.
- * While permissions are loading, all flags return `true` to prevent false
- * redirects during page reload before auth data is available.
+ * Finance is gated by three codes:
+ *   finance.view             → read-only access to every Finance page
+ *   finance.edit             → edit everything in Finance (cost ledger, payment certs, VOs, budget)
+ *   finance.approve_payment  → final sign-off on payment certificates (independent)
+ *
+ * Some legacy flag names map to multiple codes (OR semantics) so the right
+ * users can still pass route gates. While permissions are loading, all flags
+ * return `true` to prevent false redirects during page reload.
  */
 
-const FLAG_TO_CODE: Record<PermissionKey, string> = {
+// A flag may resolve to a single permission code (AND), or an array (OR).
+const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
+  // Module access
   viewCompliance:      "compliance.view",
   viewFinance:         "finance.view",
   viewAudit:           "audit.view",
   viewProgramme:       "programme.view",
-  viewSettings:        "settings.view",
+  // Settings — page-level access: any of the 3 settings codes grants entry
+  viewSettings:        ["settings.view", "settings.edit", "project.edit"],
   editSettings:        "settings.edit",
-  // Legacy settings flags — all resolve to the 2 new codes
+  // Settings — read-only views: settings.view OR settings.edit (NOT project.edit alone)
+  viewBilling:         ["settings.view", "settings.edit"],
+  viewPermissions:     ["settings.view", "settings.edit"],
+  // Settings — edit-anything-non-project actions: settings.edit only
   editTeamRoles:       "settings.edit",
   manageTeam:          "settings.edit",
   manageSettings:      "settings.edit",
-  viewBilling:         "settings.edit",
   manageIntegrations:  "settings.edit",
-  viewPermissions:     "settings.view",
   editPermissions:     "settings.edit",
   manageRoles:         "settings.edit",
   addTeamMember:       "settings.edit",
@@ -36,16 +46,21 @@ const FLAG_TO_CODE: Record<PermissionKey, string> = {
   manageAssociatedCompanies: "settings.edit",
   addCompanyMember:          "settings.edit",
   editCompanyMember:         "settings.edit",
-  // Non-settings flags unchanged
+  // Project
   createProject:       "project.create",
   editProject:         "project.edit",
+  // Tasks
   createTasks:         "task.create",
-  viewCostLedger:         "finance.cost_ledger.view",
-  editCostLedger:         "finance.cost_ledger.edit",
-  viewPaymentCertificate: "finance.payment_certificate.view",
-  editPaymentCertificate: "finance.payment_certificate.edit",
-  viewVariationOrder:     "finance.variation_order.view",
-  editVariationOrder:     "finance.variation_order.edit",
+  // Meetings — 2 codes
+  scheduleMeeting:     "meeting.schedule",
+  updateMeeting:       "meeting.update",
+  // Finance — legacy sub-tab flags now collapse to finance.view / finance.edit
+  viewCostLedger:         "finance.view",
+  editCostLedger:         "finance.edit",
+  viewPaymentCertificate: "finance.view",
+  editPaymentCertificate: "finance.edit",
+  viewVariationOrder:     "finance.view",
+  editVariationOrder:     "finance.edit",
 };
 
 export function usePermissions() {
@@ -67,12 +82,21 @@ export function usePermissions() {
 
   const can = (permission: PermissionKey): boolean => {
     const code = FLAG_TO_CODE[permission];
-    return perm(code);
+    if (Array.isArray(code)) return code.some((c) => perm(c));
+    return perm(code as string);
   };
 
-  // settings.edit implies settings.view — check both so edit-tier users can always see settings
-  const canViewSettings = perm("settings.view") || perm("settings.edit");
+  // Composite settings flags
+  const canViewSettings = perm("settings.view") || perm("settings.edit") || perm("project.edit");
   const canEditSettings = isOrgAdmin || perm("settings.edit");
+  const canEditProject  = isOrgAdmin || perm("project.edit");
+  // Read access to non-project settings sub-pages (billing, permissions, etc.)
+  const canReadSettingsCore = perm("settings.view") || perm("settings.edit");
+
+  // Finance flags — edit implies view
+  const canViewFinance     = perm("finance.view") || perm("finance.edit");
+  const canEditFinance     = isOrgAdmin || perm("finance.edit");
+  const canApprovePayment  = isOrgAdmin || perm("finance.approve_payment");
 
   return {
     isLoading,
@@ -80,19 +104,19 @@ export function usePermissions() {
     can,
     // Module access
     canViewCompliance:     perm("compliance.view"),
-    canViewFinance:        perm("finance.view"),
     canViewAudit:          perm("audit.view"),
     canViewProgramme:      perm("programme.view"),
-    // Settings — 2 primary flags
+    // Settings — 3 primary flags
     canViewSettings,
     canEditSettings,
-    // Legacy flags — all map to the 2 new settings codes
+    canEditProject,
+    // Legacy settings flags
     canEditTeamRoles:      canEditSettings,
     canManageTeam:         canEditSettings,
     canManageSettings:     canEditSettings,
-    canViewBilling:        canEditSettings,
+    canViewBilling:        canReadSettingsCore,
     canManageIntegrations: canEditSettings,
-    canViewPermissions:    canViewSettings,
+    canViewPermissions:    canReadSettingsCore,
     canEditPermissions:    canEditSettings,
     canManageRoles:        canEditSettings,
     canAddTeamMember:      canEditSettings,
@@ -103,15 +127,21 @@ export function usePermissions() {
     canEditCompanyMember:         canEditSettings,
     // Project
     canCreateProject:      perm("project.create"),
-    canEditProject:        isOrgAdmin || perm("project.edit"),
     // Tasks
     canCreateTasks:        perm("task.create"),
-    // Finance
-    canViewCostLedger:         perm("finance.cost_ledger.view"),
-    canEditCostLedger:         perm("finance.cost_ledger.edit"),
-    canViewPaymentCertificate: perm("finance.payment_certificate.view"),
-    canEditPaymentCertificate: perm("finance.payment_certificate.edit"),
-    canViewVariationOrder:     perm("finance.variation_order.view"),
-    canEditVariationOrder:     perm("finance.variation_order.edit"),
+    // Meetings — 2 flags
+    canScheduleMeeting:    isOrgAdmin || perm("meeting.schedule"),
+    canUpdateMeeting:      isOrgAdmin || perm("meeting.update"),
+    // Finance — 3 primary flags
+    canViewFinance,
+    canEditFinance,
+    canApprovePayment,
+    // Legacy finance flags — all collapse to view/edit
+    canViewCostLedger:         canViewFinance,
+    canEditCostLedger:         canEditFinance,
+    canViewPaymentCertificate: canViewFinance,
+    canEditPaymentCertificate: canEditFinance,
+    canViewVariationOrder:     canViewFinance,
+    canEditVariationOrder:     canEditFinance,
   };
 }
