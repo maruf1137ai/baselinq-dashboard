@@ -58,7 +58,12 @@ function SessionLabel({ label }: { label: string }) {
 
 interface ChatSession {
   id: number;
-  taskId: number;
+  /** 'task' = bound to a single task; 'project' = general project chat. */
+  kind?: 'task' | 'project';
+  /** Present on task chats only. */
+  taskId?: number;
+  /** Present on project chats only. */
+  projectId?: number;
   taskTypeSlug: string;
   taskType: string;
   label: string;
@@ -80,7 +85,13 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
   const { taskId: currentTaskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
 
-  const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>("ai_analysis/chat-sessions/");
+  // Scope chat history to the selected project so a user working across
+  // multiple projects doesn't see Project A's chats while in Project B.
+  const projectId = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
+  const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>(
+    projectId ? `ai_analysis/chat-sessions/?project_id=${projectId}` : 'ai_analysis/chat-sessions/',
+    { enabled: !!projectId }
+  );
 
   const sessions = sessionsData?.sessions || [];
 
@@ -116,7 +127,17 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
         <div className="flex items-center justify-between gap-2">
           <button
             className="w-full rounded-lg flex items-center justify-center h-10 bg-white border border-border text-foreground text-sm font-medium gap-2 hover:bg-muted"
-            onClick={onNewChat}>
+            onClick={() => {
+              // "+ New Chat" starts a fresh general project chat. The project
+              // route (no sessionId) triggers backend init, which assigns a
+              // new session id and redirects the URL.
+              if (projectId) {
+                onNewChat();
+                navigate(`/ai-workspace/project/${projectId}`);
+              }
+            }}
+            disabled={!projectId}
+          >
             <Plus className="h-4 w-4" />
             New Chat
           </button>
@@ -144,13 +165,19 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                       {group.period}
                     </h3>
                     <div className="space-y-0.5">
-                      {group.items.map((session) => (
+                      {group.items.map((session) => {
+                        const isProjectChat = session.kind === 'project';
+                        const targetUrl = isProjectChat
+                          ? `/ai-workspace/project/${session.projectId}/${session.id}`
+                          : `/ai-workspace/${session.taskTypeSlug}/${session.taskId}`;
+                        const isActive = !isProjectChat && currentTaskId === String(session.taskId);
+                        return (
                         <div
                           key={session.id}
-                          className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${currentTaskId === String(session.taskId)
+                          className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${isActive
                             ? "bg-sidebar border-border"
                             : ""
-                            }`} onClick={() => navigate(`/ai-workspace/${session.taskTypeSlug}/${session.taskId}`)}>
+                            }`} onClick={() => navigate(targetUrl)}>
                           <SessionLabel label={session.label} />
                           {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -187,7 +214,8 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                           </DropdownMenuContent>
                         </DropdownMenu> */}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

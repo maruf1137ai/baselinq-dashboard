@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowUp, FileText, Globe, PanelLeft } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Clip from '@/components/icons/Clip';
@@ -33,7 +34,17 @@ interface Message {
 
 
 const AiWorkSpace = () => {
-  const { taskTypeSlug, taskId } = useParams<{ taskTypeSlug: string; taskId: string }>();
+  // Two route shapes feed into this component:
+  //   /ai-workspace/:taskTypeSlug/:taskId   → task-bound chat (existing)
+  //   /ai-workspace/project/:projectId/:sessionId?  → general project chat
+  const { taskTypeSlug, taskId, projectId, sessionId } = useParams<{
+    taskTypeSlug?: string;
+    taskId?: string;
+    projectId?: string;
+    sessionId?: string;
+  }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
   const firstName = user?.name?.split(' ')[0] || '';
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,44 +55,68 @@ const AiWorkSpace = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const chatUrl = taskTypeSlug && taskId
-    ? `ai_analysis/${taskTypeSlug.toLowerCase()}/${taskId}/chat/`
-    : null;
+  const isTaskMode = !!(taskTypeSlug && taskId && taskTypeSlug !== 'project');
+  const isProjectMode = !!projectId;
 
-  // Load chat history from API when task params are present
+  const chatUrl = isTaskMode
+    ? `ai_analysis/${taskTypeSlug!.toLowerCase()}/${taskId}/chat/`
+    : isProjectMode
+      ? `ai_analysis/project/${projectId}/chat/`
+      : null;
+
+  // Bare /ai-workspace has no chat backend. Redirect to a project chat for
+  // the currently selected project so clicking "Linq" in the sidebar lands
+  // the user in a real chat instead of the dead-end fake-response state.
+  useEffect(() => {
+    if (isTaskMode || isProjectMode) return;
+    const sel = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
+    if (sel) {
+      navigate(`/ai-workspace/project/${sel}`, { replace: true });
+    }
+  }, [isTaskMode, isProjectMode, navigate]);
+
+  // Load chat history (or init a new session in project mode without sessionId).
   useEffect(() => {
     if (!chatUrl) return;
 
-    const loadChatHistory = async () => {
+    const formatMsgs = (raw: any[]): Message[] =>
+      raw.map((msg: any, i: number) => ({
+        id: msg.id?.toString() || `hist-${i}`,
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content || '',
+        sources: msg.sources || [],
+        price_breakdown: msg.price_breakdown || null,
+      }));
+
+    const load = async () => {
       setIsLoading(true);
       try {
+        if (isProjectMode) {
+          if (sessionId) {
+            // Existing project session — fetch its history.
+            const r = await fetchData(`${chatUrl}?session_id=${sessionId}`);
+            setMessages(formatMsgs(r?.messages || []));
+          } else {
+            // Fresh "+ New Chat" — no session yet, no welcome message.
+            // Session is created lazily by the backend when the user sends
+            // their first message; that response carries the new session id.
+            setMessages([]);
+          }
+          return;
+        }
+
+        // Task mode — original behaviour.
         const response = await fetchData(chatUrl);
-        // console.log(response);
         if (response?.messages && response.messages.length > 0) {
-          const formatted: Message[] = response.messages.map((msg: any, i: number) => ({
-            id: msg.id?.toString() || `hist-${i}`,
-            role: msg.role === 'user' ? 'user' : 'assistant',
-            content: msg.content || '',
-            sources: msg.sources || [],
-            price_breakdown: msg.price_breakdown || null,
-          }));
-          setMessages(formatted);
+          setMessages(formatMsgs(response.messages));
         } else {
-          // No existing session — initialize with welcome summary
           try {
             const initResponse = await postData({
               url: chatUrl,
               data: { action: 'init' },
             });
             if (initResponse?.messages && initResponse.messages.length > 0) {
-              const loaded: Message[] = initResponse.messages.map((m: any, i: number) => ({
-                id: m.id?.toString() || `init-${i}`,
-                role: m.role === 'user' ? 'user' : 'assistant',
-                content: m.content || '',
-                sources: m.sources || [],
-                price_breakdown: m.price_breakdown || null,
-              }));
-              setMessages(loaded);
+              setMessages(formatMsgs(initResponse.messages));
             }
           } catch {
             setMessages([
@@ -95,20 +130,22 @@ const AiWorkSpace = () => {
         }
       } catch (err) {
         console.error('Failed to load chat history:', err);
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            content: `Hello! I've analyzed the ${taskTypeSlug?.toUpperCase()} documentation. How can I help you today?`,
-          },
-        ]);
+        if (isTaskMode) {
+          setMessages([
+            {
+              id: 'welcome',
+              role: 'assistant',
+              content: `Hello! I've analyzed the ${taskTypeSlug?.toUpperCase()} documentation. How can I help you today?`,
+            },
+          ]);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadChatHistory();
-  }, [chatUrl]);
+    load();
+  }, [chatUrl, sessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -130,9 +167,13 @@ const AiWorkSpace = () => {
     if (chatUrl) {
       // Real API call
       try {
+        const body: any = { message: userMessage.content };
+        if (isProjectMode && sessionId) {
+          body.session_id = sessionId;
+        }
         const response = await postData({
           url: chatUrl,
-          data: { message: userMessage.content },
+          data: body,
         });
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -141,6 +182,23 @@ const AiWorkSpace = () => {
           sources: response.sources || [],
         };
         setMessages(prev => [...prev, aiMessage]);
+
+        // Project mode, first message: backend created a fresh session and
+        // (likely) generated a title. Sync the URL to the new session id and
+        // refresh the sidebar so the new chat appears with its title.
+        if (isProjectMode && projectId && response?.sessionId) {
+          if (!sessionId) {
+            navigate(`/ai-workspace/project/${projectId}/${response.sessionId}`, { replace: true });
+          }
+          if (response?.title) {
+            const sel = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
+            if (sel) {
+              queryClient.invalidateQueries({
+                queryKey: [`ai_analysis/chat-sessions/?project_id=${sel}`],
+              });
+            }
+          }
+        }
       } catch (err: any) {
         console.error('Chat API error:', err);
         const backendMessage = err?.response?.data?.message;
