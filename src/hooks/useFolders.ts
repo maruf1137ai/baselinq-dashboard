@@ -20,7 +20,7 @@ export function useFolders({ projectId, tab, enabled = true }: UseFoldersParams)
   return useQuery<Folder[]>({
     queryKey: ['folders', projectId, tab],
     queryFn: async () => {
-      console.log('🔍 useFolders called:', { projectId, tab, enabled });
+      // console.log('🔍 useFolders called:', { projectId, tab, enabled });
 
       if (!projectId) {
         console.warn('⚠️ No projectId provided to useFolders');
@@ -33,10 +33,10 @@ export function useFolders({ projectId, tab, enabled = true }: UseFoldersParams)
       }
 
       const url = `documents/folders/?${params.toString()}`;
-      console.log('📡 Fetching folders from:', url);
+      // console.log('📡 Fetching folders from:', url);
 
       const result = await fetchData(url);
-      console.log('✅ Folders API response:', result);
+      // console.log('✅ Folders API response:', result);
 
       return result;
     },

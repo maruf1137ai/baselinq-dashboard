@@ -30,7 +30,7 @@ import {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-const addNewTask = async (_payload: any) => {};
+const addNewTask = async (_payload: any) => { };
 const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
 
 const btns = [
@@ -107,9 +107,9 @@ export function CreateDocumentDialog() {
       try {
         const url = await uploadFile(file);
         uploaded.push({ name: file.name, url });
-        console.log("Uploaded file:", file.name, url);
+        // console.log("Uploaded file:", file.name, url);
       } catch (err) {
-        console.error("Error uploading file:", file.name, err);
+        // console.error("Error uploading file:", file.name, err);
         toast.error(`Failed to upload ${file.name}`);
       }
     }
@@ -133,7 +133,7 @@ export function CreateDocumentDialog() {
         linkedTask,
         attachment: files, // send uploaded file info to your task
       };
-      console.log(payload);
+      // console.log(payload);
       await mutateAsync(payload);
     } catch (err) {
       console.error(err);

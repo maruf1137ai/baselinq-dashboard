@@ -780,34 +780,8 @@ export default function CreateProject() {
         }
       }
 
-      // 2. Pre-populate Appointed details — only if user is NOT a client/owner/contractor
-      if (!isClientOrContractor && !appointedForm.company_name) {
-        const org = user.organization;
-        const profile = user.profile;
-
-        if (org) {
-          setAppointedForm((prev) => ({
-            ...prev,
-            company_name: org.name || "",
-            company_registration: org.company_reg_number || "",
-            vat_number: org.vat_number || "",
-            office_number: profile?.phone_number || "",
-            physical_address: {
-              street: profile?.address || "",
-              city: profile?.city || "",
-              province: profile?.state || "",
-              postal_code: profile?.postal_code || "",
-            },
-            principal: {
-              ...prev.principal,
-              name: user.name || prev.principal.name,
-              email: user.email || prev.principal.email,
-            }
-          }));
-        }
-      }
     }
-  }, [user, appointedForm.company_name, clientForm.company_name]);
+  }, [user, clientForm.company_name]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
@@ -1108,9 +1082,24 @@ export default function CreateProject() {
         }
         if (isClientOrContractor) await handleInviteAppointedCompanies(pId);
 
-        // For non-client users: register their own org as an associated company
-        // so it appears in Settings > Associated Companies
+        // Register the creator's company as an associated company so it appears
+        // in Settings > Associated Companies for all role types.
         let associatedCompanyId: number | undefined;
+        if (isClientOrContractor && clientForm.company_name.trim() && pId) {
+          try {
+            const client = clientPersonnelList.find(x => x.role === "Client");
+            const result = await createAssociatedCompany(pId, {
+              company_name: clientForm.company_name,
+              company_type: "General Contractor",
+              role: "Client",
+              contact_name: client?.name || user?.name || "",
+              contact_email: client?.email || user?.email || "",
+            });
+            associatedCompanyId = result.id;
+          } catch {
+            // Non-critical — project is already created
+          }
+        }
         if (!isClientOrContractor && appointedForm.company_name.trim() && pId) {
           try {
             const principal = appointedPersonnelList.find(x => x.role === "Principal Architect");

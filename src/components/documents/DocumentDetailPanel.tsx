@@ -47,7 +47,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
   if (!document) return null;
 
   const handleLink = (selectedIds: string[]) => {
-    console.log('Linking documents:', selectedIds);
+    // console.log('Linking documents:', selectedIds);
     // In a real app, this would trigger an API call
   };
 

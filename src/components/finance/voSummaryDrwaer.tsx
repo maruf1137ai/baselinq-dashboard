@@ -42,22 +42,20 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
   onClose,
   data,
 }) => {
-  console.log(data);
+  // console.log(data);
   return (
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
         onClick={onClose}
       />
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="summary-title">

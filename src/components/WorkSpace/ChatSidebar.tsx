@@ -116,9 +116,9 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
     },
   ].filter(group => group.items.length > 0);
 
-  const handleChatAction = (action: string, chatId: number) => {
-    console.log(`${action} chat ${chatId}`);
-  };
+  // const handleChatAction = (action: string, chatId: number) => {
+  //   console.log(`${action} chat ${chatId}`);
+  // };
 
   return (
     <div
@@ -172,14 +172,14 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                           : `/ai-workspace/${session.taskTypeSlug}/${session.taskId}`;
                         const isActive = !isProjectChat && currentTaskId === String(session.taskId);
                         return (
-                        <div
-                          key={session.id}
-                          className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${isActive
-                            ? "bg-sidebar border-border"
-                            : ""
-                            }`} onClick={() => navigate(targetUrl)}>
-                          <SessionLabel label={session.label} />
-                          {/* <DropdownMenu>
+                          <div
+                            key={session.id}
+                            className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${isActive
+                              ? "bg-sidebar border-border"
+                              : ""
+                              }`} onClick={() => navigate(targetUrl)}>
+                            <SessionLabel label={session.label} />
+                            {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
@@ -213,7 +213,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu> */}
-                        </div>
+                          </div>
                         );
                       })}
                     </div>

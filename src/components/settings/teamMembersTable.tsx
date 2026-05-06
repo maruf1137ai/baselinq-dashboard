@@ -6,7 +6,7 @@ import useFetch from "@/hooks/useFetch";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { postData, deleteData, patchData, orgInviteMember } from "@/lib/Api";
+import { postData, deleteData, patchData, orgInviteMember, getAssociatedCompanies } from "@/lib/Api";
 import { toast } from "sonner";
 // import CategoryBadge from './CategoryBadge';
 import {
@@ -105,6 +105,13 @@ interface TeamMember {
   };
   joinedDate: string;
   updatedAt: string;
+}
+
+interface AssociatedCompany {
+  id: number;
+  name: string;
+  role: string;
+  companyType: string;
 }
 
 interface ProjectUsersResponse {
@@ -382,18 +389,40 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   );
 
   // Debug logging
-  console.log('[TeamMembersTable] Users Data:', {
-    allUsersCount: allUsers.length,
-    teamMembersCount: teamMembers.length,
-    availableUsersCount: availableUsers.length,
-    isLoadingUsers,
-    usersError,
-    rawResponse: allUsersData
-  });
+  // console.log('[TeamMembersTable] Users Data:', {
+  //   allUsersCount: allUsers.length,
+  //   teamMembersCount: teamMembers.length,
+  //   availableUsersCount: availableUsers.length,
+  //   isLoadingUsers,
+  //   usersError,
+  //   rawResponse: allUsersData
+  // });
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [activeTab, setActiveTab] = useState("add");
+  const [associatedCompanies, setAssociatedCompanies] = useState<AssociatedCompany[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+
+  const openAddModal = async () => {
+    setShowAddMemberModal(true);
+    try {
+      const companies = await getAssociatedCompanies(projectId);
+      setAssociatedCompanies(companies);
+    } catch {
+      setAssociatedCompanies([]);
+    }
+  };
+
+  const resetModal = () => {
+    setShowAddMemberModal(false);
+    setSelectedUser(null);
+    setSelectedRole(null);
+    setInviteEmail("");
+    setInviteName("");
+    setSelectedCompanyId(null);
+    setAssociatedCompanies([]);
+  };
 
   const handleAddMember = async () => {
     if (activeTab === "add") {
@@ -406,12 +435,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             userId: selectedUser.id,
             roleName: selectedRole.name,
             roleCode: selectedRole.code,
+            ...(selectedCompanyId ? { associatedCompanyId: selectedCompanyId } : {}),
           },
         });
         toast.success("User added successfully");
-        setShowAddMemberModal(false);
-        setSelectedUser(null);
-        setSelectedRole(null);
+        resetModal();
         await refetch();
       } catch (error: any) {
         console.error("Error adding team member:", error);
@@ -433,10 +461,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
           },
         });
         toast.success("Invitation sent successfully");
-        setShowAddMemberModal(false);
-        setInviteEmail("");
-        setInviteName("");
-        setSelectedRole(null);
+        resetModal();
         await refetch();
       } catch (error: any) {
         console.error("Error inviting member:", error);
@@ -466,7 +491,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         <FilterBtns />
         {canAddTeamMember && (
           <Button
-            onClick={() => setShowAddMemberModal(true)}
+            onClick={openAddModal}
             className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
             <span className="mr-1">+</span>
             Add User
@@ -490,7 +515,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddMemberModal(false)}
+                onClick={resetModal}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
                 <X className="w-4 h-4" />
               </button>
@@ -585,19 +610,39 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
                   <div className="space-y-1.5">
                     <label className="block text-[12px] font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
-                    <select
-                      className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                    <Select
                       value={selectedRole?.code || ""}
-                      onChange={(e) => {
-                        const role = roles.find((r) => r.code === e.target.value);
-                        setSelectedRole(role || null);
-                      }}>
-                      <option value="">Select a role…</option>
-                      {roles.map((r) => (
-                        <option key={r.code} value={r.code}>{r.name}</option>
-                      ))}
-                    </select>
+                      onValueChange={(val) => setSelectedRole(roles.find((r) => r.code === val) || null)}>
+                      <SelectTrigger className="w-full text-[13px]">
+                        <SelectValue placeholder="Select a role…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r) => (
+                          <SelectItem key={r.code} value={r.code} className="text-[13px]">{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {associatedCompanies.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[12px] font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
+                      <Select
+                        value={selectedCompanyId != null ? String(selectedCompanyId) : ""}
+                        onValueChange={(val) => setSelectedCompanyId(Number(val))}>
+                        <SelectTrigger className="w-full text-[13px]">
+                          <SelectValue placeholder="Select a company…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {associatedCompanies.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)} className="text-[13px]">
+                              {c.name}{c.role ? ` — ${c.role}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -627,21 +672,42 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
-                    <select
-                      className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                  <div className="space-y-1.5">
+                    <label className="block text-[12px] font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
+                    <Select
                       value={selectedRole?.code || ""}
-                      onChange={(e) => {
-                        const role = roles.find((r) => r.code === e.target.value);
-                        setSelectedRole(role || null);
-                      }}>
-                      <option value="">Select a role…</option>
-                      {roles.map((r) => (
-                        <option key={r.code} value={r.code}>{r.name}</option>
-                      ))}
-                    </select>
+                      onValueChange={(val) => setSelectedRole(roles.find((r) => r.code === val) || null)}>
+                      <SelectTrigger className="w-full text-[13px]">
+                        <SelectValue placeholder="Select a role…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r) => (
+                          <SelectItem key={r.code} value={r.code} className="text-[13px]">{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {associatedCompanies.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[12px] font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
+                      <Select
+                        value={selectedCompanyId != null ? String(selectedCompanyId) : ""}
+                        onValueChange={(val) => setSelectedCompanyId(Number(val))}>
+                        <SelectTrigger className="w-full text-[13px]">
+                          <SelectValue placeholder="Select a company…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {associatedCompanies.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)} className="text-[13px]">
+                              {c.name}{c.role ? ` — ${c.role}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-[#9ca3af]">If left blank, the company will be linked automatically when the user accepts the invite.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -650,7 +716,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
               <button
                 type="button"
-                onClick={() => setShowAddMemberModal(false)}
+                onClick={resetModal}
                 className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
                 Cancel
               </button>

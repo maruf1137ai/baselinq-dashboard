@@ -219,6 +219,13 @@ export const inviteAppointedCompany = async (data: {
   return res.data;
 };
 
+export const getAssociatedCompanies = async (
+  projectId: string | number
+): Promise<{ id: number; name: string; role: string; companyType: string }[]> => {
+  const res = await api.get(`projects/${projectId}/associated-companies/`);
+  return res.data;
+};
+
 export const createAssociatedCompany = async (
   projectId: string | number,
   data: { company_name: string; company_type?: string; role?: string; contact_name?: string; contact_email?: string }

@@ -194,6 +194,39 @@ export const COMPANY_TYPE_ROLE_CODES: Record<string, string[]> = {
 };
 
 /**
+ * Derived from COMPANY_TYPE_ROLE_CODES — maps a role code to its matching company type.
+ * First match wins when a role code appears under multiple company types.
+ */
+export const ROLE_CODE_TO_COMPANY_TYPE: Record<string, string> = Object.entries(
+  COMPANY_TYPE_ROLE_CODES
+).reduce<Record<string, string>>((acc, [companyType, roleCodes]) => {
+  roleCodes.forEach((code) => {
+    if (!acc[code]) acc[code] = companyType;
+  });
+  return acc;
+}, {});
+
+/**
+ * Resolves the best-matching COMPANY_TYPES value from a user's role.
+ * 1. Tries exact role code lookup.
+ * 2. Falls back to matching role name keywords against company type labels
+ *    e.g. "Architect" → "Architectural", "Quantity Surveyor" → "Quantity Surveying"
+ */
+export function getCompanyTypeFromRole(roleCode: string, roleName: string): string {
+  if (roleCode && ROLE_CODE_TO_COMPANY_TYPE[roleCode]) {
+    return ROLE_CODE_TO_COMPANY_TYPE[roleCode];
+  }
+  if (!roleName) return "";
+  const words = roleName.toLowerCase().trim().split(/\s+/);
+  return (
+    COMPANY_TYPES.find((type) => {
+      const lowerType = type.toLowerCase();
+      return words.some((word) => word.length >= 4 && lowerType.includes(word));
+    }) ?? ""
+  );
+}
+
+/**
  * Filter a list of roles by company type.
  * Returns all roles if the company type is empty, "Other", or not found.
  */

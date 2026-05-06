@@ -142,14 +142,14 @@ export default function UploadDocumentWizard() {
 
       // Create folder if new (for Drawings/Documents)
       if (isNewFolder && selectedTab !== 'contracts') {
-        console.log('[UploadWizard] Creating new folder with data:', {
-          projectId: parseInt(projectId),
-          tab: selectedTab,
-          name: selectedFolderName,
-          discipline: selectedDiscipline,
-          visibility: formData.visibility || 'all',
-          visibilityUsers: formData.visibilityUsers || [],
-        });
+        // console.log('[UploadWizard] Creating new folder with data:', {
+        //   projectId: parseInt(projectId),
+        //   tab: selectedTab,
+        //   name: selectedFolderName,
+        //   discipline: selectedDiscipline,
+        //   visibility: formData.visibility || 'all',
+        //   visibilityUsers: formData.visibilityUsers || [],
+        // });
 
         const newFolder: Folder = await postData({
           url: 'documents/folders/',

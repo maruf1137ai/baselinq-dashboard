@@ -342,7 +342,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
 
         // Check if we should save
         if (mediaRecorderRef.current && (mediaRecorderRef.current as any).isCancelled) {
-          console.log("Recording cancelled");
+          // console.log("Recording cancelled");
           return;
         }
 

@@ -107,12 +107,12 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
 
     setLoading(true);
     try {
-      console.log("Acknowledging SI with task ID:", taskId);
-      console.log("Payload:", {
-        status: "Acknowledged",
-        isAcknowledged: true,
-        leadsToVariation: variationChecked,
-      });
+      // console.log("Acknowledging SI with task ID:", taskId);
+      // console.log("Payload:", {
+      //   status: "Acknowledged",
+      //   isAcknowledged: true,
+      //   leadsToVariation: variationChecked,
+      // });
 
       // Use update-entity endpoint to update SI status to "Acknowledged"
       await postData(`/tasks/tasks/${taskId}/update-entity/`, {
