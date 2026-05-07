@@ -19,7 +19,24 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 interface Participant { id: number; name: string; role: string; }
 interface Decision { id: number; text: string; owner: string; }
-interface ActionItem { id: number; text: string; owner: string; due: string; }
+interface ActionItem {
+  id: number;
+  text: string;
+  owner: string;
+  due: string;
+  // Server-side approval state (replaces frontend localStorage). When the
+  // backend supports these fields they win; otherwise we fall back to
+  // localStorage so older deployments don't regress.
+  state?: "pending" | "approved" | "declined";
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  declined_at?: string | null;
+  declined_by_name?: string | null;
+  assigned_user_id?: number | null;
+  assigned_user_name?: string | null;
+  linked_task_id?: number | null;
+  linked_task_type?: string | null;
+}
 interface TranscriptSegment { id: number; speaker: string; time: string; text: string; }
 interface MeetingDetail {
   id: number;
@@ -132,12 +149,46 @@ export default function MeetingDetails() {
     }
   );
 
+  /**
+   * Resolve the visible state for an action item, preferring the
+   * server-persisted value over per-browser localStorage. This kills
+   * the bug where Grant could approve an item on his machine and you'd
+   * still see all three buttons (and create duplicate tasks).
+   */
+  const itemState = (item: ActionItem): "pending" | "approved" | "declined" => {
+    if (item.state && item.state !== "pending") return item.state;
+    return actionDecisions[String(item.id)] ?? item.state ?? "pending";
+  };
+
   const handleApprove = async (item: ActionItem, index: number) => {
-    const projectId = localStorage.getItem("selectedProjectId");
-    if (!projectId) { toast.error("No project selected."); return; }
-    const config = TASK_CONFIGS[index % TASK_CONFIGS.length];
     setApprovingIndex(index);
     try {
+      // Preferred path: server-side idempotent approval that creates the
+      // task atomically and persists state across users/devices. Falls
+      // back to the legacy localStorage + TASK_CONFIGS path on any error
+      // so older backends keep working.
+      const config = TASK_CONFIGS[index % TASK_CONFIGS.length];
+      try {
+        await postRequest({
+          url: `meetings/${id}/action-items/${item.id}/approve/`,
+          data: { task_type: config.type },
+        });
+        persistDecision(String(item.id), "approved");
+        toast.success(`${config.type} task created.`);
+        await refetch();
+        return;
+      } catch (e: any) {
+        const status = e?.response?.status;
+        // 404 means this backend doesn't have the new endpoint yet — fall
+        // back to the legacy direct-create flow. Any other error is real.
+        if (status && status !== 404) {
+          throw e;
+        }
+      }
+
+      // Legacy fallback (matches previous production behaviour)
+      const projectId = localStorage.getItem("selectedProjectId");
+      if (!projectId) { toast.error("No project selected."); return; }
       const result = await postRequest({ url: config.url, data: config.payload(item.text, projectId) });
       try {
         await postRequest({
@@ -148,13 +199,23 @@ export default function MeetingDetails() {
       persistDecision(String(item.id), "approved");
       toast.success(`${config.type} task created successfully.`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? err?.message ?? "Failed to create task.");
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.detail ?? err?.message ?? "Failed to create task.");
     } finally {
       setApprovingIndex(null);
     }
   };
 
-  const handleDecline = (item: ActionItem) => {
+  const handleDecline = async (item: ActionItem) => {
+    try {
+      await postRequest({ url: `meetings/${id}/action-items/${item.id}/decline/`, data: {} });
+      await refetch();
+    } catch (e: any) {
+      // 404 → legacy backend, fall through to localStorage-only decline
+      if (e?.response?.status && e.response.status !== 404) {
+        toast.error(e?.response?.data?.error ?? "Failed to decline.");
+        return;
+      }
+    }
     persistDecision(String(item.id), "declined");
     toast.success("Action item declined.");
   };
@@ -429,16 +490,32 @@ export default function MeetingDetails() {
                             )}
                           </div>
                         </td>
-                        <td className="text-sm text-muted-foreground px-4 py-3">{item.owner}</td>
+                        <td className="text-sm text-muted-foreground px-4 py-3">{item.assigned_user_name || item.owner}</td>
                         <td className="text-sm text-muted-foreground px-4 py-3">{item.due}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
-                            {actionDecisions[String(item.id)] === "approved" ? (
-                              <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                                Task created
-                              </span>
-                            ) : actionDecisions[String(item.id)] === "declined" ? (
-                              <span className="text-xs text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
+                            {itemState(item) === "approved" ? (
+                              item.linked_task_id ? (
+                                <a
+                                  href={`/tasks/${item.linked_task_id}`}
+                                  className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full hover:bg-green-100"
+                                  title={item.approved_by_name ? `Approved by ${item.approved_by_name}` : "Approved"}
+                                >
+                                  {item.linked_task_type ? `${item.linked_task_type} created` : "Task created"}
+                                </a>
+                              ) : (
+                                <span
+                                  className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full"
+                                  title={item.approved_by_name ? `Approved by ${item.approved_by_name}` : "Approved"}
+                                >
+                                  Task created
+                                </span>
+                              )
+                            ) : itemState(item) === "declined" ? (
+                              <span
+                                className="text-xs text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full"
+                                title={item.declined_by_name ? `Declined by ${item.declined_by_name}` : "Declined"}
+                              >
                                 Declined
                               </span>
                             ) : (
@@ -450,7 +527,7 @@ export default function MeetingDetails() {
                                   disabled={isCreating}
                                   className="h-8 px-3 text-xs font-normal"
                                 >
-                                  Approve
+                                  Approve &amp; create task
                                 </Button>
                                 <Button
                                   size="sm"
