@@ -7,6 +7,7 @@ import {
   inviteAppointedCompany,
   getAppointedCompanies,
   removeAppointedCompany,
+  updateAppointedCompany,
   getPresignedUrl,
   uploadFileToPresignedUrl,
   inviteCompanyMember,
@@ -30,6 +31,7 @@ import {
   ChevronUp,
   Trash2,
   User,
+  Pencil,
 } from "lucide-react";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
@@ -98,6 +100,11 @@ const AssociatedCompanies = () => {
   // Remove confirmation
   const [removeConfirmId, setRemoveConfirmId] = useState<string | number | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
+
+  // Company edit
+  const [editingCompanyId, setEditingCompanyId] = useState<number | null>(null);
+  const [editCompanyForm, setEditCompanyForm] = useState({ name: "", company_type: "", role: "" });
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
 
   useEffect(() => {
     if (selectedProjectId) fetchCompanies();
@@ -247,6 +254,25 @@ const AssociatedCompanies = () => {
     }
   };
 
+  const handleSaveCompanyEdit = async (companyId: number) => {
+    if (!selectedProjectId) return;
+    setIsSavingCompany(true);
+    try {
+      await updateAppointedCompany(selectedProjectId, companyId, {
+        name: editCompanyForm.name,
+        company_type: editCompanyForm.company_type,
+        role: editCompanyForm.role,
+      });
+      toast.success("Company updated");
+      setEditingCompanyId(null);
+      fetchCompanies();
+    } catch {
+      toast.error("Failed to update company");
+    } finally {
+      setIsSavingCompany(false);
+    }
+  };
+
   const toggleExpand = (id: string | number) => {
     setExpandedCompanies((prev) => {
       const next = new Set(prev);
@@ -360,6 +386,20 @@ const AssociatedCompanies = () => {
                               </button>
                             )}
 
+                            {/* Edit company — visible to company admin or managers */}
+                            {isNumericId && (canManageAssociatedCompanies || comp.admin_user_id === currentUser?.id) && (
+                              <button
+                                onClick={() => {
+                                  setEditingCompanyId(editingCompanyId === comp.id ? null : comp.id);
+                                  setEditCompanyForm({ name: comp.company_name, company_type: comp.company_type || "", role: comp.role || "" });
+                                }}
+                                className="text-muted-foreground hover:text-primary transition-colors p-1 rounded-lg hover:bg-primary/10"
+                                title="Edit company"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
                             {/* Remove company */}
                             {canManageAssociatedCompanies && isNumericId && (
                               removeConfirmId === comp.id ? (
@@ -391,6 +431,59 @@ const AssociatedCompanies = () => {
                             )}
                           </div>
                         </div>
+
+                        {/* Inline company edit form */}
+                        {editingCompanyId === comp.id && (
+                          <div className="border-t border-border bg-slate-50/60 px-4 py-4 space-y-3">
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Edit Company</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-[11px] text-muted-foreground mb-1">Company Name</label>
+                                <Input
+                                  className="h-8 text-xs"
+                                  value={editCompanyForm.name}
+                                  onChange={e => setEditCompanyForm(f => ({ ...f, name: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] text-muted-foreground mb-1">Company Type</label>
+                                <select
+                                  className="h-8 w-full px-2 border border-border rounded-lg text-xs bg-white focus:outline-none focus:border-primary"
+                                  value={editCompanyForm.company_type}
+                                  onChange={e => setEditCompanyForm(f => ({ ...f, company_type: e.target.value }))}
+                                >
+                                  <option value="">Select type...</option>
+                                  {COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[11px] text-muted-foreground mb-1">Role on Project</label>
+                                <Input
+                                  className="h-8 text-xs"
+                                  placeholder="e.g. Architect, QS"
+                                  value={editCompanyForm.role}
+                                  onChange={e => setEditCompanyForm(f => ({ ...f, role: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-1">
+                              <button
+                                onClick={() => setEditingCompanyId(null)}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleSaveCompanyEdit(comp.id)}
+                                disabled={isSavingCompany || !editCompanyForm.name.trim()}
+                                className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                              >
+                                {isSavingCompany ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Members panel */}
                         {isExpanded && (() => {

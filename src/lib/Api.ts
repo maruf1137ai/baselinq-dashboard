@@ -234,33 +234,48 @@ export const createAssociatedCompany = async (
   return res.data;
 };
 
+export interface AppointedCompany {
+  id: string | number;
+  company_name: string;
+  company_type?: string;
+  role: string;
+  status: string;
+  contact_name: string;
+  email: string;
+  admin_user_id: number | null;
+  members: {
+    id: string | number;
+    team_member_id?: number;
+    name: string;
+    email: string;
+    role: string;
+    status?: string;
+    invitation_id?: number;
+    insurance_file_name?: string | null;
+    insurance_expiry?: string | null;
+    insurance_url?: string | null;
+  }[];
+  insurance_file_name: string | null;
+  insurance_expiry: string | null;
+  insurance_url: string | null;
+}
+
 export const getAppointedCompanies = async (projectId: string | number) => {
   const res = await api.get(`projects/${projectId}/appointed-companies/`);
-  return res.data as {
-    id: string | number;
-    company_name: string;
-    role: string;
-    status: string;
-    contact_name: string;
-    email: string;
-    members: {
-      id: string | number;
-      name: string;
-      email: string;
-      role: string;
-      status?: string;
-      insurance_file_name?: string | null;
-      insurance_expiry?: string | null;
-      insurance_url?: string | null;
-    }[];
-    insurance_file_name: string | null;
-    insurance_expiry: string | null;
-    insurance_url: string | null;
-  }[];
+  return res.data as AppointedCompany[];
 };
 
 export const removeAppointedCompany = async (projectId: string | number, companyId: string | number) => {
   const res = await api.delete(`projects/${projectId}/appointed-companies/${companyId}/remove/`);
+  return res.data;
+};
+
+export const updateAppointedCompany = async (
+  projectId: string | number,
+  companyId: string | number,
+  data: { name?: string; company_type?: string; role?: string; contact_name?: string; contact_email?: string }
+) => {
+  const res = await api.patch(`projects/${projectId}/appointed-companies/${companyId}/update/`, data);
   return res.data;
 };
 

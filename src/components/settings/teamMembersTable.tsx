@@ -56,11 +56,22 @@ import FilterBtns from "./filterBtns";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 
 
+interface Organization {
+  id: number;
+  name: string;
+  description?: string;
+  status?: string;
+  company_reg_number?: string;
+  ck_number?: string;
+  vat_number?: string;
+  company_size?: string;
+}
+
 interface User {
   id: number;
   email: string;
   name: string;
-  organization: string | null;
+  organization: Organization | string | null;
   role: Role | null;
   profile: string | null;
   is_email_verified: boolean;
@@ -68,6 +79,12 @@ interface User {
   created_at: string;
   updated_at: string;
 }
+
+const getOrgName = (org: Organization | string | null): string | null => {
+  if (!org) return null;
+  if (typeof org === "string") return org;
+  return org.name ?? null;
+};
 
 interface UsersResponse {
   count: number;
@@ -579,6 +596,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                                     onSelect={() => {
                                       setSelectedUser(u);
                                       setUserPopoverOpen(false);
+                                      // Auto-match associated company from user's org
+                                      const orgName = getOrgName(u.organization);
+                                      if (orgName) {
+                                        const match = associatedCompanies.find(
+                                          c => c.name.toLowerCase() === orgName.toLowerCase()
+                                        );
+                                        setSelectedCompanyId(match?.id ?? null);
+                                      } else {
+                                        setSelectedCompanyId(null);
+                                      }
                                     }}
                                     className="cursor-pointer px-3 py-2.5">
                                     <div className="flex items-center justify-between w-full">
@@ -624,7 +651,14 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     </Select>
                   </div>
 
-                  {associatedCompanies.length > 0 && (
+                  {getOrgName(selectedUser?.organization ?? null) ? (
+                    <div className="rounded-lg bg-[#f0fdf4] border border-[#bbf7d0] px-3.5 py-2.5 flex items-start gap-2.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#00b894] mt-1.5 shrink-0" />
+                      <p className="text-[12px] text-[#374151] leading-relaxed">
+                        This user is from <span className="font-medium">{getOrgName(selectedUser!.organization)}</span>. They'll represent that company on this project.
+                      </p>
+                    </div>
+                  ) : associatedCompanies.length > 0 && (
                     <div className="space-y-1.5">
                       <label className="block text-[12px] font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
                       <Select

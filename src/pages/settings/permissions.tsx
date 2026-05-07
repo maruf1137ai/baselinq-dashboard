@@ -426,12 +426,13 @@ function MatrixTab({ mode, readOnly }: { mode: "org"; readOnly?: boolean }) {
   const roles = asArray<Role>(rolesRaw);
   const permissions = asArray<Permission>(permsRaw);
 
-  // Read project context from localStorage
-  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
-
+  // Always use org-level context here — passing a projectId would cause
+  // non-project-scoped permissions (settings.view, settings.edit, etc.) to be
+  // saved as ProjectRolePermission overrides which the resolver ignores for
+  // non-project-scoped codes, making the toggles appear to have no effect.
   if (roles.length === 0 || permissions.length === 0) return <AwesomeLoader message="Loading matrix" />;
 
-  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={projectId} readOnly={readOnly} />;
+  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={null} readOnly={readOnly} />;
 }
 
 function MatrixGrid({
@@ -562,27 +563,40 @@ function MatrixGrid({
     return !effective(roleId, parent) || isDisabled(roleId, parent);
   };
 
+  const getAllDescendants = (code: string): string[] => {
+    const children = Object.entries(PERMISSION_PARENTS)
+      .filter(([, parent]) => parent === code)
+      .map(([child]) => child);
+    return children.flatMap((child) => [child, ...getAllDescendants(child)]);
+  };
+
   const handleToggle = (roleId: number, code: string) => {
     const target = !effective(roleId, code);
 
+    // When turning a parent OFF, cascade-uncheck all descendants
+    const updates: Record<string, boolean> = { [code]: target };
+    if (!target) {
+      for (const descendant of getAllDescendants(code)) {
+        updates[descendant] = false;
+      }
+    }
+
     if (projectId) {
-      // For project context, update project overrides
       setProjectOverrides((prev) => ({
         ...prev,
-        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+        [roleId]: { ...(prev[roleId] ?? {}), ...updates },
       }));
     } else {
-      // For org context, update org matrix
       setMatrix((prev) => ({
         ...prev,
-        [roleId]: { ...(prev[roleId] ?? {}), [code]: target },
+        [roleId]: { ...(prev[roleId] ?? {}), ...updates },
       }));
     }
 
     setDirty((prev) => {
       const next = { ...prev };
       next[roleId] = new Set(next[roleId] ?? []);
-      next[roleId].add(code);
+      for (const c of Object.keys(updates)) next[roleId].add(c);
       return next;
     });
   };

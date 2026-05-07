@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { updateProfile, postData } from "@/lib/Api";
+import { updateProfile, postData, patchData, getAppointedCompanies, inviteCompanyMember, removeCompanyMember, AppointedCompany } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info, Eye, EyeOff } from "lucide-react";
+import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info, Eye, EyeOff, Building2, UserPlus, Trash2, X } from "lucide-react";
 import { hasPermission } from "@/lib/roleUtils";
+import { useRoles } from "@/hooks/useRoles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
@@ -53,11 +54,92 @@ const AccountProfile = () => {
   const { data: user, isLoading } = useCurrentUser();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { roles } = useRoles();
   const [isSaving, setIsSaving] = useState(false);
   const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
 
   const [pwForm, setPwForm] = useState({ old_password: "", new_password: "", new_password_confirm: "" });
   const [isSavingPw, setIsSavingPw] = useState(false);
+
+  const [companyForm, setCompanyForm] = useState({ name: "", company_reg_number: "", vat_number: "" });
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
+
+  // My Company — admin member management
+  const [myCompany, setMyCompany] = useState<AppointedCompany | null>(null);
+  const [isLoadingCompany, setIsLoadingCompany] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "", position: "" });
+  const [isInviting, setIsInviting] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
+
+  const selectedProjectId = localStorage.getItem("selectedProjectId");
+
+  useEffect(() => {
+    if (user?.organization) {
+      setCompanyForm({
+        name: user.organization.name || "",
+        company_reg_number: user.organization.company_reg_number || "",
+        vat_number: user.organization.vat_number || "",
+      });
+    }
+  }, [user?.organization]);
+
+  useEffect(() => {
+    if (!user?.id || !selectedProjectId) return;
+    const fetchMyCompany = async () => {
+      setIsLoadingCompany(true);
+      try {
+        const companies = await getAppointedCompanies(selectedProjectId);
+        const mine = companies.find(c => c.admin_user_id === user.id && typeof c.id === "number");
+        setMyCompany(mine ?? null);
+      } catch {
+        // non-critical
+      } finally {
+        setIsLoadingCompany(false);
+      }
+    };
+    fetchMyCompany();
+  }, [user?.id, selectedProjectId]);
+
+  const handleInviteMember = async () => {
+    if (!selectedProjectId || !myCompany || !inviteForm.email.trim()) return;
+    setIsInviting(true);
+    try {
+      await inviteCompanyMember(selectedProjectId, myCompany.id, {
+        contact_email: inviteForm.email.trim(),
+        contact_name: inviteForm.name.trim(),
+        position: inviteForm.position.trim(),
+      });
+      toast.success(`Invitation sent to ${inviteForm.email}`);
+      setInviteForm({ name: "", email: "", position: "" });
+      setShowInviteForm(false);
+      // Refresh
+      const companies = await getAppointedCompanies(selectedProjectId);
+      const mine = companies.find(c => c.admin_user_id === user?.id && typeof c.id === "number");
+      setMyCompany(mine ?? null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to send invitation");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleRemoveMember = async (teamMemberId: number) => {
+    if (!selectedProjectId) return;
+    setRemovingMemberId(teamMemberId);
+    try {
+      await removeCompanyMember(selectedProjectId, teamMemberId);
+      toast.success("Member removed");
+      setMyCompany(prev => prev ? {
+        ...prev,
+        members: prev.members.filter(m => m.team_member_id !== teamMemberId),
+      } : null);
+    } catch {
+      toast.error("Failed to remove member");
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
   const [showPw, setShowPw] = useState({ old: false, new: false, confirm: false });
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -133,6 +215,20 @@ const AccountProfile = () => {
       toast.error("Failed to save. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingCompany(true);
+    try {
+      await updateProfile({ organization: companyForm });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      toast.success("Company details saved");
+    } catch {
+      toast.error("Failed to save company details");
+    } finally {
+      setIsSavingCompany(false);
     }
   };
 
@@ -243,6 +339,159 @@ const AccountProfile = () => {
           </div>
         </SectionCard>
       </form>
+
+      {user?.organization && (
+        <>
+          {/* Company details */}
+          <form onSubmit={handleSaveCompany}>
+            <SectionCard title="My Company" subtitle="Your organisation's registered details" icon={<Building2 className="w-4 h-4" />}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                <Field label="Company Name" colSpan>
+                  <Input value={companyForm.name} onChange={e => setCompanyForm(f => ({ ...f, name: e.target.value }))} className={INPUT_CLS} placeholder="Company legal name" />
+                </Field>
+                <Field label="Registration Number">
+                  <Input value={companyForm.company_reg_number} onChange={e => setCompanyForm(f => ({ ...f, company_reg_number: e.target.value }))} className={INPUT_CLS} placeholder="e.g. 2020/123456/07" />
+                </Field>
+                <Field label="VAT Number">
+                  <Input value={companyForm.vat_number} onChange={e => setCompanyForm(f => ({ ...f, vat_number: e.target.value }))} className={INPUT_CLS} placeholder="e.g. 4123456789" />
+                </Field>
+              </div>
+              <div className="flex justify-end mt-5">
+                <Button type="submit" disabled={isSavingCompany} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
+                  {isSavingCompany ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                  {isSavingCompany ? "Saving..." : "Save Company"}
+                </Button>
+              </div>
+            </SectionCard>
+          </form>
+
+          {/* Company team members — only visible when user is admin of a company on the current project */}
+          {isLoadingCompany ? null : myCompany && (
+            <SectionCard
+              title="Company Team"
+              subtitle={`Users representing ${myCompany.company_name} on this project`}
+              icon={<UserPlus className="w-4 h-4" />}
+            >
+              {/* Member list */}
+              <div className="space-y-2 mb-4">
+                {myCompany.members.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">No members yet — invite your team below.</p>
+                ) : (
+                  myCompany.members.map(m => (
+                    <div key={m.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-slate-50/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
+                          {(m.name || m.email || "?")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm text-foreground">{m.name || m.email}</p>
+                          <p className="text-[11px] text-muted-foreground">{m.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {m.status && m.status !== "Joined" && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-slate-100 text-muted-foreground">
+                            {m.status}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-muted-foreground">{m.role}</span>
+                        {m.team_member_id && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(m.team_member_id!)}
+                            disabled={removingMemberId === m.team_member_id}
+                            className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded hover:bg-destructive/10 disabled:opacity-40"
+                            title="Remove member"
+                          >
+                            {removingMemberId === m.team_member_id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />
+                            }
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Invite form */}
+              {showInviteForm ? (
+                <div className="border border-border rounded-xl p-4 bg-slate-50/50 space-y-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-medium text-foreground">Invite a team member</p>
+                    <button type="button" onClick={() => setShowInviteForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] text-muted-foreground tracking-wider">Full Name</label>
+                      <Input
+                        className={INPUT_CLS}
+                        placeholder="Jane Smith"
+                        value={inviteForm.name}
+                        onChange={e => setInviteForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] text-muted-foreground tracking-wider">Email Address <span className="text-destructive">*</span></label>
+                      <Input
+                        className={INPUT_CLS}
+                        type="email"
+                        placeholder="jane@company.com"
+                        value={inviteForm.email}
+                        onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] text-muted-foreground tracking-wider">Position / Role</label>
+                      <Select
+                        value={inviteForm.position}
+                        onValueChange={val => setInviteForm(f => ({ ...f, position: val }))}
+                      >
+                        <SelectTrigger className={INPUT_CLS}>
+                          <SelectValue placeholder="Select a role…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map(r => (
+                            <SelectItem key={r.code} value={r.code} className="text-sm">
+                              {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowInviteForm(false)} className="h-8 text-xs">
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isInviting || !inviteForm.email.trim()}
+                      onClick={handleInviteMember}
+                      className="h-8 text-xs bg-primary text-white hover:bg-primary/90"
+                    >
+                      {isInviting ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Sending...</> : <><UserPlus className="w-3.5 h-3.5 mr-1.5" />Send Invite</>}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowInviteForm(true)}
+                  className="w-full py-3 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Invite a team member
+                </button>
+              )}
+            </SectionCard>
+          )}
+        </>
+      )}
 
       <form onSubmit={handleChangePassword}>
         <SectionCard title="Change Password" subtitle="Update your account password" icon={<Lock className="w-4 h-4" />}>

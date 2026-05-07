@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
 import { cn } from "@/lib/utils";
 import AiIcon from "@/components/icons/AiIcon";
+import { fetchData } from "@/lib/Api";
 
 const INPUT_CLS =
   "w-full px-4 py-3.5 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+
+const INPUT_ERROR_CLS =
+  "w-full px-4 py-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 focus:bg-white transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -21,9 +25,35 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailChecking, setEmailChecking] = useState(false);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkEmail = (value: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value || !value.includes("@")) return;
+
+    debounceRef.current = setTimeout(async () => {
+      setEmailChecking(true);
+      try {
+        const result = await fetchData(`auth/check-email/?email=${encodeURIComponent(value)}`);
+        if (result?.exists) {
+          setEmailError("exists");
+        } else {
+          setEmailError("");
+        }
+      } catch {
+        // Silent — don't block signup on a failed check
+      } finally {
+        setEmailChecking(false);
+      }
+    }, 400);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailError === "exists") return;
     setError("");
     if (password !== passwordConfirm) { setError("Passwords do not match."); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
@@ -75,7 +105,6 @@ const SignupPage = () => {
           {/* Info card */}
           <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              {/* <Sparkles className="w-5 h-5 text-[#6c5ce7]" /> */}
               <AiIcon size={16} className="text-[#6c5ce7]" />
             </div>
             <p className="text-[13px] text-white/60 leading-snug">
@@ -106,7 +135,7 @@ const SignupPage = () => {
       {/* ── Right panel ── */}
       <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
 
-        {/* Mobile progress bar / top bar */}
+        {/* Mobile top bar */}
         <div className="lg:hidden border-b border-[#ededed] px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
@@ -160,10 +189,29 @@ const SignupPage = () => {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError("");
+                  }}
+                  onBlur={(e) => checkEmail(e.target.value)}
                   placeholder="you@company.com"
-                  className={INPUT_CLS}
+                  className={emailError === "exists" ? INPUT_ERROR_CLS : INPUT_CLS}
                 />
+                {emailChecking && (
+                  <p className="text-xs text-gray-400 mt-1">Checking...</p>
+                )}
+                {emailError === "exists" && (
+                  <p className="text-xs text-red-500 mt-1">
+                    An account already exists with this email.{" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/login")}
+                      className="underline font-medium hover:text-red-600 transition-colors"
+                    >
+                      Log in instead
+                    </button>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -212,7 +260,7 @@ const SignupPage = () => {
 
               <button
                 type="submit"
-                disabled={signupMutation.isPending}
+                disabled={signupMutation.isPending || emailError === "exists"}
                 className="mt-2 w-full py-3.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {signupMutation.isPending ? "Creating account..." : "Create Account"}
