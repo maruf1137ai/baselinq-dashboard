@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -81,7 +81,24 @@ const DocumentDetail = () => {
     queryFn: () => fetchData(`documents/${docId}/?project_id=${projectId}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.aiStatus;
+      return (status === 'pending' || status === 'running') ? 5000 : false;
+    },
   });
+
+  // When aiStatus transitions to 'complete', pull fresh findings + obligations
+  const prevAiStatusRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      (prevAiStatusRef.current === 'pending' || prevAiStatusRef.current === 'running') &&
+      doc?.aiStatus === 'complete'
+    ) {
+      queryClient.invalidateQueries({ queryKey: ['findings', docId] });
+      queryClient.invalidateQueries({ queryKey: ['obligations', docId] });
+    }
+    prevAiStatusRef.current = doc?.aiStatus;
+  }, [doc?.aiStatus, docId, queryClient]);
 
   useEffect(() => {
     if (docId && projectId) {
@@ -101,7 +118,6 @@ const DocumentDetail = () => {
     queryKey: ['findings', docId, projectId],
     queryFn: () => fetchData(`documents/${docId}/findings/?project_id=${projectId}`),
     enabled: !!docId && !!doc && !!projectId,
-    // refetchInterval: doc?.aiStatus === 'running' ? 3000 : false,
     refetchOnWindowFocus: false,
     select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
   });
