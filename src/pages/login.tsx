@@ -45,11 +45,12 @@ const LoginPage = () => {
           // }
         },
         onError: (err: unknown) => {
+          const data = (err as any)?.response?.data;
           const errorMessage =
-            (err as { response?: { data?: { message?: string } }; message?: string })
-              ?.response?.data?.message ||
-            (err as { message?: string })?.message ||
-            "An error occurred during login.";
+            data?.non_field_errors?.[0] ||
+            data?.detail ||
+            data?.message ||
+            "Unable to sign in. Please check your credentials and try again.";
           setError(errorMessage);
         },
       },
