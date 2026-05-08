@@ -281,24 +281,16 @@ export default function TaskDetails() {
     { enabled: !!taskId && !!projectId }
   );
 
-  // ── Werner spec rev H: route ALL task types to their v2 layout ───
-  // Every task type now has a spec-correct v2 page. The legacy
-  // TaskDetails component below remains as the fallback when:
-  //   • the task type is unknown (defensive default)
-  //   • the URL has ?legacy=1 (escape hatch during rollout)
-  //
-  // CRITICAL: must use useEffect + navigate() rather than an early
-  // return. The legacy TaskDetails has ~20 hooks declared below this
-  // line — an early return would skip them and trip 'Rendered fewer
-  // hooks than expected' on the next render.
-  //
-  // Field naming: the API response top-level `taskId` is the Task PK
-  // (NOT the entity ID). The actual entity ID is at `task.objectId`.
+  // Werner spec rev H — implementation note (May 8 2026):
+  //   The Werner spec PDF is a UX/workflow spec for what FIELDS, BUTTONS
+  //   and AUTO-REFERENCES each task doc must have. It is NOT a visual
+  //   redesign — Werner explicitly said "keep the current design look
+  //   and feel, just implement my requests". The earlier v2 pages
+  //   (src/pages/werner/*) implemented a custom gray-card layout from
+  //   the spec PDF; that was wrong. We're now adding Werner's required
+  //   features directly into THIS existing TaskDetails component so the
+  //   look-and-feel users are accustomed to remains untouched.
   const taskType = (taskDetailsResponse as any)?.taskType;
-  // Backend response shape (verified live):
-  //   { taskType: 'RFI', task: { rfiNumber: 'RFI-006', task: { objectId: 19, ... } } }
-  // The entity PK is double-nested at task.task.objectId. Other paths
-  // are tried as fallbacks for serializer drift.
   const tdr = taskDetailsResponse as any;
   const entityId =
     tdr?.task?.task?.objectId
@@ -306,30 +298,6 @@ export default function TaskDetails() {
     ?? tdr?.objectId
     ?? tdr?.object_id
     ?? tdr?.task?.id;
-
-  const v2RouteByType: Record<string, string> = {
-    RFI: "rfi-v2",
-    SI: "si-v2",
-    VO: "vo-v2",
-    GI: "gi-v2",
-    IC: "ic-v2",
-    DC: "claim-v2",
-    CLAIM: "claim-v2",
-  };
-  const v2Slug = taskType && v2RouteByType[taskType];
-  const v2Url = v2Slug && entityId ? `/tasks/${v2Slug}/${entityId}` : null;
-
-  useEffect(() => {
-    const wantsLegacy = typeof window !== "undefined"
-      && new URLSearchParams(window.location.search).get("legacy") === "1";
-    if (wantsLegacy || !v2Url) return;
-    // Force full hard navigation — bypasses any router-cached state.
-    if (typeof window !== "undefined") {
-      window.location.replace(v2Url);
-    } else {
-      navigate(v2Url, { replace: true });
-    }
-  }, [v2Url, navigate]);
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
@@ -1340,24 +1308,6 @@ export default function TaskDetails() {
 
   return (
     <DashboardLayout padding="p-0">
-
-      {/* Werner spec rev H — banner offering the new layout. Stays
-          visible even if the auto-redirect doesn't fire (e.g. browser
-          cache, in-flight data). Click → hard nav to v2 page. */}
-      {v2Url && (
-        <div className="bg-purple-600 text-white px-6 py-3 flex items-center justify-between gap-4 text-sm">
-          <div>
-            ✨ <strong>New Werner-spec layout available</strong> for this {taskType}.
-            If it didn't auto-redirect, click here to view it.
-          </div>
-          <a
-            href={v2Url}
-            className="bg-white text-purple-700 font-medium px-3 py-1.5 rounded hover:bg-purple-50"
-          >
-            Open new layout →
-          </a>
-        </div>
-      )}
 
       {/* ── VO Approve Confirmation Modal ── */}
       {displayTask?.type === "VO" && (
