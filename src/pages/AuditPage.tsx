@@ -85,8 +85,8 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   VO: "Variation Order",
   RFI: "Request for Information",
   SI: "Site Instruction",
-  DC: "Delay Claim",
-  CPI: "Critical Path Item",
+  DC: "Claim",
+  CPI: "Critical Path Item (legacy)",
   GI: "General Instruction",
 };
 
@@ -534,12 +534,12 @@ export default function AuditPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="VO">VO - Variation Order</SelectItem>
-                    <SelectItem value="RFI">RFI - Request for Info</SelectItem>
                     <SelectItem value="SI">SI - Site Instruction</SelectItem>
-                    <SelectItem value="DC">DC - Delay Claim</SelectItem>
-                    <SelectItem value="CPI">CPI - Critical Path</SelectItem>
+                    <SelectItem value="VO">VO - Variation Order</SelectItem>
+                    <SelectItem value="RFI">RFI - Request for Information</SelectItem>
                     <SelectItem value="GI">GI - General Instruction</SelectItem>
+                    <SelectItem value="DC">Claim</SelectItem>
+                    <SelectItem value="CPI">CPI - Critical Path (legacy)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

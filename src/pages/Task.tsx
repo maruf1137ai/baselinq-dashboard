@@ -31,45 +31,50 @@ import {
 } from "@/components/ui/tooltip";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
+// "+ Action" menu — order matches Werner's spec (rev G):
+//   SI → VO → RFI → GI → DC (renamed to Claim)
+// CPI removed per spec; existing CPI rows remain readable but no new ones.
+// GI is listed but its backend model lands in PR-2.
 const btns = [
   {
-    code: "VO",
-    title: "VO - Variation Order",
-    description: "Request to modify scope, cost, or materials.",
+    code: "SI",
+    title: "SI - Site Instruction",
+    description: "Professional → Contractor. Instruction for immediate site work.",
     time: "Just now",
     active: false,
   },
   {
-    code: "SI",
-    title: "SI - Site Instruction",
-    description: "Instruction issued directly for immediate site work.",
-    time: "5 minutes ago",
+    code: "VO",
+    title: "VO - Variation Order",
+    description: "PM → Contractor. Approved change to scope, cost, or materials.",
+    time: "Just now",
     active: false,
   },
   {
     code: "RFI",
     title: "RFI - Request for Information",
-    description: "Clarification requested regarding project details.",
-    time: "10 minutes ago",
+    description: "Contractor → Professional. Clarification on project details.",
+    time: "Just now",
+    active: false,
+  },
+  {
+    code: "GI",
+    title: "GI - General Instruction",
+    description: "Professional → Professional. Same format as RFI, prof-to-prof only.",
+    time: "Just now",
     active: false,
   },
   {
     code: "DC",
-    title: "DC - Delay Claim",
-    description: "Request for extension of time due to delays.",
-    time: "15 minutes ago",
-    active: false,
-  },
-  {
-    code: "CPI",
-    title: "CPI - Critical Path Item",
-    description: "Task affecting the critical path timeline.",
-    time: "20 minutes ago",
+    title: "Claim - Delay or Cost",
+    description: "Contractor → PM. Two-stage: Intention to Claim, then formal Claim.",
+    time: "Just now",
     active: false,
   },
 ];
 
-const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
+// Order: SI, VO, RFI, GI, DC. CPI omitted — frozen (no new ones, existing rows still viewable).
+const ALL_TASK_TYPES = ["SI", "VO", "RFI", "GI", "DC"];
 
 // Timeline stages per task type — used to map board columns to entity status
 const taskTypeStages: Record<string, string[]> = {
