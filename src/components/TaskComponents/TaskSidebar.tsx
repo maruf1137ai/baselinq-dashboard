@@ -204,34 +204,56 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
     return (
       <>
-        {/* Decision Timeline — Werner spec rev H. Connectors render
-            BETWEEN adjacent dots (not edge-to-edge behind them) so the
-            line never extends past the first/last dot. Each segment
-            colours per its left-end being a completed step. */}
+        {/* Decision Timeline — Werner spec rev H.
+            CSS grid with N equal columns. Each column has the dot dead-
+            center and two half-width connector segments (left-half and
+            right-half). The dot's z-10 sits above the connector edges so
+            it covers any overlap. Connectors colour purple when their
+            left-end step is complete. The first column's left-half and
+            last column's right-half are simply not rendered, so the
+            line never extends past the first/last dot. */}
         {stageCount > 0 && (
           <div>
             <h3 className="text-xs text-muted-foreground mb-5">
               Decision Timeline
             </h3>
-            <div className="flex items-start w-full">
-              {stages.map((stage: string, i: number) => (
-                <div
-                  key={stage}
-                  className={cn(
-                    "flex items-start",
-                    i === stages.length - 1 ? "" : "flex-1",
-                  )}
-                >
-                  {/* Dot + label column */}
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: `repeat(${stageCount}, minmax(0, 1fr))` }}
+            >
+              {stages.map((stage: string, i: number) => {
+                const isComplete = i <= currentStageIndex;
+                const isCurrent = i === currentStageIndex;
+                return (
                   <button
+                    key={stage}
                     type="button"
                     onClick={() => onStageClick?.(stage)}
-                    className="flex flex-col items-center cursor-pointer w-fit"
+                    className="relative flex flex-col items-center cursor-pointer pt-2 pb-1"
                   >
+                    {/* Left-half connector (skipped on first dot) */}
+                    {i > 0 && (
+                      <div
+                        className={cn(
+                          "absolute left-0 top-[18px] h-[2px] w-1/2",
+                          i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                        )}
+                      />
+                    )}
+                    {/* Right-half connector (skipped on last dot) */}
+                    {i < stageCount - 1 && (
+                      <div
+                        className={cn(
+                          "absolute right-0 top-[18px] h-[2px] w-1/2",
+                          i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                        )}
+                      />
+                    )}
+                    {/* Dot — relative + z-10 so it covers the connector edges */}
                     <div
                       className={cn(
-                        "w-4 h-4 rounded-full border-2 transition-all duration-300",
-                        i <= currentStageIndex
+                        "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
+                        isComplete
                           ? "bg-[#6c5ce7] border-[#6c5ce7]"
                           : "bg-white border-border",
                       )}
@@ -239,29 +261,14 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     <span
                       className={cn(
                         "text-xs mt-3 text-muted-foreground text-center break-words max-w-[90px] leading-tight",
-                        i === currentStageIndex && "text-foreground font-normal",
+                        isCurrent && "text-foreground font-normal",
                       )}
                     >
                       {stage}
                     </span>
                   </button>
-
-                  {/* Connector to next dot — only between dots, never past
-                      the last one. Coloured purple if THIS step is complete. */}
-                  {i < stages.length - 1 && (
-                    <div className="flex-1 mt-2 h-[2px] bg-muted">
-                      <div
-                        className={cn(
-                          "h-[2px] transition-all duration-500",
-                          i < currentStageIndex
-                            ? "bg-[#6c5ce7] w-full"
-                            : "bg-muted w-0",
-                        )}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

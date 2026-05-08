@@ -1379,32 +1379,26 @@ export default function TaskDetails() {
                   doc identifier + sender/recipient strip, then content
                   (description / proposed solution / attachments). */}
               <Card className="p-6 bg-white shadow-none rounded-lg border-border">
-                {/* Project block — name / address / number / employer */}
+                {/* Project block — Werner page 3: 4 stacked rows of label + value.
+                    Compact (label inline-style), reads as a certificate header. */}
                 {(projectName || projectNumber || (currentProject as any)?.location) && (
-                  <div className="mb-5 pb-5 border-b border-border grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Project name</p>
-                      <p className="text-foreground">{projectName || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Project No</p>
-                      <p className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Project address</p>
-                      <p className="text-foreground">
-                        {(currentProject as any)?.location || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Employer</p>
-                      <p className="text-foreground">
-                        {((currentProject as any)?.clientDetails?.name)
-                         || ((currentProject as any)?.client_details?.name)
-                         || "—"}
-                      </p>
-                    </div>
-                  </div>
+                  <dl className="mb-4 pb-4 border-b border-border grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
+                    <dt className="text-muted-foreground">Project name:</dt>
+                    <dd className="text-foreground">{projectName || "—"}</dd>
+
+                    <dt className="text-muted-foreground">Project address:</dt>
+                    <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
+
+                    <dt className="text-muted-foreground">Project No:</dt>
+                    <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
+
+                    <dt className="text-muted-foreground">Employer:</dt>
+                    <dd className="text-foreground">
+                      {((currentProject as any)?.clientDetails?.name)
+                       || ((currentProject as any)?.client_details?.name)
+                       || "—"}
+                    </dd>
+                  </dl>
                 )}
 
                 <div className="flex items-start justify-between mb-5">
@@ -1524,60 +1518,58 @@ export default function TaskDetails() {
                               : "Details"}
                 </h2>
 
-                {/* Werner spec rev H — From / To / CC / Date Required strip.
-                    Surfaces the meta that's currently buried in TaskContentRenderer
-                    so it's visible at a glance, matching Werner pages 3-11.
-                    Same fonts/sizing as the rest of the card. */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 pb-5 border-b border-border text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">From</p>
-                    <p className="text-foreground">
-                      {displayTask.creator?.name || "—"}
-                      {displayTask.creator?.role && (
-                        <span className="text-muted-foreground"> ({displayTask.creator.role})</span>
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Date Required</p>
-                    <p className="text-foreground">
-                      {displayTask.dueDate && displayTask.dueDate !== "No Date"
-                        ? <>
-                            {displayTask.dueDate}
-                            {displayTask.priority === "Urgent" && (
-                              <span className="ml-2 text-red-600 font-medium">(urgent)</span>
-                            )}
-                          </>
-                        : <span className="text-muted-foreground">—</span>}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">To</p>
-                    <div className="text-foreground space-y-0.5">
-                      {(displayTask.assignedTo || []).length > 0
-                        ? displayTask.assignedTo.map((u: any, i: number) => (
-                            <p key={i}>
+                {/* Werner page 3 — From/To/CC/Subject/Date Required as
+                    stacked label+value rows. Same dl pattern as the
+                    project block above. Reads as one document. */}
+                <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 mb-4 pb-4 border-b border-border text-sm">
+                  <dt className="text-muted-foreground">From:</dt>
+                  <dd className="text-foreground">
+                    {displayTask.creator?.name || "—"}
+                    {displayTask.creator?.role && (
+                      <span className="text-muted-foreground"> ({displayTask.creator.role})</span>
+                    )}
+                  </dd>
+
+                  <dt className="text-muted-foreground">To:</dt>
+                  <dd className="text-foreground">
+                    {(displayTask.assignedTo || []).length > 0
+                      ? <div className="space-y-0.5">
+                          {displayTask.assignedTo.map((u: any, i: number) => (
+                            <div key={i}>
                               {u.name || "—"}
                               {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
-                            </p>
-                          ))
-                        : <p className="text-muted-foreground">—</p>}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">CC</p>
-                    <div className="text-foreground space-y-0.5">
-                      {(displayTask.cc || displayTask.ccUsers || []).length > 0
-                        ? (displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
-                            <p key={i}>
+                            </div>
+                          ))}
+                        </div>
+                      : <span className="text-muted-foreground">—</span>}
+                  </dd>
+
+                  <dt className="text-muted-foreground">CC:</dt>
+                  <dd className="text-foreground">
+                    {(displayTask.cc || displayTask.ccUsers || []).length > 0
+                      ? <div className="space-y-0.5">
+                          {(displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
+                            <div key={i}>
                               {u.name || "—"}
                               {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
-                            </p>
-                          ))
-                        : <p className="text-muted-foreground">—</p>}
-                    </div>
-                  </div>
-                </div>
+                            </div>
+                          ))}
+                        </div>
+                      : <span className="text-muted-foreground">—</span>}
+                  </dd>
+
+                  <dt className="text-muted-foreground">Date required:</dt>
+                  <dd className="text-foreground">
+                    {displayTask.dueDate && displayTask.dueDate !== "No Date"
+                      ? <>
+                          {displayTask.dueDate}
+                          {displayTask.priority === "Urgent" && (
+                            <span className="ml-2 text-red-600 font-medium">(urgent)</span>
+                          )}
+                        </>
+                      : <span className="text-muted-foreground">—</span>}
+                  </dd>
+                </dl>
 
                 <TaskContentRenderer
                   displayTask={displayTask}
