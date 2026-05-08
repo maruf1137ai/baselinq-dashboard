@@ -92,6 +92,7 @@ import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRend
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
+import { TaskReferences } from "@/components/TaskComponents/TaskReferences";
 import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
@@ -2650,6 +2651,17 @@ export default function TaskDetails() {
                     </div>
                   )}
                 </div>
+
+                {/* Werner spec rev H — References sub-panel.
+                    Shows incoming auto-refs (← from RFI-001) and outgoing
+                    escalations (→ to SI-001). Matches Audit Trail visual
+                    language; renders nothing when there are no refs. */}
+                {entityId && taskType && (
+                  <TaskReferences
+                    entityType={taskType}
+                    entityId={entityId}
+                  />
+                )}
               </div>
             )}
           </div>
