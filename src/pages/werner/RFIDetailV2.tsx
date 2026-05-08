@@ -32,26 +32,52 @@ import { LifecycleTimeline, type LifecycleStep } from "@/components/werner/Lifec
 import { ActionBar, type DocType } from "@/components/werner/ActionBar";
 
 // API shape returned by the existing RFI endpoint.
+// Note: production serializer returns `project` and `raised_by` as
+// integer IDs (PrimaryKey), not nested objects. We accept either
+// shape so the component can be hardened.
+type MaybeUser = number | { id: number; name?: string; email?: string; role?: string } | null;
+
 interface RFIDetail {
   id: number;
   rfi_number: string;
   subject: string;
   description?: string;
-  question: string;
-  discipline: string;
+  question?: string;
+  discipline?: string;
   status: string;
-  priority: string;
-  raised_by?: { id: number; name: string; role?: string };
-  responded_by?: { id: number; name: string; role?: string };
+  priority?: string;
+  raised_by?: MaybeUser;
+  responded_by?: MaybeUser;
   created_at: string;
   responded_at?: string;
-  project?: {
+  project?: number | {
     id: number;
-    name: string;
+    name?: string;
     project_number?: string;
     address?: string;
     employer?: string;
   };
+}
+
+interface ProjectInfo {
+  id: number;
+  name?: string;
+  project_number?: string;
+  address?: string;
+  employer?: string;
+}
+
+interface UserInfo {
+  id: number;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
+function userObject(u: MaybeUser): UserInfo | undefined {
+  if (u == null) return undefined;
+  if (typeof u === "number") return { id: u };
+  return { id: u.id, name: u.name, email: u.email, role: u.role };
 }
 
 export default function RFIDetailV2() {
@@ -66,14 +92,17 @@ export default function RFIDetailV2() {
     id ? `tasks/requests-for-information/${id}/` : "",
   );
 
-  const { data: replies, refetch: refetchReplies } = useFetch<ReplyData[]>(
+  const { data: rawReplies, refetch: refetchReplies } = useFetch<ReplyData[]>(
     id ? `tasks/replies/?entity_type=rfi&entity_id=${id}` : "",
   );
+  // Defensive: API might return an error object or undefined; only use
+  // an array if that's actually what came back.
+  const replies: ReplyData[] = Array.isArray(rawReplies) ? rawReplies : [];
 
   const lifecycleSteps: LifecycleStep[] = useMemo(() => {
     if (!rfi) return [];
     const status = rfi.status?.toLowerCase() || "";
-    const replyCount = replies?.length || 0;
+    const replyCount = replies.length;
 
     const isClosed = status.includes("closed");
     const isSent = status !== "draft";
@@ -94,12 +123,12 @@ export default function RFIDetailV2() {
       {
         label: "Response provided",
         status: replyCount >= 1 ? "complete" : isSent ? "active" : "pending",
-        timestamp: replyCount >= 1 ? replies?.[0]?.created_at?.slice(0, 10) : undefined,
+        timestamp: replyCount >= 1 ? replies[0]?.created_at?.slice(0, 10) : undefined,
       },
       {
         label: "Response provided",
         status: replyCount >= 2 ? "complete" : replyCount >= 1 ? "active" : "pending",
-        timestamp: replyCount >= 2 ? replies?.[1]?.created_at?.slice(0, 10) : undefined,
+        timestamp: replyCount >= 2 ? replies[1]?.created_at?.slice(0, 10) : undefined,
       },
       {
         label: "Closed",
@@ -186,9 +215,15 @@ export default function RFIDetailV2() {
     );
   }
 
-  const project = rfi.project || ({} as RFIDetail["project"]);
+  // Normalise whichever shape the API returns. project may be a numeric
+  // PK or a nested object — handle both.
+  const project: ProjectInfo =
+    typeof rfi.project === "number"
+      ? { id: rfi.project }
+      : rfi.project || { id: 0 };
+  const raisedBy = userObject(rfi.raised_by);
   const isClosed = rfi.status?.toLowerCase().includes("closed");
-  const replyCount = replies?.length || 0;
+  const replyCount = replies.length;
 
   // Determine which mode the action bar should be in:
   //   - submit:           draft, never sent
@@ -228,7 +263,7 @@ export default function RFIDetailV2() {
                 docNumber={rfi.rfi_number}
                 dateIssued={new Date(rfi.created_at).toLocaleString()}
                 discipline={rfi.discipline}
-                from={rfi.raised_by ? { id: rfi.raised_by.id, name: rfi.raised_by.name, role: rfi.raised_by.role } : undefined}
+                from={raisedBy ? { id: raisedBy.id, name: raisedBy.name || raisedBy.email || `User #${raisedBy.id}`, role: raisedBy.role } : undefined}
                 subject={rfi.subject}
                 isUrgent={rfi.priority === "Urgent"}
                 description={rfi.question || rfi.description || ""}
@@ -260,7 +295,7 @@ export default function RFIDetailV2() {
             )}
 
             {/* Reply cards — each its own gray block under the action bar */}
-            {replies && replies.map((reply) => (
+            {replies.map((reply) => (
               <ReplyCard key={reply.id} reply={reply} />
             ))}
 
