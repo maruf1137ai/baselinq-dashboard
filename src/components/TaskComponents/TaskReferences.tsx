@@ -13,6 +13,7 @@
  * same dotted-list look, same fonts. No new visual style.
  */
 import useFetch from "@/hooks/useFetch";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface RefIncoming {
@@ -64,11 +65,11 @@ export function TaskReferences({ entityType, entityId }: Props) {
   }
 
   return (
-    <div className="mt-8 border-t border-border pt-6">
-      <h3 className="text-xs font-normal text-foreground mb-3 pl-2">References</h3>
+    <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
+      <h3 className="text-xs font-normal text-foreground mb-3">References</h3>
 
       {incoming.length > 0 && (
-        <div className="mb-3 pl-2">
+        <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-1.5">Originated from</p>
           <div className="flex flex-wrap gap-1.5">
             {incoming.map((ref, i) => (
@@ -90,7 +91,7 @@ export function TaskReferences({ entityType, entityId }: Props) {
       )}
 
       {outgoing.length > 0 && (
-        <div className="pl-2">
+        <div>
           <p className="text-xs text-muted-foreground mb-1.5">Linked to</p>
           <div className="flex flex-wrap gap-1.5">
             {outgoing.map((ref, i) => (
@@ -110,6 +111,6 @@ export function TaskReferences({ entityType, entityId }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

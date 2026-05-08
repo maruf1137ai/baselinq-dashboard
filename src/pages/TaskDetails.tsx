@@ -1379,26 +1379,29 @@ export default function TaskDetails() {
                   doc identifier + sender/recipient strip, then content
                   (description / proposed solution / attachments). */}
               <Card className="p-6 bg-white shadow-none rounded-lg border-border">
-                {/* Project block — Werner page 3: 4 stacked rows of label + value.
-                    Compact (label inline-style), reads as a certificate header. */}
+                {/* Project block — Werner page 3: 4 stacked rows. */}
                 {(projectName || projectNumber || (currentProject as any)?.location) && (
-                  <dl className="mb-4 pb-4 border-b border-border grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
-                    <dt className="text-muted-foreground">Project name:</dt>
-                    <dd className="text-foreground">{projectName || "—"}</dd>
+                  <>
+                    <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
+                      <dt className="text-muted-foreground">Project name:</dt>
+                      <dd className="text-foreground">{projectName || "—"}</dd>
 
-                    <dt className="text-muted-foreground">Project address:</dt>
-                    <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
+                      <dt className="text-muted-foreground">Project address:</dt>
+                      <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
 
-                    <dt className="text-muted-foreground">Project No:</dt>
-                    <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
+                      <dt className="text-muted-foreground">Project No:</dt>
+                      <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
 
-                    <dt className="text-muted-foreground">Employer:</dt>
-                    <dd className="text-foreground">
-                      {((currentProject as any)?.clientDetails?.name)
-                       || ((currentProject as any)?.client_details?.name)
-                       || "—"}
-                    </dd>
-                  </dl>
+                      <dt className="text-muted-foreground">Employer:</dt>
+                      <dd className="text-foreground">
+                        {((currentProject as any)?.clientDetails?.name)
+                         || ((currentProject as any)?.client_details?.name)
+                         || "—"}
+                      </dd>
+                    </dl>
+                    {/* Flush divider to card edges */}
+                    <div className="-mx-6 border-t border-border my-5" />
+                  </>
                 )}
 
                 <div className="flex items-start justify-between mb-5">
@@ -1444,84 +1447,20 @@ export default function TaskDetails() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-amber-50 border-amber-200 capitalize text-amber-600 py-1.5 px-3  text-xs">
-                      {displayTask.creator.badge}
-                    </Badge>
-                    <div className="border border-border flex items-center bg-white px-3 rounded-lg gap-2 py-1.5">
-                      <User className="h-[14px] w-[14px] text-muted-foreground" />
-                      <span className="text-sm text-foreground ">
-                        {displayTask.creator.name}{" "}
-                        <span className="text-sm text-muted-foreground">
-                          ({displayTask.creator.role})
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="border border-border flex items-center bg-white px-3 rounded-lg gap-2 py-1.5">
-                      <User className="h-[14px] w-[14px] text-muted-foreground" />
-                      <span className="text-sm text-foreground ">
-                        {displayTask.watcher.name}{" "}
-                        <span className="text-sm text-muted-foreground">
-                          ({displayTask.watcher.role})
-                        </span>
-                      </span>
-                    </div>
-                  </div>
+                {/* Werner spec rev H — title row keeps just title + #RFI-049
+                    + project subtitle. The yellow type pill, creator chip,
+                    watcher chip and avatar pile have been moved out — type
+                    is implied by the #RFI-049 number, and creator/watcher
+                    info appears in the From/To/CC strip below. Assign
+                    actions live in the 3-dot menu top-right. */}
 
-                  {/* assignees */}
-                  {displayTask.assignedTo && displayTask.assignedTo.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider delayDuration={0}>
-                        <div className="flex items-center">
-                          {displayTask.assignedTo.map((assignee: any, index: number) => (
-                            <Tooltip key={assignee.userId || index}>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className="h-8 w-8 rounded-full bg-[#6c5ce7] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer"
-                                  style={{ marginLeft: index > 0 ? "-8px" : "0" }}
-                                >
-                                  {assignee.name?.charAt(0).toUpperCase() || "U"}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{assignee.name || "Unknown"}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </TooltipProvider>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Werner spec rev H — divider between header section and
-                       doc-detail section. Stays inside the same Card so the
-                       whole RFI reads as a single document per page-3 spec. */}
-                <div className="border-t border-border my-5" />
-
-                <h2 className="text-sm text-foreground mb-5">
-                  {displayTask.type === "RFI"
-                    ? "Question & Context"
-                    : displayTask.type === "SI"
-                      ? "Instruction Details"
-                      : displayTask.type === "VO"
-                        ? "Instruction"
-                        : displayTask.type === "DC"
-                          ? "Delay Reason & Impact"
-                          : displayTask.type === "CPI"
-                            ? "Critical Path Details"
-                            : displayTask.type === "GI"
-                              ? "General Instruction Details"
-                              : "Details"}
-                </h2>
+                {/* Divider — flush to card edges via negative margin */}
+                <div className="-mx-6 border-t border-border my-5" />
 
                 {/* Werner page 3 — From/To/CC/Subject/Date Required as
                     stacked label+value rows. Same dl pattern as the
                     project block above. Reads as one document. */}
-                <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 mb-4 pb-4 border-b border-border text-sm">
+                <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
                   <dt className="text-muted-foreground">From:</dt>
                   <dd className="text-foreground">
                     {displayTask.creator?.name || "—"}
@@ -1570,6 +1509,9 @@ export default function TaskDetails() {
                       : <span className="text-muted-foreground">—</span>}
                   </dd>
                 </dl>
+
+                {/* Flush divider before description block */}
+                <div className="-mx-6 border-t border-border my-5" />
 
                 <TaskContentRenderer
                   displayTask={displayTask}
@@ -2464,15 +2406,10 @@ export default function TaskDetails() {
                 }}
               />
             ) : (
-              <div className="space-y-6 px-6 py-[45px] border-l">
-                {/* Decision Timeline — Werner spec rev H.
-                    CSS grid (one column per stage). Dot dead-centred, two
-                    half-width connectors per cell (left + right) — they
-                    meet at the dot and the dot's z-10 covers any overlap.
-                    First cell skips left half, last cell skips right half,
-                    so the line is exactly bounded between dots. Connector
-                    colours purple when its left-end step is complete. */}
-                <div>
+              <div className="space-y-4 px-6 py-[45px]">
+                {/* Decision Timeline — wrapped in a white Card matching
+                    the rest of the production right-panel pattern. */}
+                <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
                   <h3 className="text-xs text-muted-foreground mb-5">
                     Decision Timeline
                   </h3>
@@ -2542,7 +2479,7 @@ export default function TaskDetails() {
                       );
                     })}
                   </div>
-                </div>
+                </Card>
 
                 {/* Deadlines */}
                 {/* <Card className="p-[17px] shadow-none rounded-lg bg-sidebar border-0">
@@ -2641,9 +2578,9 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                {/* Activity Timeline */}
-                <div className="mt-8 border-t border-border pt-6">
-                  <h3 className="text-xs font-normal text-foreground mb-5st pl-2">Audit Trail</h3>
+                {/* Audit Trail — own Card matching the Decision Timeline above. */}
+                <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
+                  <h3 className="text-xs font-normal text-foreground mb-5">Audit Trail</h3>
                   {auditLogs && auditLogs.length > 0 ? (
                     groupLogsByDate(auditLogs.slice(0, 30)).map((group) => (
                       <div key={group.label} className="mb-5">
@@ -2720,12 +2657,9 @@ export default function TaskDetails() {
                       <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
                     </div>
                   )}
-                </div>
+                </Card>
 
-                {/* Werner spec rev H — References sub-panel.
-                    Shows incoming auto-refs (← from RFI-001) and outgoing
-                    escalations (→ to SI-001). Matches Audit Trail visual
-                    language; renders nothing when there are no refs. */}
+                {/* References — own Card, matches the panels above. */}
                 {entityId && taskType && (
                   <TaskReferences
                     entityType={taskType}
