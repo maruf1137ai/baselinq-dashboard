@@ -291,8 +291,15 @@ export default function TaskDetails() {
   // declared below this line, and an early return would skip them
   // — React's Rules of Hooks then panics with "Rendered fewer hooks
   // than expected" on the second render.
+  //
+  // Field naming gotcha: the response has `taskId` at the top level,
+  // but that's the Task PK. The actual entity (RFI) ID lives at
+  // `task.objectId` per the TaskSerializer's nested representation.
   const taskType = (taskDetailsResponse as any)?.taskType;
-  const entityId = (taskDetailsResponse as any)?.taskId;
+  const entityId =
+    (taskDetailsResponse as any)?.task?.objectId
+    ?? (taskDetailsResponse as any)?.objectId
+    ?? (taskDetailsResponse as any)?.object_id;
   useEffect(() => {
     const wantsLegacy = typeof window !== "undefined"
       && new URLSearchParams(window.location.search).get("legacy") === "1";
