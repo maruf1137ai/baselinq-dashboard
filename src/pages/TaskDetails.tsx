@@ -81,7 +81,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
@@ -280,6 +280,19 @@ export default function TaskDetails() {
     // projectId && taskId ? `projects/${projectId}/tasks/${taskId}/` : "",
     { enabled: !!taskId && !!projectId }
   );
+
+  // ── Werner spec rev H: route RFI to the new layout ────────────────
+  // When the underlying task is an RFI, render the spec-correct
+  // RFIDetailV2 instead of the generic TaskDetails. The redirect is
+  // gated by ?legacy=1 so anyone who needs the old view can still
+  // reach it (e.g. /tasks/123?legacy=1).
+  const wantsLegacy = typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("legacy") === "1";
+  const taskType = (taskDetailsResponse as any)?.taskType;
+  const entityId = (taskDetailsResponse as any)?.taskId;
+  if (!wantsLegacy && taskType === "RFI" && entityId) {
+    return <Navigate to={`/tasks/rfi-v2/${entityId}`} replace />;
+  }
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
