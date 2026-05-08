@@ -2465,61 +2465,82 @@ export default function TaskDetails() {
               />
             ) : (
               <div className="space-y-6 px-6 py-[45px] border-l">
-                {/* Decision Timeline */}
-                <div className="">
+                {/* Decision Timeline — Werner spec rev H.
+                    CSS grid (one column per stage). Dot dead-centred, two
+                    half-width connectors per cell (left + right) — they
+                    meet at the dot and the dot's z-10 covers any overlap.
+                    First cell skips left half, last cell skips right half,
+                    so the line is exactly bounded between dots. Connector
+                    colours purple when its left-end step is complete. */}
+                <div>
                   <h3 className="text-xs text-muted-foreground mb-5">
                     Decision Timeline
                   </h3>
-                  <div className="relative">
-                    <div className="relative w-full max-w-3xl mx-auto px-1">
-                      {/* Line */}
-                      <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
-                        <div
-                          className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
-                          style={{
-                            width: `${(currentStageIndex / (displayTask.timeline.stages.length - 1)) * 100}%`,
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: `repeat(${displayTask.timeline.stages.length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {displayTask.timeline.stages.map((stage: any, i: any) => {
+                      const isComplete = i <= currentStageIndex;
+                      const isCurrent = i === currentStageIndex;
+                      const lastIdx = displayTask.timeline.stages.length - 1;
+                      return (
+                        <button
+                          key={stage}
+                          disabled={!canApprove}
+                          onClick={() => {
+                            if (!canApprove) return;
+                            if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
+                              handleVOApproveClick();
+                            } else {
+                              handleApproveTask(stage);
+                            }
                           }}
-                        />
-                      </div>
-
-                      {/* Steps */}
-                      <div className="flex justify-between relative z-10">
-                        {displayTask.timeline.stages.map((stage: any, i: any) => (
-                          <button
-                            key={stage}
-                            disabled={!canApprove}
-                            onClick={() => {
-                              if (!canApprove) return;
-                              // For VO, route through the modal instead of direct approval
-                              if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
-                                handleVOApproveClick();
-                              } else {
-                                handleApproveTask(stage);
-                              }
-                            }}
-                            className={cn(
-                              "relative flex flex-col items-center flex-1",
-                              canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70"
-                            )}>
-                            {/* Dot */}
+                          className={cn(
+                            "relative flex flex-col items-center pt-2 pb-1",
+                            canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70",
+                          )}
+                        >
+                          {/* Left-half connector (skipped on first dot) */}
+                          {i > 0 && (
                             <div
-                              className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                                ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                                : "bg-white border-border"
-                                }`}
-                            />
-                            {/* Label */}
-                            <span
                               className={cn(
-                                "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                                i === currentStageIndex && "text-foreground font-normal"
-                              )}>
-                              {stage}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                                "absolute left-0 top-[18px] h-[2px] w-1/2",
+                                i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                              )}
+                            />
+                          )}
+                          {/* Right-half connector (skipped on last dot) */}
+                          {i < lastIdx && (
+                            <div
+                              className={cn(
+                                "absolute right-0 top-[18px] h-[2px] w-1/2",
+                                i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                              )}
+                            />
+                          )}
+                          {/* Dot — relative + z-10 so it covers connector ends */}
+                          <div
+                            className={cn(
+                              "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
+                              isComplete
+                                ? "bg-[#6c5ce7] border-[#6c5ce7]"
+                                : "bg-white border-border",
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "text-xs mt-3 text-muted-foreground text-center break-words max-w-[90px] leading-tight",
+                              isCurrent && "text-foreground font-normal",
+                            )}
+                          >
+                            {stage}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
