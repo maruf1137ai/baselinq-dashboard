@@ -30,6 +30,7 @@ import { ReplyCard, type ReplyData } from "@/components/werner/ReplyCard";
 import { ReplyForm } from "@/components/werner/ReplyForm";
 import { LifecycleTimeline, type LifecycleStep } from "@/components/werner/LifecycleTimeline";
 import { ActionBar, type DocType } from "@/components/werner/ActionBar";
+import { WernerErrorBoundary } from "@/components/werner/ErrorBoundary";
 
 // API shape returned by the existing RFI endpoint.
 // Note: production serializer returns `project` and `raised_by` as
@@ -80,7 +81,15 @@ function userObject(u: MaybeUser): UserInfo | undefined {
   return { id: u.id, name: u.name, email: u.email, role: u.role };
 }
 
-export default function RFIDetailV2() {
+export default function RFIDetailV2Wrapped() {
+  return (
+    <WernerErrorBoundary>
+      <RFIDetailV2 />
+    </WernerErrorBoundary>
+  );
+}
+
+function RFIDetailV2() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [showReplyForm, setShowReplyForm] = useState(false);
