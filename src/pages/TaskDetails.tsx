@@ -92,6 +92,7 @@ import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRend
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
+import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
 import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
@@ -299,6 +300,13 @@ export default function TaskDetails() {
     ?? tdr?.objectId
     ?? tdr?.object_id
     ?? tdr?.task?.id;
+
+  // Werner spec rev H — project context for subtitle line + notification
+  // payload. Pulls name + number from the existing /projects/<id>/
+  // endpoint via the shared useProject hook. Cached so this is cheap.
+  const { data: currentProject } = useProject(projectId || undefined);
+  const projectNumber = (currentProject as any)?.project_number || (currentProject as any)?.number || "";
+  const projectName = (currentProject as any)?.name || "";
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
@@ -1368,13 +1376,23 @@ export default function TaskDetails() {
               <Card className="p-6 bg-sidebar shadow-none rounded-lg px-6 py-4 border-border">
                 <div className="flex items-start justify-between mb-5">
                   <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-3">
+                    <div className="flex items-center gap-4 mb-1">
                       <h1 className="text-sm  text-foreground">
                         {displayTask.title}
                       </h1>
                       {/* <p className="text-muted-foreground text-sm">{displayTask.displayId || displayTask.id}</p> */}
                       <p className="text-muted-foreground text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
                     </div>
+                    {/* Werner spec rev H — project subtitle (page 13). Small, muted,
+                        same line height as the title row above. */}
+                    {(projectName || projectNumber) && (
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {projectName}
+                        {projectNumber && (
+                          <span> · #{projectNumber}</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
@@ -1484,6 +1502,61 @@ export default function TaskDetails() {
                                 ? "General Instruction Details"
                                 : "Details"}
                 </h2>
+
+                {/* Werner spec rev H — From / To / CC / Date Required strip.
+                    Surfaces the meta that's currently buried in TaskContentRenderer
+                    so it's visible at a glance, matching Werner pages 3-11.
+                    Same fonts/sizing as the rest of the card. */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 pb-5 border-b border-border text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">From</p>
+                    <p className="text-foreground">
+                      {displayTask.creator?.name || "—"}
+                      {displayTask.creator?.role && (
+                        <span className="text-muted-foreground"> ({displayTask.creator.role})</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Date Required</p>
+                    <p className="text-foreground">
+                      {displayTask.dueDate && displayTask.dueDate !== "No Date"
+                        ? <>
+                            {displayTask.dueDate}
+                            {displayTask.priority === "Urgent" && (
+                              <span className="ml-2 text-red-600 font-medium">(urgent)</span>
+                            )}
+                          </>
+                        : <span className="text-muted-foreground">—</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">To</p>
+                    <div className="text-foreground space-y-0.5">
+                      {(displayTask.assignedTo || []).length > 0
+                        ? displayTask.assignedTo.map((u: any, i: number) => (
+                            <p key={i}>
+                              {u.name || "—"}
+                              {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
+                            </p>
+                          ))
+                        : <p className="text-muted-foreground">—</p>}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">CC</p>
+                    <div className="text-foreground space-y-0.5">
+                      {(displayTask.cc || displayTask.ccUsers || []).length > 0
+                        ? (displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
+                            <p key={i}>
+                              {u.name || "—"}
+                              {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
+                            </p>
+                          ))
+                        : <p className="text-muted-foreground">—</p>}
+                    </div>
+                  </div>
+                </div>
 
                 <TaskContentRenderer
                   displayTask={displayTask}
