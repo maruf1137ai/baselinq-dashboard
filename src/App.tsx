@@ -14,6 +14,11 @@ import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import RFIDetailV2 from "./pages/werner/RFIDetailV2";
+import SIDetailV2 from "./pages/werner/SIDetailV2";
+import VODetailV2 from "./pages/werner/VODetailV2";
+import GIDetailV2 from "./pages/werner/GIDetailV2";
+import ICDetailV2 from "./pages/werner/ICDetailV2";
+import ClaimDetailV2 from "./pages/werner/ClaimDetailV2";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
 import "./App.css";
@@ -176,14 +181,24 @@ const App = () => (
               </ProjectProtectedRoute>
             </ProtectedRoute>
           } />
-          {/* Werner spec rev G — new RFI layout. Standalone route while
-              the new components are validated against the spec. */}
+          {/* Werner spec rev H — new task layouts (one per type) */}
           <Route path="/tasks/rfi-v2/:id" element={
-            <ProtectedRoute>
-              <ProjectProtectedRoute>
-                <RFIDetailV2 />
-              </ProjectProtectedRoute>
-            </ProtectedRoute>
+            <ProtectedRoute><ProjectProtectedRoute><RFIDetailV2 /></ProjectProtectedRoute></ProtectedRoute>
+          } />
+          <Route path="/tasks/si-v2/:id" element={
+            <ProtectedRoute><ProjectProtectedRoute><SIDetailV2 /></ProjectProtectedRoute></ProtectedRoute>
+          } />
+          <Route path="/tasks/vo-v2/:id" element={
+            <ProtectedRoute><ProjectProtectedRoute><VODetailV2 /></ProjectProtectedRoute></ProtectedRoute>
+          } />
+          <Route path="/tasks/gi-v2/:id" element={
+            <ProtectedRoute><ProjectProtectedRoute><GIDetailV2 /></ProjectProtectedRoute></ProtectedRoute>
+          } />
+          <Route path="/tasks/ic-v2/:id" element={
+            <ProtectedRoute><ProjectProtectedRoute><ICDetailV2 /></ProjectProtectedRoute></ProtectedRoute>
+          } />
+          <Route path="/tasks/claim-v2/:id" element={
+            <ProtectedRoute><ProjectProtectedRoute><ClaimDetailV2 /></ProjectProtectedRoute></ProtectedRoute>
           } />
           <Route path="/compliance" element={
             <ProtectedRoute>

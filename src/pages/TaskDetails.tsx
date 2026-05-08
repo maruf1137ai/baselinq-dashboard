@@ -281,20 +281,19 @@ export default function TaskDetails() {
     { enabled: !!taskId && !!projectId }
   );
 
-  // ── Werner spec rev H: route RFI to the new layout ────────────────
-  // When the underlying task is an RFI, redirect to the spec-correct
-  // RFIDetailV2 page. The redirect is gated by ?legacy=1 so anyone
-  // who needs the old view can still reach it (e.g. /tasks/123?legacy=1).
+  // ── Werner spec rev H: route ALL task types to their v2 layout ───
+  // Every task type now has a spec-correct v2 page. The legacy
+  // TaskDetails component below remains as the fallback when:
+  //   • the task type is unknown (defensive default)
+  //   • the URL has ?legacy=1 (escape hatch during rollout)
   //
   // CRITICAL: must use useEffect + navigate() rather than an early
-  // return with <Navigate>. The legacy TaskDetails has ~20 hooks
-  // declared below this line, and an early return would skip them
-  // — React's Rules of Hooks then panics with "Rendered fewer hooks
-  // than expected" on the second render.
+  // return. The legacy TaskDetails has ~20 hooks declared below this
+  // line — an early return would skip them and trip 'Rendered fewer
+  // hooks than expected' on the next render.
   //
-  // Field naming gotcha: the response has `taskId` at the top level,
-  // but that's the Task PK. The actual entity (RFI) ID lives at
-  // `task.objectId` per the TaskSerializer's nested representation.
+  // Field naming: the API response top-level `taskId` is the Task PK
+  // (NOT the entity ID). The actual entity ID is at `task.objectId`.
   const taskType = (taskDetailsResponse as any)?.taskType;
   const entityId =
     (taskDetailsResponse as any)?.task?.objectId
@@ -303,8 +302,21 @@ export default function TaskDetails() {
   useEffect(() => {
     const wantsLegacy = typeof window !== "undefined"
       && new URLSearchParams(window.location.search).get("legacy") === "1";
-    if (!wantsLegacy && taskType === "RFI" && entityId) {
-      navigate(`/tasks/rfi-v2/${entityId}`, { replace: true });
+    if (wantsLegacy || !taskType || !entityId) return;
+
+    const v2RouteByType: Record<string, string> = {
+      RFI: "rfi-v2",
+      SI: "si-v2",
+      VO: "vo-v2",
+      GI: "gi-v2",
+      IC: "ic-v2",
+      // Claim — backend serialises DC type as DC; treat both
+      DC: "claim-v2",
+      CLAIM: "claim-v2",
+    };
+    const slug = v2RouteByType[taskType];
+    if (slug) {
+      navigate(`/tasks/${slug}/${entityId}`, { replace: true });
     }
   }, [taskType, entityId, navigate]);
 
