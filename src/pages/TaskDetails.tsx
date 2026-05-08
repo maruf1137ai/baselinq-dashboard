@@ -295,10 +295,17 @@ export default function TaskDetails() {
   // Field naming: the API response top-level `taskId` is the Task PK
   // (NOT the entity ID). The actual entity ID is at `task.objectId`.
   const taskType = (taskDetailsResponse as any)?.taskType;
+  // Backend response shape (verified live):
+  //   { taskType: 'RFI', task: { rfiNumber: 'RFI-006', task: { objectId: 19, ... } } }
+  // The entity PK is double-nested at task.task.objectId. Other paths
+  // are tried as fallbacks for serializer drift.
+  const tdr = taskDetailsResponse as any;
   const entityId =
-    (taskDetailsResponse as any)?.task?.objectId
-    ?? (taskDetailsResponse as any)?.objectId
-    ?? (taskDetailsResponse as any)?.object_id;
+    tdr?.task?.task?.objectId
+    ?? tdr?.task?.objectId
+    ?? tdr?.objectId
+    ?? tdr?.object_id
+    ?? tdr?.task?.id;
 
   const v2RouteByType: Record<string, string> = {
     RFI: "rfi-v2",
