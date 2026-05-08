@@ -299,26 +299,30 @@ export default function TaskDetails() {
     (taskDetailsResponse as any)?.task?.objectId
     ?? (taskDetailsResponse as any)?.objectId
     ?? (taskDetailsResponse as any)?.object_id;
+
+  const v2RouteByType: Record<string, string> = {
+    RFI: "rfi-v2",
+    SI: "si-v2",
+    VO: "vo-v2",
+    GI: "gi-v2",
+    IC: "ic-v2",
+    DC: "claim-v2",
+    CLAIM: "claim-v2",
+  };
+  const v2Slug = taskType && v2RouteByType[taskType];
+  const v2Url = v2Slug && entityId ? `/tasks/${v2Slug}/${entityId}` : null;
+
   useEffect(() => {
     const wantsLegacy = typeof window !== "undefined"
       && new URLSearchParams(window.location.search).get("legacy") === "1";
-    if (wantsLegacy || !taskType || !entityId) return;
-
-    const v2RouteByType: Record<string, string> = {
-      RFI: "rfi-v2",
-      SI: "si-v2",
-      VO: "vo-v2",
-      GI: "gi-v2",
-      IC: "ic-v2",
-      // Claim — backend serialises DC type as DC; treat both
-      DC: "claim-v2",
-      CLAIM: "claim-v2",
-    };
-    const slug = v2RouteByType[taskType];
-    if (slug) {
-      navigate(`/tasks/${slug}/${entityId}`, { replace: true });
+    if (wantsLegacy || !v2Url) return;
+    // Force full hard navigation — bypasses any router-cached state.
+    if (typeof window !== "undefined") {
+      window.location.replace(v2Url);
+    } else {
+      navigate(v2Url, { replace: true });
     }
-  }, [taskType, entityId, navigate]);
+  }, [v2Url, navigate]);
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
@@ -1329,6 +1333,24 @@ export default function TaskDetails() {
 
   return (
     <DashboardLayout padding="p-0">
+
+      {/* Werner spec rev H — banner offering the new layout. Stays
+          visible even if the auto-redirect doesn't fire (e.g. browser
+          cache, in-flight data). Click → hard nav to v2 page. */}
+      {v2Url && (
+        <div className="bg-purple-600 text-white px-6 py-3 flex items-center justify-between gap-4 text-sm">
+          <div>
+            ✨ <strong>New Werner-spec layout available</strong> for this {taskType}.
+            If it didn't auto-redirect, click here to view it.
+          </div>
+          <a
+            href={v2Url}
+            className="bg-white text-purple-700 font-medium px-3 py-1.5 rounded hover:bg-purple-50"
+          >
+            Open new layout →
+          </a>
+        </div>
+      )}
 
       {/* ── VO Approve Confirmation Modal ── */}
       {displayTask?.type === "VO" && (
