@@ -204,48 +204,64 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
     return (
       <>
-        {/* Decision Timeline */}
+        {/* Decision Timeline — Werner spec rev H. Connectors render
+            BETWEEN adjacent dots (not edge-to-edge behind them) so the
+            line never extends past the first/last dot. Each segment
+            colours per its left-end being a completed step. */}
         {stageCount > 0 && (
           <div>
             <h3 className="text-xs text-muted-foreground mb-5">
               Decision Timeline
             </h3>
-            <div className="relative">
-              <div className="relative w-full max-w-3xl mx-auto px-1">
-                {/* Line */}
-                <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
-                  <div
-                    className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
-                    style={{
-                      width: `${(currentStageIndex / (stageCount - 1)) * 100}%`,
-                    }}
-                  />
-                </div>
-
-                {/* Steps */}
-                <div className="flex justify-between relative z-10">
-                  {stages.map((stage: string, i: number) => (
-                    <button
-                      key={stage}
-                      onClick={() => onStageClick?.(stage)}
-                      className="relative flex flex-col items-center flex-1 cursor-pointer">
-                      <div
-                        className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
+            <div className="flex items-start w-full">
+              {stages.map((stage: string, i: number) => (
+                <div
+                  key={stage}
+                  className={cn(
+                    "flex items-start",
+                    i === stages.length - 1 ? "" : "flex-1",
+                  )}
+                >
+                  {/* Dot + label column */}
+                  <button
+                    type="button"
+                    onClick={() => onStageClick?.(stage)}
+                    className="flex flex-col items-center cursor-pointer w-fit"
+                  >
+                    <div
+                      className={cn(
+                        "w-4 h-4 rounded-full border-2 transition-all duration-300",
+                        i <= currentStageIndex
                           ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                          : "bg-white border-border"
-                          }`}
-                      />
-                      <span
+                          : "bg-white border-border",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs mt-3 text-muted-foreground text-center break-words max-w-[90px] leading-tight",
+                        i === currentStageIndex && "text-foreground font-normal",
+                      )}
+                    >
+                      {stage}
+                    </span>
+                  </button>
+
+                  {/* Connector to next dot — only between dots, never past
+                      the last one. Coloured purple if THIS step is complete. */}
+                  {i < stages.length - 1 && (
+                    <div className="flex-1 mt-2 h-[2px] bg-muted">
+                      <div
                         className={cn(
-                          "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                          i === currentStageIndex && "text-foreground font-normal"
-                        )}>
-                        {stage}
-                      </span>
-                    </button>
-                  ))}
+                          "h-[2px] transition-all duration-500",
+                          i < currentStageIndex
+                            ? "bg-[#6c5ce7] w-full"
+                            : "bg-muted w-0",
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         )}

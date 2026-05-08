@@ -1373,27 +1373,48 @@ export default function TaskDetails() {
                 </button>
               </div>
 
-              {/* Header Card */}
-              <Card className="p-6 bg-sidebar shadow-none rounded-lg px-6 py-4 border-border">
+              {/* Werner spec rev H — single merged doc card.
+                  Combines Header + Question & Context into one container
+                  per Werner page 3 spec. Project block at the top, then
+                  doc identifier + sender/recipient strip, then content
+                  (description / proposed solution / attachments). */}
+              <Card className="p-6 bg-white shadow-none rounded-lg border-border">
+                {/* Project block — name / address / number / employer */}
+                {(projectName || projectNumber || (currentProject as any)?.location) && (
+                  <div className="mb-5 pb-5 border-b border-border grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Project name</p>
+                      <p className="text-foreground">{projectName || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Project No</p>
+                      <p className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Project address</p>
+                      <p className="text-foreground">
+                        {(currentProject as any)?.location || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Employer</p>
+                      <p className="text-foreground">
+                        {((currentProject as any)?.clientDetails?.name)
+                         || ((currentProject as any)?.client_details?.name)
+                         || "—"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between mb-5">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-1">
                       <h1 className="text-sm  text-foreground">
                         {displayTask.title}
                       </h1>
-                      {/* <p className="text-muted-foreground text-sm">{displayTask.displayId || displayTask.id}</p> */}
                       <p className="text-muted-foreground text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
                     </div>
-                    {/* Werner spec rev H — project subtitle (page 13). Small, muted,
-                        same line height as the title row above. */}
-                    {(projectName || projectNumber) && (
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {projectName}
-                        {projectNumber && (
-                          <span> · #{projectNumber}</span>
-                        )}
-                      </p>
-                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
@@ -1481,12 +1502,13 @@ export default function TaskDetails() {
                     </div>
                   )}
                 </div>
-              </Card>
 
+                {/* ── Werner spec rev H — divider between header section and
+                       doc-detail section. Stays inside the same Card so the
+                       whole RFI reads as a single document per page-3 spec. */}
+                <div className="border-t border-border my-5" />
 
-              {/* Question & Context */}
-              <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
-                <h2 className="text-sm  text-foreground mb-5">
+                <h2 className="text-sm text-foreground mb-5">
                   {displayTask.type === "RFI"
                     ? "Question & Context"
                     : displayTask.type === "SI"
@@ -1497,11 +1519,9 @@ export default function TaskDetails() {
                           ? "Delay Reason & Impact"
                           : displayTask.type === "CPI"
                             ? "Critical Path Details"
-                            : displayTask.type === "CPI"
-                              ? "Critical Path Details"
-                              : displayTask.type === "GI"
-                                ? "General Instruction Details"
-                                : "Details"}
+                            : displayTask.type === "GI"
+                              ? "General Instruction Details"
+                              : "Details"}
                 </h2>
 
                 {/* Werner spec rev H — From / To / CC / Date Required strip.
@@ -2137,19 +2157,24 @@ export default function TaskDetails() {
                         </Button>
                       )
                     ) : (
-                      canApprove && (
+                      // Werner spec rev H — legacy 'Close' button hidden by
+                      // default. Werner's spec replaces this with explicit
+                      // 'Close out' actions gated by role (RFI=contractor,
+                      // SI=professional, VO=PM, GI=initiator, Claim=contractor)
+                      // that fire after a response has been submitted. That
+                      // logic lives in WernerTaskActions / the future
+                      // Close-out button addition. The legacy button is kept
+                      // here only when the task is at its final stage so the
+                      // status label still surfaces (e.g. 'Approved').
+                      canApprove
+                      && displayTask.timeline?.current === displayTask.timeline?.stages?.[displayTask.timeline.stages.length - 1]
+                      && (
                         <Button
                           variant="outline"
                           className="font-normal"
-                          onClick={() => handleApproveTask(
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                          )}
-                          disabled={displayTask.timeline.current ===
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
-                          {displayTask.timeline.current ===
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                            ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                            : "Close"}
+                          disabled
+                        >
+                          {displayTask.timeline.current}
                         </Button>
                       )
                     )}
