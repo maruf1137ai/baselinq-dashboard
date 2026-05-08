@@ -1355,9 +1355,9 @@ export default function TaskDetails() {
 
       <div className="min-h-screen">
         <div className="">
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-3 gap-6 max-w-[1600px] mx-auto px-2">
             {/* Left Column - Main Content */}
-            <div className="col-span-2 space-y-4 px-6 py-4">
+            <div className="col-span-2 space-y-4 px-4 py-4">
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => navigate(-1)}
@@ -1374,50 +1374,38 @@ export default function TaskDetails() {
               </div>
 
               {/* Werner spec rev H — single merged doc card.
-                  Combines Header + Question & Context into one container
-                  per Werner page 3 spec. Project block at the top, then
-                  doc identifier + sender/recipient strip, then content
-                  (description / proposed solution / attachments). */}
-              <Card className="p-6 bg-white shadow-none rounded-lg border-border">
-                {/* Project block — Werner page 3: 4 stacked rows. */}
-                {(projectName || projectNumber || (currentProject as any)?.location) && (
-                  <>
-                    <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
-                      <dt className="text-muted-foreground">Project name:</dt>
-                      <dd className="text-foreground">{projectName || "—"}</dd>
-
-                      <dt className="text-muted-foreground">Project address:</dt>
-                      <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
-
-                      <dt className="text-muted-foreground">Project No:</dt>
-                      <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
-
-                      <dt className="text-muted-foreground">Employer:</dt>
-                      <dd className="text-foreground">
-                        {((currentProject as any)?.clientDetails?.name)
-                         || ((currentProject as any)?.client_details?.name)
-                         || "—"}
-                      </dd>
-                    </dl>
-                    {/* Flush divider to card edges */}
-                    <div className="-mx-6 border-t border-border my-5" />
-                  </>
-                )}
-
-                <div className="flex items-start justify-between mb-5">
+                  Order matches Werner page 3:
+                    1. Title + #RFI-049 + 3-dot menu
+                    2. Divider
+                    3. Project block (name/address/no/employer)
+                    4. Divider
+                    5. Meta block (Discipline/From/To/CC/Subject/Date)
+                    6. Divider
+                    7. Description (TaskContentRenderer)
+                    8. Attachments + References
+                  Light-grey card body (bg-sidebar) per spec. */}
+              <Card className="p-6 bg-sidebar shadow-none rounded-lg border-border">
+                {/* 1. Title row */}
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-1">
-                      <h1 className="text-sm  text-foreground">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h1 className="text-sm text-foreground">
                         {displayTask.title}
                       </h1>
                       <p className="text-muted-foreground text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
                     </div>
+                    {(projectName || projectNumber) && (
+                      <p className="text-xs text-muted-foreground">
+                        {projectName}
+                        {projectNumber && <span> · #{projectNumber}</span>}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
                       <Badge
                         variant="secondary"
-                        className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
+                        className="bg-amber-50 rounded-full px-3 py-1.5 text-amber-600 border-amber-200 text-xs">
                         Due: {displayTask.dueDate}
                       </Badge>
                     )}
@@ -1447,20 +1435,44 @@ export default function TaskDetails() {
                   </div>
                 </div>
 
-                {/* Werner spec rev H — title row keeps just title + #RFI-049
-                    + project subtitle. The yellow type pill, creator chip,
-                    watcher chip and avatar pile have been moved out — type
-                    is implied by the #RFI-049 number, and creator/watcher
-                    info appears in the From/To/CC strip below. Assign
-                    actions live in the 3-dot menu top-right. */}
-
-                {/* Divider — flush to card edges via negative margin */}
+                {/* 2. Divider */}
                 <div className="-mx-6 border-t border-border my-5" />
 
-                {/* Werner page 3 — From/To/CC/Subject/Date Required as
-                    stacked label+value rows. Same dl pattern as the
-                    project block above. Reads as one document. */}
-                <dl className="grid grid-cols-[120px_1fr] gap-y-1.5 text-sm">
+                {/* 3. Project block */}
+                {(projectName || projectNumber || (currentProject as any)?.location) && (
+                  <>
+                    <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+                      <dt className="text-muted-foreground">Project name:</dt>
+                      <dd className="text-foreground">{projectName || "—"}</dd>
+
+                      <dt className="text-muted-foreground">Project address:</dt>
+                      <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
+
+                      <dt className="text-muted-foreground">Project No:</dt>
+                      <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
+
+                      <dt className="text-muted-foreground">Employer:</dt>
+                      <dd className="text-foreground">
+                        {((currentProject as any)?.clientDetails?.name)
+                         || ((currentProject as any)?.client_details?.name)
+                         || "—"}
+                      </dd>
+                    </dl>
+                    {/* 4. Divider */}
+                    <div className="-mx-6 border-t border-border my-5" />
+                  </>
+                )}
+
+                {/* 5. Meta block — Werner page 3 field order:
+                       Discipline, From, To, CC, Subject, Date Required */}
+                <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+                  {displayTask.formFields?.discipline && (
+                    <>
+                      <dt className="text-muted-foreground">Discipline:</dt>
+                      <dd className="text-foreground">{displayTask.formFields.discipline}</dd>
+                    </>
+                  )}
+
                   <dt className="text-muted-foreground">From:</dt>
                   <dd className="text-foreground">
                     {displayTask.creator?.name || "—"}
@@ -1497,6 +1509,11 @@ export default function TaskDetails() {
                       : <span className="text-muted-foreground">—</span>}
                   </dd>
 
+                  <dt className="text-muted-foreground">Subject:</dt>
+                  <dd className="text-foreground">
+                    {displayTask.formFields?.subject || displayTask.title || "—"}
+                  </dd>
+
                   <dt className="text-muted-foreground">Date required:</dt>
                   <dd className="text-foreground">
                     {displayTask.dueDate && displayTask.dueDate !== "No Date"
@@ -1510,7 +1527,7 @@ export default function TaskDetails() {
                   </dd>
                 </dl>
 
-                {/* Flush divider before description block */}
+                {/* 6. Divider before description */}
                 <div className="-mx-6 border-t border-border my-5" />
 
                 <TaskContentRenderer
@@ -2406,11 +2423,13 @@ export default function TaskDetails() {
                 }}
               />
             ) : (
-              <div className="space-y-4 px-6 py-[45px]">
-                {/* Decision Timeline — wrapped in a white Card matching
-                    the rest of the production right-panel pattern. */}
+              <div className="space-y-4 py-4 pr-2">
+                {/* Decision Timeline — world-class visual:
+                    larger dots, ring halo around current step, gradient
+                    connectors, hover transitions. Wrapped in a white
+                    Card to match the rest of the production right panel. */}
                 <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
-                  <h3 className="text-xs text-muted-foreground mb-5">
+                  <h3 className="text-xs text-muted-foreground mb-6">
                     Decision Timeline
                   </h3>
                   <div
@@ -2420,7 +2439,7 @@ export default function TaskDetails() {
                     }}
                   >
                     {displayTask.timeline.stages.map((stage: any, i: any) => {
-                      const isComplete = i <= currentStageIndex;
+                      const isComplete = i < currentStageIndex;
                       const isCurrent = i === currentStageIndex;
                       const lastIdx = displayTask.timeline.stages.length - 1;
                       return (
@@ -2436,16 +2455,16 @@ export default function TaskDetails() {
                             }
                           }}
                           className={cn(
-                            "relative flex flex-col items-center pt-2 pb-1",
-                            canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70",
+                            "relative flex flex-col items-center pt-3 pb-1 group",
+                            canApprove ? "cursor-pointer" : "cursor-not-allowed",
                           )}
                         >
                           {/* Left-half connector (skipped on first dot) */}
                           {i > 0 && (
                             <div
                               className={cn(
-                                "absolute left-0 top-[18px] h-[2px] w-1/2",
-                                i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                                "absolute left-0 top-[22px] h-[2px] w-1/2 transition-colors",
+                                i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-border",
                               )}
                             />
                           )}
@@ -2453,24 +2472,33 @@ export default function TaskDetails() {
                           {i < lastIdx && (
                             <div
                               className={cn(
-                                "absolute right-0 top-[18px] h-[2px] w-1/2",
-                                i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                                "absolute right-0 top-[22px] h-[2px] w-1/2 transition-colors",
+                                i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-border",
                               )}
                             />
                           )}
-                          {/* Dot — relative + z-10 so it covers connector ends */}
+                          {/* Dot — larger, with ring halo on current step */}
                           <div
                             className={cn(
-                              "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
-                              isComplete
-                                ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                                : "bg-white border-border",
+                              "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300",
+                              isComplete && "bg-[#6c5ce7] shadow-sm",
+                              isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
+                              !isComplete && !isCurrent && "bg-white border-2 border-border group-hover:border-[#6c5ce7]/40",
                             )}
-                          />
+                          >
+                            {/* Inner check mark for completed steps */}
+                            {isComplete && (
+                              <Check className="absolute inset-0 m-auto h-2 w-2 text-white" strokeWidth={4} />
+                            )}
+                          </div>
                           <span
                             className={cn(
-                              "text-xs mt-3 text-muted-foreground text-center break-words max-w-[90px] leading-tight",
-                              isCurrent && "text-foreground font-normal",
+                              "text-[11px] mt-3 text-center break-words max-w-[90px] leading-tight transition-colors",
+                              isCurrent
+                                ? "text-foreground font-medium"
+                                : isComplete
+                                  ? "text-foreground"
+                                  : "text-muted-foreground",
                             )}
                           >
                             {stage}
