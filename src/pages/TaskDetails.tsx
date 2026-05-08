@@ -2090,6 +2090,45 @@ export default function TaskDetails() {
                   />
                 </div>
 
+                {/* Werner spec rev H — reply meta strip.
+                    Sits between the editor and the action button row.
+                    Same fonts/spacing as the rest of the form. */}
+                <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Add recipient</p>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                      onClick={() => toast.info("Recipient picker — wires into team directory next.")}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Pick a user…
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Attachment</p>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                      onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add file
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Add reference</p>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                      onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add reference
+                    </button>
+                  </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end mt-4">
                   {/* <div className="flex items-center gap-2 text-xs text-muted-foreground">
