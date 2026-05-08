@@ -13,7 +13,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Paperclip } from "lucide-react";
+import { Paperclip } from "lucide-react";
 
 interface ReplyFormProps {
   /** "rfi" | "si" | "vo" | "gi" | "ic" | "claim" */
@@ -28,7 +28,6 @@ interface ReplyFormProps {
     cost_impact: boolean;
   }) => Promise<void> | void;
   onCancel?: () => void;
-  onAnalyzeAi?: () => void;
   /** Optional: pre-fill body if user picked "use AI suggestion". */
   initialBody?: string;
   isSubmitting?: boolean;
@@ -38,7 +37,6 @@ export function ReplyForm({
   showTimeCost = false,
   onSubmit,
   onCancel,
-  onAnalyzeAi,
   initialBody = "",
   isSubmitting,
 }: ReplyFormProps) {
@@ -56,7 +54,7 @@ export function ReplyForm({
   };
 
   return (
-    <div className="border border-purple-200 rounded-lg bg-white p-4 my-3">
+    <div className="bg-gray-100 border border-gray-300 rounded-md px-5 py-4">
       <div className="space-y-3">
         <div>
           <label className="text-sm text-gray-700 mb-1 block">Reply:</label>
@@ -65,26 +63,26 @@ export function ReplyForm({
             onChange={(e) => setBody(e.target.value)}
             placeholder="Type your reply…"
             rows={4}
-            className="w-full resize-y"
+            className="w-full resize-y bg-white"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <label className="text-gray-500 block mb-1">Add recipient:</label>
+            <label className="text-gray-700 block mb-1">Add recipient:</label>
             <input
               type="text"
               placeholder="Optional: delegate to a specific user…"
-              className="w-full border border-gray-200 rounded px-2 py-1 text-sm"
+              className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white"
               disabled
             />
-            <p className="text-[11px] text-gray-400 mt-1">
-              Recipient picker — wires into team directory in commit 5.
+            <p className="text-[11px] text-gray-500 mt-1">
+              Recipient picker — wires into team directory next.
             </p>
           </div>
           <div>
-            <label className="text-gray-500 block mb-1">Attachment:</label>
-            <Button variant="outline" size="sm" disabled className="h-8 text-xs">
+            <label className="text-gray-700 block mb-1">Attachment:</label>
+            <Button variant="outline" size="sm" disabled className="h-8 text-xs bg-white">
               <Paperclip className="mr-1.5 h-3 w-3" />
               Attach file
             </Button>
@@ -92,13 +90,13 @@ export function ReplyForm({
         </div>
 
         {showTimeCost && (
-          <div className="flex items-center gap-6 pt-3 border-t border-gray-100 text-sm">
+          <div className="flex items-center gap-6 pt-3 border-t border-gray-300 text-sm">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={timeImpact}
                 onChange={(e) => setTimeImpact(e.target.checked)}
-                className="h-4 w-4 text-purple-600 rounded"
+                className="h-4 w-4 text-purple-600 rounded border-gray-400"
               />
               <span className="text-gray-700">TIME impact</span>
             </label>
@@ -107,46 +105,31 @@ export function ReplyForm({
                 type="checkbox"
                 checked={costImpact}
                 onChange={(e) => setCostImpact(e.target.checked)}
-                className="h-4 w-4 text-purple-600 rounded"
+                className="h-4 w-4 text-purple-600 rounded border-gray-400"
               />
               <span className="text-gray-700">COST impact</span>
             </label>
             {(timeImpact || costImpact) && (
-              <span className="text-xs text-orange-600 font-medium">
-                ⚠ Will auto-create a draft VO and notify the PM
+              <span className="text-xs text-orange-700 font-medium">
+                ⚠ PM &amp; QS will be added to the recipients
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div>
-            {onAnalyzeAi && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onAnalyzeAi}
-                className="bg-gray-900 text-white hover:bg-gray-800 border-gray-900"
-              >
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                Analyze with AI
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {onCancel && (
-              <Button variant="outline" size="sm" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
-            <Button
-              onClick={handleSubmit}
-              disabled={!body.trim() || isSubmitting}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {isSubmitting ? "Submitting…" : "Submit Reply"}
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-300">
+          {onCancel && (
+            <Button variant="outline" size="sm" onClick={onCancel} className="bg-white">
+              Cancel
             </Button>
-          </div>
+          )}
+          <Button
+            onClick={handleSubmit}
+            disabled={!body.trim() || isSubmitting}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isSubmitting ? "Submitting…" : "Submit Reply"}
+          </Button>
         </div>
       </div>
     </div>

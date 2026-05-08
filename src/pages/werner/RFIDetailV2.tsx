@@ -76,28 +76,34 @@ export default function RFIDetailV2() {
     const replyCount = replies?.length || 0;
 
     const isClosed = status.includes("closed");
-    const hasResponse = replyCount > 0 || status.includes("response provided") || status.includes("answered");
     const isSent = status !== "draft";
 
+    // Werner spec page 3: 5-step timeline.
+    //   Draft → Sent → Response provided (×2 round-trips) → Closed
+    // Each "Response provided" lights up after one reply has come in.
     return [
       {
-        label: "Draft created",
+        label: "RFI draft created",
         status: "complete",
         timestamp: rfi.created_at?.slice(0, 10),
       },
       {
         label: "Sent for review",
         status: isSent ? "complete" : "active",
-        timestamp: isSent ? rfi.created_at?.slice(0, 10) : undefined,
       },
       {
         label: "Response provided",
-        status: hasResponse ? "complete" : isSent ? "active" : "pending",
-        timestamp: hasResponse && rfi.responded_at ? rfi.responded_at.slice(0, 10) : undefined,
+        status: replyCount >= 1 ? "complete" : isSent ? "active" : "pending",
+        timestamp: replyCount >= 1 ? replies?.[0]?.created_at?.slice(0, 10) : undefined,
+      },
+      {
+        label: "Response provided",
+        status: replyCount >= 2 ? "complete" : replyCount >= 1 ? "active" : "pending",
+        timestamp: replyCount >= 2 ? replies?.[1]?.created_at?.slice(0, 10) : undefined,
       },
       {
         label: "Closed",
-        status: isClosed ? "complete" : hasResponse ? "active" : "pending",
+        status: isClosed ? "complete" : replyCount >= 1 ? "active" : "pending",
       },
     ];
   }, [rfi, replies]);
@@ -206,69 +212,72 @@ export default function RFIDetailV2() {
         </Link>
 
         <div className="flex items-start gap-6">
-          <div className="flex-1 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <DocumentHeader
-              docTypeLabel="REQUEST FOR INFORMATION"
-              projectName={project?.name || "—"}
-              projectNumber={project?.project_number || "—"}
-              projectAddress={project?.address || "—"}
-              employer={project?.employer || "—"}
-              showSeal={false}
-              onPrint={() => window.print()}
-            />
+          <div className="flex-1 space-y-3">
+            {/* Doc body — single rounded card per Werner spec page 3 */}
+            <div className="bg-white rounded-md border border-gray-300 shadow-sm overflow-hidden">
+              <DocumentHeader
+                docTypeLabel="REQUEST FOR INFORMATION"
+                projectName={project?.name || "—"}
+                projectNumber={project?.project_number || "—"}
+                projectAddress={project?.address || "—"}
+                employer={project?.employer || "—"}
+                showSeal={false}
+                onPrint={() => window.print()}
+              />
+              <DocumentBody
+                docNumber={rfi.rfi_number}
+                dateIssued={new Date(rfi.created_at).toLocaleString()}
+                discipline={rfi.discipline}
+                from={rfi.raised_by ? { id: rfi.raised_by.id, name: rfi.raised_by.name, role: rfi.raised_by.role } : undefined}
+                subject={rfi.subject}
+                isUrgent={rfi.priority === "Urgent"}
+                description={rfi.question || rfi.description || ""}
+              />
+            </div>
 
-            <DocumentBody
-              docNumber={rfi.rfi_number}
-              dateIssued={new Date(rfi.created_at).toLocaleString()}
-              discipline={rfi.discipline}
-              from={rfi.raised_by ? { id: rfi.raised_by.id, name: rfi.raised_by.name, role: rfi.raised_by.role } : undefined}
-              subject={rfi.subject}
-              isUrgent={rfi.priority === "Urgent"}
-              description={rfi.question || rfi.description || ""}
-            />
-
-            {replies && replies.length > 0 && (
-              <div className="px-6 py-2 bg-gray-50 border-t border-gray-200">
-                {replies.map((reply) => (
-                  <ReplyCard key={reply.id} reply={reply} />
-                ))}
-              </div>
-            )}
-
-            {showReplyForm && (
-              <div className="px-6 pt-3 pb-1 bg-gray-50 border-t border-gray-200">
-                <ReplyForm
-                  entityType="rfi"
-                  entityId={Number(id)}
-                  showTimeCost={false}
-                  onSubmit={handleSubmitReply}
-                  onCancel={() => setShowReplyForm(false)}
-                  isSubmitting={submitting}
+            {/* Action bar — sits BETWEEN doc card and reply card, no border around it.
+                Werner spec page 3: Analyze + Reply + + Action are free-floating
+                buttons under the doc card. */}
+            {!isClosed && (
+              <div className="bg-transparent">
+                <ActionBar
+                  docType="rfi"
+                  mode={actionMode}
+                  onAnalyzeAi={() => toast.info("AI analysis available in next iteration.")}
+                  onReply={() => setShowReplyForm(true)}
+                  onSubmit={async () => {
+                    await postRequest({
+                      url: `tasks/requests-for-information/${id}/`,
+                      data: { status: "Sent for Review" },
+                    });
+                    toast.success("RFI submitted.");
+                    await refetch();
+                  }}
+                  onAction={handleEscalate}
+                  onCloseOut={handleCloseOut}
                 />
               </div>
             )}
 
-            {!isClosed && (
-              <ActionBar
-                docType="rfi"
-                mode={actionMode}
-                onAnalyzeAi={() => toast.info("AI analysis coming in PR-2.")}
-                onReply={() => setShowReplyForm(true)}
-                onSubmit={async () => {
-                  await postRequest({
-                    url: `tasks/requests-for-information/${id}/`,
-                    data: { status: "Sent for Review" },
-                  });
-                  toast.success("RFI submitted.");
-                  await refetch();
-                }}
-                onAction={handleEscalate}
-                onCloseOut={handleCloseOut}
+            {/* Reply cards — each its own gray block under the action bar */}
+            {replies && replies.map((reply) => (
+              <ReplyCard key={reply.id} reply={reply} />
+            ))}
+
+            {/* Reply composer (slides in when user clicks Reply) */}
+            {showReplyForm && (
+              <ReplyForm
+                entityType="rfi"
+                entityId={Number(id)}
+                showTimeCost={false}
+                onSubmit={handleSubmitReply}
+                onCancel={() => setShowReplyForm(false)}
+                isSubmitting={submitting}
               />
             )}
 
             {isClosed && (
-              <div className="border-t border-gray-200 bg-green-50 px-6 py-3 text-sm text-green-700 flex items-center gap-2">
+              <div className="bg-green-50 border border-green-200 rounded-md px-5 py-3 text-sm text-green-700 flex items-center gap-2">
                 ✓ This RFI has been closed out.
               </div>
             )}

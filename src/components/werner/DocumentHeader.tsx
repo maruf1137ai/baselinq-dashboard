@@ -33,26 +33,26 @@ export function DocumentHeader({
   onPrint,
 }: DocumentHeaderProps) {
   return (
-    <div className="border-b border-gray-200 px-6 py-4 bg-white">
+    <div className="px-6 pt-5 pb-4 bg-gray-100 border-b border-gray-300">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h2 className="text-base font-semibold uppercase tracking-wide text-gray-900 underline">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-900 underline">
             {docTypeLabel}
           </h2>
-          <dl className="mt-3 grid grid-cols-[140px_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-gray-500">Project name:</dt>
+          <dl className="mt-3 grid grid-cols-[140px_1fr] gap-x-4 gap-y-1.5 text-sm">
+            <dt className="text-gray-700">Project name:</dt>
             <dd className="text-gray-900">{projectName}</dd>
-            <dt className="text-gray-500">Project address:</dt>
+            <dt className="text-gray-700">Project address:</dt>
             <dd className="text-gray-900">{projectAddress}</dd>
-            <dt className="text-gray-500">Project No:</dt>
+            <dt className="text-gray-700">Project No:</dt>
             <dd className="text-gray-900">{projectNumber}</dd>
-            <dt className="text-gray-500">Employer:</dt>
+            <dt className="text-gray-700">Employer:</dt>
             <dd className="text-gray-900">{employer}</dd>
           </dl>
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <Button variant="outline" size="sm" onClick={onPrint} className="h-8">
+          <Button variant="outline" size="sm" onClick={onPrint} className="h-8 bg-white">
             <Printer className="mr-1.5 h-3.5 w-3.5" />
             Print / Export
           </Button>

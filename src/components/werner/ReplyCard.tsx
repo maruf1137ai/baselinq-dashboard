@@ -54,76 +54,73 @@ export function ReplyCard({
   timestampFormatter = defaultFormatter,
 }: ReplyCardProps) {
   return (
-    <div className="border-l-2 border-purple-300 bg-gray-50 px-5 py-4 my-3">
+    <div className="bg-gray-100 border border-gray-300 rounded-md px-5 py-4 text-sm">
       <div className="flex items-baseline justify-between mb-3">
-        <div className="text-sm font-medium text-gray-900">
+        <div className="text-gray-900">
           {reply.sender_name || "Unknown"}
           {reply.sender_role && (
-            <span className="text-gray-500 font-normal ml-1">({reply.sender_role})</span>
+            <span className="text-gray-700 ml-1">({reply.sender_role})</span>
           )}
         </div>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-600">
           {timestampFormatter(reply.created_at)}
         </div>
       </div>
 
-      <div className="text-sm">
-        <p className="text-gray-500 mb-1">Reply:</p>
+      <div>
+        <p className="text-gray-700 mb-1">Reply:</p>
         <p className="text-purple-800 whitespace-pre-wrap">{reply.body}</p>
       </div>
 
-      <dl className="mt-3 grid grid-cols-[120px_1fr] gap-x-3 gap-y-1 text-xs pt-3 border-t border-gray-200">
-        <dt className="text-gray-500">Add recipient:</dt>
-        <dd className="text-purple-700">{reply.recipient_name || "—"}</dd>
-
-        {reply.sent_to_names.length > 0 && (
-          <>
-            <dt className="text-gray-500">Sent to:</dt>
-            <dd className="text-purple-700">{reply.sent_to_names.join(", ")}</dd>
-          </>
-        )}
+      <dl className="mt-4 grid grid-cols-[140px_1fr] gap-x-4 gap-y-2">
+        <dt className="text-gray-700">Add recipient:</dt>
+        <dd className="text-purple-700">{reply.recipient_name || "none"}</dd>
 
         {reply.cc_names.length > 0 && (
           <>
-            <dt className="text-gray-500">CC:</dt>
-            <dd className="text-purple-700">{reply.cc_names.join(", ")}</dd>
-          </>
-        )}
-
-        {reply.attachments && reply.attachments.length > 0 && (
-          <>
-            <dt className="text-gray-500">Attachment:</dt>
-            <dd className="text-purple-700">
-              {reply.attachments.map((a) => (
-                <span key={a.id} className="inline-flex items-center gap-1 mr-2">
-                  <Paperclip className="h-3 w-3" />
-                  {a.url ? (
-                    <a href={a.url} className="underline" target="_blank" rel="noopener noreferrer">
-                      {a.filename}
-                    </a>
-                  ) : (
-                    a.filename
-                  )}
-                </span>
+            <dt className="text-gray-700">CC:</dt>
+            <dd className="text-purple-700 space-y-0.5">
+              {reply.cc_names.map((n, i) => (
+                <div key={i}>{n}</div>
               ))}
             </dd>
           </>
         )}
 
+        <dt className="text-gray-700">Attachment:</dt>
+        <dd className="text-purple-700">
+          {reply.attachments && reply.attachments.length > 0 ? (
+            reply.attachments.map((a) => (
+              <span key={a.id} className="inline-flex items-center gap-1 mr-2">
+                <Paperclip className="h-3 w-3" />
+                {a.url ? (
+                  <a href={a.url} className="underline" target="_blank" rel="noopener noreferrer">
+                    {a.filename}
+                  </a>
+                ) : (
+                  a.filename
+                )}
+              </span>
+            ))
+          ) : (
+            <span>none</span>
+          )}
+        </dd>
+
         {reply.references_display.length > 0 && (
           <>
-            <dt className="text-gray-500">Add reference:</dt>
-            <dd>
+            <dt className="text-gray-700">Add reference:</dt>
+            <dd className="space-y-0.5">
               {reply.references_display.map((ref, i) => (
-                <span
+                <div
                   key={i}
-                  className={`block ${ref.auto ? "text-red-600" : "text-purple-700"}`}
+                  className={ref.auto ? "text-red-600" : "text-purple-700"}
                 >
                   {ref.display}
                   {ref.auto && (
-                    <span className="ml-1 text-[10px] text-gray-500">(added automatic)</span>
+                    <span className="ml-1 text-xs">(added automatic)</span>
                   )}
-                </span>
+                </div>
               ))}
             </dd>
           </>
@@ -131,22 +128,22 @@ export function ReplyCard({
 
         {showTimeCost && (
           <>
-            <dt className="text-gray-500">TIME:</dt>
+            <dt className="text-gray-700">TIME:</dt>
             <dd>
               <input
                 type="checkbox"
                 checked={reply.time_impact}
                 disabled
-                className="h-4 w-4 text-purple-600 rounded"
+                className="h-4 w-4 text-purple-600 rounded border-gray-400"
               />
             </dd>
-            <dt className="text-gray-500">COST:</dt>
+            <dt className="text-gray-700">COST:</dt>
             <dd>
               <input
                 type="checkbox"
                 checked={reply.cost_impact}
                 disabled
-                className="h-4 w-4 text-purple-600 rounded"
+                className="h-4 w-4 text-purple-600 rounded border-gray-400"
               />
             </dd>
           </>

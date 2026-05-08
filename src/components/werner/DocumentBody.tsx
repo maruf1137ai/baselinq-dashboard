@@ -10,6 +10,7 @@
  * IC reference on Claim) live in the consuming page, not here — keeps
  * this component a pure layout primitive.
  */
+import type { ReactNode } from "react";
 import { Plus, Paperclip } from "lucide-react";
 
 export interface UserRef {
@@ -53,6 +54,25 @@ interface DocumentBodyProps {
   };
 }
 
+/**
+ * Multi-user field renderer. Werner spec stacks vertically when there
+ * are multiple recipients (page 3 shows "Darren Ogden (Architect)\n
+ * Grant Mcevoy (project manager)" on separate lines, not comma-joined).
+ */
+function renderUserList(users?: UserRef[]): ReactNode {
+  if (!users || users.length === 0) return <span className="text-gray-400">—</span>;
+  return (
+    <div className="space-y-0.5">
+      {users.map((u) => (
+        <div key={u.id}>
+          {u.name}
+          {u.role && <span className="text-gray-500"> ({u.role})</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function DocumentBody({
   docNumber,
   dateIssued,
@@ -70,125 +90,132 @@ export function DocumentBody({
   onAddReference,
   structuredTimeCost,
 }: DocumentBodyProps) {
+  const docPrefix = docNumber.split("-")[0];
+
   return (
-    <div className="px-6 py-4 bg-white">
-      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2 text-sm">
+    <div className="px-6 py-5 bg-gray-100 text-sm">
+      {/* Doc-specific identifier block */}
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-1.5">
         {referenceIcNumber && (
           <>
-            <dt className="text-gray-500">Reference IC NO:</dt>
+            <dt className="text-gray-700">Reference IC NO:</dt>
             <dd className="text-gray-900 font-medium">{referenceIcNumber}</dd>
           </>
         )}
-        <dt className="text-gray-500">{docNumber.split("-")[0]} No:</dt>
+        <dt className="text-gray-700">{docPrefix} No:</dt>
         <dd className="text-gray-900 font-medium">{docNumber}</dd>
 
-        <dt className="text-gray-500">Date Issued:</dt>
+        <dt className="text-gray-700">{docPrefix} Date Issued:</dt>
         <dd className="text-gray-900">{dateIssued}</dd>
+      </dl>
 
+      {/* Sender / recipient block */}
+      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2 mt-4">
         {discipline && (
           <>
-            <dt className="text-gray-500">Discipline:</dt>
+            <dt className="text-gray-700">Discipline:</dt>
             <dd className="text-purple-700">{discipline}</dd>
           </>
         )}
 
-        <dt className="text-gray-500">From:</dt>
+        <dt className="text-gray-700">From:</dt>
         <dd className="text-purple-700">
-          {from ? `${from.name}${from.role ? ` (${from.role})` : ""}` : "—"}
+          {from ? `${from.name}${from.role ? ` (${from.role})` : ""}` : <span className="text-gray-400">—</span>}
         </dd>
 
-        <dt className="text-gray-500">To:</dt>
-        <dd className="text-purple-700">
-          {to && to.length > 0
-            ? to.map((u) => `${u.name}${u.role ? ` (${u.role})` : ""}`).join(", ")
-            : "—"}
-        </dd>
+        <dt className="text-gray-700">To:</dt>
+        <dd className="text-purple-700">{renderUserList(to)}</dd>
 
-        <dt className="text-gray-500">CC:</dt>
-        <dd className="text-purple-700">
-          {cc && cc.length > 0
-            ? cc.map((u) => `${u.name}${u.role ? ` (${u.role})` : ""}`).join(", ")
-            : "—"}
-        </dd>
+        <dt className="text-gray-700">CC:</dt>
+        <dd className="text-purple-700">{renderUserList(cc)}</dd>
 
-        <dt className="text-gray-500">Subject:</dt>
+        <dt className="text-gray-700">Subject:</dt>
         <dd className="text-purple-700">{subject}</dd>
 
-        <dt className="text-gray-500">Date required:</dt>
+        <dt className="text-gray-700">Date required:</dt>
         <dd className="text-purple-700">
-          {dateRequired || "—"}
+          {dateRequired || <span className="text-gray-400">—</span>}
           {isUrgent && (
             <span className="ml-2 text-red-600 font-medium">(urgent)</span>
           )}
         </dd>
       </dl>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-500 mb-1">Description:</p>
-        <p className="text-sm text-purple-800 whitespace-pre-wrap">{description}</p>
+      {/* Horizontal rule separator before description (matches Werner spec) */}
+      <div className="border-t border-gray-300 my-4" />
+
+      <div>
+        <p className="text-gray-700 mb-1">
+          Description{docPrefix === "SI" || docPrefix === "VO" ? ` of ${docPrefix === "SI" ? "Site instruction" : "VARIATION ORDER"}` : " of Request"}:
+        </p>
+        <p className="text-purple-800 whitespace-pre-wrap">{description}</p>
       </div>
 
       {(attachments.length > 0 || references.length > 0 || onAddReference || structuredTimeCost) && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-          {attachments.length > 0 && (
-            <div className="flex items-start gap-3 text-sm">
-              <span className="text-gray-500 w-32 shrink-0">Attachment:</span>
-              <ul className="space-y-1 flex-1">
-                {attachments.map((att) => (
-                  <li key={att.id} className="text-purple-700 flex items-center gap-1.5">
-                    <Paperclip className="h-3 w-3" />
-                    {att.url ? (
-                      <a href={att.url} className="underline" target="_blank" rel="noopener noreferrer">
-                        {att.filename}
-                      </a>
-                    ) : (
-                      <span>{att.filename}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        <>
+          <div className="border-t border-gray-300 my-4" />
 
-          {(references.length > 0 || onAddReference) && (
-            <div className="flex items-start gap-3 text-sm">
-              <span className="text-gray-500 w-32 shrink-0">Add reference:</span>
-              <div className="flex-1 space-y-1">
-                {references.map((ref, i) => (
-                  <div
-                    key={i}
-                    className={ref.auto ? "text-red-600" : "text-purple-700"}
-                  >
-                    {ref.display}
-                    {ref.auto && (
-                      <span className="ml-1 text-xs text-gray-500">(added automatic)</span>
-                    )}
-                  </div>
-                ))}
-                {onAddReference && (
-                  <button
-                    type="button"
-                    onClick={onAddReference}
-                    className="text-sm text-purple-600 hover:text-purple-800 inline-flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    add more references
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2">
+            {attachments.length > 0 && (
+              <>
+                <dt className="text-gray-700">Attachment:</dt>
+                <dd className="text-purple-700 space-y-0.5">
+                  {attachments.map((att) => (
+                    <div key={att.id} className="flex items-center gap-1.5">
+                      <Paperclip className="h-3 w-3" />
+                      {att.url ? (
+                        <a href={att.url} className="underline" target="_blank" rel="noopener noreferrer">
+                          {att.filename}
+                        </a>
+                      ) : (
+                        <span>{att.filename}</span>
+                      )}
+                    </div>
+                  ))}
+                </dd>
+              </>
+            )}
+
+            {(references.length > 0 || onAddReference) && (
+              <>
+                <dt className="text-gray-700">Add reference:</dt>
+                <dd className="space-y-0.5">
+                  {references.map((ref, i) => (
+                    <div
+                      key={i}
+                      className={ref.auto ? "text-red-600" : "text-purple-700"}
+                    >
+                      {ref.display}
+                      {ref.auto && (
+                        <span className="ml-1 text-xs">(added automatic)</span>
+                      )}
+                    </div>
+                  ))}
+                  {onAddReference && (
+                    <button
+                      type="button"
+                      onClick={onAddReference}
+                      className="text-purple-600 hover:text-purple-800 inline-flex items-center gap-1 text-xs mt-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      add more references
+                    </button>
+                  )}
+                </dd>
+              </>
+            )}
+          </dl>
 
           {structuredTimeCost && (
-            <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-gray-100">
+            <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-300">
               <div>
-                <span className="text-gray-500 block">TIME (days):</span>
+                <span className="text-gray-700 block">TIME (days):</span>
                 <span className="text-purple-700 font-medium">
                   {structuredTimeCost.timeDays ?? "—"}
                 </span>
               </div>
               <div>
-                <span className="text-gray-500 block">COST:</span>
+                <span className="text-gray-700 block">COST:</span>
                 <span className="text-purple-700 font-medium">
                   {structuredTimeCost.costAmount != null
                     ? `${structuredTimeCost.costCurrency || "ZAR"} ${structuredTimeCost.costAmount.toLocaleString()}`
@@ -197,7 +224,7 @@ export function DocumentBody({
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

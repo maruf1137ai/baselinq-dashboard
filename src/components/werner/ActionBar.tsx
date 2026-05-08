@@ -63,7 +63,7 @@ export function ActionBar({
   const allowedNext = ALLOWED_TRANSITIONS[docType];
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 flex items-center justify-between gap-3">
+    <div className="flex items-center justify-center gap-3 py-1">
       {onAnalyzeAi && (
         <Button
           variant="outline"
@@ -76,7 +76,7 @@ export function ActionBar({
         </Button>
       )}
 
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-2">
         {mode === "submit" && onSubmit && (
           <Button
             onClick={onSubmit}

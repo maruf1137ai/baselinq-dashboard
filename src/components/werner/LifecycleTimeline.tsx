@@ -9,8 +9,6 @@
  * back-and-forth round). We pass the steps in as a prop so each entity
  * page can customise — but the rendering is the same.
  */
-import { Check, Circle } from "lucide-react";
-
 export type StepStatus = "complete" | "active" | "pending";
 
 export interface LifecycleStep {
@@ -26,31 +24,29 @@ interface LifecycleTimelineProps {
 
 export function LifecycleTimeline({ steps }: LifecycleTimelineProps) {
   return (
-    <div className="bg-gray-100 rounded-lg p-4 w-64 shrink-0">
-      <ol className="space-y-3">
+    <div className="bg-gray-100 border border-gray-300 rounded-md p-5 w-56 shrink-0 self-start">
+      <ol className="space-y-5">
         {steps.map((step, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <div className="flex flex-col items-center pt-0.5">
+          <li key={i} className="flex items-start gap-3 relative">
+            <div className="flex flex-col items-center">
               {step.status === "complete" ? (
-                <div className="h-5 w-5 rounded-full bg-purple-600 flex items-center justify-center">
-                  <Check className="h-3 w-3 text-white" strokeWidth={3} />
-                </div>
+                <div className="h-3 w-3 rounded-full bg-purple-600 mt-1" />
               ) : step.status === "active" ? (
-                <div className="h-5 w-5 rounded-full bg-purple-100 border-2 border-purple-600 animate-pulse" />
+                <div className="h-3 w-3 rounded-full bg-purple-600 ring-4 ring-purple-200 mt-1" />
               ) : (
-                <Circle className="h-5 w-5 text-gray-300" strokeWidth={1.5} />
+                <div className="h-3 w-3 rounded-full bg-gray-300 mt-1" />
               )}
               {i < steps.length - 1 && (
                 <div
-                  className={`w-0.5 h-6 mt-1 ${
-                    step.status === "complete" ? "bg-purple-300" : "bg-gray-200"
+                  className={`w-px h-7 mt-1 ${
+                    step.status === "complete" ? "bg-purple-300" : "bg-gray-300"
                   }`}
                 />
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 -mt-0.5">
               <div
-                className={`text-sm font-medium ${
+                className={`text-sm leading-tight ${
                   step.status === "pending" ? "text-gray-400" : "text-gray-900"
                 }`}
               >
