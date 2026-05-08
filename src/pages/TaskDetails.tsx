@@ -1601,19 +1601,14 @@ export default function TaskDetails() {
                 </Card>
               )}
 
-              {/* Creator status card — no responses yet */}
+              {/* Creator status — compact inline notice. Single line so it
+                  doesn't dominate the page. Werner spec rev H — minimise
+                  vertical space, surface state without wasting room. */}
               {!isTaskLocked && canApprove && !(displayTask.responses?.length > 0) && (
-                <Card className="p-6 shadow-none bg-white rounded-lg border-border">
-                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-normal text-foreground">Awaiting Response</p>
-                      <p className="text-xs text-muted-foreground mt-1">The assigned member has not submitted a response yet. You will be notified once they do.</p>
-                    </div>
-                  </div>
-                </Card>
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200 px-3 py-2 rounded-md">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span>Awaiting response from the assigned member.</span>
+                </div>
               )}
 
 
@@ -2090,43 +2085,40 @@ export default function TaskDetails() {
                   />
                 </div>
 
-                {/* Werner spec rev H — reply meta strip.
-                    Sits between the editor and the action button row.
-                    Same fonts/spacing as the rest of the form. */}
-                <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Add recipient</p>
-                    <button
-                      type="button"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                      onClick={() => toast.info("Recipient picker — wires into team directory next.")}
-                    >
-                      <Plus className="h-3 w-3" />
-                      Pick a user…
-                    </button>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Attachment</p>
-                    <button
-                      type="button"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                      onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
-                    >
-                      <Plus className="h-3 w-3" />
-                      Add file
-                    </button>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Add reference</p>
-                    <button
-                      type="button"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                      onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
-                    >
-                      <Plus className="h-3 w-3" />
-                      Add reference
-                    </button>
-                  </div>
+                {/* Werner spec rev H — reply meta as small icon buttons.
+                    Sits inline above the action buttons row, single line.
+                    Same ghost-button pattern as other secondary actions. */}
+                <div className="flex items-center gap-1 mt-3 -mb-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground font-normal"
+                    onClick={() => toast.info("Recipient picker — wires into team directory next.")}
+                  >
+                    <UserPlus className="h-3.5 w-3.5 mr-1" />
+                    Recipient
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground font-normal"
+                    onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-1" />
+                    Attach
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground font-normal"
+                    onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                    Reference
+                  </Button>
                 </div>
 
                 {/* Action Buttons */}
@@ -2147,6 +2139,7 @@ export default function TaskDetails() {
                     ) : (
                       canApprove && (
                         <Button
+                          variant="outline"
                           className="font-normal"
                           onClick={() => handleApproveTask(
                             displayTask.timeline.stages[displayTask.timeline.stages.length - 1]

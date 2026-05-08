@@ -12,8 +12,8 @@
  * Design language matches the Audit Trail above: same xs muted heading,
  * same dotted-list look, same fonts. No new visual style.
  */
-import { Link } from "react-router-dom";
 import useFetch from "@/hooks/useFetch";
+import { cn } from "@/lib/utils";
 
 interface RefIncoming {
   display: string;
@@ -68,40 +68,46 @@ export function TaskReferences({ entityType, entityId }: Props) {
       <h3 className="text-xs font-normal text-foreground mb-3 pl-2">References</h3>
 
       {incoming.length > 0 && (
-        <div className="mb-3">
-          <p className="text-xs text-muted-foreground mb-1.5 pl-2">From</p>
-          <ul className="space-y-1.5 pl-2">
+        <div className="mb-3 pl-2">
+          <p className="text-xs text-muted-foreground mb-1.5">Originated from</p>
+          <div className="flex flex-wrap gap-1.5">
             {incoming.map((ref, i) => (
-              <li key={`in-${i}`} className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">←</span>
-                <span className={ref.auto ? "text-red-600" : "text-foreground"}>
-                  {ref.display}
-                </span>
-                {ref.auto && (
-                  <span className="text-[10px] text-muted-foreground">(auto)</span>
+              <span
+                key={`in-${i}`}
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border",
+                  ref.auto
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-muted border-border text-foreground",
                 )}
-              </li>
+                title={ref.auto ? "Auto-attached on escalation" : "Manually referenced"}
+              >
+                {ref.display}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
       {outgoing.length > 0 && (
-        <div>
-          <p className="text-xs text-muted-foreground mb-1.5 pl-2">Linked to</p>
-          <ul className="space-y-1.5 pl-2">
+        <div className="pl-2">
+          <p className="text-xs text-muted-foreground mb-1.5">Linked to</p>
+          <div className="flex flex-wrap gap-1.5">
             {outgoing.map((ref, i) => (
-              <li key={`out-${i}`} className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">→</span>
-                <span className={ref.auto ? "text-red-600" : "text-foreground"}>
-                  {ref.display}
-                </span>
-                {ref.auto && (
-                  <span className="text-[10px] text-muted-foreground">(auto)</span>
+              <span
+                key={`out-${i}`}
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border",
+                  ref.auto
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-muted border-border text-foreground",
                 )}
-              </li>
+                title={ref.auto ? "Auto-attached on escalation" : "Manually referenced"}
+              >
+                {ref.display}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
