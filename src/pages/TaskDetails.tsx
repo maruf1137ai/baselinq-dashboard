@@ -81,7 +81,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
@@ -282,17 +282,24 @@ export default function TaskDetails() {
   );
 
   // ── Werner spec rev H: route RFI to the new layout ────────────────
-  // When the underlying task is an RFI, render the spec-correct
-  // RFIDetailV2 instead of the generic TaskDetails. The redirect is
-  // gated by ?legacy=1 so anyone who needs the old view can still
-  // reach it (e.g. /tasks/123?legacy=1).
-  const wantsLegacy = typeof window !== "undefined"
-    && new URLSearchParams(window.location.search).get("legacy") === "1";
+  // When the underlying task is an RFI, redirect to the spec-correct
+  // RFIDetailV2 page. The redirect is gated by ?legacy=1 so anyone
+  // who needs the old view can still reach it (e.g. /tasks/123?legacy=1).
+  //
+  // CRITICAL: must use useEffect + navigate() rather than an early
+  // return with <Navigate>. The legacy TaskDetails has ~20 hooks
+  // declared below this line, and an early return would skip them
+  // — React's Rules of Hooks then panics with "Rendered fewer hooks
+  // than expected" on the second render.
   const taskType = (taskDetailsResponse as any)?.taskType;
   const entityId = (taskDetailsResponse as any)?.taskId;
-  if (!wantsLegacy && taskType === "RFI" && entityId) {
-    return <Navigate to={`/tasks/rfi-v2/${entityId}`} replace />;
-  }
+  useEffect(() => {
+    const wantsLegacy = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("legacy") === "1";
+    if (!wantsLegacy && taskType === "RFI" && entityId) {
+      navigate(`/tasks/rfi-v2/${entityId}`, { replace: true });
+    }
+  }, [taskType, entityId, navigate]);
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
