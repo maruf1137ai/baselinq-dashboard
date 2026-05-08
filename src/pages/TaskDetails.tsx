@@ -91,6 +91,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
+import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
 import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
@@ -2059,6 +2060,20 @@ export default function TaskDetails() {
                       <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
                       {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
                     </button>
+
+                    {/* Werner spec rev H — additive task actions:
+                        + Action (escalation), Sign & Issue, Risk pills.
+                        Renders nothing if not applicable to this task type. */}
+                    {entityId && (
+                      <WernerTaskActions
+                        taskType={taskType || displayTask.type}
+                        taskId={taskId || displayTask.id}
+                        entityId={entityId}
+                        riskLevel={(tdr?.task as any)?.riskLevel ?? (tdr?.task as any)?.risk_level ?? null}
+                        isSigned={!!((tdr?.task as any)?.signedAt ?? (tdr?.task as any)?.signed_at)}
+                        onChanged={() => refetchTask()}
+                      />
+                    )}
 
                     <Button className="font-normal" onClick={handleSubmitReply}>
                       Submit Reply
