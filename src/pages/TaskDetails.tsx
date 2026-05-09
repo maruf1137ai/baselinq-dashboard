@@ -1356,7 +1356,7 @@ export default function TaskDetails() {
 
       <div className="min-h-screen">
         <div className="">
-          <div className="grid grid-cols-3 gap-4 max-w-[1600px] mx-auto px-4 py-4">
+          <div className="grid grid-cols-3 gap-4 max-w-[1600px] mx-auto p-6">
             {/* Left Column - Main Content */}
             <div className="col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-4">
