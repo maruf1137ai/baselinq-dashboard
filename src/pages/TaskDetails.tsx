@@ -1356,9 +1356,9 @@ export default function TaskDetails() {
 
       <div className="min-h-screen">
         <div className="">
-          <div className="grid grid-cols-3 gap-6 max-w-[1600px] mx-auto px-2">
+          <div className="grid grid-cols-3 gap-4 max-w-[1600px] mx-auto px-4 py-4">
             {/* Left Column - Main Content */}
-            <div className="col-span-2 space-y-4 px-4 py-4">
+            <div className="col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => navigate(-1)}
@@ -2452,7 +2452,7 @@ export default function TaskDetails() {
                 }}
               />
             ) : (
-              <div className="space-y-4 py-4 pr-2">
+              <div className="space-y-4">
                 {/* Decision Timeline — world-class visual:
                     larger dots, ring halo around current step, gradient
                     connectors, hover transitions. Wrapped in a white
