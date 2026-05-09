@@ -93,6 +93,7 @@ import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { TaskReferences } from "@/components/TaskComponents/TaskReferences";
+import { UserChip } from "@/components/TaskComponents/UserChip";
 import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
@@ -1374,66 +1375,93 @@ export default function TaskDetails() {
               </div>
 
               {/* Werner spec rev H — single merged doc card.
-                  Order matches Werner page 3:
-                    1. Title + #RFI-049 + 3-dot menu
-                    2. Divider
-                    3. Project block (name/address/no/employer)
-                    4. Divider
-                    5. Meta block (Discipline/From/To/CC/Subject/Date)
-                    6. Divider
-                    7. Description (TaskContentRenderer)
-                    8. Attachments + References
-                  Light-grey card body (bg-sidebar) per spec. */}
-              <Card className="p-6 bg-sidebar shadow-none rounded-lg border-border">
-                {/* 1. Title row */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h1 className="text-sm text-foreground">
-                        {displayTask.title}
-                      </h1>
-                      <p className="text-muted-foreground text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
+                  WHITE card on grey page (production pattern). Title row
+                  has visible status + priority pills. Inner sections use
+                  subtle grey blocks for visual depth where it adds value. */}
+              <Card className="p-0 bg-white shadow-none rounded-lg border-border overflow-hidden">
+                {/* ─── Title strip — light grey banner with title, type tag,
+                       status + priority pills + 3-dot menu ─── */}
+                <div className="bg-sidebar/50 px-6 py-4 border-b border-border">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                        {/* Type chip — small uppercase letter pill */}
+                        <Badge className="bg-amber-50 border-amber-200 text-amber-700 text-[10px] uppercase tracking-wide font-medium px-2 py-0.5">
+                          {currentTask.taskType}
+                        </Badge>
+                        <h1 className="text-base font-medium text-foreground truncate">
+                          {displayTask.title}
+                        </h1>
+                        <span className="text-muted-foreground text-sm whitespace-nowrap">
+                          {`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {(projectName || projectNumber) && (
+                          <span className="text-xs text-muted-foreground">
+                            {projectName}
+                            {projectNumber && <span> · #{projectNumber}</span>}
+                          </span>
+                        )}
+                        {displayTask.timeline?.current && (
+                          <>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <Badge variant="outline" className="text-[10px] font-normal py-0 px-1.5 h-5 bg-white">
+                              {displayTask.timeline.current}
+                            </Badge>
+                          </>
+                        )}
+                        {displayTask.priority && displayTask.priority !== "Normal" && (
+                          <Badge
+                            className={cn(
+                              "text-[10px] font-normal py-0 px-1.5 h-5 border",
+                              displayTask.priority === "Urgent" && "bg-red-50 text-red-700 border-red-200",
+                              displayTask.priority === "High"   && "bg-orange-50 text-orange-700 border-orange-200",
+                              displayTask.priority === "Low"    && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            )}
+                          >
+                            {displayTask.priority}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    {(projectName || projectNumber) && (
-                      <p className="text-xs text-muted-foreground">
-                        {projectName}
-                        {projectNumber && <span> · #{projectNumber}</span>}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-amber-50 rounded-full px-3 py-1.5 text-amber-600 border-amber-200 text-xs">
-                        Due: {displayTask.dueDate}
-                      </Badge>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const assignedTo = currentTask?.assignedTo || [];
-                            const preSelected = projectMembers.filter((m: any) =>
-                              assignedTo.some((a: any) => String(a.userId) === String(m.userId))
-                            );
-                            setSelectedAssignUsers(preSelected);
-                            setShowAssignModal(true);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Assign
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-amber-50 rounded-full px-3 py-1 text-amber-700 border-amber-200 text-xs">
+                          Due {displayTask.dueDate}
+                        </Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-white">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const assignedTo = currentTask?.assignedTo || [];
+                              const preSelected = projectMembers.filter((m: any) =>
+                                assignedTo.some((a: any) => String(a.userId) === String(m.userId))
+                              );
+                              setSelectedAssignUsers(preSelected);
+                              setShowAssignModal(true);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Assign
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </div>
+
+                {/* ─── Doc body (white, with sectioned dl content) ─── */}
+                <div className="px-6 py-5">
 
                 {/* 2. Divider */}
                 <div className="-mx-6 border-t border-border my-5" />
@@ -1474,39 +1502,38 @@ export default function TaskDetails() {
                   )}
 
                   <dt className="text-muted-foreground">From:</dt>
-                  <dd className="text-foreground">
-                    {displayTask.creator?.name || "—"}
-                    {displayTask.creator?.role && (
-                      <span className="text-muted-foreground"> ({displayTask.creator.role})</span>
+                  <dd>
+                    {displayTask.creator?.name ? (
+                      <UserChip name={displayTask.creator.name} role={displayTask.creator.role} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </dd>
 
                   <dt className="text-muted-foreground">To:</dt>
-                  <dd className="text-foreground">
-                    {(displayTask.assignedTo || []).length > 0
-                      ? <div className="space-y-0.5">
-                          {displayTask.assignedTo.map((u: any, i: number) => (
-                            <div key={i}>
-                              {u.name || "—"}
-                              {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      : <span className="text-muted-foreground">—</span>}
+                  <dd>
+                    {(displayTask.assignedTo || []).length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {displayTask.assignedTo.map((u: any, i: number) => (
+                          <UserChip key={i} name={u.name || "—"} role={u.role} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </dd>
 
                   <dt className="text-muted-foreground">CC:</dt>
-                  <dd className="text-foreground">
-                    {(displayTask.cc || displayTask.ccUsers || []).length > 0
-                      ? <div className="space-y-0.5">
-                          {(displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
-                            <div key={i}>
-                              {u.name || "—"}
-                              {u.role && <span className="text-muted-foreground"> ({u.role})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      : <span className="text-muted-foreground">—</span>}
+                  <dd>
+                    {(displayTask.cc || displayTask.ccUsers || []).length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {(displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
+                          <UserChip key={i} name={u.name || "—"} role={u.role} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </dd>
 
                   <dt className="text-muted-foreground">Subject:</dt>
@@ -1555,6 +1582,7 @@ export default function TaskDetails() {
                       </Badge>
                     ))}
                 </div> */}
+                </div>{/* end .px-6.py-5 doc body */}
               </Card>
 
               {/* Locked banner — shown when task is at final stage */}
@@ -2056,40 +2084,41 @@ export default function TaskDetails() {
                   />
                 </div>
 
-                {/* Werner spec rev H — reply meta as small icon buttons.
-                    Sits inline above the action buttons row, single line.
-                    Same ghost-button pattern as other secondary actions. */}
-                <div className="flex items-center gap-1 mt-3 -mb-1">
-                  <Button
+                {/* Werner spec rev H — reply meta toolbar.
+                    Single subtle bar with three small icon-only buttons,
+                    matching the rich-text editor toolbar style. Tooltips
+                    show what each does. Action buttons sit below as
+                    primary actions. */}
+                <div className="flex items-center gap-1 mt-2 px-1">
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground font-normal"
+                    title="Add recipient"
+                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                     onClick={() => toast.info("Recipient picker — wires into team directory next.")}
                   >
-                    <UserPlus className="h-3.5 w-3.5 mr-1" />
-                    Recipient
-                  </Button>
-                  <Button
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Add recipient
+                  </button>
+                  <span className="text-muted-foreground/30">·</span>
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground font-normal"
+                    title="Attach a file"
+                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                     onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
                   >
-                    <FileText className="h-3.5 w-3.5 mr-1" />
+                    <FileText className="h-3.5 w-3.5" />
                     Attach
-                  </Button>
-                  <Button
+                  </button>
+                  <span className="text-muted-foreground/30">·</span>
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground font-normal"
+                    title="Add reference"
+                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                     onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
                   >
-                    <Link2 className="h-3.5 w-3.5 mr-1" />
-                    Reference
-                  </Button>
+                    <Link2 className="h-3.5 w-3.5" />
+                    Add reference
+                  </button>
                 </div>
 
                 {/* Action Buttons */}
