@@ -204,11 +204,11 @@ export function WernerTaskActions({
         </div>
       )}
 
-      {/* + Action escalation button */}
+      {/* + Action escalation button — solid purple per Werner page 3 */}
       {escalation && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="font-normal">
+            <Button className="font-normal bg-primary hover:bg-primary/90 text-white">
               <Plus className="mr-1 h-3.5 w-3.5" />
               Action
               <ChevronDown className="ml-1 h-3.5 w-3.5" />

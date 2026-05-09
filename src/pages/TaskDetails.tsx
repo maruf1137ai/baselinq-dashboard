@@ -2170,14 +2170,16 @@ export default function TaskDetails() {
                       )
                     )}
 
+                    {/* Werner spec rev H — Analyze with AI uses purple
+                        border + light primary-tint bg (was solid black). */}
                     <button
                       onClick={() => setShowAiChat(!showAiChat)}
                       disabled={isAnalyzeLoading}
                       className={cn(
-                        "flex items-center gap-1 px-3 py-2.5 rounded-lg transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-normal disabled:opacity-50 disabled:cursor-not-allowed",
                         showAiChat
-                          ? "bg-primary text-white hover:bg-primary/90"
-                          : "bg-gray-900 text-white hover:bg-gray-800"
+                          ? "bg-primary text-white border-primary hover:bg-primary/90"
+                          : "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10",
                       )}>
                       <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
                       {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
