@@ -1611,25 +1611,36 @@ export default function TaskDetails() {
               )}
 
 
-              {/* Response Form — hidden only when the task is locked */}
-              {!isTaskLocked && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
-                <h2 className="text-sm  text-foreground mb-5">
-                  {displayTask.type === "RFI"
-                    ? "Response"
-                    : displayTask.type === "SI"
-                      ? "Acknowledgment & Response"
-                      : displayTask.type === "VO"
-                        ? "Pricing Response"
-                        : displayTask.type === "DC"
-                          ? "Comments & Updates"
-                          : displayTask.type === "CPI"
-                            ? "Response"
-                            : displayTask.type === "CPI"
-                              ? "Response"
-                              : displayTask.type === "GI"
-                                ? "Response"
-                                : "Response"}
-                </h2>
+              {/* Response Form — hidden only when the task is locked.
+                  Werner spec rev H: gray title strip + white body, matches
+                  the pattern used by the doc card and the right-panel
+                  cards. Heading uses Werner's wording "Add a reply" so
+                  the form is consistent across all task types. */}
+              {!isTaskLocked && <Card className="p-0 shadow-none bg-white rounded-lg border-border overflow-hidden">
+                <div className="bg-sidebar/50 px-6 py-3 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {user?.name && (
+                      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
+                        {user.name.split(/\s+/).slice(0, 2).map((p: string) => p[0]?.toUpperCase() || "").join("")}
+                      </span>
+                    )}
+                    <div>
+                      <h2 className="text-sm text-foreground leading-tight">
+                        {displayTask.type === "VO"
+                          ? "Pricing response"
+                          : displayTask.type === "SI"
+                            ? "Acknowledge and reply"
+                            : displayTask.type === "DC"
+                              ? "Comments & updates"
+                              : "Add a reply"}
+                      </h2>
+                      <p className="text-[11px] text-muted-foreground leading-tight">
+                        Replying as {user?.name || "you"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-5">
 
                 {/* Structured Pricing Response Fields */}
                 {displayTask.type === "VO" && (
@@ -2186,11 +2197,16 @@ export default function TaskDetails() {
                       />
                     )}
 
-                    <Button className="font-normal" onClick={handleSubmitReply}>
+                    {/* Werner spec rev H — Submit Reply is GREEN per page 3 */}
+                    <Button
+                      className="font-normal bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleSubmitReply}
+                    >
                       Submit Reply
                     </Button>
                   </div>
                 </div>
+                </div>{/* end .px-6.py-5 form body */}
               </Card>}
 
               {/* VO Rounds Section */}
