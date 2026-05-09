@@ -65,9 +65,11 @@ export function TaskReferences({ entityType, entityId }: Props) {
   }
 
   return (
-    <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
-      <h3 className="text-xs font-normal text-foreground mb-3">References</h3>
-
+    <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+      <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+        <h3 className="text-xs font-medium text-foreground">References</h3>
+      </div>
+      <div className="px-4 py-4">
       {incoming.length > 0 && (
         <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-1.5">Originated from</p>
@@ -111,6 +113,7 @@ export function TaskReferences({ entityType, entityId }: Props) {
           </div>
         </div>
       )}
+      </div>
     </Card>
   );
 }

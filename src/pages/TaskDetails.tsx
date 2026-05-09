@@ -2457,84 +2457,84 @@ export default function TaskDetails() {
                     larger dots, ring halo around current step, gradient
                     connectors, hover transitions. Wrapped in a white
                     Card to match the rest of the production right panel. */}
-                <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
-                  <h3 className="text-xs text-muted-foreground mb-6">
-                    Decision Timeline
-                  </h3>
-                  <div
-                    className="grid"
-                    style={{
-                      gridTemplateColumns: `repeat(${displayTask.timeline.stages.length}, minmax(0, 1fr))`,
-                    }}
-                  >
-                    {displayTask.timeline.stages.map((stage: any, i: any) => {
-                      const isComplete = i < currentStageIndex;
-                      const isCurrent = i === currentStageIndex;
-                      const lastIdx = displayTask.timeline.stages.length - 1;
-                      return (
-                        <button
-                          key={stage}
-                          disabled={!canApprove}
-                          onClick={() => {
-                            if (!canApprove) return;
-                            if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
-                              handleVOApproveClick();
-                            } else {
-                              handleApproveTask(stage);
-                            }
-                          }}
-                          className={cn(
-                            "relative flex flex-col items-center pt-3 pb-1 group",
-                            canApprove ? "cursor-pointer" : "cursor-not-allowed",
-                          )}
-                        >
-                          {/* Left-half connector (skipped on first dot) */}
-                          {i > 0 && (
-                            <div
-                              className={cn(
-                                "absolute left-0 top-[22px] h-[2px] w-1/2 transition-colors",
-                                i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-border",
+                {/* Decision Timeline — VERTICAL layout. Each step is a row
+                    with the dot on the left, label on the right, and a
+                    connector line dropping straight down to the next dot.
+                    Reads naturally top→bottom, fits a narrow side panel,
+                    and the line geometry is unambiguous (connector is
+                    centred under the dot, not floating below it). */}
+                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                    <h3 className="text-xs font-medium text-foreground">Decision Timeline</h3>
+                  </div>
+                  <div className="px-4 py-4">
+                    <ol className="space-y-0">
+                      {displayTask.timeline.stages.map((stage: any, i: any) => {
+                        const isComplete = i < currentStageIndex;
+                        const isCurrent = i === currentStageIndex;
+                        const isLast = i === displayTask.timeline.stages.length - 1;
+                        return (
+                          <li key={stage} className="relative flex items-start gap-3">
+                            {/* Dot column with vertical connector */}
+                            <div className="relative flex flex-col items-center shrink-0">
+                              {/* Dot */}
+                              <button
+                                type="button"
+                                disabled={!canApprove}
+                                onClick={() => {
+                                  if (!canApprove) return;
+                                  if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
+                                    handleVOApproveClick();
+                                  } else {
+                                    handleApproveTask(stage);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300 mt-1",
+                                  isComplete && "bg-[#6c5ce7] shadow-sm",
+                                  isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
+                                  !isComplete && !isCurrent && "bg-white border-2 border-border",
+                                  canApprove && "cursor-pointer hover:scale-110",
+                                  !canApprove && "cursor-default",
+                                )}
+                              >
+                                {isComplete && (
+                                  <Check className="absolute inset-0 m-auto h-2 w-2 text-white" strokeWidth={4} />
+                                )}
+                              </button>
+                              {/* Connector to next dot — only between, never past last */}
+                              {!isLast && (
+                                <div
+                                  className={cn(
+                                    "w-[2px] flex-1 min-h-[28px] my-1 transition-colors",
+                                    isComplete ? "bg-[#6c5ce7]" : "bg-border",
+                                  )}
+                                />
                               )}
-                            />
-                          )}
-                          {/* Right-half connector (skipped on last dot) */}
-                          {i < lastIdx && (
-                            <div
-                              className={cn(
-                                "absolute right-0 top-[22px] h-[2px] w-1/2 transition-colors",
-                                i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-border",
+                            </div>
+
+                            {/* Label */}
+                            <div className={cn("flex-1 pb-5 pt-0.5", isLast && "pb-0")}>
+                              <p
+                                className={cn(
+                                  "text-sm leading-tight transition-colors",
+                                  isCurrent
+                                    ? "text-foreground font-medium"
+                                    : isComplete
+                                      ? "text-foreground"
+                                      : "text-muted-foreground",
+                                )}
+                              >
+                                {stage}
+                              </p>
+                              {isCurrent && (
+                                <p className="text-[11px] text-[#6c5ce7] mt-0.5">In progress</p>
                               )}
-                            />
-                          )}
-                          {/* Dot — larger, with ring halo on current step */}
-                          <div
-                            className={cn(
-                              "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300",
-                              isComplete && "bg-[#6c5ce7] shadow-sm",
-                              isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
-                              !isComplete && !isCurrent && "bg-white border-2 border-border group-hover:border-[#6c5ce7]/40",
-                            )}
-                          >
-                            {/* Inner check mark for completed steps */}
-                            {isComplete && (
-                              <Check className="absolute inset-0 m-auto h-2 w-2 text-white" strokeWidth={4} />
-                            )}
-                          </div>
-                          <span
-                            className={cn(
-                              "text-[11px] mt-3 text-center break-words max-w-[90px] leading-tight transition-colors",
-                              isCurrent
-                                ? "text-foreground font-medium"
-                                : isComplete
-                                  ? "text-foreground"
-                                  : "text-muted-foreground",
-                            )}
-                          >
-                            {stage}
-                          </span>
-                        </button>
-                      );
-                    })}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
                   </div>
                 </Card>
 
@@ -2635,9 +2635,12 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                {/* Audit Trail — own Card matching the Decision Timeline above. */}
-                <Card className="p-5 bg-white shadow-none border border-border rounded-lg">
-                  <h3 className="text-xs font-normal text-foreground mb-5">Audit Trail</h3>
+                {/* Audit Trail — grey header strip + white body. */}
+                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                    <h3 className="text-xs font-medium text-foreground">Audit Trail</h3>
+                  </div>
+                  <div className="px-4 py-4">
                   {auditLogs && auditLogs.length > 0 ? (
                     groupLogsByDate(auditLogs.slice(0, 30)).map((group) => (
                       <div key={group.label} className="mb-5">
@@ -2714,6 +2717,7 @@ export default function TaskDetails() {
                       <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
                     </div>
                   )}
+                  </div>
                 </Card>
 
                 {/* References — own Card, matches the panels above. */}
