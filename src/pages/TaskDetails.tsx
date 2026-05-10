@@ -1813,27 +1813,15 @@ export default function TaskDetails() {
                   </div>
                 )}
 
-                {/* Structured RFI Response Fields */}
-                {displayTask.type === "RFI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border">
-                    <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">
-                        Response Status
-                      </label>
-                      <select
-                        value={rfiResponseStatus}
-                        onChange={(e) => setRfiResponseStatus(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="">Select status...</option>
-                        <option value="clarification_provided">Clarification Provided</option>
-                        <option value="further_info_required">Instruction Follows</option>
-                        <option value="as_per_drawing">Work as per Drawing</option>
-                      </select>
-                      <p className="text-xs text-muted-foreground mt-1">Formal classification of this RFI response</p>
-                    </div>
-                  </div>
-                )}
+                {/* Werner spec rev H — Response Status dropdown removed.
+                    Verified not in Werner's PDF (rev H) or May 8 meeting
+                    transcript. The Decision Timeline pill bar on the
+                    right panel already conveys doc-level status. Per-reply
+                    categorisation (Clarification Provided / Instruction
+                    Follows / Work as per Drawing) was a production-only
+                    field that Werner doesn't ask for. Field is hidden
+                    here; the rfiResponseStatus state remains so any
+                    legacy data still serialises correctly. */}
 
                 {/* Structured DC Response Fields */}
                 {displayTask.type === "DC" && (
@@ -2095,41 +2083,53 @@ export default function TaskDetails() {
                   />
                 </div>
 
-                {/* Werner spec rev H — reply meta toolbar.
-                    Single subtle bar with three small icon-only buttons,
-                    matching the rich-text editor toolbar style. Tooltips
-                    show what each does. Action buttons sit below as
-                    primary actions. */}
-                <div className="flex items-center gap-1 mt-2 px-1">
-                  <button
-                    type="button"
-                    title="Add recipient"
-                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                    onClick={() => toast.info("Recipient picker — wires into team directory next.")}
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Add recipient
-                  </button>
-                  <span className="text-muted-foreground/30">·</span>
-                  <button
-                    type="button"
-                    title="Attach a file"
-                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                    onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    Attach
-                  </button>
-                  <span className="text-muted-foreground/30">·</span>
-                  <button
-                    type="button"
-                    title="Add reference"
-                    className="inline-flex items-center gap-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                    onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
-                  >
-                    <Link2 className="h-3.5 w-3.5" />
-                    Add reference
-                  </button>
+                {/* Werner spec rev H — reply meta as chip rows.
+                    Each row: label (left, fixed width) → chips of added
+                    items (currently empty placeholder) → small `+ add`
+                    affordance. Reads like Gmail / Notion / Linear: clear
+                    what each row is, scales with however many items get
+                    added, and stays compact when empty.
+
+                    NOTE: pickers (user search, file upload, reference
+                    search) wire up in the next pass — for now the `+ add`
+                    buttons toast a stub message so the visual layout can
+                    be reviewed first. */}
+                <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 mt-3 text-sm">
+                  <div className="text-xs text-muted-foreground self-center">Recipient:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      onClick={() => toast.info("Recipient picker — wires into team directory next.")}
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      Add user
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground self-center">Attachment:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
+                    >
+                      <FileText className="h-3 w-3" />
+                      Attach file
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground self-center">Reference:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
+                    >
+                      <Link2 className="h-3 w-3" />
+                      Link doc
+                    </button>
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
@@ -2376,7 +2376,13 @@ export default function TaskDetails() {
                 )}
               </AnimatePresence>
 
-              {/* Action request */}
+              {/* Action Requests — Werner spec rev H: hidden on the new
+                  task types (RFI/SI/VO/GI/IC/Claim) since Werner's spec
+                  doesn't reference this feature. The formal prof-to-prof
+                  asking pattern is now GI; informal team asks belong in
+                  Channels (Communications page). Kept available for
+                  legacy CPI tasks until Werner confirms removal. */}
+              {!["RFI", "SI", "VO", "GI", "IC", "DC", "CLAIM"].includes(displayTask.type) &&
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   Action Requests
@@ -2438,7 +2444,7 @@ export default function TaskDetails() {
                     }}
                   />
                 </div>
-              </Card>
+              </Card>}
             </div>
 
             {/* Right Column - Sidebar */}
