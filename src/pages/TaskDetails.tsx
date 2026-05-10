@@ -2280,85 +2280,9 @@ export default function TaskDetails() {
                 </div>
               )}
 
-              {/* Recent Responses Section (for non-VO or fallback) */}
-              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
-                String(resp.senderId) === String(user?.id) ||
-                String(displayTask.creator.id) === String(user?.id)
-              ) && (
-                  <div className="space-y-3 mb-4 mt-6">
-                    <div className="flex items-center justify-between px-1">
-                      <h2 className="text-sm font-normal text-foreground">
-                        Recent Responses
-                      </h2>
-                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
-                        {displayTask.responses.length} Total
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      {displayTask.responses
-                        .filter((resp: any) =>
-                          String(resp.senderId) === String(user?.id) ||
-                          String(displayTask.creator.id) === String(user?.id)
-                        )
-                        .slice().reverse().map((resp: any) => (
-                          <Card
-                            key={resp.id}
-                            onClick={() => {
-                              setSelectedResponse(resp);
-                              setIsResponseModalOpen(true);
-                            }}
-                            className="p-4 bg-white border border-border hover:border-[#6c5ce7] hover:shadow-md transition-all cursor-pointer group rounded-xl"
-                          >
-                            <div className="flex items-start gap-4">
-                              <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-border">
-                                <AvatarFallback className="bg-primary/5 text-[#6c5ce7] text-xs font-normal">
-                                  {resp.sender
-                                    ?.split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")
-                                    .toUpperCase() || "U"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-sm font-normal text-foreground truncate">
-                                    {resp.sender}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    {new Date(resp.date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <div
-                                  className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2"
-                                  dangerouslySetInnerHTML={{ __html: resp.content }}
-                                />
-                                {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {Object.entries(resp.structuredData).slice(0, 2).map(([key, value]) => {
-                                      if (!value) return null;
-                                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                                      return (
-                                        <span key={key} className="text-[9px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground border border-border/50">
-                                          {label}: {
-                                            typeof value === 'object' && value !== null
-                                              ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
-                                              : String(value)
-                                          }
-                                        </span>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* AI Chatbot Block */}
+              {/* AI Chatbot Block — Werner spec rev H: appears ABOVE the
+                  reply thread when triggered, so the order reads:
+                  doc → AI panel (when open) → replies → reply form. */}
               <AnimatePresence>
                 {showAiChat && (
                   <motion.div
@@ -2375,6 +2299,91 @@ export default function TaskDetails() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Replies — inline, fully expanded (Werner page 3 pattern).
+                  Each reply is its own gray card showing the full body
+                  inline. No popup modal. Reads as a printed conversation
+                  thread. The dialog at the bottom of this file still
+                  exists for legacy / drill-down use but cards no longer
+                  open it on click. */}
+              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
+                String(resp.senderId) === String(user?.id) ||
+                String(displayTask.creator.id) === String(user?.id)
+              ) && (
+                  <div className="space-y-3 mb-4 mt-6">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-normal text-foreground">
+                        Replies
+                      </h2>
+                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
+                        {displayTask.responses.length} Total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {displayTask.responses
+                        .filter((resp: any) =>
+                          String(resp.senderId) === String(user?.id) ||
+                          String(displayTask.creator.id) === String(user?.id)
+                        )
+                        .slice().reverse().map((resp: any) => (
+                          <Card
+                            key={resp.id}
+                            className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
+                          >
+                            {/* Reply header strip — sender + timestamp, gray strip
+                                matching the doc card and Response form patterns. */}
+                            <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-7 w-7 border border-primary/20">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                                    {resp.sender
+                                      ?.split(" ")
+                                      .map((n: string) => n[0])
+                                      .join("")
+                                      .toUpperCase() || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-foreground">
+                                  {resp.sender}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(resp.date).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {/* Reply body — full inline content, no truncation. */}
+                            <div className="px-5 py-4">
+                              <p className="text-xs text-muted-foreground mb-1">Reply:</p>
+                              <div
+                                className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{ __html: resp.content }}
+                              />
+
+                              {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
+                                  {Object.entries(resp.structuredData).map(([key, value]) => {
+                                    if (!value) return null;
+                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                    return (
+                                      <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
+                                        {label}: {
+                                          typeof value === 'object' && value !== null
+                                            ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
+                                            : String(value)
+                                        }
+                                      </span>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Action Requests — Werner spec rev H: hidden on the new
                   task types (RFI/SI/VO/GI/IC/Claim) since Werner's spec
