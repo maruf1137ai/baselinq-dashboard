@@ -236,12 +236,29 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   const priority = task.priority?.toLowerCase();
   const priorityInfo = priority ? priorityConfig[priority] : null;
 
-  // Days calculation
-  const daysUntilDue = task.due_date
-    ? Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000)
-    : null;
+  // Time-to-due calculation. Werner spec rev H: surface urgency precisely.
+  //   Past due  → 'Xd overdue' (red, with escalation bell at 3+ days)
+  //   < 24h     → 'Due in Xh'  (or 'Due today' when within 6h)
+  //   1-2 days  → 'Due in Xd'  (amber)
+  //   3-7 days  → real date    (gray)
+  const dueMs = task.due_date ? new Date(task.due_date).getTime() - Date.now() : null;
+  const daysUntilDue = dueMs !== null ? Math.ceil(dueMs / 86400000) : null;
+  const hoursUntilDue = dueMs !== null ? Math.ceil(dueMs / 3600000) : null;
   const overdueDays = dueDateInfo.isOverdue && daysUntilDue !== null ? Math.abs(daysUntilDue) : 0;
+  const overdueHours = dueDateInfo.isOverdue && hoursUntilDue !== null ? Math.abs(hoursUntilDue) : 0;
   const isWarning = !dueDateInfo.isOverdue && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 2;
+  const isUnder24h = !dueDateInfo.isOverdue && hoursUntilDue !== null && hoursUntilDue <= 24 && hoursUntilDue > 0;
+  // Compose the human due-string the card displays.
+  const dueDisplay = (() => {
+    if (dueDateInfo.isOverdue) {
+      if (overdueHours < 24) return `${overdueHours}h overdue`;
+      return `${overdueDays}d overdue`;
+    }
+    if (hoursUntilDue !== null && hoursUntilDue <= 6) return "Due today";
+    if (isUnder24h && hoursUntilDue !== null) return `Due in ${hoursUntilDue}h`;
+    if (isWarning && daysUntilDue !== null) return `Due in ${daysUntilDue}d`;
+    return task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  })();
 
   // Is this task resolved/done?
   const isResolved = ['done', 'closed', 'approved'].includes((task.status || '').toLowerCase());
@@ -379,17 +396,16 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   {`${overdueDays}d overdue`}
                 </span>
               ) : task.due_date && !isResolved ? (
-                <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue ? 'text-red-600 font-medium' :
-                  isWarning ? 'text-amber-600' :
-                    'text-muted-foreground'
+                <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue
+                  ? 'text-red-600 font-medium'
+                  : isUnder24h
+                    ? 'text-red-600 font-medium'
+                    : isWarning
+                      ? 'text-amber-600'
+                      : 'text-muted-foreground'
                   }`}>
                   <Calendar className="h-3 w-3" />
-                  {dueDateInfo.isOverdue
-                    ? `${overdueDays}d overdue`
-                    : isWarning
-                      ? `Due in ${daysUntilDue}d`
-                      : new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                  }
+                  {dueDisplay}
                 </span>
               ) : isResolved && task.due_date ? (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
