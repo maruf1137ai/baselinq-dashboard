@@ -25,7 +25,9 @@ const CAUSE_CATEGORY_OPTIONS = [
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
 import { registerS3TaskAttachment } from "@/lib/Api";
+import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 
@@ -36,11 +38,15 @@ export default function DCForm({ setOpen, initialStatus }: any) {
   const [description, setDescription] = useState("");
   const [requestedExtension, setRequestedExtension] = useState("");
 
+  // Werner spec rev H — shared To / CC / Date Required.
+  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
   const registerAttachments = async (dcId: string | number) => {
     if (!s3Upload.entries.length) return;
@@ -92,6 +98,11 @@ export default function DCForm({ setOpen, initialStatus }: any) {
     };
 
     const handleSuccess = async (result: any) => {
+      // Werner spec rev H — apply To / CC / Date Required to the Task wrapper.
+      const taskId = result?.task?.id || result?.taskId;
+      if (taskId) {
+        await applyMetaToTask(taskId, meta, patchRequest);
+      }
       // Create channel after DC is created
       try {
         await postRequest({
@@ -205,6 +216,9 @@ export default function DCForm({ setOpen, initialStatus }: any) {
           />
         </div>
       </div>
+
+      {/* Werner spec rev H — To / CC / Date Required. */}
+      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (PM)" />
 
       <div>
         <Label>Description</Label>
