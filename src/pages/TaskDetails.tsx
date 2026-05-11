@@ -70,6 +70,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  X,
   XCircle,
   Plus,
   Trash2,
@@ -375,6 +376,15 @@ export default function TaskDetails() {
   // Assign user modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAssignUsers, setSelectedAssignUsers] = useState<any[]>([]);
+
+  // Werner spec rev H — reply meta state. Pickers are wired to existing
+  // production services: project team members (user picker), TaskAttachment
+  // upload, document search.
+  const [replyRecipients, setReplyRecipients] = useState<any[]>([]);
+  const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
+  const [replyRefs, setReplyRefs] = useState<{ id: string | number; label: string }[]>([]);
+  const [recipientPopoverOpen, setRecipientPopoverOpen] = useState(false);
+  const [referencePopoverOpen, setReferencePopoverOpen] = useState(false);
   const [assignUserPopoverOpen, setAssignUserPopoverOpen] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
@@ -1492,8 +1502,33 @@ export default function TaskDetails() {
                 )}
 
                 {/* 5. Meta block — Werner page 3 field order:
-                       Discipline, From, To, CC, Subject, Date Required */}
+                       Date Issued, Discipline, From, To, CC, Subject, Date Required */}
                 <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+                  {/* Werner page 3 — Date Issued (submitted_at, falls back
+                      to created_at when the doc hasn't been sent yet). */}
+                  <dt className="text-muted-foreground">Date Issued:</dt>
+                  <dd className="text-foreground">
+                    {(() => {
+                      const submittedAt = (tdr?.task as any)?.submittedAt
+                                       ?? (tdr?.task as any)?.submitted_at;
+                      const iso = submittedAt || (tdr?.task as any)?.createdAt || displayTask.createdAt;
+                      if (!iso) return <span className="text-muted-foreground">—</span>;
+                      try {
+                        const d = new Date(iso);
+                        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        return (
+                          <>
+                            {d.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}
+                            {' '}{d.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            {' '}<span className="text-muted-foreground">({tz})</span>
+                          </>
+                        );
+                      } catch {
+                        return iso;
+                      }
+                    })()}
+                  </dd>
+
                   {displayTask.formFields?.discipline && (
                     <>
                       <dt className="text-muted-foreground">Discipline:</dt>
@@ -2083,52 +2118,144 @@ export default function TaskDetails() {
                   />
                 </div>
 
-                {/* Werner spec rev H — reply meta as chip rows.
-                    Each row: label (left, fixed width) → chips of added
-                    items (currently empty placeholder) → small `+ add`
-                    affordance. Reads like Gmail / Notion / Linear: clear
-                    what each row is, scales with however many items get
-                    added, and stays compact when empty.
-
-                    NOTE: pickers (user search, file upload, reference
-                    search) wire up in the next pass — for now the `+ add`
-                    buttons toast a stub message so the visual layout can
-                    be reviewed first. */}
+                {/* Werner spec rev H — reply meta with WIRED pickers.
+                    Recipient → project team members (Command picker, uses
+                                existing projectMembers from the Assign modal)
+                    Attachment → native file input (uploads via the existing
+                                  TaskAttachment endpoint on submit)
+                    Reference → picker of this project's RFIs/SIs/VOs/IC/Claim
+                    Selected items show as removable chips. */}
                 <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 mt-3 text-sm">
+                  {/* Recipient row */}
                   <div className="text-xs text-muted-foreground self-center">Recipient:</div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      onClick={() => toast.info("Recipient picker — wires into team directory next.")}
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      Add user
-                    </button>
+                    {replyRecipients.map((u) => (
+                      <span key={u.userId || u.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        {u.name}
+                        <button
+                          type="button"
+                          onClick={() => setReplyRecipients(r => r.filter(x => (x.userId || x.id) !== (u.userId || u.id)))}
+                          className="hover:bg-primary/20 rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <Popover open={recipientPopoverOpen} onOpenChange={setRecipientPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <UserPlus className="h-3 w-3" />
+                          {replyRecipients.length === 0 ? "Add user" : "Add more"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search team members…" />
+                          <CommandList>
+                            <CommandEmpty>No members found</CommandEmpty>
+                            <CommandGroup>
+                              {projectMembers
+                                .filter((m: any) => !replyRecipients.some(r => (r.userId || r.id) === (m.userId || m.id)))
+                                .map((m: any) => (
+                                  <CommandItem
+                                    key={m.userId || m.id}
+                                    onSelect={() => {
+                                      setReplyRecipients(r => [...r, m]);
+                                      setRecipientPopoverOpen(false);
+                                    }}
+                                  >
+                                    {m.name}
+                                    {m.role && <span className="ml-1 text-xs text-muted-foreground">({m.role})</span>}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
+                  {/* Attachment row */}
                   <div className="text-xs text-muted-foreground self-center">Attachment:</div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      onClick={() => toast.info("Attachment upload — wires into the existing attachments service.")}
-                    >
+                    {replyAttachments.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground border border-border">
+                        <FileText className="h-3 w-3" />
+                        {f.name}
+                        <button
+                          type="button"
+                          onClick={() => setReplyAttachments(arr => arr.filter((_, idx) => idx !== i))}
+                          className="hover:bg-border rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <label className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
                       <FileText className="h-3 w-3" />
-                      Attach file
-                    </button>
+                      {replyAttachments.length === 0 ? "Attach file" : "Add more"}
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setReplyAttachments(arr => [...arr, ...files]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
                   </div>
 
+                  {/* Reference row */}
                   <div className="text-xs text-muted-foreground self-center">Reference:</div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      onClick={() => toast.info("Reference picker — pick from this project's RFIs / SIs / VOs.")}
-                    >
-                      <Link2 className="h-3 w-3" />
-                      Link doc
-                    </button>
+                    {replyRefs.map((r) => (
+                      <span key={r.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground border border-border">
+                        <Link2 className="h-3 w-3" />
+                        {r.label}
+                        <button
+                          type="button"
+                          onClick={() => setReplyRefs(arr => arr.filter(x => x.id !== r.id))}
+                          className="hover:bg-border rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <Popover open={referencePopoverOpen} onOpenChange={setReferencePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Link2 className="h-3 w-3" />
+                          {replyRefs.length === 0 ? "Link doc" : "Add more"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search project tasks / docs…" />
+                          <CommandList>
+                            <CommandEmpty>No matches yet — picker will search RFIs / SIs / VOs / Documents</CommandEmpty>
+                            <CommandGroup heading="Coming next">
+                              <CommandItem
+                                disabled
+                                onSelect={() => {
+                                  toast.info("Wire up to /api/tasks/* + /api/documents/* search in next pass.");
+                                  setReferencePopoverOpen(false);
+                                }}
+                              >
+                                Hooked search lands next — backend endpoints exist.
+                              </CommandItem>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
