@@ -3,15 +3,27 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, User, Users } from 'lucide-react';
 
-const DOC_TYPES = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'] as const;
+// Werner rev H — full set of contractual doc types per the spec.
+// GI / IC / DC (display: Claim) were missing from the original filter
+// bar, which caused them to be excluded from the board view by default.
+const DOC_TYPES = ['All', 'VO', 'RFI', 'SI', 'GI', 'IC', 'DC', 'CPI'] as const;
 
+const DOC_TYPE_LABEL: Record<string, string> = {
+  // DC is the backend code for delay claim; Werner labels it as "Claim"
+  // on the UI side. Other types display by their three-letter code.
+  DC: 'Claim',
+};
+
+const DOC_TYPE_COLOR = { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' };
 const DOC_TYPE_COLORS: Record<string, { active: string; inactive: string }> = {
-  All: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  VO: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  RFI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  SI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  DC: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
-  CPI: { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' },
+  All: DOC_TYPE_COLOR,
+  VO: DOC_TYPE_COLOR,
+  RFI: DOC_TYPE_COLOR,
+  SI: DOC_TYPE_COLOR,
+  GI: DOC_TYPE_COLOR,
+  IC: DOC_TYPE_COLOR,
+  DC: DOC_TYPE_COLOR,
+  CPI: DOC_TYPE_COLOR,
 };
 
 export interface TaskFilters {
@@ -22,7 +34,7 @@ export interface TaskFilters {
 }
 
 export const defaultFilters: TaskFilters = {
-  docTypes: ['VO', 'RFI', 'SI', 'DC', 'CPI'],
+  docTypes: ['VO', 'RFI', 'SI', 'GI', 'IC', 'DC', 'CPI'],
   assignee: 'all',
   dateRange: 'all',
   myItems: true,
@@ -110,7 +122,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
                 className={`px-3 h-8 rounded-lg text-xs border transition-colors ${isActive ? colors.active : colors.inactive
                   }`}
               >
-                {type}
+                {DOC_TYPE_LABEL[type] || type}
               </button>
             );
           })}

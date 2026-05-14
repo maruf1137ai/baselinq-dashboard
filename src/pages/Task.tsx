@@ -31,52 +31,64 @@ import {
 } from "@/components/ui/tooltip";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
+// "+ Action" menu — order matches Werner's spec (rev G):
+//   SI → VO → RFI → GI → DC (renamed to Claim)
+// CPI removed per spec; existing CPI rows remain readable but no new ones.
+// GI is listed but its backend model lands in PR-2.
 const btns = [
   {
-    code: "VO",
-    title: "VO - Variation Order",
-    description: "Request to modify scope, cost, or materials.",
+    code: "SI",
+    title: "SI - Site Instruction",
+    description: "Professional → Contractor. Instruction for immediate site work.",
     time: "Just now",
     active: false,
   },
   {
-    code: "SI",
-    title: "SI - Site Instruction",
-    description: "Instruction issued directly for immediate site work.",
-    time: "5 minutes ago",
+    code: "VO",
+    title: "VO - Variation Order",
+    description: "PM → Contractor. Approved change to scope, cost, or materials.",
+    time: "Just now",
     active: false,
   },
   {
     code: "RFI",
     title: "RFI - Request for Information",
-    description: "Clarification requested regarding project details.",
-    time: "10 minutes ago",
+    description: "Contractor → Professional. Clarification on project details.",
+    time: "Just now",
+    active: false,
+  },
+  {
+    code: "GI",
+    title: "GI - General Instruction",
+    description: "Professional → Professional. Same format as RFI, prof-to-prof only.",
+    time: "Just now",
     active: false,
   },
   {
     code: "DC",
-    title: "DC - Delay Claim",
-    description: "Request for extension of time due to delays.",
-    time: "15 minutes ago",
-    active: false,
-  },
-  {
-    code: "CPI",
-    title: "CPI - Critical Path Item",
-    description: "Task affecting the critical path timeline.",
-    time: "20 minutes ago",
+    title: "Claim - Delay or Cost",
+    description: "Contractor → PM. Two-stage: Intention to Claim, then formal Claim.",
+    time: "Just now",
     active: false,
   },
 ];
 
-const ALL_TASK_TYPES = ["VO", "SI", "RFI", "DC", "CPI", "GI"];
+// Order: SI, VO, RFI, GI, DC. CPI omitted — frozen (no new ones, existing rows still viewable).
+const ALL_TASK_TYPES = ["SI", "VO", "RFI", "GI", "DC"];
 
-// Timeline stages per task type — used to map board columns to entity status
+// Werner rev H — every contractual doc type uses the same generic
+// 5-stage flow on the board / Decision Timeline. DC's older bespoke
+// stages (Delay Identified → EOT Awarded) collapse into the standard
+// Draft → Sent for Review → Further Info Required → Response Provided
+// → Closed flow so the visible state is consistent across every type.
+const WERNER_STAGES = ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"];
 const taskTypeStages: Record<string, string[]> = {
-  VO: ["Draft", "Priced", "Under Review", "Recommended", "Approved"],
-  RFI: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
-  SI: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
-  DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+  VO: WERNER_STAGES,
+  RFI: WERNER_STAGES,
+  SI: WERNER_STAGES,
+  GI: WERNER_STAGES,
+  IC: WERNER_STAGES,
+  DC: WERNER_STAGES,
   CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
   CRITICALPATHITEM: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
 };
@@ -231,12 +243,29 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   const priority = task.priority?.toLowerCase();
   const priorityInfo = priority ? priorityConfig[priority] : null;
 
-  // Days calculation
-  const daysUntilDue = task.due_date
-    ? Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000)
-    : null;
+  // Time-to-due calculation. Werner spec rev H: surface urgency precisely.
+  //   Past due  → 'Xd overdue' (red, with escalation bell at 3+ days)
+  //   < 24h     → 'Due in Xh'  (or 'Due today' when within 6h)
+  //   1-2 days  → 'Due in Xd'  (amber)
+  //   3-7 days  → real date    (gray)
+  const dueMs = task.due_date ? new Date(task.due_date).getTime() - Date.now() : null;
+  const daysUntilDue = dueMs !== null ? Math.ceil(dueMs / 86400000) : null;
+  const hoursUntilDue = dueMs !== null ? Math.ceil(dueMs / 3600000) : null;
   const overdueDays = dueDateInfo.isOverdue && daysUntilDue !== null ? Math.abs(daysUntilDue) : 0;
+  const overdueHours = dueDateInfo.isOverdue && hoursUntilDue !== null ? Math.abs(hoursUntilDue) : 0;
   const isWarning = !dueDateInfo.isOverdue && daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 2;
+  const isUnder24h = !dueDateInfo.isOverdue && hoursUntilDue !== null && hoursUntilDue <= 24 && hoursUntilDue > 0;
+  // Compose the human due-string the card displays.
+  const dueDisplay = (() => {
+    if (dueDateInfo.isOverdue) {
+      if (overdueHours < 24) return `${overdueHours}h overdue`;
+      return `${overdueDays}d overdue`;
+    }
+    if (hoursUntilDue !== null && hoursUntilDue <= 6) return "Due today";
+    if (isUnder24h && hoursUntilDue !== null) return `Due in ${hoursUntilDue}h`;
+    if (isWarning && daysUntilDue !== null) return `Due in ${daysUntilDue}d`;
+    return task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  })();
 
   // Is this task resolved/done?
   const isResolved = ['done', 'closed', 'approved'].includes((task.status || '').toLowerCase());
@@ -374,17 +403,16 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   {`${overdueDays}d overdue`}
                 </span>
               ) : task.due_date && !isResolved ? (
-                <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue ? 'text-red-600 font-medium' :
-                  isWarning ? 'text-amber-600' :
-                    'text-muted-foreground'
+                <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue
+                  ? 'text-red-600 font-medium'
+                  : isUnder24h
+                    ? 'text-red-600 font-medium'
+                    : isWarning
+                      ? 'text-amber-600'
+                      : 'text-muted-foreground'
                   }`}>
                   <Calendar className="h-3 w-3" />
-                  {dueDateInfo.isOverdue
-                    ? `${overdueDays}d overdue`
-                    : isWarning
-                      ? `Due in ${daysUntilDue}d`
-                      : new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                  }
+                  {dueDisplay}
                 </span>
               ) : isResolved && task.due_date ? (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
@@ -653,7 +681,26 @@ export default function Task() {
           entity_status: item.task?.status || '',
           priority: item.task?.priority || TASK_PRIORITIES[idx % TASK_PRIORITIES.length],
           discipline: item.task?.discipline || TASK_DISCIPLINES[idx % TASK_DISCIPLINES.length],
-          task_code: `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
+          // Werner rev H — every doc has a canonical number per Werner
+          // (RFI-006, SI-005, VO-005, GI-001, IC-001, C-001). Use it as
+          // the card title so the board, the doc page, and the bell
+          // notification all reference the SAME identifier. Fall back to
+          // the Task wrapper PK only if no doc number is available (e.g.,
+          // a legacy task created before numbering was introduced).
+          task_code:
+            item.task?.rfiNumber
+            || item.task?.siNumber
+            || item.task?.voNumber
+            || item.task?.giNumber
+            || item.task?.icNumber
+            || item.task?.dcNumber
+            || item.task?.rfi_number
+            || item.task?.si_number
+            || item.task?.vo_number
+            || item.task?.gi_number
+            || item.task?.ic_number
+            || item.task?.dc_number
+            || `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
           due_date: dueDate,
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,

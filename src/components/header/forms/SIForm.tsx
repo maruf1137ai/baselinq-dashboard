@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
+import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
@@ -42,11 +44,17 @@ const initialValues = {
 
 export default function SIForm({ setOpen, initialStatus }: any) {
   const [formData, setFormData] = useState(initialValues);
+  // Werner spec rev H — shared To / CC meta. Date Required is already
+  // handled by the existing dueDate field on this form so we hide it
+  // in the shared component.
+  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -99,6 +107,11 @@ export default function SIForm({ setOpen, initialStatus }: any) {
     };
 
     const handleSuccess = async (result: any) => {
+      // Werner spec rev H — apply To / CC to the auto-created Task wrapper.
+      const taskId = result?.task?.id || result?.taskId;
+      if (taskId) {
+        await applyMetaToTask(taskId, meta, patchRequest);
+      }
       // Create channel after SI is created
       console.log("SI created:", result);
       try {
@@ -217,6 +230,15 @@ export default function SIForm({ setOpen, initialStatus }: any) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Werner spec rev H — To / CC pickers (SI form already has its
+          own Due Date field below, so we hide ours). */}
+      <TaskMetaFields
+        value={meta}
+        onChange={setMeta}
+        toLabel="To (contractor)"
+        showDateRequired={false}
+      />
 
       <div>
         <Label className="block mb-1">Due Date</Label>

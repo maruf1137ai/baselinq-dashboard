@@ -16,7 +16,9 @@ import { Trash2, CalendarIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
 import { patchData, registerS3TaskAttachment } from "@/lib/Api";
+import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
@@ -42,11 +44,15 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       : [{ description: "", qty: 1, rate: 0 }]
   );
 
+  // Werner spec rev H — shared To / CC / Date Required.
+  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
   const addItem = () => {
     setItems([...items, { description: "", qty: 1, rate: 0 }]);
@@ -124,6 +130,11 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
     };
 
     const handleSuccess = async (result: any) => {
+      // Werner spec rev H — apply To / CC / Date Required to the Task wrapper.
+      const taskId = result?.task?.id || result?.taskId;
+      if (taskId) {
+        await applyMetaToTask(taskId, meta, patchRequest);
+      }
       // Create channel after VO is created
       // console.log("VO created:", result);
       try {
@@ -216,6 +227,9 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
           </SelectContent>
         </Select>
       </div>
+
+      {/* Werner spec rev H — To / CC / Date Required. */}
+      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (contractor)" />
 
       <div>
         <Label className="block mb-1">Date of Instruction</Label>
