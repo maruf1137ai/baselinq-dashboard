@@ -313,6 +313,7 @@ export default function TaskDetails() {
 
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
+  const queryClient = useQueryClient();
   const updateTask = async (data: any) => {
     try {
       if (!taskId) return;
@@ -334,12 +335,18 @@ export default function TaskDetails() {
       });
       if (updatedTask) setCurrentTask(updatedTask);
       refetchAuditLogs();
+      // Werner rev H — invalidate the board query so the card in /tasks
+      // reflects status change without a manual reload. Applies to every
+      // status-update path that goes through updateTask (DC, RFI reply,
+      // VO pricing decision, etc.).
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      }
     } catch (err) {
       console.error("Update task error:", err);
       throw err;
     }
   };
-  const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   // console.log(userRole)
@@ -416,10 +423,9 @@ export default function TaskDetails() {
   // RFI (Status) state
   const [rfiResponseStatus, setRfiResponseStatus] = useState<string>("");
 
-  // SI (Site Instruction) state
-  const [siAcknowledgeReceipt, setSiAcknowledgeReceipt] = useState<boolean>(false);
-  const [siLeadsToVariationResponse, setSiLeadsToVariationResponse] = useState<boolean>(false);
-  const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
+  // SI (Site Instruction) state — Werner rev H page 5-6 TIME / COST.
+  const [siTimeImpact, setSiTimeImpact] = useState<boolean>(false);
+  const [siCostImpact, setSiCostImpact] = useState<boolean>(false);
   const [showAiChat, setShowAiChat] = useState<boolean>(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showPricingResponse, setShowPricingResponse] = useState(false);
@@ -492,45 +498,11 @@ export default function TaskDetails() {
     }
   };
 
-  // Handle SI Approve - updates status to "Acknowledged"
-  const handleSIApprove = async () => {
-    if (!siAcknowledgeReceipt) {
-      toast.error("Please acknowledge receipt of the Site Instruction");
-      return;
-    }
-
-    if (!currentTask?.taskId) {
-      toast.error("Task ID not found. Please refresh and try again.");
-      return;
-    }
-
-    setIsReplySubmitLoading(true);
-    try {
-      // Use update-entity endpoint to update SI status to "Acknowledged"
-      await patchData({
-        url: `/tasks/tasks/${currentTask.taskId}/update-entity/`,
-        data: {
-          status: "Acknowledged",
-          isAcknowledged: true,
-          leadsToVariation: siLeadsToVariationResponse,
-        },
-      });
-
-      toast.success("Site Instruction acknowledged successfully");
-
-      // Refresh task data
-      await refetchTask();
-
-      // Reset checkbox states
-      setSiAcknowledgeReceipt(false);
-      setSiLeadsToVariationResponse(false);
-    } catch (error: any) {
-      console.error("SI Approve error:", error);
-      toast.error(error?.response?.data?.error || error?.message || "Failed to acknowledge SI");
-    } finally {
-      setIsReplySubmitLoading(false);
-    }
-  };
+  // Werner rev H — handleSIApprove removed. Werner page 5-6 does not
+  // have a separate "Acknowledge receipt" gate on the contractor's
+  // reply. The act of submitting a reply with optional TIME / COST
+  // tickboxes IS the acknowledgement. Submit Reply (handleSubmitReply
+  // below) is the single action; status flips to Acknowledged.
 
   const handleSubmitReply = async () => {
     if (!editor || !currentTask) return;
@@ -580,10 +552,10 @@ export default function TaskDetails() {
         };
       }
       if (displayTask.type === "SI") {
-        return { siAcknowledgeReceipt, siLeadsToVariationResponse };
+        return { siTimeImpact, siCostImpact };
       }
       if (displayTask.type === "GI") {
-        return { giAcknowledgeReceipt };
+        return {};
       }
       return null;
     };
@@ -684,20 +656,15 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "SI") {
-        if (siAcknowledgeReceipt) {
-          updateData.status = "Acknowledged";
-        } else {
-          updateData.status = "Actioned";
-        }
+        // Werner page 5/6 — contractor's reply moves SI to Acknowledged.
+        // The act of replying IS the acknowledgement.
+        updateData.status = "Acknowledged";
       }
 
       if (displayTask.type === "GI") {
-        if (giAcknowledgeReceipt) {
-          updateData.status = "Acknowledged";
-          updateData.isAcknowledged = true;
-        } else {
-          updateData.status = "Distributed";
-        }
+        // Werner page 10 — no formal acknowledge gate. Reply moves the
+        // GI into Distributed; close-out is a separate originator action.
+        updateData.status = "Distributed";
       }
 
       // Sync pricing and response fields to update the underlying entity
@@ -719,8 +686,9 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "SI") {
-        updateData.leadsToVariation = siLeadsToVariationResponse;
-        updateData.isAcknowledged = siAcknowledgeReceipt;
+        // Werner rev H — TIME or COST ticked flags this as a VO request.
+        updateData.leadsToVariation = siTimeImpact || siCostImpact;
+        updateData.isAcknowledged = true;
       }
 
       if (displayTask.type === "DC") {
@@ -731,6 +699,32 @@ export default function TaskDetails() {
 
 
       await updateTask(updateData);
+
+      // Werner rev H — for SI, also fire the Werner Reply endpoint with
+      // the TIME / COST flags so the backend's _notify_pm_on_si_time_cost
+      // fan-out runs (PM + QS auto-CC'd into the reply, in-app push that
+      // a VO request is incoming). update-entity doesn't trigger this
+      // path, so without the second call the VO workflow stays silent.
+      if (displayTask.type === "SI") {
+        try {
+          const entityId = displayTask.task?._id || (currentTask as any)?.task?._id;
+          if (entityId) {
+            await postData("tasks/replies/", {
+              entity_type: "si",
+              entity_id: Number(entityId),
+              body: editor.getHTML(),
+              time_impact: siTimeImpact,
+              cost_impact: siCostImpact,
+            });
+          }
+        } catch (err) {
+          // Soft-fail: update-entity already wrote the reply into the
+          // task wrapper; this second call is for the Werner side-
+          // effects only. Don't block the user.
+          console.warn("Werner reply mirror failed:", err);
+        }
+      }
+
       toast.success("Reply submitted successfully");
       editor.commands.setContent("");
 
@@ -747,9 +741,8 @@ export default function TaskDetails() {
       setCpiRecoveryPlan("");
       setCpiRiskLevel("");
       setCpiMilestoneImpact("");
-      setSiAcknowledgeReceipt(false);
-      setSiLeadsToVariationResponse(false);
-      setGiAcknowledgeReceipt(false);
+      setSiTimeImpact(false);
+      setSiCostImpact(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit reply");
@@ -1046,9 +1039,11 @@ export default function TaskDetails() {
       case "DC":
         return {
           ...baseData,
-          displayId: `#DC-${task._id}`,
+          // Werner rev H — use the canonical doc number (C-001, dc_number
+          // = "C-001"). Falls back to the entity PK only if no number.
+          displayId: `#${task.dcNumber || task.dc_number || `DC-${task._id}`}`,
           title: task.title,
-          task_code: `DC-${task._id}`,
+          task_code: task.dcNumber || task.dc_number || `DC-${task._id}`,
           dueDate: "No Date",
           formFields: {
             title: task.title,
@@ -1067,20 +1062,34 @@ export default function TaskDetails() {
             replyDue: "N/A",
             contractWindow: "28 days",
           },
+          // Werner rev H — every doc type shows the SAME generic 5-stage
+          // Decision Timeline (page 3-15 of the spec PDF). DC's older
+          // bespoke stages (Delay Identified → EOT Awarded) collapse into
+          // the standard Draft → Sent for Review → Further Info Required
+          // → Response Provided → Closed flow so the right-panel timeline
+          // is consistent across every task type.
           timeline: {
             current: (() => {
-              const s = task.status || apiResponse.status || "Delay Identified";
+              const s = task.status || apiResponse.status || "Draft";
               const legacyMap: Record<string, string> = {
-                "Draft": "Delay Identified",
-                "Submitted": "Notice Issued",
-                "In Review": "Under Assessment",
-                "Approved": "EOT Awarded",
-                "Rejected": "Determination Made",
-                "Closed": "EOT Awarded",
+                "Draft": "Draft",
+                "Delay Identified": "Draft",
+                "Notice Issued": "Sent for Review",
+                "Submitted": "Sent for Review",
+                "Sent for Review": "Sent for Review",
+                "Under Assessment": "Further Info Required",
+                "In Review": "Further Info Required",
+                "Further Info Required": "Further Info Required",
+                "Determination Made": "Response Provided",
+                "Response Provided": "Response Provided",
+                "Approved": "Closed",
+                "Rejected": "Closed",
+                "EOT Awarded": "Closed",
+                "Closed": "Closed",
               };
               return legacyMap[s] ?? s;
             })(),
-            stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+            stages: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
           },
           impact: {
             time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
@@ -1645,6 +1654,103 @@ export default function TaskDetails() {
                 </div>
               )}
 
+              {/* Werner rev H — Sign & Issue nudge for the SI originator.
+                  When an SI is still in Draft and the current user is the
+                  professional who raised it, surface a clear hint that
+                  the next step is to click "Sign & Issue" in the action
+                  bar above. Without this nudge the originator typically
+                  clicks Submit Reply by mistake (which moves the SI to
+                  Acknowledged but doesn't actually issue it). */}
+              {displayTask.type === "SI"
+                && (displayTask.timeline?.current || displayTask.status || "").toString().toLowerCase() === "draft"
+                && String(displayTask.creator?.id) === String(user?.id) && (
+                <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 px-3 py-2 rounded-md">
+                  <span className="text-base leading-none">🛡️</span>
+                  <span>
+                    This Site Instruction is still in <strong>Draft</strong>.
+                    Click <strong>Sign &amp; Issue</strong> in the action bar above to issue it to the contractor.
+                  </span>
+                </div>
+              )}
+
+              {/* Replies — Werner rev H: existing replies render ABOVE
+                  the reply form so the page reads chronologically (doc →
+                  reply 1 → reply 2 → … → input form at the bottom).
+                  Each reply is its own gray-header / white-body card. */}
+              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
+                String(resp.senderId) === String(user?.id) ||
+                String(displayTask.creator.id) === String(user?.id)
+              ) && (
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-normal text-foreground">
+                        Replies
+                      </h2>
+                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
+                        {displayTask.responses.length} Total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {displayTask.responses
+                        .filter((resp: any) =>
+                          String(resp.senderId) === String(user?.id) ||
+                          String(displayTask.creator.id) === String(user?.id)
+                        )
+                        .slice().reverse().map((resp: any) => (
+                          <Card
+                            key={resp.id}
+                            className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
+                          >
+                            <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-7 w-7 border border-primary/20">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                                    {resp.sender
+                                      ?.split(" ")
+                                      .map((n: string) => n[0])
+                                      .join("")
+                                      .toUpperCase() || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-foreground">
+                                  {resp.sender}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(resp.date).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="px-5 py-4">
+                              <p className="text-xs text-muted-foreground mb-1">Reply:</p>
+                              <div
+                                className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{ __html: resp.content }}
+                              />
+                              {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
+                                  {Object.entries(resp.structuredData).map(([key, value]) => {
+                                    if (!value) return null;
+                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                    return (
+                                      <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
+                                        {label}: {
+                                          typeof value === 'object' && value !== null
+                                            ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
+                                            : String(value)
+                                        }
+                                      </span>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
 
               {/* Response Form — hidden only when the task is locked.
                   Werner spec rev H: gray title strip + white body, matches
@@ -1999,70 +2105,54 @@ export default function TaskDetails() {
                   </div>
                 )}
 
-                {/* Structured SI Response Fields */}
+                {/* Werner rev H page 5-6 — SI contractor reply tickboxes.
+                    TIME and COST are the only structured fields on a
+                    Werner SI reply. Either ticked → the reply pulls
+                    PM + QS into the conversation and triggers a VO
+                    request. The act of clicking Submit Reply IS the
+                    acknowledgement (Werner does not have a separate
+                    "I formally acknowledge receipt" gate). */}
                 {displayTask.type === "SI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-lg border-primary/20">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
+                  <div className="space-y-3 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-lg border-primary/20">
+                    <p className="text-xs text-muted-foreground">
+                      Tick if this instruction has a time and/or cost impact.
+                      Either box ticked notifies the PM and QS so a Variation
+                      Order can be issued.
+                    </p>
+                    <div className="flex items-center gap-8">
+                      <label htmlFor="siTimeImpact" className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          id="siAcknowledge"
-                          checked={siAcknowledgeReceipt}
-                          onChange={(e) => setSiAcknowledgeReceipt(e.target.checked)}
+                          id="siTimeImpact"
+                          checked={siTimeImpact}
+                          onChange={(e) => setSiTimeImpact(e.target.checked)}
                           className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                         />
-                        <label htmlFor="siAcknowledge" className="text-sm font-normal text-foreground cursor-pointer">
-                          I formally acknowledge receipt of this Site Instruction
-                        </label>
-                      </div>
-
-                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-foreground">TIME</span>
+                      </label>
+                      <label htmlFor="siCostImpact" className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          id="siVariation"
-                          checked={siLeadsToVariationResponse}
-                          onChange={(e) => setSiLeadsToVariationResponse(e.target.checked)}
+                          id="siCostImpact"
+                          checked={siCostImpact}
+                          onChange={(e) => setSiCostImpact(e.target.checked)}
                           className="w-4 h-4 text-orange-600 border-border rounded focus:ring-orange-500"
                         />
-                        <label htmlFor="siVariation" className="text-sm font-normal text-foreground cursor-pointer">
-                          This instruction will lead to a Variation Order request
-                        </label>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground italic">Receipt and potential cost impact must be declared as per contract protocols.</p>
-
-                    {/* Approve Button - Bottom Right */}
-                    <div className="flex justify-end items-center pt-3 border-t border-border mt-4">
-                      <Button
-                        onClick={handleSIApprove}
-                        disabled={isReplySubmitLoading || !siAcknowledgeReceipt}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-sm"
-                        size="lg"
-                      >
-                        {isReplySubmitLoading ? "Approving..." : "Approve"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Structured GI Response Fields */}
-                {displayTask.type === "GI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border bg-purple-50/30 p-4 rounded-lg border-purple-100">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="giAcknowledge"
-                        checked={giAcknowledgeReceipt}
-                        onChange={(e) => setGiAcknowledgeReceipt(e.target.checked)}
-                        className="w-4 h-4 text-purple-600 border-border rounded focus:ring-purple-500"
-                      />
-                      <label htmlFor="giAcknowledge" className="text-sm font-normal text-foreground cursor-pointer">
-                        I formally acknowledge receipt of this General Instruction
+                        <span className="text-sm font-medium text-foreground">COST</span>
                       </label>
                     </div>
-                    <p className="text-xs text-muted-foreground italic">General instructions must be distributed and acknowledged by all relevant lead stakeholders.</p>
+                    {(siTimeImpact || siCostImpact) && (
+                      <p className="text-xs text-orange-700 font-medium">
+                        ⚠ PM &amp; QS will be added to the recipients and notified that a VO request is incoming.
+                      </p>
+                    )}
                   </div>
                 )}
+
+                {/* Werner rev H page 10 — GI has no formal acknowledge
+                    gate. The reply is text-only; closing out the GI
+                    is a separate action on the action bar (only the
+                    originator can close). */}
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 mb-4 pb-4 border-b">
                   <button
@@ -2322,7 +2412,26 @@ export default function TaskDetails() {
                         entityId={entityId}
                         riskLevel={(tdr?.task as any)?.riskLevel ?? (tdr?.task as any)?.risk_level ?? null}
                         isSigned={!!((tdr?.task as any)?.signedAt ?? (tdr?.task as any)?.signed_at)}
-                        onChanged={() => refetchTask()}
+                        // Werner rev H — after any Werner action (escalate,
+                        // sign & issue, risk-set) refetch the task, audit
+                        // log, and invalidate every dependent query so
+                        // the page state matches the backend without a
+                        // manual reload: doc header status, Audit Trail
+                        // Card, References Card, and the /tasks board.
+                        onChanged={async () => {
+                          await refetchTask();
+                          await refetchAuditLogs();
+                          if (projectId) {
+                            queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+                          }
+                          // References sub-panel reads /entity-references/
+                          // via its own useFetch; invalidate so it refreshes.
+                          if (entityId && taskType) {
+                            queryClient.invalidateQueries({
+                              queryKey: [`tasks/entity-references/?entity_type=${taskType.toLowerCase()}&entity_id=${entityId}`]
+                            });
+                          }
+                        }}
                       />
                     )}
 
@@ -2427,90 +2536,10 @@ export default function TaskDetails() {
                 )}
               </AnimatePresence>
 
-              {/* Replies — inline, fully expanded (Werner page 3 pattern).
-                  Each reply is its own gray card showing the full body
-                  inline. No popup modal. Reads as a printed conversation
-                  thread. The dialog at the bottom of this file still
-                  exists for legacy / drill-down use but cards no longer
-                  open it on click. */}
-              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
-                String(resp.senderId) === String(user?.id) ||
-                String(displayTask.creator.id) === String(user?.id)
-              ) && (
-                  <div className="space-y-3 mb-4 mt-6">
-                    <div className="flex items-center justify-between px-1">
-                      <h2 className="text-sm font-normal text-foreground">
-                        Replies
-                      </h2>
-                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
-                        {displayTask.responses.length} Total
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      {displayTask.responses
-                        .filter((resp: any) =>
-                          String(resp.senderId) === String(user?.id) ||
-                          String(displayTask.creator.id) === String(user?.id)
-                        )
-                        .slice().reverse().map((resp: any) => (
-                          <Card
-                            key={resp.id}
-                            className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
-                          >
-                            {/* Reply header strip — sender + timestamp, gray strip
-                                matching the doc card and Response form patterns. */}
-                            <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-7 w-7 border border-primary/20">
-                                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
-                                    {resp.sender
-                                      ?.split(" ")
-                                      .map((n: string) => n[0])
-                                      .join("")
-                                      .toUpperCase() || "U"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm text-foreground">
-                                  {resp.sender}
-                                </span>
-                              </div>
-                              <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(resp.date).toLocaleString()}
-                              </span>
-                            </div>
-
-                            {/* Reply body — full inline content, no truncation. */}
-                            <div className="px-5 py-4">
-                              <p className="text-xs text-muted-foreground mb-1">Reply:</p>
-                              <div
-                                className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={{ __html: resp.content }}
-                              />
-
-                              {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
-                                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
-                                  {Object.entries(resp.structuredData).map(([key, value]) => {
-                                    if (!value) return null;
-                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                                    return (
-                                      <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
-                                        {label}: {
-                                          typeof value === 'object' && value !== null
-                                            ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
-                                            : String(value)
-                                        }
-                                      </span>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  </div>
-                )}
+              {/* Replies block moved ABOVE the reply form (Werner rev H —
+                  chronological reading order: doc → existing replies →
+                  input form at the bottom). See the block earlier in
+                  this component for the actual render. */}
 
               {/* Action Requests — Werner spec rev H: hidden on the new
                   task types (RFI/SI/VO/GI/IC/Claim) since Werner's spec
@@ -2583,35 +2612,13 @@ export default function TaskDetails() {
               </Card>}
             </div>
 
-            {/* Right Column - Sidebar */}
-            {displayTask.creator.badge === "DC" ? (
-              <TaskSidebar
-                taskType={displayTask.creator.badge}
-                canApprove={canApprove && currentStageIndex < displayTask.timeline.stages.length - 1}
-                currentStageIndex={currentStageIndex}
-                auditLogs={auditLogs}
-                taskData={{
-                  ...displayTask,
-                  // Add DC-specific fields
-                  daysRequested: displayTask.formFields?.requestedExtension || "5",
-                  approvedDays: "0",
-                  number: displayTask.id,
-                  createdBy: displayTask.creator.name,
-                  status: displayTask.timeline.current,
-                }}
-                onStageClick={(stage) => { if (!isTaskLocked) handleApproveTask(stage); }}
-                onApprove={() => {
-                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                  handleApproveTask(lastStage);
-                }}
-                onReject={() => {
-                  toast.info("Task rejected");
-                }}
-                onRequestInfo={() => {
-                  toast.info("Request info dialog triggered");
-                }}
-              />
-            ) : (
+            {/* Right Column - Sidebar
+                Werner rev H — every task type uses the same inline right
+                column (Decision Timeline → Audit Trail → References).
+                The legacy DC-only TaskSidebar branch (with its bespoke
+                green Approve button and Actions card) is removed so the
+                Claim page is visually consistent with RFI/SI/VO/GI/IC. */}
+            {false ? null : (
               <div className="space-y-4">
                 {/* Decision Timeline — world-class visual:
                     larger dots, ring halo around current step, gradient

@@ -36,13 +36,20 @@ const btns = [
   {
     code: "GI",
     title: "GI - General Instruction",
-    description: "Professional → Professional. Same format as RFI, prof-to-prof only.",
+    // Werner rev H p.10: GI is Prof→Prof OR Main contractor→Subcontractor.
+    description: "Professional → Professional, or Main contractor → Subcontractor.",
+    active: false,
+  },
+  {
+    code: "IC",
+    title: "IC - Intention to Claim",
+    description: "Contractor → PM. Preliminary notice — preserves right to claim. File this first.",
     active: false,
   },
   {
     code: "DC",
-    title: "Claim - Delay or Cost",
-    description: "Contractor → PM. Two-stage: Intention to Claim, then formal Claim.",
+    title: "Claim",
+    description: "Contractor → PM. Formal claim with detailed substantiation. Must follow an Intention to Claim.",
     active: false,
   },
 ];

@@ -70,14 +70,17 @@ const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: stri
   ],
 };
 
-// Timeline stages per task type
+// Werner rev H — unified 5-stage Decision Timeline for every contractual
+// doc type. CPI keeps its own scheduling flow (separate spec).
+const WERNER_STAGES = ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"];
 const taskTypeStages: Record<string, string[]> = {
-  VO: ["Draft", "Submitted", "Under Review", "Priced", "Approved"],
-  RFI: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
-  SI: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
-  DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+  VO: WERNER_STAGES,
+  RFI: WERNER_STAGES,
+  SI: WERNER_STAGES,
+  GI: WERNER_STAGES,
+  IC: WERNER_STAGES,
+  DC: WERNER_STAGES,
   CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
-  GI: ["Draft", "Issued", "Distributed", "Acknowledged"],
 };
 
 // Task type labels
@@ -609,7 +612,7 @@ export default function AuditPage() {
                     <SelectItem value="VO">VO</SelectItem>
                     <SelectItem value="RFI">RFI</SelectItem>
                     <SelectItem value="SI">SI</SelectItem>
-                    <SelectItem value="DC">DC</SelectItem>
+                    <SelectItem value="DC">Claim</SelectItem>
                     <SelectItem value="CPI">CPI</SelectItem>
                     <SelectItem value="GI">GI</SelectItem>
                   </SelectContent>

@@ -76,12 +76,19 @@ const btns = [
 // Order: SI, VO, RFI, GI, DC. CPI omitted — frozen (no new ones, existing rows still viewable).
 const ALL_TASK_TYPES = ["SI", "VO", "RFI", "GI", "DC"];
 
-// Timeline stages per task type — used to map board columns to entity status
+// Werner rev H — every contractual doc type uses the same generic
+// 5-stage flow on the board / Decision Timeline. DC's older bespoke
+// stages (Delay Identified → EOT Awarded) collapse into the standard
+// Draft → Sent for Review → Further Info Required → Response Provided
+// → Closed flow so the visible state is consistent across every type.
+const WERNER_STAGES = ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"];
 const taskTypeStages: Record<string, string[]> = {
-  VO: ["Draft", "Priced", "Under Review", "Recommended", "Approved"],
-  RFI: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
-  SI: ["Draft", "Issued", "Acknowledged", "Actioned", "Verified"],
-  DC: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+  VO: WERNER_STAGES,
+  RFI: WERNER_STAGES,
+  SI: WERNER_STAGES,
+  GI: WERNER_STAGES,
+  IC: WERNER_STAGES,
+  DC: WERNER_STAGES,
   CPI: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
   CRITICALPATHITEM: ["Scheduled", "In Progress", "On Track / At Risk", "Completed"],
 };
@@ -674,7 +681,26 @@ export default function Task() {
           entity_status: item.task?.status || '',
           priority: item.task?.priority || TASK_PRIORITIES[idx % TASK_PRIORITIES.length],
           discipline: item.task?.discipline || TASK_DISCIPLINES[idx % TASK_DISCIPLINES.length],
-          task_code: `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
+          // Werner rev H — every doc has a canonical number per Werner
+          // (RFI-006, SI-005, VO-005, GI-001, IC-001, C-001). Use it as
+          // the card title so the board, the doc page, and the bell
+          // notification all reference the SAME identifier. Fall back to
+          // the Task wrapper PK only if no doc number is available (e.g.,
+          // a legacy task created before numbering was introduced).
+          task_code:
+            item.task?.rfiNumber
+            || item.task?.siNumber
+            || item.task?.voNumber
+            || item.task?.giNumber
+            || item.task?.icNumber
+            || item.task?.dcNumber
+            || item.task?.rfi_number
+            || item.task?.si_number
+            || item.task?.vo_number
+            || item.task?.gi_number
+            || item.task?.ic_number
+            || item.task?.dc_number
+            || `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
           due_date: dueDate,
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,

@@ -36,9 +36,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePost } from "@/hooks/usePost";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
 
 type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPATHITEM" | string;
+
+// Werner rev H — role buckets used to gate every action below. Match the
+// backend's role-code sets in views_werner.py / views_signing.py so the
+// frontend hides what the backend would reject anyway.
+const CONTRACTOR_ROLES = new Set(["CONTRACTS_MGR", "CM", "FOREMAN", "SS", "CONTRACTOR"]);
+const PROFESSIONAL_ROLES = new Set([
+  "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "CIVIL_ENG",
+  "QS", "CQS", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA",
+]);
+const PM_ROLES = new Set(["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
 
 interface Props {
   /** Task type from the API (e.g. 'RFI', 'SI', 'VO', 'IC', 'DC'). */
@@ -71,15 +82,47 @@ export function WernerTaskActions({
   onChanged,
 }: Props) {
   const { mutateAsync: postRequest } = usePost();
+  const { data: currentUser } = useCurrentUser();
   const [signOpen, setSignOpen] = useState(false);
   const [signMethod, setSignMethod] = useState<"pin" | "click-confirm">("click-confirm");
   const [pin, setPin] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [signing, setSigning] = useState(false);
 
-  const escalation = ESCALATION_TARGETS[taskType];
-  const showSignIssue = SIGNABLE_TYPES.has(taskType) && !isSigned;
-  const showRiskPills = taskType === "IC";
+  // Werner rev H — derive the current user's role bucket once.
+  const userRoleCode = (currentUser?.role?.code || "").toUpperCase();
+  const isContractor = CONTRACTOR_ROLES.has(userRoleCode);
+  const isProfessional = PROFESSIONAL_ROLES.has(userRoleCode);
+  const isPM = PM_ROLES.has(userRoleCode);
+
+  // Escalation visibility per Werner spec:
+  //   RFI → SI : professional only (architects, engineers, PMs)
+  //   SI  → VO : PM / Principal Agent only
+  //   IC  → Claim : the contractor who filed the IC (backend also enforces raised_by match)
+  // Anyone else shouldn't see the menu entry at all so they don't even
+  // attempt the action (backend still rejects with 403 as a safety net).
+  const rawEscalation = ESCALATION_TARGETS[taskType];
+  const canEscalateFromHere =
+    !rawEscalation ? false :
+    taskType === "RFI" ? isProfessional :
+    taskType === "SI"  ? isPM :
+    taskType === "IC"  ? isContractor :
+    false;
+  const escalation = canEscalateFromHere ? rawEscalation : undefined;
+
+  // Sign & Issue per Werner spec: SI=Architect/Engineer, VO/Claim=PM.
+  const canSignThisType =
+    taskType === "SI"    ? isProfessional :
+    taskType === "VO"    ? isPM :
+    taskType === "DC"    ? isPM :
+    taskType === "CLAIM" ? isPM :
+    false;
+  const showSignIssue = SIGNABLE_TYPES.has(taskType) && !isSigned && canSignThisType;
+
+  // Risk pills on IC are PM-set per Werner page 13. Contractors and
+  // other professionals can VIEW the pills (read-only) but only PMs
+  // can change. We hide the interactive pills entirely for non-PMs.
+  const showRiskPills = taskType === "IC" && isPM;
 
   // ── Escalation handler ──────────────────────────────────────────────
   const handleEscalate = async (toType: string) => {
@@ -101,15 +144,21 @@ export function WernerTaskActions({
   };
 
   // ── Sign & Issue handlers ───────────────────────────────────────────
+  // Werner rev H p.19-20: SI requires a pass key (PIN); VO and Claim use
+  // click-confirm. We only fall back to click-confirm on SI when the
+  // user hasn't set up a PIN yet — better UX than blocking the workflow.
   const openSignModal = async () => {
-    try {
-      const res = await postRequest({
-        url: "tasks/signing-pin/verify/",
-        data: { pin: "" },
-      });
-      const m: "pin" | "click-confirm" = res?.method === "pin" ? "pin" : "click-confirm";
-      setSignMethod(m);
-    } catch {
+    if (taskType === "SI") {
+      try {
+        const res = await postRequest({
+          url: "tasks/signing-pin/verify/",
+          data: { pin: "" },
+        });
+        setSignMethod(res?.method === "pin" ? "pin" : "click-confirm");
+      } catch {
+        setSignMethod("click-confirm");
+      }
+    } else {
       setSignMethod("click-confirm");
     }
     setPin("");

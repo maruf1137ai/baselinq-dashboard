@@ -70,9 +70,15 @@ export function TaskReferences({ entityType, entityId }: Props) {
         <h3 className="text-xs font-medium text-foreground">References</h3>
       </div>
       <div className="px-4 py-4">
+      {/* Werner rev H — semantics:
+            incoming = OTHER docs that reference THIS one. Those are
+            DOWNSTREAM (e.g. the SI that was escalated from this RFI).
+            outgoing = THIS doc references OTHER docs. Those are UPSTREAM
+            (e.g. the RFI this SI was escalated from).
+          The old labels had these swapped. */}
       {incoming.length > 0 && (
         <div className="mb-3">
-          <p className="text-xs text-muted-foreground mb-1.5">Originated from</p>
+          <p className="text-xs text-muted-foreground mb-1.5">Escalated to / referenced by</p>
           <div className="flex flex-wrap gap-1.5">
             {incoming.map((ref, i) => (
               <span
@@ -94,7 +100,7 @@ export function TaskReferences({ entityType, entityId }: Props) {
 
       {outgoing.length > 0 && (
         <div>
-          <p className="text-xs text-muted-foreground mb-1.5">Linked to</p>
+          <p className="text-xs text-muted-foreground mb-1.5">Originated from</p>
           <div className="flex flex-wrap gap-1.5">
             {outgoing.map((ref, i) => (
               <span
