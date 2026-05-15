@@ -308,7 +308,7 @@ export default function TaskDetails() {
   // payload. Pulls name + number from the existing /projects/<id>/
   // endpoint via the shared useProject hook. Cached so this is cheap.
   const { data: currentProject } = useProject(projectId || undefined);
-  const projectNumber = (currentProject as any)?.project_number || (currentProject as any)?.number || "";
+  const projectNumber = (tdr?.task as any)?.project?.project_number || (currentProject as any)?.projectNumber || (currentProject as any)?.project_number || (currentProject as any)?.number || "";
   const projectName = (currentProject as any)?.name || "";
 
   const { data: user } = useCurrentUser();
@@ -886,13 +886,16 @@ export default function TaskDetails() {
       type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
       creator: {
         badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
-        id: assignedBy?.userId
+        id: assignedBy?.userId || task.createdBy?.userId || task.issuedBy?.userId,
+        name: assignedBy?.name || task.issuedBy?.name || task.createdBy?.name || task.raisedBy?.name || task.submittedBy?.name || "",
+        role: assignedBy?.role || task.issuedBy?.role || task.createdBy?.role || "",
       },
       watcher: {
         name: assignedTo[0]?.name || "Watcher",
         role: assignedTo[0]?.role || "Watcher",
       },
       assignedTo: assignedTo,
+      ccUsers: apiResponse.responseBy || apiResponse.response_by || apiResponse.ccUsers || apiResponse.cc_users || [],
       actionRequests: mappedActionRequests,
       responses: apiResponse.responses || [],
       status: task.status || apiResponse.status || "Pending",
@@ -1500,8 +1503,10 @@ export default function TaskDetails() {
 
                       <dt className="text-muted-foreground">Employer:</dt>
                       <dd className="text-foreground">
-                        {((currentProject as any)?.clientDetails?.name)
-                         || ((currentProject as any)?.client_details?.name)
+                        {(tdr?.task as any)?.project?.employer
+                         || (currentProject as any)?.clientDetails?.company_name
+                         || (currentProject as any)?.clientDetails?.name
+                         || (currentProject as any)?.client_details?.company_name
                          || "—"}
                       </dd>
                     </dl>
