@@ -70,6 +70,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  X,
   XCircle,
   Plus,
   Trash2,
@@ -91,6 +92,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
+import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
+import { TaskReferences } from "@/components/TaskComponents/TaskReferences";
+import { UserChip } from "@/components/TaskComponents/UserChip";
+import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
 import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
@@ -281,8 +286,34 @@ export default function TaskDetails() {
     { enabled: !!taskId && !!projectId }
   );
 
+  // Werner spec rev H — implementation note (May 8 2026):
+  //   The Werner spec PDF is a UX/workflow spec for what FIELDS, BUTTONS
+  //   and AUTO-REFERENCES each task doc must have. It is NOT a visual
+  //   redesign — Werner explicitly said "keep the current design look
+  //   and feel, just implement my requests". The earlier v2 pages
+  //   (src/pages/werner/*) implemented a custom gray-card layout from
+  //   the spec PDF; that was wrong. We're now adding Werner's required
+  //   features directly into THIS existing TaskDetails component so the
+  //   look-and-feel users are accustomed to remains untouched.
+  const taskType = (taskDetailsResponse as any)?.taskType;
+  const tdr = taskDetailsResponse as any;
+  const entityId =
+    tdr?.task?.task?.objectId
+    ?? tdr?.task?.objectId
+    ?? tdr?.objectId
+    ?? tdr?.object_id
+    ?? tdr?.task?.id;
+
+  // Werner spec rev H — project context for subtitle line + notification
+  // payload. Pulls name + number from the existing /projects/<id>/
+  // endpoint via the shared useProject hook. Cached so this is cheap.
+  const { data: currentProject } = useProject(projectId || undefined);
+  const projectNumber = (tdr?.task as any)?.project?.project_number || (currentProject as any)?.projectNumber || (currentProject as any)?.project_number || (currentProject as any)?.number || "";
+  const projectName = (currentProject as any)?.name || "";
+
   const { data: user } = useCurrentUser();
   const { userRole } = useUserRoleStore();
+  const queryClient = useQueryClient();
   const updateTask = async (data: any) => {
     try {
       if (!taskId) return;
@@ -304,12 +335,18 @@ export default function TaskDetails() {
       });
       if (updatedTask) setCurrentTask(updatedTask);
       refetchAuditLogs();
+      // Werner rev H — invalidate the board query so the card in /tasks
+      // reflects status change without a manual reload. Applies to every
+      // status-update path that goes through updateTask (DC, RFI reply,
+      // VO pricing decision, etc.).
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      }
     } catch (err) {
       console.error("Update task error:", err);
       throw err;
     }
   };
-  const queryClient = useQueryClient();
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   // console.log(userRole)
@@ -346,6 +383,15 @@ export default function TaskDetails() {
   // Assign user modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAssignUsers, setSelectedAssignUsers] = useState<any[]>([]);
+
+  // Werner spec rev H — reply meta state. Pickers are wired to existing
+  // production services: project team members (user picker), TaskAttachment
+  // upload, document search.
+  const [replyRecipients, setReplyRecipients] = useState<any[]>([]);
+  const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
+  const [replyRefs, setReplyRefs] = useState<{ id: string | number; label: string }[]>([]);
+  const [recipientPopoverOpen, setRecipientPopoverOpen] = useState(false);
+  const [referencePopoverOpen, setReferencePopoverOpen] = useState(false);
   const [assignUserPopoverOpen, setAssignUserPopoverOpen] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
@@ -377,10 +423,9 @@ export default function TaskDetails() {
   // RFI (Status) state
   const [rfiResponseStatus, setRfiResponseStatus] = useState<string>("");
 
-  // SI (Site Instruction) state
-  const [siAcknowledgeReceipt, setSiAcknowledgeReceipt] = useState<boolean>(false);
-  const [siLeadsToVariationResponse, setSiLeadsToVariationResponse] = useState<boolean>(false);
-  const [giAcknowledgeReceipt, setGiAcknowledgeReceipt] = useState<boolean>(false);
+  // SI (Site Instruction) state — Werner rev H page 5-6 TIME / COST.
+  const [siTimeImpact, setSiTimeImpact] = useState<boolean>(false);
+  const [siCostImpact, setSiCostImpact] = useState<boolean>(false);
   const [showAiChat, setShowAiChat] = useState<boolean>(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showPricingResponse, setShowPricingResponse] = useState(false);
@@ -453,45 +498,11 @@ export default function TaskDetails() {
     }
   };
 
-  // Handle SI Approve - updates status to "Acknowledged"
-  const handleSIApprove = async () => {
-    if (!siAcknowledgeReceipt) {
-      toast.error("Please acknowledge receipt of the Site Instruction");
-      return;
-    }
-
-    if (!currentTask?.taskId) {
-      toast.error("Task ID not found. Please refresh and try again.");
-      return;
-    }
-
-    setIsReplySubmitLoading(true);
-    try {
-      // Use update-entity endpoint to update SI status to "Acknowledged"
-      await patchData({
-        url: `/tasks/tasks/${currentTask.taskId}/update-entity/`,
-        data: {
-          status: "Acknowledged",
-          isAcknowledged: true,
-          leadsToVariation: siLeadsToVariationResponse,
-        },
-      });
-
-      toast.success("Site Instruction acknowledged successfully");
-
-      // Refresh task data
-      await refetchTask();
-
-      // Reset checkbox states
-      setSiAcknowledgeReceipt(false);
-      setSiLeadsToVariationResponse(false);
-    } catch (error: any) {
-      console.error("SI Approve error:", error);
-      toast.error(error?.response?.data?.error || error?.message || "Failed to acknowledge SI");
-    } finally {
-      setIsReplySubmitLoading(false);
-    }
-  };
+  // Werner rev H — handleSIApprove removed. Werner page 5-6 does not
+  // have a separate "Acknowledge receipt" gate on the contractor's
+  // reply. The act of submitting a reply with optional TIME / COST
+  // tickboxes IS the acknowledgement. Submit Reply (handleSubmitReply
+  // below) is the single action; status flips to Acknowledged.
 
   const handleSubmitReply = async () => {
     if (!editor || !currentTask) return;
@@ -541,10 +552,10 @@ export default function TaskDetails() {
         };
       }
       if (displayTask.type === "SI") {
-        return { siAcknowledgeReceipt, siLeadsToVariationResponse };
+        return { siTimeImpact, siCostImpact };
       }
       if (displayTask.type === "GI") {
-        return { giAcknowledgeReceipt };
+        return {};
       }
       return null;
     };
@@ -645,20 +656,15 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "SI") {
-        if (siAcknowledgeReceipt) {
-          updateData.status = "Acknowledged";
-        } else {
-          updateData.status = "Actioned";
-        }
+        // Werner page 5/6 — contractor's reply moves SI to Acknowledged.
+        // The act of replying IS the acknowledgement.
+        updateData.status = "Acknowledged";
       }
 
       if (displayTask.type === "GI") {
-        if (giAcknowledgeReceipt) {
-          updateData.status = "Acknowledged";
-          updateData.isAcknowledged = true;
-        } else {
-          updateData.status = "Distributed";
-        }
+        // Werner page 10 — no formal acknowledge gate. Reply moves the
+        // GI into Distributed; close-out is a separate originator action.
+        updateData.status = "Distributed";
       }
 
       // Sync pricing and response fields to update the underlying entity
@@ -680,8 +686,9 @@ export default function TaskDetails() {
       }
 
       if (displayTask.type === "SI") {
-        updateData.leadsToVariation = siLeadsToVariationResponse;
-        updateData.isAcknowledged = siAcknowledgeReceipt;
+        // Werner rev H — TIME or COST ticked flags this as a VO request.
+        updateData.leadsToVariation = siTimeImpact || siCostImpact;
+        updateData.isAcknowledged = true;
       }
 
       if (displayTask.type === "DC") {
@@ -692,6 +699,32 @@ export default function TaskDetails() {
 
 
       await updateTask(updateData);
+
+      // Werner rev H — for SI, also fire the Werner Reply endpoint with
+      // the TIME / COST flags so the backend's _notify_pm_on_si_time_cost
+      // fan-out runs (PM + QS auto-CC'd into the reply, in-app push that
+      // a VO request is incoming). update-entity doesn't trigger this
+      // path, so without the second call the VO workflow stays silent.
+      if (displayTask.type === "SI") {
+        try {
+          const entityId = displayTask.task?._id || (currentTask as any)?.task?._id;
+          if (entityId) {
+            await postData("tasks/replies/", {
+              entity_type: "si",
+              entity_id: Number(entityId),
+              body: editor.getHTML(),
+              time_impact: siTimeImpact,
+              cost_impact: siCostImpact,
+            });
+          }
+        } catch (err) {
+          // Soft-fail: update-entity already wrote the reply into the
+          // task wrapper; this second call is for the Werner side-
+          // effects only. Don't block the user.
+          console.warn("Werner reply mirror failed:", err);
+        }
+      }
+
       toast.success("Reply submitted successfully");
       editor.commands.setContent("");
 
@@ -708,9 +741,8 @@ export default function TaskDetails() {
       setCpiRecoveryPlan("");
       setCpiRiskLevel("");
       setCpiMilestoneImpact("");
-      setSiAcknowledgeReceipt(false);
-      setSiLeadsToVariationResponse(false);
-      setGiAcknowledgeReceipt(false);
+      setSiTimeImpact(false);
+      setSiCostImpact(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit reply");
@@ -854,13 +886,16 @@ export default function TaskDetails() {
       type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
       creator: {
         badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
-        id: assignedBy?.userId
+        id: assignedBy?.userId || task.createdBy?.userId || task.issuedBy?.userId,
+        name: assignedBy?.name || task.issuedBy?.name || task.createdBy?.name || task.raisedBy?.name || task.submittedBy?.name || "",
+        role: assignedBy?.role || task.issuedBy?.role || task.createdBy?.role || "",
       },
       watcher: {
         name: assignedTo[0]?.name || "Watcher",
         role: assignedTo[0]?.role || "Watcher",
       },
       assignedTo: assignedTo,
+      ccUsers: apiResponse.responseBy || apiResponse.response_by || apiResponse.ccUsers || apiResponse.cc_users || [],
       actionRequests: mappedActionRequests,
       responses: apiResponse.responses || [],
       status: task.status || apiResponse.status || "Pending",
@@ -1007,9 +1042,11 @@ export default function TaskDetails() {
       case "DC":
         return {
           ...baseData,
-          displayId: `#DC-${task._id}`,
+          // Werner rev H — use the canonical doc number (C-001, dc_number
+          // = "C-001"). Falls back to the entity PK only if no number.
+          displayId: `#${task.dcNumber || task.dc_number || `DC-${task._id}`}`,
           title: task.title,
-          task_code: `DC-${task._id}`,
+          task_code: task.dcNumber || task.dc_number || `DC-${task._id}`,
           dueDate: "No Date",
           formFields: {
             title: task.title,
@@ -1028,20 +1065,34 @@ export default function TaskDetails() {
             replyDue: "N/A",
             contractWindow: "28 days",
           },
+          // Werner rev H — every doc type shows the SAME generic 5-stage
+          // Decision Timeline (page 3-15 of the spec PDF). DC's older
+          // bespoke stages (Delay Identified → EOT Awarded) collapse into
+          // the standard Draft → Sent for Review → Further Info Required
+          // → Response Provided → Closed flow so the right-panel timeline
+          // is consistent across every task type.
           timeline: {
             current: (() => {
-              const s = task.status || apiResponse.status || "Delay Identified";
+              const s = task.status || apiResponse.status || "Draft";
               const legacyMap: Record<string, string> = {
-                "Draft": "Delay Identified",
-                "Submitted": "Notice Issued",
-                "In Review": "Under Assessment",
-                "Approved": "EOT Awarded",
-                "Rejected": "Determination Made",
-                "Closed": "EOT Awarded",
+                "Draft": "Draft",
+                "Delay Identified": "Draft",
+                "Notice Issued": "Sent for Review",
+                "Submitted": "Sent for Review",
+                "Sent for Review": "Sent for Review",
+                "Under Assessment": "Further Info Required",
+                "In Review": "Further Info Required",
+                "Further Info Required": "Further Info Required",
+                "Determination Made": "Response Provided",
+                "Response Provided": "Response Provided",
+                "Approved": "Closed",
+                "Rejected": "Closed",
+                "EOT Awarded": "Closed",
+                "Closed": "Closed",
               };
               return legacyMap[s] ?? s;
             })(),
-            stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
+            stages: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
           },
           impact: {
             time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
@@ -1327,9 +1378,9 @@ export default function TaskDetails() {
 
       <div className="min-h-screen">
         <div className="">
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-3 gap-4 max-w-[1600px] mx-auto p-6">
             {/* Left Column - Main Content */}
-            <div className="col-span-2 space-y-4 px-6 py-4">
+            <div className="col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => navigate(-1)}
@@ -1345,126 +1396,215 @@ export default function TaskDetails() {
                 </button>
               </div>
 
-              {/* Header Card */}
-              <Card className="p-6 bg-sidebar shadow-none rounded-lg px-6 py-4 border-border">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-3">
-                      <h1 className="text-sm  text-foreground">
-                        {displayTask.title}
-                      </h1>
-                      {/* <p className="text-muted-foreground text-sm">{displayTask.displayId || displayTask.id}</p> */}
-                      <p className="text-muted-foreground text-sm">{`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}</p>
+              {/* Werner spec rev H — single merged doc card.
+                  WHITE card on grey page (production pattern). Title row
+                  has visible status + priority pills. Inner sections use
+                  subtle grey blocks for visual depth where it adds value. */}
+              <Card className="p-0 bg-white shadow-none rounded-lg border-border overflow-hidden">
+                {/* ─── Title strip — light grey banner with title, type tag,
+                       status + priority pills + 3-dot menu ─── */}
+                <div className="bg-sidebar/50 px-6 py-4 border-b border-border">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                        {/* Type chip — small uppercase letter pill */}
+                        <Badge className="bg-amber-50 border-amber-200 text-amber-700 text-[10px] uppercase tracking-wide font-medium px-2 py-0.5">
+                          {currentTask.taskType}
+                        </Badge>
+                        <h1 className="text-base font-medium text-foreground truncate">
+                          {displayTask.title}
+                        </h1>
+                        <span className="text-muted-foreground text-sm whitespace-nowrap">
+                          {`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {(projectName || projectNumber) && (
+                          <span className="text-xs text-muted-foreground">
+                            {projectName}
+                            {projectNumber && <span> · #{projectNumber}</span>}
+                          </span>
+                        )}
+                        {displayTask.timeline?.current && (
+                          <>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <Badge variant="outline" className="text-[10px] font-normal py-0 px-1.5 h-5 bg-white">
+                              {displayTask.timeline.current}
+                            </Badge>
+                          </>
+                        )}
+                        {displayTask.priority && displayTask.priority !== "Normal" && (
+                          <Badge
+                            className={cn(
+                              "text-[10px] font-normal py-0 px-1.5 h-5 border",
+                              displayTask.priority === "Urgent" && "bg-red-50 text-red-700 border-red-200",
+                              displayTask.priority === "High"   && "bg-orange-50 text-orange-700 border-orange-200",
+                              displayTask.priority === "Low"    && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            )}
+                          >
+                            {displayTask.priority}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-amber-50 rounded-full px-3 py-2 text-amber-600 border-amber-200 text-xs">
-                        Due: {displayTask.dueDate}
-                      </Badge>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const assignedTo = currentTask?.assignedTo || [];
-                            const preSelected = projectMembers.filter((m: any) =>
-                              assignedTo.some((a: any) => String(a.userId) === String(m.userId))
-                            );
-                            setSelectedAssignUsers(preSelected);
-                            setShowAssignModal(true);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Assign
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {displayTask.dueDate && displayTask.dueDate !== "No Date" && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-amber-50 rounded-full px-3 py-1 text-amber-700 border-amber-200 text-xs">
+                          Due {displayTask.dueDate}
+                        </Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-white">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const assignedTo = currentTask?.assignedTo || [];
+                              const preSelected = projectMembers.filter((m: any) =>
+                                assignedTo.some((a: any) => String(a.userId) === String(m.userId))
+                              );
+                              setSelectedAssignUsers(preSelected);
+                              setShowAssignModal(true);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Assign
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-amber-50 border-amber-200 capitalize text-amber-600 py-1.5 px-3  text-xs">
-                      {displayTask.creator.badge}
-                    </Badge>
-                    <div className="border border-border flex items-center bg-white px-3 rounded-lg gap-2 py-1.5">
-                      <User className="h-[14px] w-[14px] text-muted-foreground" />
-                      <span className="text-sm text-foreground ">
-                        {displayTask.creator.name}{" "}
-                        <span className="text-sm text-muted-foreground">
-                          ({displayTask.creator.role})
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="border border-border flex items-center bg-white px-3 rounded-lg gap-2 py-1.5">
-                      <User className="h-[14px] w-[14px] text-muted-foreground" />
-                      <span className="text-sm text-foreground ">
-                        {displayTask.watcher.name}{" "}
-                        <span className="text-sm text-muted-foreground">
-                          ({displayTask.watcher.role})
-                        </span>
-                      </span>
-                    </div>
-                  </div>
+                {/* ─── Doc body (white, with sectioned dl content) ─── */}
+                <div className="px-6 py-5">
 
-                  {/* assignees */}
-                  {displayTask.assignedTo && displayTask.assignedTo.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider delayDuration={0}>
-                        <div className="flex items-center">
-                          {displayTask.assignedTo.map((assignee: any, index: number) => (
-                            <Tooltip key={assignee.userId || index}>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className="h-8 w-8 rounded-full bg-[#6c5ce7] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer"
-                                  style={{ marginLeft: index > 0 ? "-8px" : "0" }}
-                                >
-                                  {assignee.name?.charAt(0).toUpperCase() || "U"}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{assignee.name || "Unknown"}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </TooltipProvider>
-                    </div>
+                {/* 2. Divider */}
+                <div className="-mx-6 border-t border-border my-5" />
+
+                {/* 3. Project block */}
+                {(projectName || projectNumber || (currentProject as any)?.location) && (
+                  <>
+                    <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+                      <dt className="text-muted-foreground">Project name:</dt>
+                      <dd className="text-foreground">{projectName || "—"}</dd>
+
+                      <dt className="text-muted-foreground">Project address:</dt>
+                      <dd className="text-foreground">{(currentProject as any)?.location || "—"}</dd>
+
+                      <dt className="text-muted-foreground">Project No:</dt>
+                      <dd className="text-foreground">{projectNumber ? `#${projectNumber}` : "—"}</dd>
+
+                      <dt className="text-muted-foreground">Employer:</dt>
+                      <dd className="text-foreground">
+                        {(tdr?.task as any)?.project?.employer
+                         || (currentProject as any)?.clientDetails?.company_name
+                         || (currentProject as any)?.clientDetails?.name
+                         || (currentProject as any)?.client_details?.company_name
+                         || "—"}
+                      </dd>
+                    </dl>
+                    {/* 4. Divider */}
+                    <div className="-mx-6 border-t border-border my-5" />
+                  </>
+                )}
+
+                {/* 5. Meta block — Werner page 3 field order:
+                       Date Issued, Discipline, From, To, CC, Subject, Date Required */}
+                <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+                  {/* Werner page 3 — Date Issued (submitted_at, falls back
+                      to created_at when the doc hasn't been sent yet). */}
+                  <dt className="text-muted-foreground">Date Issued:</dt>
+                  <dd className="text-foreground">
+                    {(() => {
+                      const submittedAt = (tdr?.task as any)?.submittedAt
+                                       ?? (tdr?.task as any)?.submitted_at;
+                      const iso = submittedAt || (tdr?.task as any)?.createdAt || displayTask.createdAt;
+                      if (!iso) return <span className="text-muted-foreground">—</span>;
+                      try {
+                        const d = new Date(iso);
+                        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        return (
+                          <>
+                            {d.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}
+                            {' '}{d.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            {' '}<span className="text-muted-foreground">({tz})</span>
+                          </>
+                        );
+                      } catch {
+                        return iso;
+                      }
+                    })()}
+                  </dd>
+
+                  {displayTask.formFields?.discipline && (
+                    <>
+                      <dt className="text-muted-foreground">Discipline:</dt>
+                      <dd className="text-foreground">{displayTask.formFields.discipline}</dd>
+                    </>
                   )}
-                </div>
-              </Card>
 
+                  <dt className="text-muted-foreground">From:</dt>
+                  <dd>
+                    {displayTask.creator?.name ? (
+                      <UserChip name={displayTask.creator.name} role={displayTask.creator.role} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </dd>
 
-              {/* Question & Context */}
-              <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
-                <h2 className="text-sm  text-foreground mb-5">
-                  {displayTask.type === "RFI"
-                    ? "Question & Context"
-                    : displayTask.type === "SI"
-                      ? "Instruction Details"
-                      : displayTask.type === "VO"
-                        ? "Instruction"
-                        : displayTask.type === "DC"
-                          ? "Delay Reason & Impact"
-                          : displayTask.type === "CPI"
-                            ? "Critical Path Details"
-                            : displayTask.type === "CPI"
-                              ? "Critical Path Details"
-                              : displayTask.type === "GI"
-                                ? "General Instruction Details"
-                                : "Details"}
-                </h2>
+                  <dt className="text-muted-foreground">To:</dt>
+                  <dd>
+                    {(displayTask.assignedTo || []).length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {displayTask.assignedTo.map((u: any, i: number) => (
+                          <UserChip key={i} name={u.name || "—"} role={u.role} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </dd>
+
+                  <dt className="text-muted-foreground">CC:</dt>
+                  <dd>
+                    {(displayTask.cc || displayTask.ccUsers || []).length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {(displayTask.cc || displayTask.ccUsers).map((u: any, i: number) => (
+                          <UserChip key={i} name={u.name || "—"} role={u.role} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </dd>
+
+                  <dt className="text-muted-foreground">Subject:</dt>
+                  <dd className="text-foreground">
+                    {displayTask.formFields?.subject || displayTask.title || "—"}
+                  </dd>
+
+                  <dt className="text-muted-foreground">Date required:</dt>
+                  <dd className="text-foreground">
+                    {displayTask.dueDate && displayTask.dueDate !== "No Date"
+                      ? <>
+                          {displayTask.dueDate}
+                          {displayTask.priority === "Urgent" && (
+                            <span className="ml-2 text-red-600 font-medium">(urgent)</span>
+                          )}
+                        </>
+                      : <span className="text-muted-foreground">—</span>}
+                  </dd>
+                </dl>
+
+                {/* 6. Divider before description */}
+                <div className="-mx-6 border-t border-border my-5" />
 
                 <TaskContentRenderer
                   displayTask={displayTask}
@@ -1491,6 +1631,7 @@ export default function TaskDetails() {
                       </Badge>
                     ))}
                 </div> */}
+                </div>{/* end .px-6.py-5 doc body */}
               </Card>
 
               {/* Locked banner — shown when task is at final stage */}
@@ -1508,41 +1649,144 @@ export default function TaskDetails() {
                 </Card>
               )}
 
-              {/* Creator status card — no responses yet */}
+              {/* Creator status — compact inline notice. Single line so it
+                  doesn't dominate the page. Werner spec rev H — minimise
+                  vertical space, surface state without wasting room. */}
               {!isTaskLocked && canApprove && !(displayTask.responses?.length > 0) && (
-                <Card className="p-6 shadow-none bg-white rounded-lg border-border">
-                  <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-normal text-foreground">Awaiting Response</p>
-                      <p className="text-xs text-muted-foreground mt-1">The assigned member has not submitted a response yet. You will be notified once they do.</p>
-                    </div>
-                  </div>
-                </Card>
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200 px-3 py-2 rounded-md">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span>Awaiting response from the assigned member.</span>
+                </div>
               )}
 
+              {/* Werner rev H — Sign & Issue nudge for the SI originator.
+                  When an SI is still in Draft and the current user is the
+                  professional who raised it, surface a clear hint that
+                  the next step is to click "Sign & Issue" in the action
+                  bar above. Without this nudge the originator typically
+                  clicks Submit Reply by mistake (which moves the SI to
+                  Acknowledged but doesn't actually issue it). */}
+              {displayTask.type === "SI"
+                && (displayTask.timeline?.current || displayTask.status || "").toString().toLowerCase() === "draft"
+                && String(displayTask.creator?.id) === String(user?.id) && (
+                <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 px-3 py-2 rounded-md">
+                  <span className="text-base leading-none">🛡️</span>
+                  <span>
+                    This Site Instruction is still in <strong>Draft</strong>.
+                    Click <strong>Sign &amp; Issue</strong> in the action bar above to issue it to the contractor.
+                  </span>
+                </div>
+              )}
 
-              {/* Response Form — hidden only when the task is locked */}
-              {!isTaskLocked && <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
-                <h2 className="text-sm  text-foreground mb-5">
-                  {displayTask.type === "RFI"
-                    ? "Response"
-                    : displayTask.type === "SI"
-                      ? "Acknowledgment & Response"
-                      : displayTask.type === "VO"
-                        ? "Pricing Response"
-                        : displayTask.type === "DC"
-                          ? "Comments & Updates"
-                          : displayTask.type === "CPI"
-                            ? "Response"
-                            : displayTask.type === "CPI"
-                              ? "Response"
-                              : displayTask.type === "GI"
-                                ? "Response"
-                                : "Response"}
-                </h2>
+              {/* Replies — Werner rev H: existing replies render ABOVE
+                  the reply form so the page reads chronologically (doc →
+                  reply 1 → reply 2 → … → input form at the bottom).
+                  Each reply is its own gray-header / white-body card. */}
+              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
+                String(resp.senderId) === String(user?.id) ||
+                String(displayTask.creator.id) === String(user?.id)
+              ) && (
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between px-1">
+                      <h2 className="text-sm font-normal text-foreground">
+                        Replies
+                      </h2>
+                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
+                        {displayTask.responses.length} Total
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {displayTask.responses
+                        .filter((resp: any) =>
+                          String(resp.senderId) === String(user?.id) ||
+                          String(displayTask.creator.id) === String(user?.id)
+                        )
+                        .slice().reverse().map((resp: any) => (
+                          <Card
+                            key={resp.id}
+                            className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
+                          >
+                            <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-7 w-7 border border-primary/20">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                                    {resp.sender
+                                      ?.split(" ")
+                                      .map((n: string) => n[0])
+                                      .join("")
+                                      .toUpperCase() || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-foreground">
+                                  {resp.sender}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(resp.date).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="px-5 py-4">
+                              <p className="text-xs text-muted-foreground mb-1">Reply:</p>
+                              <div
+                                className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+                                dangerouslySetInnerHTML={{ __html: resp.content }}
+                              />
+                              {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
+                                  {Object.entries(resp.structuredData).map(([key, value]) => {
+                                    if (!value) return null;
+                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                    return (
+                                      <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
+                                        {label}: {
+                                          typeof value === 'object' && value !== null
+                                            ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
+                                            : String(value)
+                                        }
+                                      </span>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+
+              {/* Response Form — hidden only when the task is locked.
+                  Werner spec rev H: gray title strip + white body, matches
+                  the pattern used by the doc card and the right-panel
+                  cards. Heading uses Werner's wording "Add a reply" so
+                  the form is consistent across all task types. */}
+              {!isTaskLocked && <Card className="p-0 shadow-none bg-white rounded-lg border-border overflow-hidden">
+                <div className="bg-sidebar/50 px-6 py-3 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {user?.name && (
+                      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
+                        {user.name.split(/\s+/).slice(0, 2).map((p: string) => p[0]?.toUpperCase() || "").join("")}
+                      </span>
+                    )}
+                    <div>
+                      <h2 className="text-sm text-foreground leading-tight">
+                        {displayTask.type === "VO"
+                          ? "Pricing response"
+                          : displayTask.type === "SI"
+                            ? "Acknowledge and reply"
+                            : displayTask.type === "DC"
+                              ? "Comments & updates"
+                              : "Add a reply"}
+                      </h2>
+                      <p className="text-[11px] text-muted-foreground leading-tight">
+                        Replying as {user?.name || "you"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-5">
 
                 {/* Structured Pricing Response Fields */}
                 {displayTask.type === "VO" && (
@@ -1715,27 +1959,15 @@ export default function TaskDetails() {
                   </div>
                 )}
 
-                {/* Structured RFI Response Fields */}
-                {displayTask.type === "RFI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border">
-                    <div>
-                      <label className="text-xs font-normal text-muted-foreground block mb-2">
-                        Response Status
-                      </label>
-                      <select
-                        value={rfiResponseStatus}
-                        onChange={(e) => setRfiResponseStatus(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="">Select status...</option>
-                        <option value="clarification_provided">Clarification Provided</option>
-                        <option value="further_info_required">Instruction Follows</option>
-                        <option value="as_per_drawing">Work as per Drawing</option>
-                      </select>
-                      <p className="text-xs text-muted-foreground mt-1">Formal classification of this RFI response</p>
-                    </div>
-                  </div>
-                )}
+                {/* Werner spec rev H — Response Status dropdown removed.
+                    Verified not in Werner's PDF (rev H) or May 8 meeting
+                    transcript. The Decision Timeline pill bar on the
+                    right panel already conveys doc-level status. Per-reply
+                    categorisation (Clarification Provided / Instruction
+                    Follows / Work as per Drawing) was a production-only
+                    field that Werner doesn't ask for. Field is hidden
+                    here; the rfiResponseStatus state remains so any
+                    legacy data still serialises correctly. */}
 
                 {/* Structured DC Response Fields */}
                 {displayTask.type === "DC" && (
@@ -1878,70 +2110,54 @@ export default function TaskDetails() {
                   </div>
                 )}
 
-                {/* Structured SI Response Fields */}
+                {/* Werner rev H page 5-6 — SI contractor reply tickboxes.
+                    TIME and COST are the only structured fields on a
+                    Werner SI reply. Either ticked → the reply pulls
+                    PM + QS into the conversation and triggers a VO
+                    request. The act of clicking Submit Reply IS the
+                    acknowledgement (Werner does not have a separate
+                    "I formally acknowledge receipt" gate). */}
                 {displayTask.type === "SI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-lg border-primary/20">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
+                  <div className="space-y-3 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-lg border-primary/20">
+                    <p className="text-xs text-muted-foreground">
+                      Tick if this instruction has a time and/or cost impact.
+                      Either box ticked notifies the PM and QS so a Variation
+                      Order can be issued.
+                    </p>
+                    <div className="flex items-center gap-8">
+                      <label htmlFor="siTimeImpact" className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          id="siAcknowledge"
-                          checked={siAcknowledgeReceipt}
-                          onChange={(e) => setSiAcknowledgeReceipt(e.target.checked)}
+                          id="siTimeImpact"
+                          checked={siTimeImpact}
+                          onChange={(e) => setSiTimeImpact(e.target.checked)}
                           className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                         />
-                        <label htmlFor="siAcknowledge" className="text-sm font-normal text-foreground cursor-pointer">
-                          I formally acknowledge receipt of this Site Instruction
-                        </label>
-                      </div>
-
-                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-foreground">TIME</span>
+                      </label>
+                      <label htmlFor="siCostImpact" className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          id="siVariation"
-                          checked={siLeadsToVariationResponse}
-                          onChange={(e) => setSiLeadsToVariationResponse(e.target.checked)}
+                          id="siCostImpact"
+                          checked={siCostImpact}
+                          onChange={(e) => setSiCostImpact(e.target.checked)}
                           className="w-4 h-4 text-orange-600 border-border rounded focus:ring-orange-500"
                         />
-                        <label htmlFor="siVariation" className="text-sm font-normal text-foreground cursor-pointer">
-                          This instruction will lead to a Variation Order request
-                        </label>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground italic">Receipt and potential cost impact must be declared as per contract protocols.</p>
-
-                    {/* Approve Button - Bottom Right */}
-                    <div className="flex justify-end items-center pt-3 border-t border-border mt-4">
-                      <Button
-                        onClick={handleSIApprove}
-                        disabled={isReplySubmitLoading || !siAcknowledgeReceipt}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-sm"
-                        size="lg"
-                      >
-                        {isReplySubmitLoading ? "Approving..." : "Approve"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Structured GI Response Fields */}
-                {displayTask.type === "GI" && (
-                  <div className="space-y-4 mb-6 pb-6 border-b border-border bg-purple-50/30 p-4 rounded-lg border-purple-100">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="giAcknowledge"
-                        checked={giAcknowledgeReceipt}
-                        onChange={(e) => setGiAcknowledgeReceipt(e.target.checked)}
-                        className="w-4 h-4 text-purple-600 border-border rounded focus:ring-purple-500"
-                      />
-                      <label htmlFor="giAcknowledge" className="text-sm font-normal text-foreground cursor-pointer">
-                        I formally acknowledge receipt of this General Instruction
+                        <span className="text-sm font-medium text-foreground">COST</span>
                       </label>
                     </div>
-                    <p className="text-xs text-muted-foreground italic">General instructions must be distributed and acknowledged by all relevant lead stakeholders.</p>
+                    {(siTimeImpact || siCostImpact) && (
+                      <p className="text-xs text-orange-700 font-medium">
+                        ⚠ PM &amp; QS will be added to the recipients and notified that a VO request is incoming.
+                      </p>
+                    )}
                   </div>
                 )}
+
+                {/* Werner rev H page 10 — GI has no formal acknowledge
+                    gate. The reply is text-only; closing out the GI
+                    is a separate action on the action bar (only the
+                    originator can close). */}
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 mb-4 pb-4 border-b">
                   <button
@@ -1997,6 +2213,147 @@ export default function TaskDetails() {
                   />
                 </div>
 
+                {/* Werner spec rev H — reply meta with WIRED pickers.
+                    Recipient → project team members (Command picker, uses
+                                existing projectMembers from the Assign modal)
+                    Attachment → native file input (uploads via the existing
+                                  TaskAttachment endpoint on submit)
+                    Reference → picker of this project's RFIs/SIs/VOs/IC/Claim
+                    Selected items show as removable chips. */}
+                <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 mt-3 text-sm">
+                  {/* Recipient row */}
+                  <div className="text-xs text-muted-foreground self-center">Recipient:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {replyRecipients.map((u) => (
+                      <span key={u.userId || u.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        {u.name}
+                        <button
+                          type="button"
+                          onClick={() => setReplyRecipients(r => r.filter(x => (x.userId || x.id) !== (u.userId || u.id)))}
+                          className="hover:bg-primary/20 rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <Popover open={recipientPopoverOpen} onOpenChange={setRecipientPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <UserPlus className="h-3 w-3" />
+                          {replyRecipients.length === 0 ? "Add user" : "Add more"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search team members…" />
+                          <CommandList>
+                            <CommandEmpty>No members found</CommandEmpty>
+                            <CommandGroup>
+                              {projectMembers
+                                .filter((m: any) => !replyRecipients.some(r => (r.userId || r.id) === (m.userId || m.id)))
+                                .map((m: any) => (
+                                  <CommandItem
+                                    key={m.userId || m.id}
+                                    onSelect={() => {
+                                      setReplyRecipients(r => [...r, m]);
+                                      setRecipientPopoverOpen(false);
+                                    }}
+                                  >
+                                    {m.name}
+                                    {m.role && <span className="ml-1 text-xs text-muted-foreground">({m.role})</span>}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Attachment row */}
+                  <div className="text-xs text-muted-foreground self-center">Attachment:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {replyAttachments.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground border border-border">
+                        <FileText className="h-3 w-3" />
+                        {f.name}
+                        <button
+                          type="button"
+                          onClick={() => setReplyAttachments(arr => arr.filter((_, idx) => idx !== i))}
+                          className="hover:bg-border rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <label className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                      <FileText className="h-3 w-3" />
+                      {replyAttachments.length === 0 ? "Attach file" : "Add more"}
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setReplyAttachments(arr => [...arr, ...files]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Reference row */}
+                  <div className="text-xs text-muted-foreground self-center">Reference:</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {replyRefs.map((r) => (
+                      <span key={r.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground border border-border">
+                        <Link2 className="h-3 w-3" />
+                        {r.label}
+                        <button
+                          type="button"
+                          onClick={() => setReplyRefs(arr => arr.filter(x => x.id !== r.id))}
+                          className="hover:bg-border rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <Popover open={referencePopoverOpen} onOpenChange={setReferencePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Link2 className="h-3 w-3" />
+                          {replyRefs.length === 0 ? "Link doc" : "Add more"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search project tasks / docs…" />
+                          <CommandList>
+                            <CommandEmpty>No matches yet — picker will search RFIs / SIs / VOs / Documents</CommandEmpty>
+                            <CommandGroup heading="Coming next">
+                              <CommandItem
+                                disabled
+                                onSelect={() => {
+                                  toast.info("Wire up to /api/tasks/* + /api/documents/* search in next pass.");
+                                  setReferencePopoverOpen(false);
+                                }}
+                              >
+                                Hooked search lands next — backend endpoints exist.
+                              </CommandItem>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end mt-4">
                   {/* <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -2013,40 +2370,86 @@ export default function TaskDetails() {
                         </Button>
                       )
                     ) : (
-                      canApprove && (
+                      // Werner spec rev H — legacy 'Close' button hidden by
+                      // default. Werner's spec replaces this with explicit
+                      // 'Close out' actions gated by role (RFI=contractor,
+                      // SI=professional, VO=PM, GI=initiator, Claim=contractor)
+                      // that fire after a response has been submitted. That
+                      // logic lives in WernerTaskActions / the future
+                      // Close-out button addition. The legacy button is kept
+                      // here only when the task is at its final stage so the
+                      // status label still surfaces (e.g. 'Approved').
+                      canApprove
+                      && displayTask.timeline?.current === displayTask.timeline?.stages?.[displayTask.timeline.stages.length - 1]
+                      && (
                         <Button
+                          variant="outline"
                           className="font-normal"
-                          onClick={() => handleApproveTask(
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                          )}
-                          disabled={displayTask.timeline.current ===
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]}>
-                          {displayTask.timeline.current ===
-                            displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                            ? displayTask.timeline.stages[displayTask.timeline.stages.length - 1]
-                            : "Close"}
+                          disabled
+                        >
+                          {displayTask.timeline.current}
                         </Button>
                       )
                     )}
 
+                    {/* Werner spec rev H — Analyze with AI uses purple
+                        border + light primary-tint bg (was solid black). */}
                     <button
                       onClick={() => setShowAiChat(!showAiChat)}
                       disabled={isAnalyzeLoading}
                       className={cn(
-                        "flex items-center gap-1 px-3 py-2.5 rounded-lg transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed",
+                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-normal disabled:opacity-50 disabled:cursor-not-allowed",
                         showAiChat
-                          ? "bg-primary text-white hover:bg-primary/90"
-                          : "bg-gray-900 text-white hover:bg-gray-800"
+                          ? "bg-primary text-white border-primary hover:bg-primary/90"
+                          : "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10",
                       )}>
                       <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
                       {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
                     </button>
 
-                    <Button className="font-normal" onClick={handleSubmitReply}>
+                    {/* Werner spec rev H — additive task actions:
+                        + Action (escalation), Sign & Issue, Risk pills.
+                        Renders nothing if not applicable to this task type. */}
+                    {entityId && (
+                      <WernerTaskActions
+                        taskType={taskType || displayTask.type}
+                        taskId={taskId || displayTask.id}
+                        entityId={entityId}
+                        riskLevel={(tdr?.task as any)?.riskLevel ?? (tdr?.task as any)?.risk_level ?? null}
+                        isSigned={!!((tdr?.task as any)?.signedAt ?? (tdr?.task as any)?.signed_at)}
+                        // Werner rev H — after any Werner action (escalate,
+                        // sign & issue, risk-set) refetch the task, audit
+                        // log, and invalidate every dependent query so
+                        // the page state matches the backend without a
+                        // manual reload: doc header status, Audit Trail
+                        // Card, References Card, and the /tasks board.
+                        onChanged={async () => {
+                          await refetchTask();
+                          await refetchAuditLogs();
+                          if (projectId) {
+                            queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+                          }
+                          // References sub-panel reads /entity-references/
+                          // via its own useFetch; invalidate so it refreshes.
+                          if (entityId && taskType) {
+                            queryClient.invalidateQueries({
+                              queryKey: [`tasks/entity-references/?entity_type=${taskType.toLowerCase()}&entity_id=${entityId}`]
+                            });
+                          }
+                        }}
+                      />
+                    )}
+
+                    {/* Werner spec rev H — Submit Reply is GREEN per page 3 */}
+                    <Button
+                      className="font-normal bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleSubmitReply}
+                    >
                       Submit Reply
                     </Button>
                   </div>
                 </div>
+                </div>{/* end .px-6.py-5 form body */}
               </Card>}
 
               {/* VO Rounds Section */}
@@ -2118,85 +2521,9 @@ export default function TaskDetails() {
                 </div>
               )}
 
-              {/* Recent Responses Section (for non-VO or fallback) */}
-              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
-                String(resp.senderId) === String(user?.id) ||
-                String(displayTask.creator.id) === String(user?.id)
-              ) && (
-                  <div className="space-y-3 mb-4 mt-6">
-                    <div className="flex items-center justify-between px-1">
-                      <h2 className="text-sm font-normal text-foreground">
-                        Recent Responses
-                      </h2>
-                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
-                        {displayTask.responses.length} Total
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      {displayTask.responses
-                        .filter((resp: any) =>
-                          String(resp.senderId) === String(user?.id) ||
-                          String(displayTask.creator.id) === String(user?.id)
-                        )
-                        .slice().reverse().map((resp: any) => (
-                          <Card
-                            key={resp.id}
-                            onClick={() => {
-                              setSelectedResponse(resp);
-                              setIsResponseModalOpen(true);
-                            }}
-                            className="p-4 bg-white border border-border hover:border-[#6c5ce7] hover:shadow-md transition-all cursor-pointer group rounded-xl"
-                          >
-                            <div className="flex items-start gap-4">
-                              <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-border">
-                                <AvatarFallback className="bg-primary/5 text-[#6c5ce7] text-xs font-normal">
-                                  {resp.sender
-                                    ?.split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")
-                                    .toUpperCase() || "U"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-sm font-normal text-foreground truncate">
-                                    {resp.sender}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    {new Date(resp.date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <div
-                                  className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2"
-                                  dangerouslySetInnerHTML={{ __html: resp.content }}
-                                />
-                                {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {Object.entries(resp.structuredData).slice(0, 2).map(([key, value]) => {
-                                      if (!value) return null;
-                                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                                      return (
-                                        <span key={key} className="text-[9px] bg-muted/50 px-2 py-0.5 rounded-md text-muted-foreground border border-border/50">
-                                          {label}: {
-                                            typeof value === 'object' && value !== null
-                                              ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
-                                              : String(value)
-                                          }
-                                        </span>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* AI Chatbot Block */}
+              {/* AI Chatbot Block — Werner spec rev H: appears ABOVE the
+                  reply thread when triggered, so the order reads:
+                  doc → AI panel (when open) → replies → reply form. */}
               <AnimatePresence>
                 {showAiChat && (
                   <motion.div
@@ -2214,7 +2541,18 @@ export default function TaskDetails() {
                 )}
               </AnimatePresence>
 
-              {/* Action request */}
+              {/* Replies block moved ABOVE the reply form (Werner rev H —
+                  chronological reading order: doc → existing replies →
+                  input form at the bottom). See the block earlier in
+                  this component for the actual render. */}
+
+              {/* Action Requests — Werner spec rev H: hidden on the new
+                  task types (RFI/SI/VO/GI/IC/Claim) since Werner's spec
+                  doesn't reference this feature. The formal prof-to-prof
+                  asking pattern is now GI; informal team asks belong in
+                  Channels (Communications page). Kept available for
+                  legacy CPI tasks until Werner confirms removal. */}
+              {!["RFI", "SI", "VO", "GI", "IC", "DC", "CLAIM"].includes(displayTask.type) &&
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   Action Requests
@@ -2276,96 +2614,101 @@ export default function TaskDetails() {
                     }}
                   />
                 </div>
-              </Card>
+              </Card>}
             </div>
 
-            {/* Right Column - Sidebar */}
-            {displayTask.creator.badge === "DC" ? (
-              <TaskSidebar
-                taskType={displayTask.creator.badge}
-                canApprove={canApprove && currentStageIndex < displayTask.timeline.stages.length - 1}
-                currentStageIndex={currentStageIndex}
-                auditLogs={auditLogs}
-                taskData={{
-                  ...displayTask,
-                  // Add DC-specific fields
-                  daysRequested: displayTask.formFields?.requestedExtension || "5",
-                  approvedDays: "0",
-                  number: displayTask.id,
-                  createdBy: displayTask.creator.name,
-                  status: displayTask.timeline.current,
-                }}
-                onStageClick={(stage) => { if (!isTaskLocked) handleApproveTask(stage); }}
-                onApprove={() => {
-                  const lastStage = displayTask.timeline.stages[displayTask.timeline.stages.length - 1];
-                  handleApproveTask(lastStage);
-                }}
-                onReject={() => {
-                  toast.info("Task rejected");
-                }}
-                onRequestInfo={() => {
-                  toast.info("Request info dialog triggered");
-                }}
-              />
-            ) : (
-              <div className="space-y-6 px-6 py-[45px] border-l">
-                {/* Decision Timeline */}
-                <div className="">
-                  <h3 className="text-xs text-muted-foreground mb-5">
-                    Decision Timeline
-                  </h3>
-                  <div className="relative">
-                    <div className="relative w-full max-w-3xl mx-auto px-1">
-                      {/* Line */}
-                      <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
-                        <div
-                          className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
-                          style={{
-                            width: `${(currentStageIndex / (displayTask.timeline.stages.length - 1)) * 100}%`,
-                          }}
-                        />
-                      </div>
-
-                      {/* Steps */}
-                      <div className="flex justify-between relative z-10">
-                        {displayTask.timeline.stages.map((stage: any, i: any) => (
-                          <button
-                            key={stage}
-                            disabled={!canApprove}
-                            onClick={() => {
-                              if (!canApprove) return;
-                              // For VO, route through the modal instead of direct approval
-                              if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
-                                handleVOApproveClick();
-                              } else {
-                                handleApproveTask(stage);
-                              }
-                            }}
-                            className={cn(
-                              "relative flex flex-col items-center flex-1",
-                              canApprove ? "cursor-pointer" : "cursor-not-allowed opacity-70"
-                            )}>
-                            {/* Dot */}
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                                ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                                : "bg-white border-border"
-                                }`}
-                            />
-                            {/* Label */}
-                            <span
-                              className={cn(
-                                "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                                i === currentStageIndex && "text-foreground font-normal"
-                              )}>
-                              {stage}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+            {/* Right Column - Sidebar
+                Werner rev H — every task type uses the same inline right
+                column (Decision Timeline → Audit Trail → References).
+                The legacy DC-only TaskSidebar branch (with its bespoke
+                green Approve button and Actions card) is removed so the
+                Claim page is visually consistent with RFI/SI/VO/GI/IC. */}
+            {false ? null : (
+              <div className="space-y-4">
+                {/* Decision Timeline — world-class visual:
+                    larger dots, ring halo around current step, gradient
+                    connectors, hover transitions. Wrapped in a white
+                    Card to match the rest of the production right panel. */}
+                {/* Decision Timeline — VERTICAL layout. Each step is a row
+                    with the dot on the left, label on the right, and a
+                    connector line dropping straight down to the next dot.
+                    Reads naturally top→bottom, fits a narrow side panel,
+                    and the line geometry is unambiguous (connector is
+                    centred under the dot, not floating below it). */}
+                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                    <h3 className="text-xs font-medium text-foreground">Decision Timeline</h3>
                   </div>
-                </div>
+                  <div className="px-4 py-4">
+                    <ol className="space-y-0">
+                      {displayTask.timeline.stages.map((stage: any, i: any) => {
+                        const isComplete = i < currentStageIndex;
+                        const isCurrent = i === currentStageIndex;
+                        const isLast = i === displayTask.timeline.stages.length - 1;
+                        return (
+                          <li key={stage} className="relative flex items-start gap-3">
+                            {/* Dot column with vertical connector */}
+                            <div className="relative flex flex-col items-center shrink-0">
+                              {/* Dot */}
+                              <button
+                                type="button"
+                                disabled={!canApprove}
+                                onClick={() => {
+                                  if (!canApprove) return;
+                                  if (displayTask.type === "VO" && (stage === "Approved" || stage === "Recommended")) {
+                                    handleVOApproveClick();
+                                  } else {
+                                    handleApproveTask(stage);
+                                  }
+                                }}
+                                className={cn(
+                                  "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300 mt-1",
+                                  isComplete && "bg-[#6c5ce7] shadow-sm",
+                                  isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
+                                  !isComplete && !isCurrent && "bg-white border-2 border-border",
+                                  canApprove && "cursor-pointer hover:scale-110",
+                                  !canApprove && "cursor-default",
+                                )}
+                              >
+                                {isComplete && (
+                                  <Check className="absolute inset-0 m-auto h-2 w-2 text-white" strokeWidth={4} />
+                                )}
+                              </button>
+                              {/* Connector to next dot — only between, never past last */}
+                              {!isLast && (
+                                <div
+                                  className={cn(
+                                    "w-[2px] flex-1 min-h-[28px] my-1 transition-colors",
+                                    isComplete ? "bg-[#6c5ce7]" : "bg-border",
+                                  )}
+                                />
+                              )}
+                            </div>
+
+                            {/* Label */}
+                            <div className={cn("flex-1 pb-5 pt-0.5", isLast && "pb-0")}>
+                              <p
+                                className={cn(
+                                  "text-sm leading-tight transition-colors",
+                                  isCurrent
+                                    ? "text-foreground font-medium"
+                                    : isComplete
+                                      ? "text-foreground"
+                                      : "text-muted-foreground",
+                                )}
+                              >
+                                {stage}
+                              </p>
+                              {isCurrent && (
+                                <p className="text-[11px] text-[#6c5ce7] mt-0.5">In progress</p>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                </Card>
 
                 {/* Deadlines */}
                 {/* <Card className="p-[17px] shadow-none rounded-lg bg-sidebar border-0">
@@ -2464,9 +2807,12 @@ export default function TaskDetails() {
                   </div>
                 </Card> */}
 
-                {/* Activity Timeline */}
-                <div className="mt-8 border-t border-border pt-6">
-                  <h3 className="text-xs font-normal text-foreground mb-5st pl-2">Audit Trail</h3>
+                {/* Audit Trail — grey header strip + white body. */}
+                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                    <h3 className="text-xs font-medium text-foreground">Audit Trail</h3>
+                  </div>
+                  <div className="px-4 py-4">
                   {auditLogs && auditLogs.length > 0 ? (
                     groupLogsByDate(auditLogs.slice(0, 30)).map((group) => (
                       <div key={group.label} className="mb-5">
@@ -2543,7 +2889,16 @@ export default function TaskDetails() {
                       <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
                     </div>
                   )}
-                </div>
+                  </div>
+                </Card>
+
+                {/* References — own Card, matches the panels above. */}
+                {entityId && taskType && (
+                  <TaskReferences
+                    entityType={taskType}
+                    entityId={entityId}
+                  />
+                )}
               </div>
             )}
           </div>

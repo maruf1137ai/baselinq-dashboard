@@ -204,48 +204,71 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
     return (
       <>
-        {/* Decision Timeline */}
+        {/* Decision Timeline — Werner spec rev H.
+            CSS grid with N equal columns. Each column has the dot dead-
+            center and two half-width connector segments (left-half and
+            right-half). The dot's z-10 sits above the connector edges so
+            it covers any overlap. Connectors colour purple when their
+            left-end step is complete. The first column's left-half and
+            last column's right-half are simply not rendered, so the
+            line never extends past the first/last dot. */}
         {stageCount > 0 && (
           <div>
             <h3 className="text-xs text-muted-foreground mb-5">
               Decision Timeline
             </h3>
-            <div className="relative">
-              <div className="relative w-full max-w-3xl mx-auto px-1">
-                {/* Line */}
-                <div className="absolute top-2 left-0 right-0 h-[2px] bg-muted">
-                  <div
-                    className="h-[2px] bg-[#6c5ce7] transition-all duration-500"
-                    style={{
-                      width: `${(currentStageIndex / (stageCount - 1)) * 100}%`,
-                    }}
-                  />
-                </div>
-
-                {/* Steps */}
-                <div className="flex justify-between relative z-10">
-                  {stages.map((stage: string, i: number) => (
-                    <button
-                      key={stage}
-                      onClick={() => onStageClick?.(stage)}
-                      className="relative flex flex-col items-center flex-1 cursor-pointer">
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: `repeat(${stageCount}, minmax(0, 1fr))` }}
+            >
+              {stages.map((stage: string, i: number) => {
+                const isComplete = i <= currentStageIndex;
+                const isCurrent = i === currentStageIndex;
+                return (
+                  <button
+                    key={stage}
+                    type="button"
+                    onClick={() => onStageClick?.(stage)}
+                    className="relative flex flex-col items-center cursor-pointer pt-2 pb-1"
+                  >
+                    {/* Left-half connector (skipped on first dot) */}
+                    {i > 0 && (
                       <div
-                        className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${i <= currentStageIndex
-                          ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                          : "bg-white border-border"
-                          }`}
-                      />
-                      <span
                         className={cn(
-                          "text-xs mt-3 text-muted-foreground w-full text-center break-words px-1",
-                          i === currentStageIndex && "text-foreground font-normal"
-                        )}>
-                        {stage}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                          "absolute left-0 top-[18px] h-[2px] w-1/2",
+                          i <= currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                        )}
+                      />
+                    )}
+                    {/* Right-half connector (skipped on last dot) */}
+                    {i < stageCount - 1 && (
+                      <div
+                        className={cn(
+                          "absolute right-0 top-[18px] h-[2px] w-1/2",
+                          i < currentStageIndex ? "bg-[#6c5ce7]" : "bg-muted",
+                        )}
+                      />
+                    )}
+                    {/* Dot — relative + z-10 so it covers the connector edges */}
+                    <div
+                      className={cn(
+                        "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
+                        isComplete
+                          ? "bg-[#6c5ce7] border-[#6c5ce7]"
+                          : "bg-white border-border",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs mt-3 text-muted-foreground text-center break-words max-w-[90px] leading-tight",
+                        isCurrent && "text-foreground font-normal",
+                      )}
+                    >
+                      {stage}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
