@@ -128,7 +128,7 @@ export function WernerTaskActions({
   const handleEscalate = async (toType: string) => {
     try {
       const res = await postRequest({
-        url: "tasks/escalate/",
+        url: "tasks/chain-escalate/",
         data: {
           from_type: taskType.toLowerCase(),
           from_id: Number(entityId),

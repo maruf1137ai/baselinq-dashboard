@@ -277,7 +277,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   // Fire escalation notification once per task when level reaches 2 and backend hasn't recorded it yet
   useEffect(() => {
     if (escalationLevel >= 2 && !task.is_escalated) {
-      postData({ url: `tasks/${task.id}/escalate/`, data: {} }).catch(() => {
+      postData({ url: `tasks/tasks/${task.id}/escalate/`, data: {} }).catch(() => {
         // silent — best-effort, no user-facing error
       });
     }
@@ -792,7 +792,7 @@ export default function Task() {
     const overContainer = findContainer(over.id);
 
     // Prevent dragging out of the "done" column — locked tasks stay locked
-    if (activeContainer === 'done') {
+    if (activeStartContainer === 'done') {
       setActiveId(null);
       setActiveStartContainer(null);
       return;
