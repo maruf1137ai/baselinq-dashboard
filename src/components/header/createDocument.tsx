@@ -33,11 +33,13 @@ import { toast } from "sonner";
 const addNewTask = async (_payload: any) => { };
 const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
 
+// Order matches Werner's spec rev G: SI, VO, RFI, GI, Claim. CPI removed.
 const btns = [
-  "VO - Variation Order",
   "SI - Site Instruction",
+  "VO - Variation Order",
   "RFI - Request for Information",
-  "DC - Delay Claim",
+  "GI - General Instruction",
+  "Claim - Delay or Cost",
 ];
 
 export function CreateDocumentDialog() {

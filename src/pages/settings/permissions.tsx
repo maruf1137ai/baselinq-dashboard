@@ -53,8 +53,8 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   "task.vo.create":  "Can create Variation Order (VO) tasks",
   "task.si.create":  "Can create Site Instruction (SI) tasks",
   "task.rfi.create": "Can create Request for Information (RFI) tasks",
-  "task.dc.create":  "Can create Delay Claim (DC) tasks",
-  "task.cpi.create": "Can create Critical Path Item (CPI) tasks",
+  "task.dc.create":  "Can create Claim tasks (Intention to Claim → formal Claim)",
+  "task.cpi.create": "Legacy: Can create Critical Path Item (CPI) — frozen, removed from menu per spec rev G",
   "task.gi.create":  "Can create General Instruction (GI) tasks",
   // Tasks — approval
   "task.vo.recommend": "Can recommend a priced VO to the client for approval",

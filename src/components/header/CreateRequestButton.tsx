@@ -12,41 +12,44 @@ import CreateRequestDialog from "./CreateRequestDialog";
 import { Plus } from "lucide-react";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
+// "+ Action" menu — order matches Werner's spec rev G: SI, VO, RFI, GI, Claim.
+// CPI removed per spec; existing rows remain readable (frozen).
 const btns = [
   {
     code: "SI",
     title: "SI - Site Instruction",
-    description: "Instruction issued directly for immediate site work.",
+    description: "Professional → Contractor. Instruction for immediate site work.",
     active: false,
   },
   {
     code: "VO",
     title: "VO - Variation Order",
-    description: "Request to modify scope, cost, or materials.",
+    description: "PM → Contractor. Approved change to scope, cost, or materials.",
     active: false,
   },
   {
     code: "RFI",
     title: "RFI - Request for Information",
-    description: "Clarification requested regarding project details.",
-    active: false,
-  },
-  {
-    code: "CPI",
-    title: "CPI - Critical Path Item",
-    description: "Task affecting the critical path timeline.",
+    description: "Contractor → Professional. Clarification on project details.",
     active: false,
   },
   {
     code: "GI",
     title: "GI - General Instruction",
-    description: "General instruction for work or processes.",
+    // Werner rev H p.10: GI is Prof→Prof OR Main contractor→Subcontractor.
+    description: "Professional → Professional, or Main contractor → Subcontractor.",
+    active: false,
+  },
+  {
+    code: "IC",
+    title: "IC - Intention to Claim",
+    description: "Contractor → PM. Preliminary notice — preserves right to claim. File this first.",
     active: false,
   },
   {
     code: "DC",
-    title: "DC - Delay Claim",
-    description: "Request for extension of time due to delays.",
+    title: "Claim",
+    description: "Contractor → PM. Formal claim with detailed substantiation. Must follow an Intention to Claim.",
     active: false,
   },
 ];

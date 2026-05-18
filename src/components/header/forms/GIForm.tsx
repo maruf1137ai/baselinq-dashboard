@@ -13,83 +13,69 @@ import { Label } from "@/components/ui/label";
 import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-const addNewTask = async (_payload: any) => {};
-const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
+import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { useS3Upload } from "@/hooks/useS3Upload";
+import { S3AttachmentSection } from "@/components/S3AttachmentSection";
+import { registerS3TaskAttachment } from "@/lib/Api";
+
+// Werner rev H p.10: GI is Professional → Professional OR Main Contractor →
+// Subcontractor. It never crosses the prof/contractor boundary. The UI
+// lets the originator pick which lane this GI lives in; the backend
+// rejects any other Direction value.
+const GI_DIRECTION_OPTIONS = [
+  { value: "prof_to_prof", label: "Professional → Professional" },
+  { value: "contractor_to_subcontractor", label: "Main Contractor → Subcontractor" },
+] as const;
 
 const initialValues = {
   title: "",
   discipline: "",
   instruction: "",
   effectiveDate: "",
-  applicableTo: "",
-  complianceRequired: "",
+  direction: "prof_to_prof" as (typeof GI_DIRECTION_OPTIONS)[number]["value"],
 };
 
 export default function GIForm({ setOpen, initialStatus }: any) {
   const [formData, setFormData] = useState(initialValues);
+  // Werner spec rev H — shared To / CC / Date Required pickers.
+  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<
-    { name: string; url: string }[]
-  >([]);
+  // Werner rev H — attachment upload (required on every doc per spec p.3-15).
+  const s3Upload = useS3Upload("task-attachments/pending");
 
   const queryClient = useQueryClient();
-  const projectId = localStorage.getItem("selectedProjectId");
+  const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
-  const { mutateAsync } = useMutation({
-    mutationFn: (newTask: any) => addNewTask({ newTask }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
-      toast.success("Success! GI created successfully");
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Error! Try again");
-      console.error("Error creating GI:", error);
-    },
-  });
+  const registerAttachments = async (giId: string | number) => {
+    if (!s3Upload.entries.length) return;
+    const ids = s3Upload.entries.map((e) => e.id);
+    const s3Keys = await s3Upload.waitForAll(ids);
+    await Promise.all(
+      s3Upload.entries.map(async (entry) => {
+        const key = s3Keys.get(entry.id);
+        if (!key) { toast.error(`Failed to upload ${entry.file.name}`); return; }
+        try {
+          await registerS3TaskAttachment("general-instructions", giId, { file_name: entry.file.name, s3_key: key });
+        } catch {
+          toast.error(`Failed to register ${entry.file.name}`);
+        }
+      })
+    );
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadAllFiles = async (projectId: string) => {
-    if (!selectedFiles.length) return [];
-    setUploading(true);
-    const uploaded: { name: string; url: string }[] = [];
-
-    for (const file of selectedFiles) {
-      try {
-        const url = await uploadFile(file, projectId);
-        uploaded.push({ name: file.name, url });
-      } catch (err) {
-        console.error("Error uploading file:", file.name, err);
-        toast.error(`Failed to upload ${file.name}`);
-      }
-    }
-
-    setUploading(false);
-    setUploadedFiles(uploaded);
-    return uploaded;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) {
-      toast.error("Title is required");
+      toast.error("Subject is required");
       return;
     }
 
@@ -100,37 +86,68 @@ export default function GIForm({ setOpen, initialStatus }: any) {
     }
 
     setLoading(true);
-
     try {
-      const files = await uploadAllFiles(projectId);
-
-      const randomTime = Math.floor(Math.random() * 30) + 1;
-      const randomCost = Math.floor(Math.random() * 900000) + 100000;
-      const randomScore = Math.floor(Math.random() * 100) + 1;
-
-      const payload = {
-        project_id: projectId,
-        title: formData.title,
-        type: "GI",
-        taskStatus: initialStatus || "todo",
-        priority: "Medium",
-        Discipline: formData.discipline,
-        Instruction: formData.instruction,
-        Effective_Date: formData.effectiveDate || null,
-        Applicable_To: formData.applicableTo,
-        Compliance: formData.complianceRequired,
-        description: files.length > 0 ? `Attachments: ${JSON.stringify(files)}` : "",
-        impact: {
-          time_impact: randomTime.toString(),
-          cost_impact: randomCost.toString(),
-          score: `${randomScore}/100`
+      // Werner rev H — real POST to the GeneralInstruction endpoint.
+      // The view auto-generates the gi_number; we pass the user-chosen
+      // direction (prof→prof or contractor→subcontractor).
+      const result: any = await postRequest({
+        url: "tasks/general-instructions/",
+        data: {
+          project: parseInt(projectId),
+          subject: formData.title,
+          description: formData.instruction,
+          discipline: formData.discipline || "Other",
+          direction: formData.direction,
+          date_required: formData.effectiveDate || null,
+          taskStatus: initialStatus || "Draft",
         },
-      };
+      });
 
-      await mutateAsync(payload);
-    } catch (err) {
+      // Werner rev H — apply To / CC / Date Required to the Task wrapper
+      // (same pattern used by RFI/SI/VO/DC forms).
+      const taskId = result?.task?.id || result?.taskId;
+      if (taskId) {
+        await applyMetaToTask(taskId, meta, patchRequest);
+      }
+
+      // Werner rev H — register any uploaded attachments against the
+      // new GI (matches the pattern in RFIForm / SIForm).
+      if (s3Upload.entries.length > 0 && result?._id) {
+        await registerAttachments(result._id);
+      }
+
+      // Create channel after GI is created — mirrors the RFI/SI flow.
+      try {
+        await postRequest({
+          url: "channels/",
+          data: {
+            project: parseInt(projectId),
+            taskId: result?.task?.id,
+            taskType: result?.task?.taskType,
+            name: formData.title,
+            description: formData.instruction,
+            channel_type: "public",
+          },
+        });
+      } catch (error) {
+        console.error("Error creating channel:", error);
+      }
+
+      toast.success("GI created successfully");
+      await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
+      await queryClient.invalidateQueries({ queryKey: ["gis"] });
+      await queryClient.invalidateQueries({
+        queryKey: [`channels/?projectId=${projectId}`],
+      });
+      setOpen(false);
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error creating GI");
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Error creating GI";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,147 +156,91 @@ export default function GIForm({ setOpen, initialStatus }: any) {
   return (
     <form className="flex flex-col h-full" onSubmit={handleSubmit}>
       <div className="flex-1 overflow-y-auto space-y-4 py-6">
-      <div>
-        <Label>Title</Label>
-        <Input
-          className="mt-1"
-          placeholder="General instruction title"
-          value={formData.title}
-          onChange={(e) => handleChange("title", e.target.value)}
-        />
-      </div>
+        <div>
+          <Label>Subject</Label>
+          <Input
+            className="mt-1"
+            placeholder="General instruction subject"
+            value={formData.title}
+            onChange={(e) => handleChange("title", e.target.value)}
+          />
+        </div>
 
-      <div>
-        <Label>Discipline</Label>
-        <Select value={formData.discipline} onValueChange={(val) => handleChange("discipline", val)}>
-          <SelectTrigger className="mt-1">
-            <SelectValue placeholder="Select discipline" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {DISCIPLINE_OPTIONS.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Instruction</Label>
-        <Textarea
-          className="mt-1"
-          rows={6}
-          placeholder="Write general instruction"
-          value={formData.instruction}
-          onChange={(e) => handleChange("instruction", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Effective Date</Label>
-        <Input
-          type="date"
-          className="mt-1"
-          value={formData.effectiveDate}
-          onChange={(e) => handleChange("effectiveDate", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Applicable To</Label>
-        <Input
-          className="mt-1"
-          placeholder="e.g., All contractors, Specific team"
-          value={formData.applicableTo}
-          onChange={(e) => handleChange("applicableTo", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Compliance Required</Label>
-        <Select
-          value={formData.complianceRequired}
-          onValueChange={(val) => handleChange("complianceRequired", val)}
-        >
-          <SelectTrigger className="mt-1">
-            <SelectValue placeholder="Select compliance level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Mandatory">Mandatory</SelectItem>
-            <SelectItem value="Recommended">Recommended</SelectItem>
-            <SelectItem value="Optional">Optional</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Upload Section */}
-      <div>
-        <Label htmlFor="gi-upload" className="text-sm text-foreground">
-          Upload Section
-        </Label>
-        <input
-          type="file"
-          id="gi-upload"
-          className="hidden"
-          onChange={handleFileChange}
-          multiple
-        />
-
-        <div
-          className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => document.getElementById("gi-upload")?.click()}>
-          <p className="text-sm text-muted-foreground">
-            Drag and drop your file here
-          </p>
-          <p className="text-sm text-muted-foreground">
-            or click to browse
+        {/* Werner rev H p.10 — Direction picker. Never crosses prof↔contractor. */}
+        <div>
+          <Label>Direction</Label>
+          <Select
+            value={formData.direction}
+            onValueChange={(val) => handleChange("direction", val)}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {GI_DIRECTION_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            GI never crosses the professional / contractor boundary.
           </p>
         </div>
 
-        {/* Selected files */}
-        {selectedFiles.length > 0 && (
-          <div className="mt-2 flex flex-col gap-2">
-            {selectedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center border p-2 rounded">
-                <span className="text-sm">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile(index)}
-                  className="text-red-500 text-xs hover:underline">
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div>
+          <Label>Discipline</Label>
+          <Select
+            value={formData.discipline}
+            onValueChange={(val) => handleChange("discipline", val)}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Select discipline" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {DISCIPLINE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Uploaded files URLs */}
-        {uploadedFiles.length > 0 && (
-          <div className="mt-2 flex flex-col gap-2">
-            {uploadedFiles.map((f, i) => (
-              <a
-                key={i}
-                href={f.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm text-blue-500 hover:underline">
-                {f.name}
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Werner spec rev H — To / CC / Date Required pickers. */}
+        <TaskMetaFields value={meta} onChange={setMeta} toLabel="To" />
 
+        <div>
+          <Label>Instruction</Label>
+          <Textarea
+            className="mt-1"
+            rows={6}
+            placeholder="Write general instruction"
+            value={formData.instruction}
+            onChange={(e) => handleChange("instruction", e.target.value)}
+          />
+        </div>
+
+        <div>
+          <Label>Date Required</Label>
+          <Input
+            type="date"
+            className="mt-1"
+            value={formData.effectiveDate}
+            onChange={(e) => handleChange("effectiveDate", e.target.value)}
+          />
+        </div>
+
+        {/* Werner rev H — Attachment upload (spec page 10). */}
+        <S3AttachmentSection s3Upload={s3Upload} inputId="gi-upload" label="Attachments" />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
         <Button variant="outline" onClick={() => setOpen(false)} type="button">
           Cancel
         </Button>
-        <Button type="submit" disabled={loading || uploading}>
-          {loading || uploading ? "Creating..." : "Create GI"}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Creating..." : "Create GI"}
         </Button>
       </div>
     </form>

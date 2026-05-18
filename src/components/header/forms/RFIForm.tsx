@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { usePatch } from "@/hooks/usePatch";
 import {
   Select,
   SelectContent,
@@ -27,11 +29,15 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
 
+  // Werner spec rev H — required RFI fields (page 3): To / CC / Date Required.
+  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
+  const { mutateAsync: patchRequest } = usePatch();
 
   const registerAttachments = async (rfiId: string | number) => {
     if (!s3Upload.entries.length) return;
@@ -76,6 +82,13 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
     };
 
     const handleSuccess = async (result: any) => {
+      // Werner spec rev H — apply To / CC / Date Required to the
+      // auto-created Task wrapper.
+      const taskId = result?.task?.id || result?.taskId;
+      if (taskId) {
+        await applyMetaToTask(taskId, meta, patchRequest);
+      }
+
       // Create channel after RFI is created
       try {
         await postRequest({
@@ -170,6 +183,9 @@ export default function RFIForm({ setOpen, initialStatus }: any) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Werner spec rev H — To / CC / Date Required (shared component). */}
+      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (recipient)" />
 
       <div>
         <Label>Question</Label>
