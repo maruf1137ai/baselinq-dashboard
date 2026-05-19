@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowUp, FileText, Globe, PanelLeft } from 'lucide-react';
+import { ArrowUp, FileText, Globe, X, Paperclip } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Clip from '@/components/icons/Clip';
-import { fetchData, postData } from '@/lib/Api';
+import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
@@ -30,6 +30,7 @@ interface Message {
   content: string;
   sources?: ChatSource[];
   price_breakdown?: any;
+  attachment?: { file_name: string; file_type: string };
 }
 
 
@@ -52,8 +53,12 @@ const AiWorkSpace = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  const [pendingAttachment, setPendingAttachment] = useState<{ file_name: string; attachment_id: number } | null>(null);
+  const [attachmentLoading, setAttachmentLoading] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTaskMode = !!(taskTypeSlug && taskId && taskTypeSlug !== 'project');
   const isProjectMode = !!projectId;
@@ -107,6 +112,7 @@ const AiWorkSpace = () => {
 
         // Task mode — original behaviour.
         const response = await fetchData(chatUrl);
+        if (response?.sessionId) setActiveSessionId(response.sessionId);
         if (response?.messages && response.messages.length > 0) {
           setMessages(formatMsgs(response.messages));
         } else {
@@ -115,6 +121,7 @@ const AiWorkSpace = () => {
               url: chatUrl,
               data: { action: 'init' },
             });
+            if (initResponse?.sessionId) setActiveSessionId(initResponse.sessionId);
             if (initResponse?.messages && initResponse.messages.length > 0) {
               setMessages(formatMsgs(initResponse.messages));
             }
@@ -158,6 +165,9 @@ const AiWorkSpace = () => {
       id: Date.now().toString(),
       role: 'user',
       content: input,
+      attachment: pendingAttachment
+        ? { file_name: pendingAttachment.file_name, file_type: 'document' }
+        : undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -168,13 +178,15 @@ const AiWorkSpace = () => {
       // Real API call
       try {
         const body: any = { message: userMessage.content };
-        if (isProjectMode && sessionId) {
-          body.session_id = sessionId;
+        const effectiveSessionId = sessionId || (activeSessionId ? String(activeSessionId) : null);
+        if (isProjectMode && effectiveSessionId) {
+          body.session_id = parseInt(effectiveSessionId);
         }
         const response = await postData({
           url: chatUrl,
           data: body,
         });
+        if (response?.sessionId && isTaskMode) setActiveSessionId(response.sessionId);
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
@@ -182,6 +194,7 @@ const AiWorkSpace = () => {
           sources: response.sources || [],
         };
         setMessages(prev => [...prev, aiMessage]);
+        setPendingAttachment(null);
 
         // Project mode, first message: backend created a fresh session and
         // (likely) generated a title. Sync the URL to the new session id and
@@ -189,6 +202,7 @@ const AiWorkSpace = () => {
         if (isProjectMode && projectId && response?.sessionId) {
           if (!sessionId) {
             navigate(`/ai-workspace/project/${projectId}/${response.sessionId}`, { replace: true });
+            setActiveSessionId(null);
           }
           if (response?.title) {
             const sel = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
@@ -220,6 +234,50 @@ const AiWorkSpace = () => {
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !chatUrl) return;
+    e.target.value = '';
+
+    setAttachmentLoading(true);
+    try {
+      let resolvedSessionId: number | null = activeSessionId ?? (sessionId ? parseInt(sessionId) : null);
+
+      // No session yet — create one via init (works for both project and task chats)
+      if (!resolvedSessionId) {
+        const initResp = await postData({ url: chatUrl, data: { action: 'init' } });
+        resolvedSessionId = initResp?.sessionId ?? null;
+        if (resolvedSessionId) setActiveSessionId(resolvedSessionId);
+      }
+
+      if (!resolvedSessionId) {
+        toast.error('Could not create a session to attach the file.');
+        return;
+      }
+
+      const { upload_url, key } = await getPresignedUrl({
+        filename: file.name,
+        content_type: file.type || 'application/octet-stream',
+        folder: `chat_attachments/${resolvedSessionId}`,
+      });
+
+      await uploadFileToPresignedUrl(upload_url, file, file.type || 'application/octet-stream');
+
+      const attachResp = await postData({
+        url: `ai_analysis/session/${resolvedSessionId}/attach/`,
+        data: { s3_key: key, file_name: file.name, file_type: file.type || 'application/octet-stream' },
+      });
+
+      setPendingAttachment({ file_name: file.name, attachment_id: attachResp.attachment_id });
+      toast.success(`"${file.name}" attached and analyzed.`);
+    } catch (err: any) {
+      console.error('Attachment error:', err);
+      toast.error(err?.response?.data?.error || 'Failed to attach file. Please try again.');
+    } finally {
+      setAttachmentLoading(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -233,6 +291,37 @@ const AiWorkSpace = () => {
   };
 
   const hasMessages = messages.length > 0 || isLoading;
+
+  const clipButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+      onClick={() => fileInputRef.current?.click()}
+      disabled={attachmentLoading}
+      title="Attach file"
+    >
+      {attachmentLoading ? (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+      ) : (
+        <Clip />
+      )}
+    </Button>
+  );
+
+  const attachmentChip = pendingAttachment && (
+    <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted border border-border text-xs text-foreground">
+      <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+      <span className="max-w-[180px] truncate">{pendingAttachment.file_name}</span>
+      <button
+        onClick={() => setPendingAttachment(null)}
+        className="ml-1 text-muted-foreground hover:text-foreground"
+        title="Remove attachment"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
 
   return (
     <DashboardLayout padding="p-0">
@@ -256,7 +345,18 @@ const AiWorkSpace = () => {
                     <div key={message.id} className="mb-6">
                       {message.role === 'user' ? (
                         <div className="flex justify-end">
-                          <div className="max-w-[85%] text-sm rounded-lg bg-sidebar px-4 py-3">
+                          <div className="max-w-[85%] text-sm rounded-lg bg-sidebar px-4 py-3 space-y-2">
+                            {message.attachment && (
+                              <div className="flex items-center gap-2.5 p-2 rounded-md bg-red-50 border border-red-100">
+                                <div className="w-8 h-8 rounded bg-red-500 flex items-center justify-center shrink-0">
+                                  <FileText className="h-4 w-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-foreground truncate">{message.attachment.file_name}</p>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">PDF</p>
+                                </div>
+                              </div>
+                            )}
                             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{message.content}</p>
                           </div>
                         </div>
@@ -378,10 +478,11 @@ const AiWorkSpace = () => {
               {/* Input Area */}
               <div className="px-3 sm:px-6 py-4">
                 <div className="mx-auto max-w-4xl">
+                  {attachmentChip && (
+                    <div className="flex flex-wrap gap-1.5 mb-2 px-1">{attachmentChip}</div>
+                  )}
                   <div className="relative flex items-end gap-2 rounded-lg border border-border bg-[#F9F9F9] px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                      <Clip />
-                    </Button>
+                    {clipButton}
                     <Textarea
                       ref={textareaRef}
                       value={input}
@@ -430,6 +531,9 @@ const AiWorkSpace = () => {
 
                   {/* Input with bottom toolbar */}
                   <div className="rounded-2xl bg-white border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#6c5ce7]/30 focus-within:border-[#6c5ce7] transition-all">
+                    {attachmentChip && (
+                      <div className="flex flex-wrap gap-1.5 px-4 pt-3">{attachmentChip}</div>
+                    )}
                     <Textarea
                       ref={textareaRef}
                       value={input}
@@ -441,9 +545,7 @@ const AiWorkSpace = () => {
                     />
                     {/* Bottom toolbar */}
                     <div className="flex items-center justify-between px-3 pb-3 pt-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                        <Clip />
-                      </Button>
+                      {clipButton}
                       <div className="flex items-center gap-2">
                         <Button
                           onClick={handleSend}
@@ -483,6 +585,13 @@ const AiWorkSpace = () => {
           )}
         </div>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.doc,image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
     </DashboardLayout>
   );
 };
