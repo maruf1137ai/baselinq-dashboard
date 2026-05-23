@@ -79,6 +79,8 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  ExternalLink,
+  Copy as CopyIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -93,7 +95,15 @@ import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRend
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
+import { isTaskLocked as computeIsTaskLocked } from "@/lib/taskLock";
+import {
+  getIntentionAtDisplay,
+  getFormalClaimAtDisplay,
+  getNoticeGapDays,
+} from "@/lib/claimTimestamps";
 import { TaskReferences } from "@/components/TaskComponents/TaskReferences";
+import { TaskOriginBanner } from "@/components/TaskComponents/TaskOriginBanner";
+import { RequestInfoResponseRow } from "@/components/TaskComponents/RequestInfoResponseRow";
 import { UserChip } from "@/components/TaskComponents/UserChip";
 import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
@@ -319,10 +329,21 @@ export default function TaskDetails() {
       if (!taskId) return;
       const payload = { ...data };
       if (payload.status) {
+        // Mirror backend TERMINAL_STATUSES (tasks/views.py). Werner SI flow:
+        // Draft → Issued → Acknowledged → Actioned → Verified — so
+        // "Acknowledged" is mid-flow, NOT terminal. Only the final state
+        // of each workflow lands in the Done column on the task board.
         const lowerStatus = payload.status.toLowerCase();
-        if (['approved', 'rejected', 'closed', 'completed', 'eot awarded', 'acknowledged'].includes(lowerStatus)) {
+        const DONE_STATUSES = [
+          'approved', 'rejected', 'closed', 'completed',
+          'eot awarded', 'verified', 'answered',
+        ];
+        const TODO_STATUSES = [
+          'todo', 'draft', 'pending', 'not started', 'delay identified',
+        ];
+        if (DONE_STATUSES.includes(lowerStatus)) {
           payload.taskStatus = 'done';
-        } else if (lowerStatus === 'todo') {
+        } else if (TODO_STATUSES.includes(lowerStatus)) {
           payload.taskStatus = 'todo';
         } else {
           payload.taskStatus = 'in review';
@@ -663,8 +684,10 @@ export default function TaskDetails() {
 
       if (displayTask.type === "GI") {
         // Werner page 10 — no formal acknowledge gate. Reply moves the
-        // GI into Distributed; close-out is a separate originator action.
-        updateData.status = "Distributed";
+        // GI to Replied; close-out is a separate originator action.
+        // (Previously sent "Distributed" which isn't in the GI enum
+        // — Draft / Sent / Replied / Closed.)
+        updateData.status = "Replied";
       }
 
       // Sync pricing and response fields to update the underlying entity
@@ -870,15 +893,37 @@ export default function TaskDetails() {
     const assignedTo = apiResponse.assignedTo || [];
 
     // Map action requests if data is provided
-    const mappedActionRequests = actionRequestsData?.map(req => ({
-      id: req._id,
-      senderName: req.requestedBy?.name || "User",
-      recipient: req.recipient?.name || "Recipient",
-      role: req.requestedBy?.role || "User",
-      task: req.requestDetails,
-      date: req.dueDate,
-      status: "Pending"
-    })) || apiResponse.request_info || [];
+    const mappedActionRequests = actionRequestsData?.map(req => {
+      // Werner spec — surface the response payload so the UI can render
+      // the answer inline + show "Resolved" badge when answered.
+      const responseText = req.response_text ?? req.responseText ?? null;
+      const respondedBy = req.responded_by ?? req.respondedBy ?? null;
+      const respondedAt = req.responded_at ?? req.respondedAt ?? null;
+
+      // Werner spec — combined recipient list (primary + additional CC).
+      // Falls back to just the primary if backend hasn't been upgraded.
+      const recipientsList =
+        req.recipients
+        ?? (req.recipient ? [{ userId: req.recipient.userId, name: req.recipient.name, email: req.recipient.email, isPrimary: true }] : []);
+      const recipientIds = recipientsList.map((r: any) => String(r.userId ?? r.id));
+      const recipientNames = recipientsList.map((r: any) => r.name).filter(Boolean).join(", ");
+
+      return {
+        id: req.id ?? req._id,
+        senderName: req.requestedBy?.name || req.requested_by?.name || "User",
+        senderId: req.requestedBy?.id || req.requested_by?.id,
+        recipient: recipientNames || req.recipient?.name || "Recipient",
+        recipientIds,                           // array of all recipient ids
+        recipientList: recipientsList,           // full list (objects)
+        role: req.requestedBy?.role || "User",
+        task: req.requestDetails ?? req.request_details,
+        date: req.dueDate ?? req.due_date,
+        responseText,
+        respondedBy,
+        respondedAt,
+        status: responseText ? "Responded" : "Pending",
+      };
+    }) || apiResponse.request_info || [];
 
     // Common fields
     const baseData = {
@@ -1144,41 +1189,81 @@ export default function TaskDetails() {
 
 
 
-      case "GI":
+      case "GI": {
+        // Werner spec: GI has subject + description (not title/instruction).
+        // Workflow is Draft → Sent → Replied → Closed.
+        const giDate = task.dateRequired || task.date_required || task.dueDate;
         return {
           ...baseData,
-          displayId: `#${task.giNumber || `GI-${task._id}`}`,
-          title: task.title,
-          task_code: task.giNumber,
-          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          displayId: `#${task.giNumber || task.gi_number || `GI-${task._id}`}`,
+          title: task.subject || "Untitled GI",
+          task_code: task.giNumber || task.gi_number,
+          dueDate: giDate ? new Date(giDate).toLocaleDateString() : "No Date",
           formFields: {
-            title: task.title,
+            subject: task.subject,
             discipline: task.discipline,
-            instruction: task.instruction,
-            effectiveDate: task.effectiveDate,
-            applicableTo: task.applicableTo,
-            complianceRequired: task.complianceRequired,
             description: task.description,
+            direction: task.direction,
+            dateRequired: giDate,
           },
           question: {
-            text: task.instruction || "",
-            tags: [],
+            text: task.description || "",
+            tags: task.discipline ? [task.discipline] : [],
           },
           deadlines: {
-            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
-            contractWindow: "14 days",
+            replyDue: giDate ? new Date(giDate).toLocaleDateString() : "N/A",
+            contractWindow: "—",
           },
           timeline: {
             current: task.status || apiResponse.status || "Draft",
-            stages: ["Draft", "Issued", "Distributed", "Acknowledged"],
+            stages: ["Draft", "Sent", "Replied", "Closed"],
           },
           impact: {
-            time: "0 days",
-            cost: "R 0",
-            riskScore: 20,
+            time: "—",
+            cost: "—",
+            riskScore: 0,
             riskMax: 100,
           },
         };
+      }
+
+      case "IC": {
+        // Werner spec: Contractor → PM. Two-stage claim flow (IC then DC).
+        // intentionAt is stamped at submission; riskLevel set by PM.
+        const icDate = task.dateRequired || task.date_required || task.dueDate;
+        return {
+          ...baseData,
+          displayId: `#${task.icNumber || task.ic_number || `IC-${task._id}`}`,
+          title: task.subject || "Untitled IC",
+          task_code: task.icNumber || task.ic_number,
+          dueDate: icDate ? new Date(icDate).toLocaleDateString() : "No Date",
+          formFields: {
+            subject: task.subject,
+            description: task.description,
+            riskLevel: task.riskLevel || task.risk_level,
+            dateRequired: icDate,
+            respondentUser: task.respondentUser || task.respondent_user,
+          },
+          question: {
+            text: task.description || "",
+            tags: task.riskLevel ? [`Risk: ${task.riskLevel}`] : [],
+          },
+          deadlines: {
+            replyDue: icDate ? new Date(icDate).toLocaleDateString() : "N/A",
+            contractWindow: "—",
+          },
+          timeline: {
+            current: task.status || apiResponse.status || "Draft",
+            stages: ["Draft", "Sent", "Acknowledged", "Escalated to Claim", "Closed"],
+          },
+          impact: {
+            time: "—",
+            cost: "—",
+            riskScore: 0,
+            riskMax: 100,
+          },
+        };
+      }
 
       default:
         return {
@@ -1215,14 +1300,38 @@ export default function TaskDetails() {
     "Completed": "Approved",
   };
 
+  // Werner spec — task statuses that mean "terminated beyond the normal
+  // workflow" — e.g. SI auto-closed when escalated to a VO, RFI cancelled,
+  // IC's "Escalated to Claim". These don't appear in the per-type stages
+  // array, so we treat them as "every stage complete" rather than
+  // letting indexOf(-1) fall through to 0 (Draft).
+  const TERMINAL_BEYOND_STAGES = new Set([
+    "closed", "cancelled", "superseded", "escalated to claim",
+  ]);
+
   const currentStageIndex = displayTask
     ? (() => {
       const current = displayTask.timeline.current;
       const mapped = statusToStageMap[current] || current;
       const idx = displayTask.timeline.stages.indexOf(mapped);
-      return idx !== -1 ? idx : 0;
+      if (idx !== -1) return idx;
+      // Unknown status — if it's a "beyond stages" terminal, mark every
+      // stage as complete by pointing past the last index.
+      if (TERMINAL_BEYOND_STAGES.has((current || "").toLowerCase().trim())) {
+        return displayTask.timeline.stages.length;
+      }
+      return 0;
     })()
     : 0;
+
+  // Truthy when the task is in a terminal-beyond-stages state — used by
+  // the right-panel Decision Timeline to show a "Closed / Superseded"
+  // indicator instead of an "In progress" label.
+  const isTerminalBeyondStages = displayTask
+    ? TERMINAL_BEYOND_STAGES.has(
+        (displayTask.timeline?.current || "").toLowerCase().trim(),
+      )
+    : false;
 
   const canApprove = !!user && !!displayTask && (() => {
     const isCreator = String(displayTask.creator?.id) === String(user?.id);
@@ -1242,12 +1351,9 @@ export default function TaskDetails() {
     return false;
   })();
 
-  // Task is locked (read-only) once it reaches the final stage — no further responses or edits allowed
-  const isTaskLocked = !!displayTask && (() => {
-    const stages: string[] = displayTask.timeline?.stages || [];
-    const current: string = displayTask.timeline?.current || '';
-    return stages.length > 0 && current === stages[stages.length - 1];
-  })();
+  // Werner spec — VO/SI lock on signed_at; other task types fall back to
+  // the last-timeline-stage rule. Logic in @/lib/taskLock for testability.
+  const isTaskLocked = computeIsTaskLocked(displayTask, tdr?.task);
 
   const editor = useEditor({
     extensions: [
@@ -1356,9 +1462,38 @@ export default function TaskDetails() {
             submittedBy: displayTask.creator?.name || "Unknown",
             recommendedBy: (auditLogs || []).find((l: any) =>
               (l.description || "").toLowerCase().includes("recommended"))?.createdBy?.name,
-            subTotal: displayTask.formFields?.subTotal ?? 0,
-            taxAmount: displayTask.formFields?.tax?.amount ?? 0,
-            grandTotal: displayTask.formFields?.grandTotal ?? 0,
+            // Werner spec — when a VO reply submits new pricing (line
+            // items + VAT) we want the Approve & Sign dialog to reflect
+            // it. The VO entity's own sub_total/tax_amount/grand_total
+            // fields aren't always pushed by the reply flow, so we
+            // prefer the latest reply's structured pricing data and
+            // fall back to the VO's own fields when there's no reply.
+            ...(() => {
+              const latestPricing = (() => {
+                const resps: any[] = displayTask.responses || [];
+                for (let i = resps.length - 1; i >= 0; i--) {
+                  const sd = resps[i]?.structuredData || {};
+                  if (sd.subTotal != null || sd.grandTotal != null || sd.tax?.amount != null) {
+                    return sd;
+                  }
+                }
+                return null;
+              })();
+              const taxAmountFromReply = Number(latestPricing?.tax?.amount ?? 0);
+              const subTotalFromReply = Number(latestPricing?.subTotal ?? 0);
+              const grandTotalFromReply = Number(latestPricing?.grandTotal ?? 0);
+              return {
+                subTotal: subTotalFromReply > 0
+                  ? subTotalFromReply
+                  : (displayTask.formFields?.subTotal ?? 0),
+                taxAmount: taxAmountFromReply > 0
+                  ? taxAmountFromReply
+                  : (displayTask.formFields?.tax?.amount ?? 0),
+                grandTotal: grandTotalFromReply > 0
+                  ? grandTotalFromReply
+                  : (displayTask.formFields?.grandTotal ?? 0),
+              };
+            })(),
             currency: displayTask.formFields?.currency || "ZAR",
             timeExtensionDays: (() => {
               const sd = displayTask.responses?.slice(-1)?.[0]?.structuredData || {};
@@ -1366,12 +1501,42 @@ export default function TaskDetails() {
               return v > 0 ? v : undefined;
             })(),
           }}
-          onConfirm={async () => {
+          onConfirm={async (auth) => {
             setShowApproveModal(false);
-            const targetStatus = (displayTask.isWithinMandate || displayTask.status === "Recommended")
-              ? "Approved"
-              : "Recommended";
-            await handleApproveTask(targetStatus);
+            const mode = (displayTask.isWithinMandate || displayTask.status === "Recommended")
+              ? "approve"
+              : "recommend";
+
+            // "Recommend" mode is a status bump — no signing yet. Keep
+            // the existing update-task path.
+            if (mode === "recommend") {
+              await handleApproveTask("Recommended");
+              return;
+            }
+
+            // "Approve" mode is the legal sign. Route through the
+            // sign-and-issue endpoint so the same flow as Sign & Issue
+            // applies: PIN/role gate, signed_at, certificate_token,
+            // contract value update, Task → done. Werner spec — VO
+            // approval is the highest-stakes action and must run through
+            // the same gate as any other contract certificate.
+            const payload: any = {
+              entity_type: "vo",
+              entity_id: entityId,
+            };
+            if (auth && "pin" in auth) payload.pin = auth.pin;
+
+            try {
+              await postData({ url: "tasks/sign-and-issue/", data: payload });
+              toast.success("Variation Order approved and signed.");
+              await refetchTask();
+              await refetchAuditLogs?.();
+              // Invalidate the projects query — contract_value /
+              // contract_end_date moved when the VO was signed.
+              queryClient.invalidateQueries({ queryKey: ["projects"] });
+            } catch (err: any) {
+              toast.error(err?.response?.data?.error || "Approve & Sign failed.");
+            }
           }}
         />
       )}
@@ -1395,6 +1560,17 @@ export default function TaskDetails() {
                   Print / Export
                 </button>
               </div>
+
+              {/* Werner spec — origin banner: when this doc was auto-
+                  created via escalation (e.g. SI → VO), surface that at
+                  the top so users immediately see the linkage instead of
+                  having to find it in the right sidebar. */}
+              {entityId && (taskType || displayTask.type) && (
+                <TaskOriginBanner
+                  entityType={(taskType || displayTask.type || "").toLowerCase()}
+                  entityId={entityId}
+                />
+              )}
 
               {/* Werner spec rev H — single merged doc card.
                   WHITE card on grey page (production pattern). Title row
@@ -1550,6 +1726,62 @@ export default function TaskDetails() {
                     </>
                   )}
 
+                  {/* Werner spec — "Originated from" row: when this doc
+                      was auto-created via escalation (RFI→SI, SI→VO,
+                      IC→Claim), surface the source ref in the meta
+                      strip too. Reuses the same entity-references
+                      endpoint as the OriginBanner (React Query caches,
+                      so this doesn't add a network call). */}
+                  {entityId && (taskType || displayTask.type) && (
+                    <OriginMetaRow
+                      entityType={(taskType || displayTask.type || "").toLowerCase()}
+                      entityId={entityId}
+                    />
+                  )}
+
+                  {/* Werner spec — claim submission timestamps. Shown on IC
+                      and DC types only. Pair them on the DC view to expose
+                      the notice gap, which is the legally significant data
+                      point in delay-claim disputes. */}
+                  {(displayTask.type === "IC" || displayTask.type === "DC") && (() => {
+                    const intentionRaw =
+                      (displayTask as any)?.intentionAt
+                      ?? (tdr?.task as any)?.intentionAt
+                      ?? (tdr?.task as any)?.intention_at
+                      ?? (tdr?.task as any)?.intentionRef?.intentionAt
+                      ?? (tdr?.task as any)?.intentionRef?.intention_at;
+                    const formalRaw =
+                      (displayTask as any)?.formalClaimAt
+                      ?? (tdr?.task as any)?.formalClaimAt
+                      ?? (tdr?.task as any)?.formal_claim_at;
+                    const intentionLabel = getIntentionAtDisplay({ intentionAt: intentionRaw });
+                    const formalLabel = getFormalClaimAtDisplay({ formalClaimAt: formalRaw });
+                    const gap = getNoticeGapDays(intentionRaw, formalRaw);
+                    return (
+                      <>
+                        {intentionLabel && (
+                          <>
+                            <dt className="text-muted-foreground">Intention lodged:</dt>
+                            <dd className="text-foreground">{intentionLabel}</dd>
+                          </>
+                        )}
+                        {formalLabel && (
+                          <>
+                            <dt className="text-muted-foreground">Formal claim submitted:</dt>
+                            <dd className="text-foreground">
+                              {formalLabel}
+                              {gap !== null && (
+                                <span className="ml-2 text-muted-foreground">
+                                  ({gap} day{gap === 1 ? "" : "s"} after intention)
+                                </span>
+                              )}
+                            </dd>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <dt className="text-muted-foreground">From:</dt>
                   <dd>
                     {displayTask.creator?.name ? (
@@ -1645,6 +1877,49 @@ export default function TaskDetails() {
                       <p className="text-sm font-normal text-foreground">Task Locked</p>
                       <p className="text-xs text-muted-foreground mt-1">This task has been approved and is now closed. No further responses or edits are allowed.</p>
                     </div>
+                    {/* Werner spec — shareable URL certificate (replaces PDF).
+                        Shown once the doc has a certificate_token. Anyone with
+                        the link can view the read-only certificate page.
+                        UI: one primary "Open" button (opens in new tab), no
+                        raw URL on screen — keep the locked card clean. */}
+                    {(() => {
+                      const certToken =
+                        (tdr?.task as any)?.certificateToken
+                        ?? (tdr?.task as any)?.certificate_token
+                        ?? (displayTask as any)?.certificateToken
+                        ?? (displayTask as any)?.certificate_token;
+                      if (!certToken) return null;
+                      const typeLower = (displayTask.type || "").toLowerCase();
+                      const apiType = typeLower === "dc" ? "claim" : typeLower;
+                      const certUrl = `${window.location.origin}/certificates/${apiType}/${certToken}`;
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <a
+                            href={certUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs text-foreground hover:bg-slate-50"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Open Certificate
+                          </a>
+                          <button
+                            type="button"
+                            title="Copy certificate link"
+                            aria-label="Copy certificate link"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(certUrl).then(
+                                () => toast.success("Certificate link copied"),
+                                () => toast.error("Could not copy link"),
+                              );
+                            }}
+                            className="inline-flex items-center justify-center rounded-md border border-border bg-white p-1.5 hover:bg-slate-50"
+                          >
+                            <CopyIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </Card>
               )}
@@ -1682,10 +1957,7 @@ export default function TaskDetails() {
                   the reply form so the page reads chronologically (doc →
                   reply 1 → reply 2 → … → input form at the bottom).
                   Each reply is its own gray-header / white-body card. */}
-              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.some((resp: any) =>
-                String(resp.senderId) === String(user?.id) ||
-                String(displayTask.creator.id) === String(user?.id)
-              ) && (
+              {displayTask.type !== "VO" && displayTask.responses && displayTask.responses.length > 0 && (
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center justify-between px-1">
                       <h2 className="text-sm font-normal text-foreground">
@@ -1697,10 +1969,6 @@ export default function TaskDetails() {
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       {displayTask.responses
-                        .filter((resp: any) =>
-                          String(resp.senderId) === String(user?.id) ||
-                          String(displayTask.creator.id) === String(user?.id)
-                        )
                         .slice().reverse().map((resp: any) => (
                           <Card
                             key={resp.id}
@@ -1735,17 +2003,51 @@ export default function TaskDetails() {
                               {resp.structuredData && Object.keys(resp.structuredData).some(k => resp.structuredData[k]) && (
                                 <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
                                   {Object.entries(resp.structuredData).map(([key, value]) => {
-                                    if (!value) return null;
-                                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                    if (value === null || value === undefined || value === "" || value === false || value === 0) return null;
+
+                                    // Strip task-type prefix (si/vo/rfi/dc/cpi) and humanise camelCase.
+                                    const label = key
+                                      .replace(/^(si|vo|rfi|dc|cpi)(?=[A-Z])/, "")
+                                      .replace(/([A-Z])/g, " $1")
+                                      .trim()
+                                      .replace(/^./, c => c.toUpperCase());
+
+                                    // Booleans render as a flag chip — no ": true" noise. Amber tone
+                                    // for impact flags so they stand out for the PM/QS reviewer.
+                                    if (typeof value === "boolean") {
+                                      const isImpact = /impact|acknowledged|leadsto/i.test(key);
+                                      const tone = isImpact
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-muted text-muted-foreground border-border";
+                                      return (
+                                        <span key={key} className={`text-[10px] px-2 py-0.5 rounded-md border ${tone}`}>
+                                          {label}
+                                        </span>
+                                      );
+                                    }
+
+                                    // Arrays / objects — show a friendly count or amount.
+                                    let display: string;
+                                    if (Array.isArray(value)) {
+                                      display = `${value.length} item${value.length === 1 ? "" : "s"}`;
+                                    } else if (typeof value === "object") {
+                                      display = (value as any).amount !== undefined ? String((value as any).amount) : "—";
+                                    } else if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+                                      // ISO date → friendly local date.
+                                      const d = new Date(value);
+                                      display = isNaN(d.getTime()) ? value : d.toLocaleDateString();
+                                    } else if (typeof value === "string") {
+                                      // Title-case enum-ish values (e.g. "approved" → "Approved").
+                                      display = value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                                    } else {
+                                      display = String(value);
+                                    }
+
                                     return (
                                       <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
-                                        {label}: {
-                                          typeof value === 'object' && value !== null
-                                            ? (Array.isArray(value) ? `${value.length} items` : ((value as any).amount !== undefined ? (value as any).amount : '...'))
-                                            : String(value)
-                                        }
+                                        {label}: {display}
                                       </span>
-                                    )
+                                    );
                                   })}
                                 </div>
                               )}
@@ -2417,6 +2719,12 @@ export default function TaskDetails() {
                         entityId={entityId}
                         riskLevel={(tdr?.task as any)?.riskLevel ?? (tdr?.task as any)?.risk_level ?? null}
                         isSigned={!!((tdr?.task as any)?.signedAt ?? (tdr?.task as any)?.signed_at)}
+                        // Werner spec — SI doesn't lock on signed_at; it
+                        // locks at Verified. Escalation (e.g. SI → VO if
+                        // cost/time impact surfaces mid-flow) must stay
+                        // available until then. For VO/Claim, isTaskLocked
+                        // matches signed_at so the behaviour is unchanged.
+                        isLocked={isTaskLocked}
                         // Werner rev H — after any Werner action (escalate,
                         // sign & issue, risk-set) refetch the task, audit
                         // log, and invalidate every dependent query so
@@ -2429,6 +2737,11 @@ export default function TaskDetails() {
                           if (projectId) {
                             queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
                           }
+                          // A signed VO mutates project.contract_value and
+                          // project.contract_end_date. Invalidate the projects
+                          // query so the project detail page reflects the new
+                          // values without a manual reload.
+                          queryClient.invalidateQueries({ queryKey: ["projects"] });
                           // References sub-panel reads /entity-references/
                           // via its own useFetch; invalidate so it refreshes.
                           if (entityId && taskType) {
@@ -2547,12 +2860,43 @@ export default function TaskDetails() {
                   this component for the actual render. */}
 
               {/* Action Requests — Werner spec rev H: hidden on the new
-                  task types (RFI/SI/VO/GI/IC/Claim) since Werner's spec
+                  task types (SI/VO/GI/IC/Claim) since Werner's spec
                   doesn't reference this feature. The formal prof-to-prof
                   asking pattern is now GI; informal team asks belong in
-                  Channels (Communications page). Kept available for
-                  legacy CPI tasks until Werner confirms removal. */}
-              {!["RFI", "SI", "VO", "GI", "IC", "DC", "CLAIM"].includes(displayTask.type) &&
+                  Channels (Communications page). Kept available for:
+                    • Legacy CPI tasks
+                    • RFI in "Sent for Review" — used to fire the
+                      "Further Info Required" transition. The existing
+                      onSuccess hook on the dialog already updates the
+                      RFI status when the user submits a recipient +
+                      message + due date. */}
+              {(() => {
+                // Werner spec — Action Requests card visibility:
+                //   - Always shown on legacy CPI / non-Werner types (legacy behaviour).
+                //   - Hidden on SI / VO / GI / IC / DC / Claim (Werner spec
+                //     doesn't reference this feature for those).
+                //   - On RFI: shown if (a) there are existing requests to
+                //     display (so architects can see + respond), OR (b)
+                //     the current user is the contractor in Sent for
+                //     Review status (so they have an entry point to
+                //     create the first one). Hidden otherwise — no empty
+                //     "Action Requests" card with nothing in it.
+                const t = displayTask.type;
+                const requests = displayTask.actionRequests || [];
+                const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                const currentStatus = (displayTask.timeline?.current || displayTask.status || "").toLowerCase().trim();
+
+                const isLegacyType = !["RFI", "SI", "VO", "GI", "IC", "DC", "CLAIM"].includes(t);
+                if (isLegacyType) return true;
+
+                if (t === "RFI") {
+                  if (requests.length > 0) return true;
+                  if (isCreator && currentStatus === "sent for review") return true;
+                  return false;
+                }
+
+                return false;
+              })() &&
               <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   Action Requests
@@ -2560,59 +2904,49 @@ export default function TaskDetails() {
                 <div className="space-y-3">
                   {displayTask.actionRequests &&
                     displayTask.actionRequests.map((request: any) => (
-                      <div
+                      <RequestInfoResponseRow
                         key={request.id}
-                        className="flex items-start gap-4 p-3 bg-white border rounded-lg">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                            {request.senderName
-                              ?.split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-xs">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs  text-black capitalize">
-                              {request.senderName}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs  text-black capitalize">
-                              {request.recipient}
-                            </span>
-                          </div>
-                          {/* <p className="text-xs text-muted-foreground mb-1">
-                            {request.role}
-                          </p> */}
-                          <p className="text-xs text-black">{request.task}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Due {new Date(request.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge className="bg-amber-50 text-amber-600 py-1.5 px-3 hover:bg-orange-50 border-amber-200 text-xs">
-                          Pending
-                        </Badge>
-                      </div>
+                        request={request}
+                        currentUserId={user?.id}
+                        onChanged={async () => {
+                          await refetchTask();
+                          await refetchRequestInfo();
+                          await refetchAuditLogs();
+                        }}
+                      />
                     ))}
 
-                  <RequestInfoDialog
-                    wFull={true}
-                    taskType={displayTask.type}
-                    taskId={taskId || ''}
-                    assignedTo={currentTask?.assignedTo || []}
-                    onSuccess={async () => {
-                      // RFI: requesting info → Further Info Required
-                      if (displayTask.type === "RFI") {
-                        const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-                        if (currentStatusNorm === 'sentforreview') {
-                          await updateTask({ status: "Further Info Required", statusCause: "Additional information requested" });
-                        }
-                      }
-                      refetchTask(); refetchRequestInfo(); refetchAuditLogs();
-                    }}
-                  />
+                  {/* "+ Request Info" button — visibility rules:
+                        • RFI: only the original raiser (the contractor)
+                          can create new info requests. The architect's
+                          role is to RESPOND to existing rows, not to
+                          create more questions. Hide for everyone else.
+                        • CPI (legacy): keep open to all (no Werner spec
+                          for this type — pre-existing behaviour). */}
+                  {(() => {
+                    if (displayTask.type === "RFI") {
+                      const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                      if (!isCreator) return null;
+                    }
+                    return (
+                      <RequestInfoDialog
+                        wFull={true}
+                        taskType={displayTask.type}
+                        taskId={taskId || ''}
+                        assignedTo={currentTask?.assignedTo || []}
+                        onSuccess={async () => {
+                          // RFI: requesting info → Further Info Required
+                          if (displayTask.type === "RFI") {
+                            const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                            if (currentStatusNorm === 'sentforreview') {
+                              await updateTask({ status: "Further Info Required", statusCause: "Additional information requested" });
+                            }
+                          }
+                          refetchTask(); refetchRequestInfo(); refetchAuditLogs();
+                        }}
+                      />
+                    );
+                  })()}
                 </div>
               </Card>}
             </div>
@@ -2707,6 +3041,19 @@ export default function TaskDetails() {
                         );
                       })}
                     </ol>
+                    {/* Werner spec — when a task ends outside the normal
+                        stage flow (SI auto-closed by VO escalation, RFI
+                        cancelled, etc.), surface a small subtitle so the
+                        timeline doesn't pretend it just finished the
+                        verified path. */}
+                    {isTerminalBeyondStages && (
+                      <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>
+                          {displayTask.timeline?.current || "Closed"} — this task ended outside the normal stage flow.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Card>
 
@@ -3204,5 +3551,34 @@ export default function TaskDetails() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+  );
+}
+
+// ── Origin meta row ─────────────────────────────────────────────────────────
+//
+// Renders an extra <dt>/<dd> pair inside the doc meta grid when this doc
+// was auto-attached to a parent via escalation. Same data source as the
+// TaskOriginBanner above the card; React Query caches the response so
+// there's only one network call total.
+
+type RefRow = {
+  display: string;
+  target_type: string;
+  target_id: number;
+  auto: boolean;
+};
+
+function OriginMetaRow({ entityType, entityId }: { entityType: string; entityId: number | string }) {
+  const url = entityType && entityId
+    ? `tasks/entity-references/?entity_type=${entityType.toLowerCase()}&entity_id=${entityId}`
+    : "";
+  const { data } = useFetch<{ outgoing: RefRow[] }>(url);
+  const origin = (data?.outgoing || []).find((r) => r.auto);
+  if (!origin) return null;
+  return (
+    <>
+      <dt className="text-muted-foreground">From source:</dt>
+      <dd className="text-foreground">{origin.display}</dd>
+    </>
   );
 }

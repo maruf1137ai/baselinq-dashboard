@@ -35,7 +35,6 @@ const initialValues = {
   title: "",
   discipline: "",
   instruction: "",
-  effectiveDate: "",
   direction: "prof_to_prof" as (typeof GI_DIRECTION_OPTIONS)[number]["value"],
 };
 
@@ -98,7 +97,7 @@ export default function GIForm({ setOpen, initialStatus }: any) {
           description: formData.instruction,
           discipline: formData.discipline || "Other",
           direction: formData.direction,
-          date_required: formData.effectiveDate || null,
+          date_required: meta.dateRequired || null,
           taskStatus: initialStatus || "Draft",
         },
       });
@@ -219,16 +218,6 @@ export default function GIForm({ setOpen, initialStatus }: any) {
             placeholder="Write general instruction"
             value={formData.instruction}
             onChange={(e) => handleChange("instruction", e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>Date Required</Label>
-          <Input
-            type="date"
-            className="mt-1"
-            value={formData.effectiveDate}
-            onChange={(e) => handleChange("effectiveDate", e.target.value)}
           />
         </div>
 

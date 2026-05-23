@@ -88,7 +88,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                       <span className="text-xs font-normal text-primary">
                         {displayId || "Private"}
                       </span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${['Done', 'Approved', 'Completed', 'Closed', 'Verified', 'Acknowledged', 'EOT Awarded'].includes(status) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${['Done', 'Approved', 'Completed', 'Closed', 'Verified', 'EOT Awarded', 'Answered', 'Rejected'].includes(status) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
                         }`}>
                         {status}
                       </span>

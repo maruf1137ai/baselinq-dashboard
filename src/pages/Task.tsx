@@ -565,10 +565,19 @@ const applyFilters = (taskList: any[], filters: TaskFilters, currentUserName: st
       if (!isDateInRange(task.due_date, filters.dateRange)) return false;
     }
 
-    // My Items filter
+    // My Items filter — Werner: includes anyone involved with the task
+    // (assignee, creator, CC). A PM CC'd on an SI still considers it
+    // "their item" since they're an informed party who may need to act.
     if (filters.myItems && currentUserName) {
+      const me = currentUserName.toLowerCase();
       const assigneeNames = (task.assignedTo || []).map((a: any) => (a.name || '').toLowerCase());
-      if (!assigneeNames.includes(currentUserName.toLowerCase())) return false;
+      const ccNames = (task.ccUsers || []).map((a: any) => (a.name || '').toLowerCase());
+      const creatorName = (task.assignedBy?.name || '').toLowerCase();
+      const involved =
+        assigneeNames.includes(me) ||
+        ccNames.includes(me) ||
+        creatorName === me;
+      if (!involved) return false;
     }
 
     return true;
@@ -705,6 +714,9 @@ export default function Task() {
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,
           assignedBy: item.assignedBy,
+          // Werner — CC users (response_by) need to flow through to the
+          // board so the "My Items" filter can match informed parties.
+          ccUsers: item.responseBy || item.response_by || item.cc_users || [],
           attachments: item.task?.attachments || [],
           responses: item.responses || [],
           chat: [],

@@ -17,7 +17,8 @@
  *   POST /api/tasks/intentions-to-claim/<id>/set-risk-level/
  */
 import { useState } from "react";
-import { ChevronDown, Plus, ShieldCheck } from "lucide-react";
+import { ChevronDown, Plus, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -45,10 +46,22 @@ type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPA
 // backend's role-code sets in views_werner.py / views_signing.py so the
 // frontend hides what the backend would reject anyway.
 const CONTRACTOR_ROLES = new Set(["CONTRACTS_MGR", "CM", "FOREMAN", "SS", "CONTRACTOR"]);
+
+// "Professional" — broad set used for ESCALATION visibility (RFI→SI).
+// Matches the backend's PROFESSIONAL_CODES in views_werner.py.
 const PROFESSIONAL_ROLES = new Set([
   "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "CIVIL_ENG",
   "QS", "CQS", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA",
 ]);
+
+// Narrower set for SIGNING an SI — only the design professionals.
+// Matches the backend's SIGNING_ROLES["si"] in views_signing.py. The
+// previous code reused PROFESSIONAL_ROLES, which showed the Sign & Issue
+// button to QS/PM/CivilEng users who'd then get 403 on click.
+const SI_SIGN_ROLES = new Set([
+  "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "PRINCIPAL_AGENT", "PA",
+]);
+
 const PM_ROLES = new Set(["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
 
 interface Props {
@@ -62,6 +75,19 @@ interface Props {
   riskLevel?: "low" | "medium" | "high" | null;
   /** Whether the doc has already been signed (hide Sign & Issue if so). */
   isSigned?: boolean;
+  /**
+   * Whether the doc is locked / terminal (workflow over).
+   *
+   * Werner spec — different lock points per type:
+   *  • SI    locks at status=Verified (not at signed_at — workflow
+   *          continues through Acknowledged/Actioned after Issued).
+   *  • VO/Claim lock at signed_at (terminal on sign).
+   *
+   * We hide escalation when locked, NOT when signed, so SI → VO can
+   * still happen between Issued and Verified if cost/time impact
+   * surfaces in the contractor's reply.
+   */
+  isLocked?: boolean;
   /** Refetch the task after a state change. */
   onChanged: () => void | Promise<void>;
 }
@@ -74,11 +100,19 @@ const ESCALATION_TARGETS: Partial<Record<TaskType, { type: string; label: string
 
 const SIGNABLE_TYPES = new Set<string>(["SI", "VO", "DC", "CLAIM"]);
 
+// Werner spec — high-stakes signs (contract amendment, claim
+// determination) MUST require a PIN. The click-confirm fallback is
+// allowed only for SI (lower stakes — contractual but no money). For
+// these types, if the user hasn't set a PIN, we block signing and link
+// them to the Security settings page.
+const HIGH_STAKES_SIGN_TYPES = new Set<string>(["VO", "DC", "CLAIM"]);
+
 export function WernerTaskActions({
   taskType,
   entityId,
   riskLevel,
   isSigned,
+  isLocked,
   onChanged,
 }: Props) {
   const { mutateAsync: postRequest } = usePost();
@@ -108,11 +142,21 @@ export function WernerTaskActions({
     taskType === "SI"  ? isPM :
     taskType === "IC"  ? isContractor :
     false;
-  const escalation = canEscalateFromHere ? rawEscalation : undefined;
+  // Werner spec — escalation stays available while the doc is "live",
+  // i.e. NOT in its terminal locked state. For SI that's anything before
+  // Verified (so PM can still escalate to VO mid-flow if the contractor
+  // flags cost/time impact). For VO/Claim, isLocked = signed_at, so the
+  // behaviour matches the old `!isSigned` rule there. Backend rejects
+  // out-of-state attempts too as a safety net.
+  const escalation = canEscalateFromHere && !isLocked ? rawEscalation : undefined;
 
-  // Sign & Issue per Werner spec: SI=Architect/Engineer, VO/Claim=PM.
+  // Sign & Issue per Werner spec: SI=Architect/Engineer (narrow set —
+  // see SI_SIGN_ROLES above), VO/Claim=PM. Uses SI_SIGN_ROLES instead
+  // of the broader PROFESSIONAL_ROLES so users like QS / CivilEng / PM
+  // don't see a button they'll get 403 on.
+  const canSignSI = SI_SIGN_ROLES.has(userRoleCode);
   const canSignThisType =
-    taskType === "SI"    ? isProfessional :
+    taskType === "SI"    ? canSignSI :
     taskType === "VO"    ? isPM :
     taskType === "DC"    ? isPM :
     taskType === "CLAIM" ? isPM :
@@ -144,21 +188,26 @@ export function WernerTaskActions({
   };
 
   // ── Sign & Issue handlers ───────────────────────────────────────────
-  // Werner rev H p.19-20: SI requires a pass key (PIN); VO and Claim use
-  // click-confirm. We only fall back to click-confirm on SI when the
-  // user hasn't set up a PIN yet — better UX than blocking the workflow.
+  // Werner spec — every signable doc type (SI / VO / DC / Claim) gates
+  // on the same rule: if the user has a 4-digit signing PIN configured,
+  // require it; otherwise fall back to a click-confirm checkbox. VO and
+  // Claim are the highest-stakes docs (contract amendments, claim
+  // determinations) — they MUST be capable of using the PIN gate just
+  // like SI.
+  //
+  // Uses the dedicated GET endpoint rather than a verify-with-empty-PIN
+  // trick — cleaner, no false-positive side effects.
   const openSignModal = async () => {
-    if (taskType === "SI") {
-      try {
-        const res = await postRequest({
-          url: "tasks/signing-pin/verify/",
-          data: { pin: "" },
-        });
-        setSignMethod(res?.method === "pin" ? "pin" : "click-confirm");
-      } catch {
-        setSignMethod("click-confirm");
-      }
-    } else {
+    try {
+      const res = await postRequest({
+        url: "tasks/signing-pin/verify/",
+        data: { pin: "" },
+      });
+      // verify with empty PIN returns {valid:true, method:"click-confirm"}
+      // when no PIN is set; {valid:false, method:"pin"} when one is. The
+      // method field is the source of truth.
+      setSignMethod(res?.method === "pin" ? "pin" : "click-confirm");
+    } catch {
       setSignMethod("click-confirm");
     }
     setPin("");
@@ -294,7 +343,28 @@ export function WernerTaskActions({
             </DialogDescription>
           </DialogHeader>
 
-          {signMethod === "pin" ? (
+          {/* Werner spec — block high-stakes signs without a PIN. */}
+          {signMethod === "click-confirm" && HIGH_STAKES_SIGN_TYPES.has(taskType) ? (
+            <div className="py-2">
+              <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
+                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="space-y-2 text-amber-900">
+                  <p className="font-normal">A signing PIN is required to sign this document.</p>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    {taskType === "VO" ? "Variation Orders" : "Claims"} are binding contractual
+                    instructions and must be signed with a 4-digit PIN. Set one up to continue.
+                  </p>
+                  <Link
+                    to="/settings/security"
+                    onClick={() => setSignOpen(false)}
+                    className="inline-block text-xs font-normal text-amber-900 underline hover:text-amber-700 mt-1"
+                  >
+                    Set up signing PIN →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : signMethod === "pin" ? (
             <div className="py-2">
               <label className="text-sm text-foreground block mb-2">
                 Enter your 4-digit signing PIN:
@@ -310,7 +380,7 @@ export function WernerTaskActions({
                 autoFocus
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Set or change your PIN in Settings → Profile.
+                Set or change your PIN in Settings → Security.
               </p>
             </div>
           ) : (
@@ -327,7 +397,7 @@ export function WernerTaskActions({
                 </span>
               </label>
               <p className="text-xs text-muted-foreground mt-3 italic">
-                Set a 4-digit PIN in Settings → Profile to require it on every signing.
+                Set a 4-digit PIN in Settings → Security to require it on every signing.
               </p>
             </div>
           )}
@@ -337,8 +407,13 @@ export function WernerTaskActions({
               Cancel
             </Button>
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={signing}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:bg-green-600/40 disabled:cursor-not-allowed"
+              disabled={
+                signing
+                || (signMethod === "click-confirm" && HIGH_STAKES_SIGN_TYPES.has(taskType))
+                || (signMethod === "pin" && !/^\d{4}$/.test(pin))
+                || (signMethod === "click-confirm" && !confirmed)
+              }
               onClick={handleSign}
             >
               {signing ? "Signing…" : "Sign & Issue"}

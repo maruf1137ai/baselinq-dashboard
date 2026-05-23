@@ -13,6 +13,7 @@ import RoleRoute from "./RoleRoute";
 import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
+import CertificatePage from "./pages/CertificatePage";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
 import "./App.css";
@@ -157,6 +158,10 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          {/* Werner spec — public certificate page. No auth: possession of
+              the UUID4 token is the access grant (same model as Google Docs
+              sharing links). Backend returns 404 for missing/revoked tokens. */}
+          <Route path="/certificates/:type/:token" element={<CertificatePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />

@@ -10,7 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import useFetch from "@/hooks/useFetch";
 
 interface VOApprovalModalProps {
   open: boolean;
@@ -29,7 +32,13 @@ interface VOApprovalModalProps {
     currency?: string;
     timeExtensionDays?: number;
   };
-  onConfirm: () => Promise<void>;
+  /** Callback fired when the user submits.
+   *  Args:
+   *    auth — `{ pin }` for "approve" mode (PIN is mandatory for VO sign
+   *           per Werner spec). `null` for "recommend" mode. */
+  onConfirm: (
+    auth: { pin: string } | null,
+  ) => Promise<void>;
 }
 
 const fmt = (amount: number, currency = "ZAR") =>
@@ -43,20 +52,48 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
   onConfirm,
 }) => {
   const [declarationChecked, setDeclarationChecked] = useState(false);
+  const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Werner spec — final VO sign goes through the same PIN gate as Sign
+  // & Issue (the highest-stakes action — contract amendment). We fetch
+  // the user's PIN status to decide between PIN input and click-confirm.
+  // Skip the fetch entirely for "recommend" mode — it doesn't sign yet.
+  const { data: pinStatus } = useFetch<{ has_pin: boolean }>(
+    open && mode === "approve" ? "tasks/signing-pin/" : "",
+    { enabled: open && mode === "approve" },
+  );
+  const signMethod: "pin" | "click-confirm" = pinStatus?.has_pin ? "pin" : "click-confirm";
 
   useEffect(() => {
     if (open) {
       setDeclarationChecked(false);
+      setPin("");
       setIsSubmitting(false);
     }
   }, [open]);
 
+  // Werner spec — VO is high-stakes (contract amendment). When no PIN
+  // is configured we BLOCK the final Approve & Sign step entirely and
+  // require the user to go set up a PIN first. The click-confirm
+  // fallback used by SI doesn't apply here.
+  const needsPinSetup = mode === "approve" && signMethod === "click-confirm";
+
+  // Disabled rule: declaration must always be ticked; for "approve" mode
+  // we ALSO need a valid PIN (or block entirely if no PIN is set).
+  const authReady =
+    mode === "recommend" ||
+    (signMethod === "pin" && /^\d{4}$/.test(pin));
+  const canSubmit = declarationChecked && authReady && !needsPinSetup && !isSubmitting;
+
   const handleConfirm = async () => {
-    if (!declarationChecked || isSubmitting) return;
+    if (!canSubmit) return;
     setIsSubmitting(true);
     try {
-      await onConfirm();
+      // For "approve" mode, only the PIN path can ever reach here —
+      // click-confirm is blocked at the UI level (needsPinSetup banner).
+      const auth: { pin: string } | null = mode === "approve" ? { pin } : null;
+      await onConfirm(auth);
     } finally {
       setIsSubmitting(false);
     }
@@ -154,6 +191,52 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             </span>
           </div>
 
+          {/* Auth step — only on "approve" mode (final sign). For
+              "recommend" mode the declaration alone is sufficient. */}
+          {mode === "approve" && signMethod === "pin" && (
+            <div className="pt-2 space-y-2">
+              <label className="text-xs text-muted-foreground block">
+                Enter your 4-digit signing PIN
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="••••"
+                className="w-full font-mono tracking-[0.6em] text-center text-lg border border-border rounded-md py-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Set or change your PIN in Settings → Security.
+              </p>
+            </div>
+          )}
+          {/* No-PIN blocker for VO Approve & Sign — high-stakes per Werner. */}
+          {needsPinSetup && (
+            <div className="pt-2">
+              <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
+                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="space-y-2 text-amber-900">
+                  <p className="font-normal">A signing PIN is required to approve this Variation Order.</p>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Variation Orders are binding contractual instructions that amend the
+                    contract value and timeline. A 4-digit PIN is required for every
+                    Approve &amp; Sign action.
+                  </p>
+                  <Link
+                    to="/settings/security"
+                    onClick={() => onOpenChange(false)}
+                    className="inline-block text-xs font-normal text-amber-900 underline hover:text-amber-700 mt-1"
+                  >
+                    Set up signing PIN →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Declaration */}
           <div className="flex items-start gap-3 pt-6">
             <Checkbox
@@ -180,8 +263,8 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             Cancel
           </Button>
           <Button
-            className="font-normal bg-primary text-white hover:bg-primary/90 px-6"
-            disabled={!declarationChecked || isSubmitting}
+            className="font-normal bg-primary text-white hover:bg-primary/90 px-6 disabled:bg-primary/40 disabled:cursor-not-allowed"
+            disabled={!canSubmit}
             onClick={handleConfirm}
           >
             {isSubmitting

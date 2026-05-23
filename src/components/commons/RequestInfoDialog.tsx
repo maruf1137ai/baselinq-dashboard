@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import useFetch from '@/hooks/useFetch';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { postData, patchData } from '@/lib/Api';
 import { toast } from 'sonner';
 
@@ -70,6 +71,30 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
 
   const { data: usersData } = useFetch<any>(`projects/${SelectedProjectID}/team-members/`);
   const availableUsers = usersData?.teamMembers || [];
+  const { data: currentUser } = useCurrentUser();
+
+  // Werner spec — on RFI, pre-fill all current assignees (the
+  // professional team) as recipients. Submitting still produces ONE
+  // RequestTaskInfo row with the full list; any recipient can respond.
+  // Contractor can edit / remove / add anyone.
+  useEffect(() => {
+    if (!open) return;
+    if (taskType !== "RFI") return;
+    if (selectedRecipients.length > 0) return;
+    if (assignedTo.length === 0 || availableUsers.length === 0) return;
+
+    const selfId = String((currentUser as any)?.id ?? "");
+    const assigneeIds = assignedTo
+      .map((a) => String(a.userId))
+      .filter((id) => id && id !== selfId);
+    if (assigneeIds.length === 0) return;
+
+    const matches = availableUsers.filter((m: any) =>
+      assigneeIds.includes(String(m.user?.id ?? m.userId ?? m._id)),
+    );
+    if (matches.length > 0) setSelectedRecipients(matches);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, taskType, availableUsers.length, assignedTo.length, (currentUser as any)?.id]);
 
   const toggleRecipient = (member: any) => {
     setSelectedRecipients((prev: any[]) => {
@@ -95,22 +120,27 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
     setIsSubmitting(true);
 
     try {
-      // Send request for each selected recipient
-      const promises = selectedRecipients.map((recipient) =>
-        postData({
-          url: 'tasks/request-task-info/',
-          data: {
-            taskType,
-            taskId: String(taskId),
-            recipientId: recipient.user?.id || recipient.id,
-            requestDetails: message,
-            optionalNote: note || '',
-            dueDate: date ? format(date, 'yyyy-MM-dd') : null,
-          },
-        })
+      // Werner spec — one request per submit, even when multiple
+      // recipients are picked. First user in the list is the primary
+      // recipient; the rest are additional (CC). Any of them can
+      // respond; whoever does first resolves it for all.
+      const recipientIds = selectedRecipients.map(
+        (r) => String(r.user?.id ?? r.id)
       );
+      const [primaryId, ...additionalIds] = recipientIds;
 
-      await Promise.all(promises);
+      await postData({
+        url: 'tasks/request-task-info/',
+        data: {
+          taskType,
+          taskId: String(taskId),
+          recipientId: primaryId,
+          additionalRecipientIds: additionalIds,
+          requestDetails: message,
+          optionalNote: note || '',
+          dueDate: date ? format(date, 'yyyy-MM-dd') : null,
+        },
+      });
 
       // Assign recipients who are not already assigned to the task
       const newUserIds = selectedRecipients

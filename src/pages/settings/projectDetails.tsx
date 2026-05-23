@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatDate } from "@/lib/utils";
+import { getContractValueDisplay, getContractEndDateDisplay } from "@/lib/projectContract";
 import { useProjects, useProject, useUpdateProject } from "@/hooks/useProjects";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import React, { useState, useEffect } from "react";
@@ -544,6 +545,24 @@ const ProjectDetails = () => {
                 onChange={(e) => handleNumericInput("principal_agent_mandate", e.target.value)}
                 className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
                 placeholder="e.g. 50,000"
+              />
+            </Field>
+            <Field label="Contract Value (live)">
+              <Input
+                type="text"
+                readOnly
+                value={getContractValueDisplay(selectedProject)}
+                className={cn(INPUT_CLS, "bg-slate-50/50 cursor-not-allowed")}
+                placeholder="Auto-updates from approved VOs"
+              />
+            </Field>
+            <Field label="Contract End Date (live)">
+              <Input
+                type="text"
+                readOnly
+                value={getContractEndDateDisplay(selectedProject)}
+                className={cn(INPUT_CLS, "bg-slate-50/50 cursor-not-allowed")}
+                placeholder="Auto-updates from approved VOs"
               />
             </Field>
             <Field label="Currency">
