@@ -1,0 +1,103 @@
+fileType: momentic/test
+id: bf7172f6-5e70-46f0-b4b2-847615c8ed85
+name: add-to-cart
+baseUrl: ""
+description: Log in, add an item to cart, and verify it appears
+schemaVersion: 1.0.24
+advanced:
+  viewport:
+    width: 1920
+    height: 1080
+  browserType: Chromium
+retries: 1
+envs:
+  - name: web
+    default: true
+disabled: false
+labels: []
+steps:
+  - id: 8d373c0f-5d89-4d42-9893-612202244900
+    type: PRESET_ACTION
+    command:
+      id: 17bb7276-e1c8-4187-8db6-03d40f14f65c
+      type: TYPE
+      target:
+        type: description
+        elementDescriptor: username input
+      value: "{{env.USERNAME}}"
+      clearContent: true
+      cache:
+        target:
+          id: 0
+          generatedSelectors:
+            - "#user-name"
+            - "[data-test='username']"
+          nodeOnlySerializedHtml: <input id="user-name" data-test="username" placeholder="Username" type="text">
+  - id: f50604cf-c0c8-4f85-b184-d5beed0d9a23
+    type: PRESET_ACTION
+    command:
+      id: 1a8caea1-85f2-448f-adda-e1952f8fbd28
+      type: TYPE
+      target:
+        type: description
+        elementDescriptor: password input
+      value: "{{env.PASSWORD}}"
+      clearContent: true
+      cache:
+        target:
+          id: 0
+          generatedSelectors:
+            - "#password"
+            - "[data-test='password']"
+          nodeOnlySerializedHtml: <input id="password" data-test="password" placeholder="Password" type="password">
+  - id: 6cc6f848-fb09-478a-8464-62fff907c4f8
+    type: PRESET_ACTION
+    command:
+      id: eaee49ff-8031-49ee-a011-7ccb56f9565a
+      type: CLICK
+      target:
+        type: description
+        elementDescriptor: login button
+      cache:
+        target:
+          id: 0
+          generatedSelectors:
+            - input[type='submit']
+            - .btn_action
+          nodeOnlySerializedHtml: <input class="btn_action" type="submit" value="LOGIN">
+  - id: 5cc805a1-e59a-4250-8a34-77bd6862303e
+    type: PRESET_ACTION
+    command:
+      id: 600d0519-cdd3-4a77-bee0-a8ae8f612041
+      type: CLICK
+      target:
+        type: description
+        elementDescriptor: add to cart for the Momentic Backpack item
+      cache:
+        target:
+          id: 0
+          generatedSelectors:
+            - .inventory_item:first-child .btn_primary
+            - .inventory_list > :first-child button
+          nodeOnlySerializedHtml: <button class="btn_primary">ADD TO CART</button>
+  - id: bdae2c33-bbe3-4a21-84f9-0ea2287c1312
+    type: PRESET_ACTION
+    command:
+      id: 75ac66b8-efa0-4a71-a0c3-7f45dbbaec1d
+      type: CLICK
+      target:
+        type: description
+        elementDescriptor: Cart icon on the top right of the page
+      cache:
+        target:
+          id: 0
+          generatedSelectors:
+            - .shopping_cart_link
+            - a[href='./cart.html']
+          nodeOnlySerializedHtml: <a class="shopping_cart_link" href="./cart.html"></a>
+  - id: cfe20f33-2b52-45e9-85fd-c3743b557271
+    type: PRESET_ACTION
+    command:
+      id: d9d9a463-2ca9-4324-8204-6b744f949f57
+      type: AI_ASSERTION
+      assertion: Verify the Momentic Backpack is listed as an item in the cart

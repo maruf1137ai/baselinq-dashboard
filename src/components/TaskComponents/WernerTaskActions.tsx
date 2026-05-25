@@ -17,7 +17,7 @@
  *   POST /api/tasks/intentions-to-claim/<id>/set-risk-level/
  */
 import { useState } from "react";
-import { ChevronDown, Plus, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ChevronDown, Lock, Plus, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -88,6 +88,14 @@ interface Props {
    * surfaces in the contractor's reply.
    */
   isLocked?: boolean;
+  /** The originator's user ID — needed for close-out visibility on GI/RFI/IC. */
+  originatorId?: number | string | null;
+  /** Current entity status — used to hide Close-out when already closed. */
+  currentStatus?: string | null;
+  /** IC-only: respondent user ID, used to gate the Resend broker button. */
+  respondentId?: number | string | null;
+  /** IC-only: whether the broker has already been notified for this IC. */
+  brokerNotified?: boolean;
   /** Refetch the task after a state change. */
   onChanged: () => void | Promise<void>;
 }
@@ -113,6 +121,10 @@ export function WernerTaskActions({
   riskLevel,
   isSigned,
   isLocked,
+  originatorId,
+  currentStatus,
+  respondentId,
+  brokerNotified,
   onChanged,
 }: Props) {
   const { mutateAsync: postRequest } = usePost();
@@ -122,6 +134,17 @@ export function WernerTaskActions({
   const [pin, setPin] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [signing, setSigning] = useState(false);
+  // Close-out modal state — mirrors the sign-and-issue pattern so the
+  // two destructive actions feel consistent (Dialog + Cancel/Confirm).
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
+  const [closing, setClosing] = useState(false);
+  // HIGH-risk confirmation modal (replaces the browser confirm dialog
+  // so it matches the app's design — same Dialog shell as Sign & Issue
+  // and Close out).
+  const [riskOpen, setRiskOpen] = useState(false);
+  const [pendingRisk, setPendingRisk] = useState<"low" | "medium" | "high" | null>(null);
+  const [settingRisk, setSettingRisk] = useState(false);
 
   // Werner rev H — derive the current user's role bucket once.
   const userRoleCode = (currentUser?.role?.code || "").toUpperCase();
@@ -167,6 +190,76 @@ export function WernerTaskActions({
   // other professionals can VIEW the pills (read-only) but only PMs
   // can change. We hide the interactive pills entirely for non-PMs.
   const showRiskPills = taskType === "IC" && isPM;
+
+  // Resend broker email — visible on IC when:
+  //   • Current risk is HIGH
+  //   • The original broker email never went out (brokerNotified === false)
+  //   • Viewer is the PM or the respondent themselves (mirrors backend gate)
+  // Use case: PM rated HIGH while the respondent had no broker email
+  // configured. Respondent later adds one in Settings → Security and
+  // hits this button so their broker actually gets the notice.
+  const isRespondent = !!(
+    respondentId && currentUser?.id && String(respondentId) === String(currentUser.id)
+  );
+  const showResendBroker =
+    taskType === "IC"
+    && (riskLevel || "").toLowerCase() === "high"
+    && brokerNotified === false
+    && (isPM || isRespondent);
+
+  // ── Close-out button visibility ─────────────────────────────────────
+  // Mirrors backend CloseOutView role gates (views_werner.py:1244):
+  //   GI               → originator only (strict, Werner rev H p.11)
+  //   SI               → originator OR professional
+  //   VO               → originator OR PM
+  //   RFI / IC / Claim → originator OR contractor
+  // Hidden when the doc is already in a terminal state.
+  const isOriginator = !!(
+    originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
+  );
+  const TERMINAL_STATUSES = new Set([
+    "Closed", "Verified", "EOT Awarded", "Escalated to Claim", "Approved",
+  ]);
+  const alreadyTerminal = !!currentStatus && TERMINAL_STATUSES.has(currentStatus);
+  const canCloseOut = (() => {
+    if (alreadyTerminal) return false;
+    if (taskType === "GI") return isOriginator;
+    if (taskType === "SI") return isOriginator || isProfessional;
+    if (taskType === "VO") return isOriginator || isPM;
+    if (taskType === "RFI" || taskType === "IC") return isOriginator || isContractor;
+    if (taskType === "DC" || taskType === "CLAIM") return isOriginator || isPM;
+    return false;
+  })();
+
+  // Map frontend taskType to backend entity_type for the close-out POST.
+  const closeOutEntityType =
+    taskType === "DC" || taskType === "CLAIM" ? "claim" : taskType.toLowerCase();
+
+  const openCloseModal = () => {
+    setCloseReason("");
+    setCloseOpen(true);
+  };
+
+  const handleCloseOut = async () => {
+    setClosing(true);
+    try {
+      await postRequest({
+        url: "tasks/close-out/",
+        data: {
+          entity_type: closeOutEntityType,
+          entity_id: Number(entityId),
+          reason: closeReason.trim(),
+        },
+      });
+      toast.success(`${taskType} closed out.`);
+      setCloseOpen(false);
+      await onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to close out.");
+    } finally {
+      setClosing(false);
+    }
+  };
 
   // ── Escalation handler ──────────────────────────────────────────────
   const handleEscalate = async (toType: string) => {
@@ -250,28 +343,55 @@ export function WernerTaskActions({
   };
 
   // ── Risk level handler ──────────────────────────────────────────────
-  const handleRisk = async (level: "low" | "medium" | "high") => {
+  // HIGH risk goes through a confirmation Dialog (same styling as the
+  // Sign & Issue / Close-out modals). Low / Medium fire immediately.
+  const handleRisk = (level: "low" | "medium" | "high") => {
     if (riskLevel === level) return;
     if (level === "high") {
-      const ok = window.confirm(
-        "Setting this Intention to Claim to HIGH will email the "
-          + "respondent's insurance broker. Continue?",
-      );
-      if (!ok) return;
+      setPendingRisk("high");
+      setRiskOpen(true);
+      return;
     }
+    void persistRisk(level);
+  };
+
+  // ── Resend broker email handler ─────────────────────────────────────
+  const [resendingBroker, setResendingBroker] = useState(false);
+  const handleResendBroker = async () => {
+    setResendingBroker(true);
+    try {
+      await postRequest({
+        url: `tasks/intentions-to-claim/${entityId}/resend-broker-email/`,
+        data: {},
+      });
+      toast.success("Broker has been emailed.");
+      await onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Could not resend broker email.");
+    } finally {
+      setResendingBroker(false);
+    }
+  };
+
+  const persistRisk = async (level: "low" | "medium" | "high") => {
+    setSettingRisk(true);
     try {
       await postRequest({
         url: `tasks/intentions-to-claim/${entityId}/set-risk-level/`,
         data: { risk_level: level },
       });
       toast.success(`Risk set to ${level.charAt(0).toUpperCase() + level.slice(1)}.`);
+      setRiskOpen(false);
+      setPendingRisk(null);
       await onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to set risk level.");
+    } finally {
+      setSettingRisk(false);
     }
   };
 
-  if (!escalation && !showSignIssue && !showRiskPills) return null;
+  if (!escalation && !showSignIssue && !showRiskPills && !canCloseOut && !showResendBroker) return null;
 
   return (
     <>
@@ -302,6 +422,20 @@ export function WernerTaskActions({
         </div>
       )}
 
+      {/* Resend broker email — visible when IC is HIGH but the broker
+          email never went out (e.g. no broker email was configured at
+          rating time). Once the broker gets emailed, the button hides. */}
+      {showResendBroker && (
+        <Button
+          variant="outline"
+          className="font-normal text-amber-700 border-amber-300 hover:bg-amber-50"
+          onClick={handleResendBroker}
+          disabled={resendingBroker}
+        >
+          {resendingBroker ? "Sending…" : "Resend broker email"}
+        </Button>
+      )}
+
       {/* + Action escalation button — solid purple per Werner page 3 */}
       {escalation && (
         <DropdownMenu>
@@ -329,6 +463,22 @@ export function WernerTaskActions({
         >
           <ShieldCheck className="mr-1 h-3.5 w-3.5" />
           Sign &amp; Issue
+        </Button>
+      )}
+
+      {/* Close-out button — gated per-task-type by canCloseOut above.
+          Werner spec: GI = originator only; SI = professional;
+          VO = PM; RFI/IC/Claim = contractor or originator.
+          Matches Sign & Issue's outline/icon style, but slate-toned
+          so it reads as "wrap up" rather than "approve". */}
+      {canCloseOut && (
+        <Button
+          variant="outline"
+          className="font-normal text-slate-700 border-slate-300 hover:bg-slate-50"
+          onClick={openCloseModal}
+        >
+          <Lock className="mr-1 h-3.5 w-3.5" />
+          Close out
         </Button>
       )}
 
@@ -417,6 +567,99 @@ export function WernerTaskActions({
               onClick={handleSign}
             >
               {signing ? "Signing…" : "Sign & Issue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* HIGH-risk confirmation — same Dialog shell as Sign & Issue
+          and Close out. Replaces the browser-native confirm dialog so
+          the warning matches the rest of the app. */}
+      <Dialog open={riskOpen} onOpenChange={(o) => { if (!settingRisk) setRiskOpen(o); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set risk to HIGH</DialogTitle>
+            <DialogDescription>
+              Rating this Intention to Claim as HIGH triggers an automated
+              email to the respondent professional's insurance broker so
+              they can advise mitigation steps early.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+              <div className="space-y-1 text-amber-900">
+                <p className="font-normal">This action sends an email.</p>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  If no broker is configured on the respondent's profile,
+                  they receive an in-app reminder to add one instead.
+                  The email fires at most once per Intention to Claim.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRiskOpen(false)}
+              disabled={settingRisk}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white disabled:bg-red-600/40 disabled:cursor-not-allowed"
+              disabled={settingRisk}
+              onClick={() => pendingRisk && persistRisk(pendingRisk)}
+            >
+              {settingRisk ? "Setting…" : "Set HIGH risk"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close-out modal — same Dialog shell as Sign & Issue so the
+          two final actions feel consistent. Optional reason for the
+          audit trail; backend stores it on the close-out audit row. */}
+      <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Close out {taskType}</DialogTitle>
+            <DialogDescription>
+              This marks the document as complete. It moves to the
+              Done column on the task board and the status is locked.
+              The action is recorded in the audit trail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <label className="text-sm text-foreground block mb-2">
+              Reason (optional)
+            </label>
+            <textarea
+              value={closeReason}
+              onChange={(e) => setCloseReason(e.target.value)}
+              className="w-full border border-border rounded-md px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="e.g. Resolved in discussion with the structural engineer."
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Adds context to the audit log — visible to everyone with
+              access to this document.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseOpen(false)} disabled={closing}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-slate-700 hover:bg-slate-800 text-white disabled:bg-slate-700/40 disabled:cursor-not-allowed"
+              disabled={closing}
+              onClick={handleCloseOut}
+            >
+              {closing ? "Closing…" : "Close out"}
             </Button>
           </DialogFooter>
         </DialogContent>

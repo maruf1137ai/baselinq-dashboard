@@ -690,6 +690,20 @@ export default function TaskDetails() {
         updateData.status = "Replied";
       }
 
+      if (displayTask.type === "IC") {
+        // Werner page 13-14 — any reply on an IC means someone in the
+        // org has engaged with the early-warning notice. Move
+        // Sent → Acknowledged so the timeline advances. The contractor
+        // still has to explicitly escalate (→ Claim) or close it out.
+        // We only set this when the current status is Sent so we don't
+        // downgrade Acknowledged → Acknowledged spuriously or stomp on
+        // Escalated to Claim / Closed.
+        const cur = (displayTask.timeline?.current || "").toLowerCase();
+        if (cur === "sent" || cur === "draft" || cur === "") {
+          updateData.status = "Acknowledged";
+        }
+      }
+
       // Sync pricing and response fields to update the underlying entity
       if (displayTask.type === "VO") {
         if (recommendedAmount) updateData.recommendedAmount = parseFloat(recommendedAmount) || 0;
@@ -2719,6 +2733,26 @@ export default function TaskDetails() {
                         entityId={entityId}
                         riskLevel={(tdr?.task as any)?.riskLevel ?? (tdr?.task as any)?.risk_level ?? null}
                         isSigned={!!((tdr?.task as any)?.signedAt ?? (tdr?.task as any)?.signed_at)}
+                        // Werner — needed to show Close-out for the originator.
+                        // displayTask.creator.id mirrors task.assigned_by which
+                        // is set to the user who created the entity.
+                        originatorId={displayTask.creator?.id ?? null}
+                        currentStatus={displayTask.timeline?.current ?? displayTask.status ?? null}
+                        // IC-only: respondent ID lets the "Resend broker
+                        // email" button show for the respondent themselves.
+                        // brokerNotified controls whether the button is
+                        // surfaced at all (false → broker never got emailed).
+                        respondentId={
+                          (tdr?.task as any)?.respondentUser?.userId
+                          ?? (tdr?.task as any)?.respondentUser
+                          ?? (tdr?.task as any)?.respondent_user
+                          ?? null
+                        }
+                        brokerNotified={
+                          (tdr?.task as any)?.brokerNotified
+                          ?? (tdr?.task as any)?.broker_notified
+                          ?? false
+                        }
                         // Werner spec — SI doesn't lock on signed_at; it
                         // locks at Verified. Escalation (e.g. SI → VO if
                         // cost/time impact surfaces mid-flow) must stay

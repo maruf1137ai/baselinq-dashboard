@@ -8,25 +8,96 @@
  *   POST /api/tasks/signing-pin/set/     → body { pin: "1234" } or { pin: "" }
  *   POST /api/tasks/signing-pin/verify/  → body { pin } (unused here)
  */
-import { useState } from "react";
-import { KeyRound, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { KeyRound, ShieldCheck, ShieldAlert, Loader2, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
+import { usePatch } from "@/hooks/usePatch";
 import { useQueryClient } from "@tanstack/react-query";
 
 const Security = () => {
   const queryClient = useQueryClient();
   const { data: pinStatus, isLoading: pinLoading } = useFetch<{ has_pin: boolean }>("tasks/signing-pin/");
   const { mutateAsync: postRequest, isPending: saving } = usePost();
+  const { mutateAsync: patchRequest, isPending: savingBroker } = usePatch();
 
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
 
   const hasPin = !!pinStatus?.has_pin;
+
+  // ── Insurance broker contact ─────────────────────────────────────────
+  // Werner — professional's own indemnity broker. Read off the user
+  // profile, edited here, used when an IC against this user is rated
+  // HIGH risk.
+  const {
+    data: profile,
+    isLoading: profileLoading,
+  } = useFetch<any>("auth/profile/");
+
+  const [brokerName, setBrokerName] = useState("");
+  const [brokerEmail, setBrokerEmail] = useState("");
+  const [brokerInitialized, setBrokerInitialized] = useState(false);
+
+  useEffect(() => {
+    if (profile && !brokerInitialized) {
+      setBrokerName(profile.insurance_broker_name || "");
+      setBrokerEmail(profile.insurance_broker_email || "");
+      setBrokerInitialized(true);
+    }
+  }, [profile, brokerInitialized]);
+
+  const hasBroker = !!(profile?.insurance_broker_email || profile?.insurance_broker_name);
+  const brokerDirty =
+    brokerInitialized && (
+      brokerName !== (profile?.insurance_broker_name || "")
+      || brokerEmail !== (profile?.insurance_broker_email || "")
+    );
+  const brokerEmailValid =
+    brokerEmail.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(brokerEmail.trim());
+
+  const handleSaveBroker = async () => {
+    if (!brokerEmailValid) {
+      toast.error("Please enter a valid broker email.");
+      return;
+    }
+    try {
+      await patchRequest({
+        url: "auth/profile/update/",
+        data: {
+          insurance_broker_name: brokerName.trim(),
+          insurance_broker_email: brokerEmail.trim(),
+        },
+      });
+      toast.success("Insurance broker contact saved.");
+      queryClient.invalidateQueries({ queryKey: ["auth/profile/"] });
+      setBrokerInitialized(false); // re-sync from refetched profile
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || err?.message || "Could not save broker contact.");
+    }
+  };
+
+  const handleClearBroker = async () => {
+    try {
+      await patchRequest({
+        url: "auth/profile/update/",
+        data: {
+          insurance_broker_name: "",
+          insurance_broker_email: "",
+        },
+      });
+      setBrokerName("");
+      setBrokerEmail("");
+      toast.success("Insurance broker contact cleared.");
+      queryClient.invalidateQueries({ queryKey: ["auth/profile/"] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || err?.message || "Could not clear broker.");
+    }
+  };
 
   const handleSavePin = async () => {
     if (!/^\d{4}$/.test(pin)) {
@@ -165,6 +236,110 @@ const Security = () => {
           <p className="text-[11px] text-muted-foreground">
             Tip: pick a PIN you don't use elsewhere. It only protects this app's signing
             action — not your login. You can change or clear it at any time.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Insurance broker contact ─────────────────────────────────────
+          Werner — when an Intention to Claim is filed against this user
+          and the PM rates it HIGH risk, the broker entered here is the
+          recipient of the automated warning email. */}
+      <div className="bg-white rounded-lg border border-border overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <Briefcase className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-sm font-normal text-foreground">Insurance broker</h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                The broker who handles your professional indemnity insurance.
+                If an Intention to Claim against you is rated HIGH risk,
+                they receive an automated email so they can advise early.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0">
+            {profileLoading ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading
+              </span>
+            ) : hasBroker ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-xs text-green-700">
+                <ShieldCheck className="w-3 h-3" />
+                Contact set
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs text-amber-700">
+                <ShieldAlert className="w-3 h-3" />
+                Not set
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">
+                Broker name
+              </label>
+              <Input
+                type="text"
+                value={brokerName}
+                onChange={(e) => setBrokerName(e.target.value)}
+                placeholder="e.g. Jane Doe, Acme Insurance"
+                autoComplete="off"
+                disabled={profileLoading}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">
+                Broker email
+              </label>
+              <Input
+                type="email"
+                value={brokerEmail}
+                onChange={(e) => setBrokerEmail(e.target.value)}
+                placeholder="broker@example.com"
+                autoComplete="off"
+                disabled={profileLoading}
+                className={!brokerEmailValid ? "border-red-300 focus-visible:ring-red-200" : ""}
+              />
+              {!brokerEmailValid && (
+                <p className="text-[11px] text-red-600 mt-1">
+                  Enter a valid email address.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={handleSaveBroker}
+              disabled={savingBroker || profileLoading || !brokerDirty || !brokerEmailValid}
+              className="h-8 text-xs rounded-lg"
+            >
+              {savingBroker ? "Saving…" : hasBroker ? "Update contact" : "Save contact"}
+            </Button>
+            {hasBroker && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleClearBroker}
+                disabled={savingBroker || profileLoading}
+                className="h-8 text-xs rounded-lg"
+              >
+                Clear contact
+              </Button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            Only used to send broker warnings when an IC against you reaches
+            HIGH risk. Leave empty and you'll get an in-app reminder instead.
           </p>
         </div>
       </div>

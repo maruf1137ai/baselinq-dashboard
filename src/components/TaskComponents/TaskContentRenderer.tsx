@@ -5,6 +5,7 @@ import { TaskVO } from './TaskVO';
 import { TaskDC } from './TaskDC';
 import { TaskCPI } from './TaskCPI';
 import { TaskGI } from './TaskGI';
+import { TaskIC } from './TaskIC';
 
 interface TaskContentRendererProps {
   displayTask: any;
@@ -28,6 +29,8 @@ export const TaskContentRenderer: React.FC<TaskContentRendererProps> = ({ displa
       return <TaskCPI formFields={displayTask.formFields} />;
     case 'GI':
       return <TaskGI formFields={displayTask.formFields} />;
+    case 'IC':
+      return <TaskIC formFields={displayTask.formFields} />;
     default:
       return null;
   }
