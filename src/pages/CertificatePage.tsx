@@ -23,7 +23,16 @@ import {
   getCertificateTypeLabel,
 } from "@/lib/certificate";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+// Use the same env var the rest of the app uses (VITE_API_BASE_URL),
+// not VITE_API_URL which is never set. Without this, fetch hits the
+// frontend's own /api/* path (handled by the SPA catch-all → index.html)
+// instead of the Django backend, and the page renders "Something went
+// wrong" because `resp.json()` chokes on HTML.
+//
+// VITE_API_BASE_URL typically ends with "/api" or "/api/" — strip any
+// trailing slash so the URL we build is always exactly one slash deep.
+const API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "")
+  .replace(/\/+$/, "");
 
 export default function CertificatePage() {
   const { type, token } = useParams<{ type: string; token: string }>();
@@ -39,7 +48,7 @@ export default function CertificatePage() {
     const ac = new AbortController();
     (async () => {
       try {
-        const resp = await fetch(`${API_BASE}/api/certificates/${type}/${token}/`, {
+        const resp = await fetch(`${API_BASE}/certificates/${type}/${token}/`, {
           signal: ac.signal,
           // Bypass HTTP cache. A CDN / reverse proxy was returning 304
           // Not Modified on the certificate URL, which made fetch's
