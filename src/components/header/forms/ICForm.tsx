@@ -13,6 +13,11 @@ import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaF
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
 /**
  * Werner rev H — Intention to Claim (page 13-14).
@@ -153,12 +158,31 @@ export default function ICForm({ setOpen, initialStatus }: any) {
 
         <div>
           <Label>Deadline / Date Required</Label>
-          <Input
-            type="date"
-            className="mt-1"
-            value={dateRequired}
-            onChange={(e) => setDateRequired(e.target.value)}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal mt-1",
+                  !dateRequired && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRequired
+                  ? format(parseISO(dateRequired), "PPP")
+                  : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-white" align="start">
+              <Calendar
+                mode="single"
+                selected={dateRequired ? parseISO(dateRequired) : undefined}
+                onSelect={(d) => setDateRequired(d ? format(d, "yyyy-MM-dd") : "")}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           <p className="text-[11px] text-muted-foreground mt-1">
             Date by which the PM must assess the event. Most contracts require
             an IC to be filed within 7-14 days of the event.

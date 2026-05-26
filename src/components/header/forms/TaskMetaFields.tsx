@@ -11,11 +11,15 @@
  *   dateRequired: ISO yyyy-mm-dd string
  */
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronsUpDown, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, ChevronsUpDown, Search, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 import useFetch from "@/hooks/useFetch";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export interface TaskMetaValue {
   to: any[];
@@ -60,19 +64,23 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
     const q = search.toLowerCase();
     return (
       (m.name || "").toLowerCase().includes(q) ||
-      (m.email || "").toLowerCase().includes(q)
+      (m.email || "").toLowerCase().includes(q) ||
+      (m.role || "").toLowerCase().includes(q)
     );
   });
 
   const isSelected = (m: any) =>
     selected.some((s) => (s.userId || s.id) === (m.userId || m.id));
 
+  const nameWithRole = (m: any) =>
+    m.role ? `${m.name || m.email} — ${m.role}` : (m.name || m.email);
+
   const triggerLabel =
     selected.length === 0
       ? placeholder
       : multi
       ? `${selected.length} selected`
-      : selected[0]?.name || placeholder;
+      : nameWithRole(selected[0]) || placeholder;
 
   return (
     <div>
@@ -126,7 +134,12 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                 >
                   <Avatar name={m.name} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-normal text-foreground truncate">{m.name || m.email}</p>
+                    <p className="text-sm font-normal text-foreground truncate">
+                      {m.name || m.email}
+                      {m.role && (
+                        <span className="text-muted-foreground"> — {m.role}</span>
+                      )}
+                    </p>
                     {m.email && (
                       <p className="text-xs text-muted-foreground truncate">{m.email}</p>
                     )}
@@ -157,6 +170,9 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
               className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted text-foreground border border-border"
             >
               {u.name}
+              {u.role && (
+                <span className="text-muted-foreground">— {u.role}</span>
+              )}
               <button
                 type="button"
                 onClick={() => onRemove(u.userId || u.id)}
@@ -188,11 +204,21 @@ export function TaskMetaFields({
     { enabled: !!projectId },
   );
 
+  const { data: currentUser } = useCurrentUser();
+  const currentUserId = currentUser?.id ? String(currentUser.id) : "";
+
   const members: any[] = (teamData?.teamMembers || []).map((m: any) => ({
     userId: m.user_id || m.userId || m.user?.id,
     name: m.user?.name || m.name || m.user?.email || "",
     email: m.user?.email || m.email || "",
-    role: m.role || m.role_info?.name || "",
+    role:
+      m.roleName ||
+      m.orgRoleName ||
+      m.orgRoleInfo?.name ||
+      m.user?.role?.name ||
+      m.role ||
+      m.role_info?.name ||
+      "",
   }));
 
   const handleToSelect = (user: any) => {
@@ -232,7 +258,9 @@ export function TaskMetaFields({
       <UserPicker
         label="CC"
         selected={value.cc}
-        members={members}
+        members={members.filter(
+          (m) => !currentUserId || String(m.userId) !== currentUserId,
+        )}
         multi={true}
         onSelect={handleCcSelect}
         onRemove={handleCcRemove}
@@ -242,13 +270,37 @@ export function TaskMetaFields({
       {showDateRequired && (
         <div>
           <Label className="text-sm font-normal">Date Required</Label>
-          <Input
-            type="date"
-            className="mt-1"
-            value={value.dateRequired}
-            onChange={(e) => onChange({ ...value, dateRequired: e.target.value })}
-            min={new Date().toISOString().slice(0, 10)}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal mt-1",
+                  !value.dateRequired && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value.dateRequired
+                  ? format(parseISO(value.dateRequired), "PPP")
+                  : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-white" align="start">
+              <Calendar
+                mode="single"
+                selected={value.dateRequired ? parseISO(value.dateRequired) : undefined}
+                onSelect={(d) =>
+                  onChange({
+                    ...value,
+                    dateRequired: d ? format(d, "yyyy-MM-dd") : "",
+                  })
+                }
+                disabled={(d) => d < new Date(new Date().toDateString())}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           <p className="text-xs text-muted-foreground mt-1">
             Deadline by which a response is required.
           </p>

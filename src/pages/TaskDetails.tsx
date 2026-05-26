@@ -89,7 +89,7 @@ import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
-import { postData, patchData } from "@/lib/Api";
+import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
@@ -410,7 +410,7 @@ export default function TaskDetails() {
   // upload, document search.
   const [replyRecipients, setReplyRecipients] = useState<any[]>([]);
   const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
-  const [replyRefs, setReplyRefs] = useState<{ id: string | number; label: string }[]>([]);
+  const [replyRefs, setReplyRefs] = useState<{ id: string | number; label: string; target_type: string; target_id: number }[]>([]);
   const [recipientPopoverOpen, setRecipientPopoverOpen] = useState(false);
   const [referencePopoverOpen, setReferencePopoverOpen] = useState(false);
   const [assignUserPopoverOpen, setAssignUserPopoverOpen] = useState(false);
@@ -458,6 +458,58 @@ export default function TaskDetails() {
     { enabled: !!projectId }
   );
   const projectMembers = projectTeamData?.teamMembers || [];
+
+  // Flat shape used by the reply form's recipient picker (name/email
+  // are nested under m.user in the raw API). Keeps `projectMembers`
+  // intact for the Assign modal which already reads camelCase fields.
+  const recipientOptions = projectMembers.map((m: any) => ({
+    userId: m.userId || m.user_id || m.user?.id,
+    name: m.user?.name || m.user?.email || m.name || "",
+    email: m.user?.email || m.email || "",
+    role:
+      m.roleName ||
+      m.orgRoleName ||
+      m.orgRoleInfo?.name ||
+      m.user?.role?.name ||
+      "",
+  }));
+
+  // ── Reference picker — load all linkable docs on this project ─────────
+  // Reply.references supports any Werner entity (RFI/SI/VO/IC/Claim/GI).
+  // CPI replies aren't routed through /tasks/replies/ so they're skipped.
+  const { data: projectTasksData } = useFetch<{ tasks?: any[] }>(
+    projectId ? `projects/${projectId}/tasks/` : "",
+    { enabled: !!projectId },
+  );
+  // Map frontend doc-type → backend entity_type (the /tasks/replies/
+  // endpoint speaks "rfi" / "si" / "vo" / "ic" / "claim" / "gi").
+  const TASK_TYPE_TO_ENTITY: Record<string, string> = {
+    RFI: "rfi", SI: "si", VO: "vo", IC: "ic",
+    DC: "claim", CLAIM: "claim", GI: "gi",
+  };
+  const referenceOptions = (projectTasksData?.tasks || [])
+    .map((t: any) => {
+      const rawType = String(t.type || t.taskType || "").toUpperCase();
+      const entityType = TASK_TYPE_TO_ENTITY[rawType];
+      const tid = t.objectId ?? t.object_id ?? t.entityId ?? t.id;
+      const code = t.task_code || t.taskCode || `${rawType}-${tid}`;
+      const subject = t.subject || t.title || t.summary || "";
+      return entityType && tid
+        ? {
+            id: `${entityType}:${tid}`,
+            target_type: entityType,
+            target_id: Number(tid),
+            label: subject ? `${code} — ${subject}` : code,
+          }
+        : null;
+    })
+    .filter(Boolean)
+    // Drop the task we're currently viewing (can't reference itself).
+    .filter((r: any) =>
+      !(taskType && String(r.target_type).toLowerCase() ===
+          (TASK_TYPE_TO_ENTITY[String(taskType).toUpperCase()] || String(taskType).toLowerCase())
+        && String(r.target_id) === String(entityId)),
+    );
 
   const handleAnalyzeWithAi = async () => {
     setIsAnalyzeModalOpen(true);
@@ -737,28 +789,66 @@ export default function TaskDetails() {
 
       await updateTask(updateData);
 
-      // Werner rev H — for SI, also fire the Werner Reply endpoint with
-      // the TIME / COST flags so the backend's _notify_pm_on_si_time_cost
-      // fan-out runs (PM + QS auto-CC'd into the reply, in-app push that
-      // a VO request is incoming). update-entity doesn't trigger this
-      // path, so without the second call the VO workflow stays silent.
-      if (displayTask.type === "SI") {
+      // Werner rev H — fire the Reply endpoint for every supported doc
+      // type so the recipient / CC / attachment / reference metadata
+      // entered on the reply form actually persists. The legacy PATCH
+      // above (responses[] mutation) only updates the response timeline
+      // for backward-compat display; the Werner-spec behaviour
+      // (notifications, ball-passing, references, attachments) lives in
+      // /tasks/replies/.
+      const REPLY_ENTITY_TYPE: Record<string, string> = {
+        RFI: "rfi", SI: "si", VO: "vo", IC: "ic",
+        DC: "claim", CLAIM: "claim", GI: "gi",
+      };
+      const replyEntityType = REPLY_ENTITY_TYPE[displayTask.type];
+      const replyEntityId = entityId
+        ?? displayTask.task?._id
+        ?? (currentTask as any)?.task?._id;
+      if (replyEntityType && replyEntityId) {
         try {
-          const entityId = displayTask.task?._id || (currentTask as any)?.task?._id;
-          if (entityId) {
-            await postData("tasks/replies/", {
-              entity_type: "si",
-              entity_id: Number(entityId),
-              body: editor.getHTML(),
-              time_impact: siTimeImpact,
-              cost_impact: siCostImpact,
+          // Upload reply attachments to S3 first (sequential is fine —
+          // these are usually a small number of files per reply).
+          const attachmentKeys: { file_name: string; s3_key: string }[] = [];
+          for (const f of replyAttachments) {
+            const { upload_url, key } = await getPresignedUrl({
+              filename: f.name,
+              content_type: f.type || "application/octet-stream",
+              folder: "task-replies/pending",
             });
+            await uploadFileToPresignedUrl(
+              upload_url,
+              f,
+              f.type || "application/octet-stream",
+            );
+            attachmentKeys.push({ file_name: f.name, s3_key: key });
           }
+
+          const replyPayload: any = {
+            entity_type: replyEntityType,
+            entity_id: Number(replyEntityId),
+            body: editor.getHTML(),
+            sent_to_ids: replyRecipients.map((u: any) => u.userId || u.id).filter(Boolean),
+            cc_ids: [], // CC isn't part of this form — recipients are the only addressees
+            attachment_keys: attachmentKeys,
+            reference_targets: replyRefs.map((r) => ({
+              target_type: r.target_type,
+              target_id: r.target_id,
+            })),
+          };
+          // SI-only TIME / COST flags — harmless on other types but the
+          // serializer only declares them on Reply.time_impact / cost_impact.
+          if (displayTask.type === "SI") {
+            replyPayload.time_impact = siTimeImpact;
+            replyPayload.cost_impact = siCostImpact;
+          }
+          await postData({ url: "tasks/replies/", data: replyPayload });
         } catch (err) {
-          // Soft-fail: update-entity already wrote the reply into the
-          // task wrapper; this second call is for the Werner side-
-          // effects only. Don't block the user.
-          console.warn("Werner reply mirror failed:", err);
+          // Soft-fail: the legacy responses[] PATCH above already wrote
+          // the reply body to the task wrapper, so the timeline still
+          // shows the reply. Only the Werner side-effects (notify,
+          // attach, link) are lost. Log so the user sees feedback.
+          console.warn("Werner reply submit failed:", err);
+          toast.error("Reply saved, but notifications / attachments may not have been persisted.");
         }
       }
 
@@ -780,6 +870,10 @@ export default function TaskDetails() {
       setCpiMilestoneImpact("");
       setSiTimeImpact(false);
       setSiCostImpact(false);
+      // Reset reply meta fields (recipient / attachment / reference).
+      setReplyRecipients([]);
+      setReplyAttachments([]);
+      setReplyRefs([]);
     } catch (err) {
       console.error(err);
       toast.error("Failed to submit reply");
@@ -2570,18 +2664,32 @@ export default function TaskDetails() {
                           <CommandList>
                             <CommandEmpty>No members found</CommandEmpty>
                             <CommandGroup>
-                              {projectMembers
-                                .filter((m: any) => !replyRecipients.some(r => (r.userId || r.id) === (m.userId || m.id)))
+                              {recipientOptions
+                                .filter((m: any) => !!m.userId)
+                                .filter((m: any) => String(m.userId) !== String(user?.id))
+                                // Skip current assignees — they're already on
+                                // the auto-notify list as `task.assigned_to`,
+                                // and the post-reply reassignment will put the
+                                // parent's original author back on the task
+                                // anyway, so listing them as a Recipient is
+                                // duplicate noise.
+                                .filter((m: any) =>
+                                  !(displayTask?.assignedTo || []).some(
+                                    (a: any) => String(a.userId || a.id) === String(m.userId),
+                                  ),
+                                )
+                                .filter((m: any) => !replyRecipients.some(r => String(r.userId || r.id) === String(m.userId)))
                                 .map((m: any) => (
                                   <CommandItem
-                                    key={m.userId || m.id}
+                                    key={m.userId}
+                                    value={`${m.name} ${m.email} ${m.role}`}
                                     onSelect={() => {
                                       setReplyRecipients(r => [...r, m]);
                                       setRecipientPopoverOpen(false);
                                     }}
                                   >
-                                    {m.name}
-                                    {m.role && <span className="ml-1 text-xs text-muted-foreground">({m.role})</span>}
+                                    {m.name || m.email}
+                                    {m.role && <span className="ml-1 text-xs text-muted-foreground">— {m.role}</span>}
                                   </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -2651,19 +2759,24 @@ export default function TaskDetails() {
                       </PopoverTrigger>
                       <PopoverContent className="w-72 p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="Search project tasks / docs…" />
+                          <CommandInput placeholder="Search project tasks…" />
                           <CommandList>
-                            <CommandEmpty>No matches yet — picker will search RFIs / SIs / VOs / Documents</CommandEmpty>
-                            <CommandGroup heading="Coming next">
-                              <CommandItem
-                                disabled
-                                onSelect={() => {
-                                  toast.info("Wire up to /api/tasks/* + /api/documents/* search in next pass.");
-                                  setReferencePopoverOpen(false);
-                                }}
-                              >
-                                Hooked search lands next — backend endpoints exist.
-                              </CommandItem>
+                            <CommandEmpty>No tasks found</CommandEmpty>
+                            <CommandGroup>
+                              {referenceOptions
+                                .filter((r: any) => !replyRefs.some(x => x.id === r.id))
+                                .map((r: any) => (
+                                  <CommandItem
+                                    key={r.id}
+                                    value={r.label}
+                                    onSelect={() => {
+                                      setReplyRefs(arr => [...arr, { id: r.id, label: r.label, target_type: r.target_type, target_id: r.target_id }]);
+                                      setReferencePopoverOpen(false);
+                                    }}
+                                  >
+                                    {r.label}
+                                  </CommandItem>
+                                ))}
                             </CommandGroup>
                           </CommandList>
                         </Command>
