@@ -47,8 +47,12 @@ export default function CertificatePage() {
           // "error". Certificates are tiny JSON payloads — no benefit
           // to caching them client-side, and a stale cached cert would
           // be wrong anyway once revoked.
+          //
+          // NOTE: do NOT add a custom "Cache-Control" request header —
+          // it's not on the CORS safelist and triggers an OPTIONS
+          // preflight that can fail on edge proxies. `cache: "no-store"`
+          // is enough on its own.
           cache: "no-store",
-          headers: { "Cache-Control": "no-cache" },
         });
         if (resp.status === 404) {
           setStatus("not-found");
