@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import CreateRequestDialog from "./CreateRequestDialog";
-import { Plus } from "lucide-react";
+import { HelpCircle, Plus } from "lucide-react";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 // "+ Action" menu — order matches Werner's spec rev G: SI, VO, RFI, GI, Claim.
@@ -118,6 +120,20 @@ export default function CreateRequestButton() {
                 </div>
               </DropdownMenuItem>
             ))}
+            {/* Help link — plain-English guide explaining what each
+                task type is for and who can act on it. Keeps the
+                "which one should I pick?" question one click away. */}
+            <DropdownMenuSeparator className="my-0" />
+            <DropdownMenuItem asChild className="p-0 cursor-pointer">
+              <Link
+                to="/help/tasks"
+                onClick={() => setBtnsOpen(false)}
+                className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                Which task should I create?
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

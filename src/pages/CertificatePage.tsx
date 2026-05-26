@@ -41,6 +41,14 @@ export default function CertificatePage() {
       try {
         const resp = await fetch(`${API_BASE}/api/certificates/${type}/${token}/`, {
           signal: ac.signal,
+          // Bypass HTTP cache. A CDN / reverse proxy was returning 304
+          // Not Modified on the certificate URL, which made fetch's
+          // `resp.ok` false (304 isn't in 2xx) and the page rendered
+          // "error". Certificates are tiny JSON payloads — no benefit
+          // to caching them client-side, and a stale cached cert would
+          // be wrong anyway once revoked.
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
         });
         if (resp.status === 404) {
           setStatus("not-found");

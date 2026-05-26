@@ -14,6 +14,7 @@ import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
+import HelpTasks from "./pages/HelpTasks";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
 import "./App.css";
@@ -178,6 +179,13 @@ const App = () => (
               <ProjectProtectedRoute>
                 <TaskDetails />
               </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          {/* Werner task workflow reference — who can do what per doc type.
+              No project scope; usable from anywhere in the app. */}
+          <Route path="/help/tasks" element={
+            <ProtectedRoute>
+              <HelpTasks />
             </ProtectedRoute>
           } />
           <Route path="/compliance" element={

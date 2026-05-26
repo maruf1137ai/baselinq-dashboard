@@ -54,7 +54,9 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
 
 const settingsItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
   { title: "Settings", url: "/settings", icon: <Settings />, permission: "viewSettings" },
-  { title: "Help", url: "/help", icon: <Help />, permission: null },
+  // Help points at the task workflow reference — plain-English guide
+  // for who can create / reply / sign / close each task type.
+  { title: "Help", url: "/help/tasks", icon: <Help />, permission: null },
 ];
 
 export function DashboardSidebar() {

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Paperclip, Plus, Bell, Calendar, MessageSquare } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
 import useFetch from '@/hooks/useFetch';
 import { usePatch } from '@/hooks/usePatch';
 import { postData } from '@/lib/Api';
@@ -881,7 +882,17 @@ export default function Task() {
           </div>
         ) : (
           <div className="w-full h-[calc(100vh-120px)] bg-white flex flex-col overflow-hidden">
-            <h1 className="text-2xl font-normal tracking-tight text-foreground mb-6">Tasks</h1>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-normal tracking-tight text-foreground">Tasks</h1>
+              <Link
+                to="/help/tasks"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                title="Who can create / reply / sign / close / escalate each task type"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Workflow reference
+              </Link>
+            </div>
             <TaskFilterBar
               filters={filters}
               onFiltersChange={setFilters}

@@ -81,10 +81,11 @@ import {
   ChevronRight,
   ExternalLink,
   Copy as CopyIcon,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
@@ -1444,21 +1445,23 @@ export default function TaskDetails() {
     : false;
 
   const canApprove = !!user && !!displayTask && (() => {
-    const isCreator = String(displayTask.creator?.id) === String(user?.id);
-    if (isCreator) return true;
-
     if (displayTask.type === "VO") {
       const userCode = resolvePermissionCode(user.role?.name || userRole || "");
-      const paRoles = ["PM", "ARCH", "CQS"];
+      // Mirrors backend SIGNING_ROLES["vo"] in views_signing.py — only the
+      // PM / Principal Agent roles may approve & sign a VO (it's a contract
+      // amendment). Architect / QS / CQS were here previously but the
+      // backend 403s them, so the button died on click. Hide it instead.
+      const paRoles = ["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"];
+      // Client final sign-off when status = Recommended (over-mandate VOs).
       const clientRoles = ["CLIENT", "CPM"];
-      // PA can approve/recommend when Priced
       if (displayTask.status === "Priced" && paRoles.includes(userCode)) return true;
-      // Client can do final sign-off when Recommended
       if (displayTask.status === "Recommended" && clientRoles.includes(userCode)) return true;
       return false;
     }
 
-    return false;
+    // Non-VO doc types: keep the legacy creator-can-approve shortcut.
+    const isCreator = String(displayTask.creator?.id) === String(user?.id);
+    return isCreator;
   })();
 
   // Werner spec — VO/SI lock on signed_at; other task types fall back to
@@ -1663,12 +1666,25 @@ export default function TaskDetails() {
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </button>
-                <button
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm">
-                  <Printer className="h-4 w-4 text-muted-foreground" />
-                  Print / Export
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Workflow help — plain-English guide to who can do
+                      what on this task type. Anchored to the section
+                      for the current task type. */}
+                  <Link
+                    to={`/help/tasks#${(currentTask.taskType || "").toLowerCase()}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm"
+                    title={`Workflow reference for ${currentTask.taskType}`}
+                  >
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    Task help
+                  </Link>
+                  <button
+                    onClick={() => window.print()}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm">
+                    <Printer className="h-4 w-4 text-muted-foreground" />
+                    Print / Export
+                  </button>
+                </div>
               </div>
 
               {/* Werner spec — origin banner: when this doc was auto-
