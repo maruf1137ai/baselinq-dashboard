@@ -145,6 +145,11 @@ export function WernerTaskActions({
   const [riskOpen, setRiskOpen] = useState(false);
   const [pendingRisk, setPendingRisk] = useState<"low" | "medium" | "high" | null>(null);
   const [settingRisk, setSettingRisk] = useState(false);
+  // IC → Claim mitigation gate (Werner notes line 71). Contractor must
+  // describe what they did to resolve the issue before escalating.
+  const [mitigationOpen, setMitigationOpen] = useState(false);
+  const [mitigationNotes, setMitigationNotes] = useState("");
+  const [escalatingClaim, setEscalatingClaim] = useState(false);
 
   // Werner rev H — derive the current user's role bucket once.
   const userRoleCode = (currentUser?.role?.code || "").toUpperCase();
@@ -155,15 +160,21 @@ export function WernerTaskActions({
   // Escalation visibility per Werner spec:
   //   RFI → SI : professional only (architects, engineers, PMs)
   //   SI  → VO : PM / Principal Agent only
-  //   IC  → Claim : the contractor who filed the IC (backend also enforces raised_by match)
+  //   IC  → Claim : ONLY the contractor who filed the IC (raised_by).
+  //                 Other contractors on the project should NOT see the
+  //                 button — the backend rejects them with 403, so we
+  //                 hide it client-side to avoid the broken click path.
   // Anyone else shouldn't see the menu entry at all so they don't even
   // attempt the action (backend still rejects with 403 as a safety net).
+  const isIcRaiser = !!(
+    originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
+  );
   const rawEscalation = ESCALATION_TARGETS[taskType];
   const canEscalateFromHere =
     !rawEscalation ? false :
     taskType === "RFI" ? isProfessional :
     taskType === "SI"  ? isPM :
-    taskType === "IC"  ? isContractor :
+    taskType === "IC"  ? (isContractor && isIcRaiser) :
     false;
   // Werner spec — escalation stays available while the doc is "live",
   // i.e. NOT in its terminal locked state. For SI that's anything before
@@ -208,11 +219,10 @@ export function WernerTaskActions({
     && (isPM || isRespondent);
 
   // ── Close-out button visibility ─────────────────────────────────────
-  // Mirrors backend CloseOutView role gates (views_werner.py:1244):
-  //   GI               → originator only (strict, Werner rev H p.11)
-  //   SI               → originator OR professional
-  //   VO               → originator OR PM
+  // Mirrors backend CloseOutView role gates (views_werner.py:1325):
   //   RFI / IC / Claim → originator OR contractor
+  //   SI / GI          → originator OR professional
+  //   VO               → originator OR PM
   // Hidden when the doc is already in a terminal state.
   const isOriginator = !!(
     originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
@@ -223,11 +233,10 @@ export function WernerTaskActions({
   const alreadyTerminal = !!currentStatus && TERMINAL_STATUSES.has(currentStatus);
   const canCloseOut = (() => {
     if (alreadyTerminal) return false;
-    if (taskType === "GI") return isOriginator;
-    if (taskType === "SI") return isOriginator || isProfessional;
-    if (taskType === "VO") return isOriginator || isPM;
     if (taskType === "RFI" || taskType === "IC") return isOriginator || isContractor;
-    if (taskType === "DC" || taskType === "CLAIM") return isOriginator || isPM;
+    if (taskType === "DC" || taskType === "CLAIM") return isOriginator || isContractor;
+    if (taskType === "SI" || taskType === "GI") return isOriginator || isProfessional;
+    if (taskType === "VO") return isOriginator || isPM;
     return false;
   })();
 
@@ -262,7 +271,20 @@ export function WernerTaskActions({
   };
 
   // ── Escalation handler ──────────────────────────────────────────────
+  // IC → Claim goes through a mitigation-notes modal first (Werner spec
+  // requires evidence of mitigation efforts before formal escalation).
+  // Other escalations (RFI → SI, SI → VO) fire immediately.
   const handleEscalate = async (toType: string) => {
+    if (taskType === "IC" && toType === "claim") {
+      setMitigationNotes("");
+      setMitigationOpen(true);
+      return;
+    }
+    void runEscalate(toType, {});
+  };
+
+  const runEscalate = async (toType: string, payload: Record<string, any>) => {
+    setEscalatingClaim(true);
     try {
       const res = await postRequest({
         url: "tasks/chain-escalate/",
@@ -270,14 +292,26 @@ export function WernerTaskActions({
           from_type: taskType.toLowerCase(),
           from_id: Number(entityId),
           to_type: toType,
-          payload: {},
+          payload,
         },
       });
       toast.success(`Escalated to ${res?.display || toType.toUpperCase()}.`);
+      setMitigationOpen(false);
       await onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to escalate.");
+    } finally {
+      setEscalatingClaim(false);
     }
+  };
+
+  const handleSubmitMitigation = () => {
+    const notes = mitigationNotes.trim();
+    if (notes.length < 20) {
+      toast.error("Please describe the mitigation steps taken (at least 20 characters).");
+      return;
+    }
+    void runEscalate("claim", { mitigation_notes: notes });
   };
 
   // ── Sign & Issue handlers ───────────────────────────────────────────
@@ -614,6 +648,64 @@ export function WernerTaskActions({
               onClick={() => pendingRisk && persistRisk(pendingRisk)}
             >
               {settingRisk ? "Setting…" : "Set HIGH risk"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* IC → Claim mitigation gate — Werner notes line 71. Contractor
+          must describe the mitigation steps taken before lodging the
+          formal Claim. Same Dialog shell as the other action modals. */}
+      <Dialog
+        open={mitigationOpen}
+        onOpenChange={(o) => { if (!escalatingClaim) setMitigationOpen(o); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Escalate to formal Claim</DialogTitle>
+            <DialogDescription>
+              Before escalating to a formal Claim, briefly describe the
+              steps you've taken to try to resolve this issue. Your note
+              will be saved to the audit trail on both this Intention to
+              Claim and the new Claim.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <label className="text-sm text-foreground block mb-2">
+              Mitigation steps taken
+            </label>
+            <textarea
+              value={mitigationNotes}
+              onChange={(e) => setMitigationNotes(e.target.value)}
+              className="w-full border border-border rounded-md px-3 py-2 text-sm min-h-[120px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="e.g. Issued RFI-018 on 2026-04-12, followed up by email on the 19th and 26th. Met on-site with the architect on the 30th. No drawing revisions received by the contractual deadline."
+              autoFocus
+            />
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-muted-foreground">
+                At least 20 characters — describe the actual steps, not a placeholder.
+              </p>
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {mitigationNotes.trim().length} chars
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setMitigationOpen(false)}
+              disabled={escalatingClaim}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/40 disabled:cursor-not-allowed"
+              disabled={escalatingClaim || mitigationNotes.trim().length < 20}
+              onClick={handleSubmitMitigation}
+            >
+              {escalatingClaim ? "Escalating…" : "Escalate to Claim"}
             </Button>
           </DialogFooter>
         </DialogContent>

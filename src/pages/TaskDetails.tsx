@@ -1124,34 +1124,36 @@ export default function TaskDetails() {
             replyDue: "N/A",
             contractWindow: "28 days",
           },
-          // Werner rev H — every doc type shows the SAME generic 5-stage
-          // Decision Timeline (page 3-15 of the spec PDF). DC's older
-          // bespoke stages (Delay Identified → EOT Awarded) collapse into
-          // the standard Draft → Sent for Review → Further Info Required
-          // → Response Provided → Closed flow so the right-panel timeline
-          // is consistent across every task type.
+          // Werner spec — Claim has its own contractual progression.
+          // Previously this collapsed into a generic RFI-looking flow
+          // (Draft → Sent for Review → Further Info Required → …) which
+          // hid the actual claim workflow from the user. Now we surface
+          // the real model enum so "Determination Made" reads as a
+          // contractual ruling, not a routine reply.
+          //
+          // The review endpoint (PM's approve/reject/re-evaluate) sets
+          // statuses outside the model enum — we map those onto the
+          // closest stage. Approved → EOT Awarded (terminal-with-grant),
+          // Rejected / Closed → Determination Made (terminal-no-grant).
+          // EOT-vs-Approved ambiguity is flagged in need-to-know item 2.
           timeline: {
             current: (() => {
-              const s = task.status || apiResponse.status || "Draft";
+              const s = task.status || apiResponse.status || "Delay Identified";
               const legacyMap: Record<string, string> = {
-                "Draft": "Draft",
-                "Delay Identified": "Draft",
-                "Notice Issued": "Sent for Review",
-                "Submitted": "Sent for Review",
-                "Sent for Review": "Sent for Review",
-                "Under Assessment": "Further Info Required",
-                "In Review": "Further Info Required",
-                "Further Info Required": "Further Info Required",
-                "Determination Made": "Response Provided",
-                "Response Provided": "Response Provided",
-                "Approved": "Closed",
-                "Rejected": "Closed",
-                "EOT Awarded": "Closed",
-                "Closed": "Closed",
+                "Draft": "Delay Identified",
+                "Submitted": "Notice Issued",
+                "Sent for Review": "Notice Issued",
+                "In Review": "Under Assessment",
+                "Further Info Required": "Under Assessment",
+                "Re-evaluate": "Under Assessment",
+                "Response Provided": "Determination Made",
+                "Rejected": "Determination Made",
+                "Closed": "Determination Made",
+                "Approved": "EOT Awarded",
               };
               return legacyMap[s] ?? s;
             })(),
-            stages: ["Draft", "Sent for Review", "Further Info Required", "Response Provided", "Closed"],
+            stages: ["Delay Identified", "Notice Issued", "Under Assessment", "Determination Made", "EOT Awarded"],
           },
           impact: {
             time: task.requestedExtensionDays ? `${task.requestedExtensionDays} days` : "N/A",
