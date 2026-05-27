@@ -161,7 +161,16 @@ const LoginPage = () => {
               </div>
 
               <div>
-                <label className={LABEL_CLS}>Password</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={cn(LABEL_CLS, "mb-0")}>Password</label>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/forgot-password")}
+                    className="text-xs text-[#6c5ce7] hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}

@@ -15,6 +15,7 @@ import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
 import HelpTasks from "./pages/HelpTasks";
+import ForgotPassword from "./pages/ForgotPassword";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
 import "./App.css";
@@ -165,6 +166,9 @@ const App = () => (
           <Route path="/certificates/:type/:token" element={<CertificatePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          {/* OTP-based password reset — single page, three internal
+              steps (request email → enter 6-digit code → set new password). */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
           <Route path="/accept-appointed-invitation/:token" element={<AcceptAppointedInvitation />} />
           <Route path="/tasks" element={
