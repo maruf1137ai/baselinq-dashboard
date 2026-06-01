@@ -36,6 +36,12 @@ export default function UploadDocumentWizard() {
   const [selectedFolderId, setSelectedFolderId] = useState('');
   const [selectedFolderName, setSelectedFolderName] = useState('');
   const [isNewFolder, setIsNewFolder] = useState(false);
+  // Full breadcrumb path (e.g. "Contracts > 02 Contract Documentation >
+  // 04 Payments > Payment Applications"). Provided by the row-level
+  // Upload button via the `folder_path` query param so Step 3 can show
+  // the user where the file will actually land. Falls back to "" — in
+  // that case Step 3 builds a best-effort path from selectedFolderName.
+  const [folderPath, setFolderPath] = useState('');
 
   const s3Upload = useS3Upload('project-documents/pending');
 
@@ -45,6 +51,7 @@ export default function UploadDocumentWizard() {
   const folderNameParam = searchParams.get('folder_name');
   const folderDisciplineParam = searchParams.get('folder_discipline');
   const disciplineParam = searchParams.get('discipline');
+  const folderPathParam = searchParams.get('folder_path');
 
   // Initialize wizard state from URL params
   useEffect(() => {
@@ -56,6 +63,7 @@ export default function UploadDocumentWizard() {
         setSelectedDiscipline(folderDisciplineParam ?? '');
         setSelectedFolderId(folderIdParam);
         setSelectedFolderName(folderNameParam);
+        if (folderPathParam) setFolderPath(folderPathParam);
         setIsNewFolder(false);
         setCurrentStep(3);
         return;
@@ -71,6 +79,7 @@ export default function UploadDocumentWizard() {
           setSelectedDiscipline(folder.discipline || '');
           setSelectedFolderId(folder._id);
           setSelectedFolderName(folder.name);
+          if (folderPathParam) setFolderPath(folderPathParam);
           setIsNewFolder(false);
           setCurrentStep(3);
           return;
@@ -313,6 +322,8 @@ export default function UploadDocumentWizard() {
               selectedTab={selectedTab as FolderTab}
               selectedFolderId={selectedFolderId}
               selectedFolderName={selectedFolderName}
+              selectedDiscipline={selectedDiscipline}
+              folderPath={folderPath}
               isNewFolder={isNewFolder}
               s3Upload={s3Upload}
               onBack={() => setCurrentStep(2)}

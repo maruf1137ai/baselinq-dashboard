@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Loader2,
   ChevronLeft,
+  Folder as FolderIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AiIcon from '@/components/icons/AiIcon';
@@ -39,6 +40,21 @@ interface UploadStep3Props {
   selectedTab: FolderTab;
   selectedFolderId: string;
   selectedFolderName: string;
+  /**
+   * Discipline (Drawings / Documents tabs only — Architectural,
+   * Structural, etc). Used to build the fallback breadcrumb when the
+   * caller didn't pre-compute folderPath.
+   */
+  selectedDiscipline?: string;
+  /**
+   * Full destination breadcrumb, e.g. "Contracts > 02 Contract
+   * Documentation > 04 Payments > Payment Applications". Pre-computed
+   * by the row-level Upload button (ContractsTree / FoldersView) so we
+   * don't have to walk the folder ancestor chain again here. Empty
+   * when the user reached Step 3 by clicking through Steps 1 + 2 — in
+   * that case we build a best-effort path from tab / discipline / name.
+   */
+  folderPath?: string;
   isNewFolder: boolean;
   s3Upload: ReturnType<typeof useS3Upload>;
   onBack: () => void;
@@ -83,12 +99,30 @@ export function UploadStep3FileMetadata({
   selectedTab,
   selectedFolderId,
   selectedFolderName,
+  selectedDiscipline,
+  folderPath,
   isNewFolder,
   s3Upload,
   onBack,
   onSubmit,
   submitting,
 }: UploadStep3Props) {
+  // Build the destination breadcrumb shown above the form. Use the
+  // caller-supplied folderPath when present (row-level Upload click);
+  // otherwise build a best-effort one from tab / discipline / name so
+  // users walking through Steps 1 + 2 still see context.
+  const TAB_LABEL: Record<FolderTab, string> = {
+    contracts: 'Contracts',
+    drawings: 'Drawings',
+    documents: 'Documents',
+  };
+  const breadcrumbCrumbs = (folderPath && folderPath.trim().length > 0
+    ? folderPath.split('>').map((s) => s.trim()).filter(Boolean)
+    : [
+        TAB_LABEL[selectedTab] || selectedTab,
+        ...(selectedDiscipline ? [selectedDiscipline] : []),
+        (selectedFolderName || '').replace(/_/g, ' '),
+      ].filter(Boolean));
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [showLinking, setShowLinking] = useState(false);
 
@@ -267,10 +301,44 @@ export function UploadStep3FileMetadata({
       {/* Header */}
       <div className="text-center space-y-1">
         <h2 className="text-xl font-normal text-foreground">Upload Files & Details</h2>
-        <p className="text-sm text-muted-foreground">
-          Uploading to: <strong>{selectedFolderName.replace(/_/g, ' ')}</strong>
-          {isNewFolder && <span className="text-primary ml-1">(New folder)</span>}
-        </p>
+      </div>
+
+      {/* Destination breadcrumb banner — restores context for users who
+          land on Step 3 via the inline row-level Upload button. Without
+          this they have no visual confirmation of where their file is
+          going, which made the auto-skip feel like a UI glitch. */}
+      <div className="rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 mt-0.5 text-primary">
+            <FolderIcon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Uploading to
+            </p>
+            <p className="text-sm text-foreground mt-0.5 break-words leading-snug">
+              {breadcrumbCrumbs.map((crumb, i) => (
+                <React.Fragment key={`${crumb}-${i}`}>
+                  <span
+                    className={
+                      i === breadcrumbCrumbs.length - 1
+                        ? 'font-medium text-foreground'
+                        : 'text-muted-foreground'
+                    }
+                  >
+                    {crumb}
+                  </span>
+                  {i < breadcrumbCrumbs.length - 1 && (
+                    <span className="text-muted-foreground/60 mx-1.5">›</span>
+                  )}
+                </React.Fragment>
+              ))}
+              {isNewFolder && (
+                <span className="ml-2 text-xs text-primary">(new folder)</span>
+              )}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-5 gap-4 items-start">

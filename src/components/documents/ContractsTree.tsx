@@ -30,6 +30,15 @@ interface FolderNodeProps {
   hasAiFlagsById: Map<string, boolean>;
   onDocumentClick?: (id: string) => void;
   onViewRegister?: (folderId: string, folderName: string) => void;
+  /**
+   * Breadcrumb of ancestor folder names (display-formatted — underscores
+   * already replaced with spaces). Top-level node receives []. Each
+   * recursive child receives [...parentPath, parent.name]. Used to build
+   * the `folder_path` URL param on the row-level Upload button so the
+   * upload wizard's Step 3 can show a full breadcrumb instead of just
+   * the leaf folder name.
+   */
+  parentPath: string[];
 }
 
 /**
@@ -60,7 +69,7 @@ function formatRelative(iso?: string): string {
  *       reference chip on the right. Visually unmistakeable from a
  *       folder row.
  */
-function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountById, hasRecentActivityById, hasAiFlagsById, onDocumentClick, onViewRegister }: FolderNodeProps) {
+function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountById, hasRecentActivityById, hasAiFlagsById, onDocumentClick, onViewRegister, parentPath }: FolderNodeProps) {
   const folderDocs = docsByFolderId.get(folder._id) ?? [];
   const descendantCount = descendantCountById.get(folder._id) ?? 0;
   const hasChildren = folder.children && folder.children.length > 0;
@@ -77,7 +86,16 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
   const handleUpload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/documents/upload?tab=contracts&folder_id=${folder._id}`);
+    // Build "Contracts > Parent A > Parent B > Leaf" so Step 3 can show
+    // the destination breadcrumb instead of just the leaf folder name.
+    const folderName = folder.name.replace(/_/g, ' ');
+    const crumbs = ['Contracts', ...parentPath, folderName];
+    const folderPath = encodeURIComponent(crumbs.join(' > '));
+    navigate(
+      `/documents/upload?tab=contracts&folder_id=${folder._id}` +
+      `&folder_name=${encodeURIComponent(folder.name)}` +
+      `&folder_path=${folderPath}`,
+    );
   };
 
   const handleViewRegister = (e: React.MouseEvent) => {
@@ -270,6 +288,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
                   hasAiFlagsById={hasAiFlagsById}
                   onDocumentClick={onDocumentClick}
                   onViewRegister={onViewRegister}
+                  parentPath={[...parentPath, folder.name.replace(/_/g, ' ')]}
                 />
               ))}
               {renderDocuments()}
@@ -399,6 +418,7 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
             hasAiFlagsById={hasAiFlagsById}
             onDocumentClick={onDocumentClick}
             onViewRegister={onViewRegister}
+            parentPath={[]}
           />
         ))}
       </div>

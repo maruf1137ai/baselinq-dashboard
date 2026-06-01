@@ -56,7 +56,21 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
 
   const handleUpload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/documents/upload?tab=${tab}&folder_id=${folder._id}`);
+    // Build "Documents > Architectural > Tender Drawings" so Step 3 can
+    // show the destination breadcrumb instead of just the leaf folder.
+    const tabLabel =
+      tab === 'drawings' ? 'Drawings' :
+      tab === 'documents' ? 'Documents' :
+      tab === 'contracts' ? 'Contracts' :
+      tab;
+    const folderName = folder.name.replace(/_/g, ' ');
+    const crumbs = [tabLabel, ...(folder.discipline ? [folder.discipline] : []), folderName];
+    const folderPath = encodeURIComponent(crumbs.join(' > '));
+    navigate(
+      `/documents/upload?tab=${tab}&folder_id=${folder._id}` +
+      `&folder_name=${encodeURIComponent(folder.name)}` +
+      `&folder_path=${folderPath}`,
+    );
   };
 
   const handleViewRegister = (e: React.MouseEvent) => {
