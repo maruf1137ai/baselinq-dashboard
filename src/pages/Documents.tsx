@@ -4,6 +4,7 @@ import { ContractsTree } from '@/components/documents/ContractsTree';
 import { FoldersView } from '@/components/documents/FoldersView';
 import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
 import { IssueRegisterModal } from '@/components/documents/IssueRegisterModal';
+import { PrimaryContractCard } from '@/components/documents/PrimaryContractCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Search, Plus, ChevronDown } from 'lucide-react';
@@ -182,6 +183,12 @@ const Documents = () => {
           isOpen={isAskOpen}
           onClose={() => setIsAskOpen(false)}
         />
+
+        {/* AI MVP — Primary Contract anchor card. Sits above the page
+            header so it's the first thing the user sees on /documents.
+            Empty state nudges them to upload the official JBCC contract;
+            filled state shows the badge + replace / unset actions. */}
+        {projectId && <PrimaryContractCard projectId={projectId} />}
 
         {/* Header — canonical pattern (text-2xl title, h-8 text-xs buttons) */}
         <div className="flex items-center justify-between">

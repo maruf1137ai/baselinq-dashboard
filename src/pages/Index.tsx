@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, inviteClient, inviteAppointedCompany, getAppointedCompanies } from "@/lib/Api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { PrimaryContractAlert } from '@/components/documents/PrimaryContractAlert';
 import { ProjectStatusCard } from '@/components/ProjectStatusCard';
 import { ProjectTimelineCard } from '@/components/ProjectTimelineCard';
 import { ActionItem } from '@/components/ActionItem';
@@ -453,6 +454,15 @@ const Index = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <InsuranceBanner />
+
+        {/* AI MVP — nudge owners/admins to mark the project's primary
+            contract. Auto-hides once a primary_contract is set. Gated
+            on canEditProject so non-owners (e.g. a Civil Engineer team
+            member) don't see a CTA they can't action. */}
+        <PrimaryContractAlert
+          projectId={projectId}
+          visibleToCurrentUser={canEditProject}
+        />
 
         {showCompletionCard && (
           <div className="p-6 rounded-2xl bg-white border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">

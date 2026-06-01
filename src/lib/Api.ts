@@ -549,6 +549,66 @@ export const uploadProjectDocument = async (
   }
 };
 
+// ── AI MVP — Primary contract surface ────────────────────────────────
+// Backed by the new endpoints on ProjectViewSet:
+//   GET   /api/projects/<id>/primary-contract/
+//   PATCH /api/projects/<id>/documents/<doc_id>/role/
+
+export type ProjectDocumentRole =
+  | "primary_contract"
+  | "addendum"
+  | "bill_of_quantities"
+  | "specification"
+  | "drawing"
+  | "correspondence"
+  | "other";
+
+export interface PrimaryContractInfo {
+  primary_contract: null | {
+    id: number;
+    file_name: string;
+    name: string;
+    document_role: ProjectDocumentRole;
+    uploaded_at: string | null;
+    s3_key: string | null;
+  };
+  reason?: string;
+  message?: string;
+  candidate_count?: number;
+  supporting_documents?: Array<{
+    id: number;
+    file_name: string;
+    document_role: ProjectDocumentRole;
+  }>;
+}
+
+export const getPrimaryContract = async (
+  projectId: string | number
+): Promise<PrimaryContractInfo> => {
+  if (!projectId) throw new Error("Project ID is required");
+  const response = await api.get<PrimaryContractInfo>(`projects/${projectId}/primary-contract/`);
+  return response.data;
+};
+
+export const setProjectDocumentRole = async (
+  projectId: string | number,
+  documentId: string | number,
+  documentRole: ProjectDocumentRole
+): Promise<{ id: number; file_name: string; document_role: ProjectDocumentRole; demoted_previous_primary_ids: number[]; message: string }> => {
+  if (!projectId) throw new Error("Project ID is required");
+  if (!documentId) throw new Error("Document ID is required");
+  try {
+    const response = await api.patch(
+      `projects/${projectId}/documents/${documentId}/role/`,
+      { document_role: documentRole }
+    );
+    return response.data;
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+};
+
 // Delete document from project
 export const deleteProjectDocument = async (
   projectId: string | number,
