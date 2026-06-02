@@ -2094,8 +2094,14 @@ export default function TaskDetails() {
                       </span>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
+                      {/* Werner rev H — chronological order: oldest reply
+                          first, newest closest to the input form below.
+                          Previously .reverse() flipped this so the newest
+                          reply appeared at the top, contradicting the
+                          comment block above and making the conversation
+                          read backwards in production. */}
                       {displayTask.responses
-                        .slice().reverse().map((resp: any) => (
+                        .slice().map((resp: any) => (
                           <Card
                             key={resp.id}
                             className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
@@ -3638,10 +3644,25 @@ export default function TaskDetails() {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-[#1B1C1F] text-white">
-                          <tr>
+                        <tfoot>
+                          {/* Werner spec rev H — full price breakdown.
+                              Bug fix: previously this tfoot only rendered
+                              "Total Amount", dropping Subtotal and VAT
+                              rows that the user entered during pricing.
+                              VAT appeared to "disappear" after submit. */}
+                          <tr className="bg-muted/50 border-t border-border">
+                            <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">Subtotal</td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.subTotal ?? 0)}</td>
+                          </tr>
+                          <tr className="bg-muted/50">
+                            <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">
+                              VAT ({selectedResponse.financials?.taxRate ?? 15}%)
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.taxAmount ?? 0)}</td>
+                          </tr>
+                          <tr className="bg-[#1B1C1F] text-white">
                             <td colSpan={3} className="px-4 py-2 text-right opacity-70">Total Amount</td>
-                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal)}</td>
+                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal ?? 0)}</td>
                           </tr>
                         </tfoot>
                       </table>

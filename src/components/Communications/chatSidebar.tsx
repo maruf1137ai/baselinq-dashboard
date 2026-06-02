@@ -65,12 +65,23 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 </div>
               ) : filteredTasks.map((channel) => {
                 const taskType = channel.taskType || "TSK";
-                // For task-linked channels, show the reference. For others, derive a meaningful title.
+                // Werner rev H — use the canonical doc number (channel.name,
+                // e.g. "VO-012") that the backend generated from vo_number /
+                // rfi_number / si_number. Previously we built a synthetic
+                // "VO-043" from the Task PK padded to 3 digits, which
+                // conflicted with the channel.name displayed alongside.
                 const displayId = channel.taskId
-                  ? `${taskType}-${String(channel.taskId).padStart(3, '0')}`
+                  ? (channel.name && /^[A-Z]+-\d+/.test(channel.name)
+                      ? channel.name
+                      : `${taskType}-${channel.taskId}`)
                   : null;
 
-                const displayTitle = channel.name || "Direct Message";
+                // Use the entity subject/title (stored on channel.description)
+                // when displayId already shows the canonical doc number,
+                // otherwise fall back to the channel.name itself.
+                const displayTitle = displayId && channel.description
+                  ? channel.description
+                  : (channel.name || "Direct Message");
                 const count = channel.unread_count || 0;
                 const isSelected = selectedTask?.id === channel.id;
                 const status = channel.status || "Open";
@@ -99,10 +110,12 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                       {displayTitle}
                     </div>
 
-                    {/* Footer - Description */}
+                    {/* Footer - Description (hidden when it's already the title) */}
                     <div className="flex justify-between items-center mt-1">
                       <div className="text-xs text-muted-foreground truncate max-w-[80%]">
-                        {channel.description || "No details"}
+                        {channel.description && channel.description !== displayTitle
+                          ? channel.description
+                          : "No details"}
                       </div>
 
                       {count > 0 && (
