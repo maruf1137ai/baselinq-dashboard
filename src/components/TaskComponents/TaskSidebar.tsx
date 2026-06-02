@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { TaskAttachments } from "./TaskAttachments";
 import { cn } from "@/lib/utils";
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface TaskSidebarProps {
   taskType: string;
@@ -60,7 +61,7 @@ const groupLogsByDate = (logs: any[]) => {
     let label: string;
     if (d.getTime() === today.getTime()) label = 'Today';
     else if (d.getTime() === yesterday.getTime()) label = 'Yesterday';
-    else label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    else label = formatDate(d);
     if (seen[label] === undefined) { seen[label] = groups.length; groups.push({ label, logs: [] }); }
     groups[seen[label]].logs.push(log);
   });

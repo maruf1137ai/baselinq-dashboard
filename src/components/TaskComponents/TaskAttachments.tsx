@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { FilePreviewModal } from "./FilePreviewModal";
 import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface TaskAttachmentsProps {
   attachments?: {
@@ -64,7 +65,7 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
                 )}
                 {item.uploadedAt && (
                   <p className="text-xs text-muted-foreground">
-                    {new Date(item.uploadedAt).toLocaleDateString()}
+                    {formatDate(item.uploadedAt)}
                   </p>
                 )}
               </div>
