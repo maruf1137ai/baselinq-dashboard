@@ -2266,10 +2266,26 @@ export default function TaskDetails() {
                                         <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
                                       </td>
                                       <td className="px-2 py-1">
-                                        <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          pattern="[0-9]*\.?[0-9]*"
+                                          className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right"
+                                          placeholder="0"
+                                          value={item.qty}
+                                          onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "qty", e.target.value)}
+                                        />
                                       </td>
                                       <td className="px-2 py-1">
-                                        <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          pattern="[0-9]*\.?[0-9]*"
+                                          className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right"
+                                          placeholder="0.00"
+                                          value={item.rate}
+                                          onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "rate", e.target.value)}
+                                        />
                                       </td>
                                       <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
                                       <td className="px-2 py-1.5">
@@ -2326,11 +2342,27 @@ export default function TaskDetails() {
                                   <div className="flex items-center gap-2 pl-6">
                                     <div className="flex-1">
                                       <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
-                                      <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*\.?[0-9]*"
+                                        className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right"
+                                        placeholder="0"
+                                        value={item.qty}
+                                        onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "qty", e.target.value)}
+                                      />
                                     </div>
                                     <div className="flex-1">
                                       <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
-                                      <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*\.?[0-9]*"
+                                        className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right"
+                                        placeholder="0.00"
+                                        value={item.rate}
+                                        onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "rate", e.target.value)}
+                                      />
                                     </div>
                                     <div className="flex-1 text-right">
                                       <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
@@ -3650,15 +3682,24 @@ export default function TaskDetails() {
                               "Total Amount", dropping Subtotal and VAT
                               rows that the user entered during pricing.
                               VAT appeared to "disappear" after submit. */}
+                          {/* Werner spec rev H — financials shape from
+                              backend (tasks/serializers.py:1534) is:
+                                financials: {
+                                  subTotal, tax: {type, rate, amount}, grandTotal
+                                }
+                              Earlier fix read selectedResponse.financials.taxAmount /
+                              .taxRate which don't exist → VAT defaulted to 0
+                              and "VAT (15%)" was the only thing rendered. Read the
+                              correct nested .tax.amount / .tax.rate path. */}
                           <tr className="bg-muted/50 border-t border-border">
                             <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">Subtotal</td>
                             <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.subTotal ?? 0)}</td>
                           </tr>
                           <tr className="bg-muted/50">
                             <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">
-                              VAT ({selectedResponse.financials?.taxRate ?? 15}%)
+                              VAT ({selectedResponse.financials?.tax?.rate ?? 15}%)
                             </td>
-                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.taxAmount ?? 0)}</td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.tax?.amount ?? 0)}</td>
                           </tr>
                           <tr className="bg-[#1B1C1F] text-white">
                             <td colSpan={3} className="px-4 py-2 text-right opacity-70">Total Amount</td>
