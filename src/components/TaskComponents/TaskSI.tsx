@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { postData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface TaskSIProps {
   formFields: any;
@@ -263,7 +264,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
                     </label>
                     {formFields.feedbackBy && formFields.feedbackAt && (
                       <span className="text-xs text-muted-foreground">
-                        {new Date(formFields.feedbackAt).toLocaleDateString()}
+                        {formatDate(formFields.feedbackAt)}
                       </span>
                     )}
                   </div>

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { postData } from "@/lib/Api";
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface ActionRequest {
   id: number | string;
@@ -111,7 +112,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
         <p className="text-xs text-black mt-1">{request.task}</p>
         {request.date && (
           <p className="text-xs text-muted-foreground mt-1">
-            Due {new Date(request.date).toLocaleDateString()}
+            Due {formatDate(request.date)}
           </p>
         )}
 

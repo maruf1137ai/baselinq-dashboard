@@ -91,6 +91,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
@@ -155,7 +156,7 @@ const groupLogsByDate = (logs: any[]) => {
     let label: string;
     if (d.getTime() === today.getTime()) label = 'Today';
     else if (d.getTime() === yesterday.getTime()) label = 'Yesterday';
-    else label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    else label = formatDate(d, 'short');
     if (seen[label] === undefined) { seen[label] = groups.length; groups.push({ label, logs: [] }); }
     groups[seen[label]].logs.push(log);
   });
@@ -1074,7 +1075,7 @@ export default function TaskDetails() {
       audit: [
         {
           action: `${taskType} created by ${task.createdBy?.name || task.raisedBy?.name || task.issuedBy?.name || task.submittedBy?.name || "User"}`,
-          date: new Date(task.createdAt || apiResponse.created_at).toLocaleDateString(),
+          date: formatDate(task.createdAt || apiResponse.created_at),
           isAI: false,
         },
       ],
@@ -1088,7 +1089,7 @@ export default function TaskDetails() {
           displayId: `#${task.voNumber || `VO-${task._id}`}`,
           title: task.title,
           task_code: task.voNumber,
-          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
             discipline: task.discipline,
@@ -1106,7 +1107,7 @@ export default function TaskDetails() {
             tags: [],
           },
           deadlines: {
-            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(task.dueDate, "short", "N/A"),
             contractWindow: "21 days",
           },
           timeline: {
@@ -1128,7 +1129,7 @@ export default function TaskDetails() {
           displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
           title: task.subject,
           task_code: task.rfiNumber,
-          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             subject: task.subject,
             discipline: task.discipline,
@@ -1141,7 +1142,7 @@ export default function TaskDetails() {
             tags: [],
           },
           deadlines: {
-            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(task.dueDate, "short", "N/A"),
             contractWindow: "14 days",
           },
           timeline: {
@@ -1162,7 +1163,7 @@ export default function TaskDetails() {
           displayId: `#${task.siNumber || `SI-${task._id}`}`,
           title: task.title,
           task_code: task.siNumber,
-          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
             discipline: task.discipline,
@@ -1178,7 +1179,7 @@ export default function TaskDetails() {
             tags: task.urgency ? [task.urgency] : [],
           },
           deadlines: {
-            replyDue: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(task.dueDate, "short", "N/A"),
             contractWindow: "7 days",
           },
           timeline: {
@@ -1267,7 +1268,7 @@ export default function TaskDetails() {
           displayId: `#CPI-${task._id}`,
           title: task.taskActivityName,
           task_code: `CPI-${task._id}`,
-          dueDate: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(task.finishDate),
           formFields: {
             title: task.taskActivityName,
             description: task.description,
@@ -1283,7 +1284,7 @@ export default function TaskDetails() {
             tags: ["Critical Path"],
           },
           deadlines: {
-            replyDue: task.finishDate ? new Date(task.finishDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(task.finishDate, "short", "N/A"),
             contractWindow: "7 days",
           },
           timeline: {
@@ -1309,7 +1310,7 @@ export default function TaskDetails() {
           displayId: `#${task.giNumber || task.gi_number || `GI-${task._id}`}`,
           title: task.subject || "Untitled GI",
           task_code: task.giNumber || task.gi_number,
-          dueDate: giDate ? new Date(giDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(giDate),
           formFields: {
             subject: task.subject,
             discipline: task.discipline,
@@ -1322,7 +1323,7 @@ export default function TaskDetails() {
             tags: task.discipline ? [task.discipline] : [],
           },
           deadlines: {
-            replyDue: giDate ? new Date(giDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(giDate, "short", "N/A"),
             contractWindow: "—",
           },
           timeline: {
@@ -1347,7 +1348,7 @@ export default function TaskDetails() {
           displayId: `#${task.icNumber || task.ic_number || `IC-${task._id}`}`,
           title: task.subject || "Untitled IC",
           task_code: task.icNumber || task.ic_number,
-          dueDate: icDate ? new Date(icDate).toLocaleDateString() : "No Date",
+          dueDate: formatDateOrNoDate(icDate),
           formFields: {
             subject: task.subject,
             description: task.description,
@@ -1360,7 +1361,7 @@ export default function TaskDetails() {
             tags: task.riskLevel ? [`Risk: ${task.riskLevel}`] : [],
           },
           deadlines: {
-            replyDue: icDate ? new Date(icDate).toLocaleDateString() : "N/A",
+            replyDue: formatDate(icDate, "short", "N/A"),
             contractWindow: "—",
           },
           timeline: {
@@ -2094,8 +2095,14 @@ export default function TaskDetails() {
                       </span>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
+                      {/* Werner rev H — chronological order: oldest reply
+                          first, newest closest to the input form below.
+                          Previously .reverse() flipped this so the newest
+                          reply appeared at the top, contradicting the
+                          comment block above and making the conversation
+                          read backwards in production. */}
                       {displayTask.responses
-                        .slice().reverse().map((resp: any) => (
+                        .slice().map((resp: any) => (
                           <Card
                             key={resp.id}
                             className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
@@ -2161,7 +2168,7 @@ export default function TaskDetails() {
                                     } else if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
                                       // ISO date → friendly local date.
                                       const d = new Date(value);
-                                      display = isNaN(d.getTime()) ? value : d.toLocaleDateString();
+                                      display = isNaN(d.getTime()) ? value : formatDate(d, 'short');
                                     } else if (typeof value === "string") {
                                       // Title-case enum-ish values (e.g. "approved" → "Approved").
                                       display = value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -2260,10 +2267,26 @@ export default function TaskDetails() {
                                         <input className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent" placeholder="Item description" value={item.description} onChange={e => updateVoItem(item.id, "description", e.target.value)} />
                                       </td>
                                       <td className="px-2 py-1">
-                                        <input type="number" className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          pattern="[0-9]*\.?[0-9]*"
+                                          className="w-full text-sm px-3 py-2 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right"
+                                          placeholder="0"
+                                          value={item.qty}
+                                          onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "qty", e.target.value)}
+                                        />
                                       </td>
                                       <td className="px-2 py-1">
-                                        <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          pattern="[0-9]*\.?[0-9]*"
+                                          className="w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-transparent text-right"
+                                          placeholder="0.00"
+                                          value={item.rate}
+                                          onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "rate", e.target.value)}
+                                        />
                                       </td>
                                       <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
                                       <td className="px-2 py-1.5">
@@ -2320,11 +2343,27 @@ export default function TaskDetails() {
                                   <div className="flex items-center gap-2 pl-6">
                                     <div className="flex-1">
                                       <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
-                                      <input type="number" className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0" value={item.qty} onChange={e => updateVoItem(item.id, "qty", e.target.value)} />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*\.?[0-9]*"
+                                        className="w-full text-sm px-3 py-2 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right"
+                                        placeholder="0"
+                                        value={item.qty}
+                                        onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "qty", e.target.value)}
+                                      />
                                     </div>
                                     <div className="flex-1">
                                       <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
-                                      <input type="number" className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right" placeholder="0.00" value={item.rate} onChange={e => updateVoItem(item.id, "rate", e.target.value)} />
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9]*\.?[0-9]*"
+                                        className="w-full text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-right"
+                                        placeholder="0.00"
+                                        value={item.rate}
+                                        onChange={e => /^[0-9]*\.?[0-9]*$/.test(e.target.value) && updateVoItem(item.id, "rate", e.target.value)}
+                                      />
                                     </div>
                                     <div className="flex-1 text-right">
                                       <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
@@ -2464,7 +2503,7 @@ export default function TaskDetails() {
                               "w-full flex items-center justify-between px-3 py-2 border border-border rounded-lg text-sm bg-background hover:bg-muted/50 transition text-left",
                               !cpiForecastDate && "text-muted-foreground"
                             )}>
-                              <span>{cpiForecastDate ? new Date(cpiForecastDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : "Pick a date"}</span>
+                              <span>{cpiForecastDate ? formatDate(cpiForecastDate, 'short') : "Pick a date"}</span>
                               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                             </button>
                           </PopoverTrigger>
@@ -3638,10 +3677,34 @@ export default function TaskDetails() {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-[#1B1C1F] text-white">
-                          <tr>
+                        <tfoot>
+                          {/* Werner spec rev H — full price breakdown.
+                              Bug fix: previously this tfoot only rendered
+                              "Total Amount", dropping Subtotal and VAT
+                              rows that the user entered during pricing.
+                              VAT appeared to "disappear" after submit. */}
+                          {/* Werner spec rev H — financials shape from
+                              backend (tasks/serializers.py:1534) is:
+                                financials: {
+                                  subTotal, tax: {type, rate, amount}, grandTotal
+                                }
+                              Earlier fix read selectedResponse.financials.taxAmount /
+                              .taxRate which don't exist → VAT defaulted to 0
+                              and "VAT (15%)" was the only thing rendered. Read the
+                              correct nested .tax.amount / .tax.rate path. */}
+                          <tr className="bg-muted/50 border-t border-border">
+                            <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">Subtotal</td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.subTotal ?? 0)}</td>
+                          </tr>
+                          <tr className="bg-muted/50">
+                            <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">
+                              VAT ({selectedResponse.financials?.tax?.rate ?? 15}%)
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.tax?.amount ?? 0)}</td>
+                          </tr>
+                          <tr className="bg-[#1B1C1F] text-white">
                             <td colSpan={3} className="px-4 py-2 text-right opacity-70">Total Amount</td>
-                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal)}</td>
+                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal ?? 0)}</td>
                           </tr>
                         </tfoot>
                       </table>

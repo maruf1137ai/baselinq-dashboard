@@ -682,7 +682,7 @@ const Index = () => {
                         title={`${task.type}: ${task.title}`}
                         description={task.description || task.title}
                         priority={task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) as any : "Medium"}
-                        dueDate={task.due_date ? new Date(task.due_date).toLocaleDateString() : "No Date"}
+                        dueDate={task.due_date ? formatDate(task.due_date) : "No Date"}
                         id={task.id}
                         isOverdue={task._isOverdue}
                       />
@@ -725,7 +725,7 @@ const Index = () => {
                       title={`${actorName} ${verb} ${task.type || 'Task'}: ${task.title}`}
                       status={displayStatus}
                       author={actorName}
-                      timeAgo={task.updated_at || task.created_at ? new Date(task.updated_at || task.created_at).toLocaleDateString() : "Just now"}
+                      timeAgo={task.updated_at || task.created_at ? formatDate(task.updated_at || task.created_at) : "Just now"}
                     />
                   );
                 })

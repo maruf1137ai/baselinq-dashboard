@@ -471,8 +471,13 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     );
   }
 
+  // Werner rev H — canonical doc number from channel.name (e.g. "VO-012")
+  // takes precedence over a synthesised "VO-043" from the Task PK.
+  // Falls back only if channel.name doesn't look like a doc number.
   const displayId = channel.taskId
-    ? `${channel.taskType || "TSK"}-${String(channel.taskId).padStart(3, '0')}`
+    ? (channel.name && /^[A-Z]+-\d+/.test(channel.name)
+        ? channel.name
+        : `${channel.taskType || "TSK"}-${channel.taskId}`)
     : `# ${channel.name}`;
 
   return (

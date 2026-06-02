@@ -1,3 +1,4 @@
+import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 import React, { useState, useMemo } from 'react';
 import {
   Dialog,
@@ -111,7 +112,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
   const formatDate = (val: string) => {
     if (!val) return '';
     try {
-      return new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return formatDate(val);
     } catch {
       return val;
     }

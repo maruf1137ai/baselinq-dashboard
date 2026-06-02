@@ -106,7 +106,16 @@ const ESCALATION_TARGETS: Partial<Record<TaskType, { type: string; label: string
   IC: { type: "claim", label: "Claim" },
 };
 
-const SIGNABLE_TYPES = new Set<string>(["SI", "VO", "DC", "CLAIM"]);
+// Werner rev H — VO has its OWN dedicated signing surface:
+// "Approve & Sign" lives next to the contractor's pricing response in
+// the page body (TaskDetails.tsx ~2819). Showing "Sign & Issue" in this
+// top action bar AS WELL meant the PM saw two buttons for the same
+// backend endpoint (tasks/sign-and-issue/). Confusing.
+//
+// Excluded VO here so only the contextual Approve & Sign renders.
+// SI, DC, and Claim still use this top-bar Sign & Issue (their
+// signing isn't tied to a pricing-response review step).
+const SIGNABLE_TYPES = new Set<string>(["SI", "DC", "CLAIM"]);
 
 // Werner spec — high-stakes signs (contract amendment, claim
 // determination) MUST require a PIN. The click-confirm fallback is
