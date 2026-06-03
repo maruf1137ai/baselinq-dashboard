@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { Sparkles } from "lucide-react";
 import { useProjects } from "@/hooks/useProjects";
+import WeatherAIAnalysisModal from "./WeatherAIAnalysisModal";
 
 const OWM_KEY = "8dda08a209080b44cdc3566edffcfbc4";
 
@@ -62,6 +64,7 @@ const geocodeAddress = async (address: string): Promise<{ lat: number; lon: numb
 const NavbarWeather = () => {
   const [weather, setWeather] = useState<any>(null);
   const [hovered, setHovered] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [fromProjectLocation, setFromProjectLocation] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => localStorage.getItem("selectedProjectId")
@@ -167,7 +170,25 @@ const NavbarWeather = () => {
               </div>
             )}
           </div>
+          {fromProjectLocation && (
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Analyze with AI
+            </button>
+          )}
         </div>
+      )}
+
+      {currentProject && (
+        <WeatherAIAnalysisModal
+          open={aiOpen}
+          onOpenChange={setAiOpen}
+          project={currentProject}
+        />
       )}
     </div>
   );

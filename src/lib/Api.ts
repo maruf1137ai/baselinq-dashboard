@@ -473,6 +473,24 @@ export const deleteProject = async (projectId: string | number) => {
   }
 };
 
+// AI weather-risk analysis for a project's site. Returns today + forecast
+// weather plus AI narrative; backend caches by location + date range (24h TTL).
+export const analyzeWeather = async (body: {
+  project_id: string | number;
+  range_start?: string;
+  range_end?: string;
+  force_refresh?: boolean;
+}) => {
+  try {
+    const response = await api.post("ai_analysis/weather/", body);
+    return response.data;
+  } catch (error: any) {
+    const msg =
+      error?.response?.data?.error || error?.message || "Weather analysis failed";
+    throw new Error(msg);
+  }
+};
+
 export const lookupCompany = async (regNumber: string) => {
   if (!regNumber) throw new Error("Registration number is required");
   const response = await api.get(`projects/company-lookup/?reg_number=${encodeURIComponent(regNumber)}`);
