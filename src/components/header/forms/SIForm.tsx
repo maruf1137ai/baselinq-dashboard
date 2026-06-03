@@ -17,12 +17,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
+import useFetch from "@/hooks/useFetch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Link2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -38,8 +39,11 @@ const initialValues = {
   location: "",
   urgency: "",
   dueDate: undefined as Date | undefined,
-  voReference: "",
-  costImpact: "",
+  // Werner — link this SI to another doc on the project (RFI, VO, IC,
+  // claim, GI). Field used to be a free-text "VO Reference" — now it's a
+  // task picker. Storing the picked task's display code (e.g. "RFI-007")
+  // keeps the backend payload unchanged.
+  taskReference: "",
 };
 
 export default function SIForm({ setOpen, initialStatus }: any) {
@@ -51,6 +55,75 @@ export default function SIForm({ setOpen, initialStatus }: any) {
 
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
+
+  // ── Task Reference picker ──────────────────────────────────────────
+  // Loads all tasks on the current project so the user can link this
+  // SI to any RFI / SI / VO / IC / Claim / GI. Replaces the old free-
+  // text "VO Reference" input.
+  const projectIdLs =
+    typeof window !== "undefined"
+      ? localStorage.getItem("selectedProjectId") || ""
+      : "";
+  const { data: projectTasksData } = useFetch<{ tasks?: any[] }>(
+    projectIdLs ? `projects/${projectIdLs}/tasks/` : "",
+    { enabled: !!projectIdLs },
+  );
+  // The /projects/<id>/tasks/ response nests entity data under `.task`
+  // and uses camelCase number fields per type (rfiNumber / siNumber /
+  // voNumber / giNumber / icNumber / dcNumber). Mirrors the transform
+  // in Task.tsx so this picker shows the same canonical doc identifiers
+  // the kanban board does.
+  const taskOptions = (projectTasksData?.tasks || [])
+    .map((t: any) => {
+      const inner = t.task || {};
+      const apiType = (t.taskType || "").toString().toUpperCase();
+      const type = apiType === "CRITICALPATHITEM" ? "CPI" : apiType;
+      const number =
+        inner.rfiNumber ||
+        inner.siNumber ||
+        inner.voNumber ||
+        inner.giNumber ||
+        inner.icNumber ||
+        inner.dcNumber ||
+        inner.rfi_number ||
+        inner.si_number ||
+        inner.vo_number ||
+        inner.gi_number ||
+        inner.ic_number ||
+        inner.dc_number ||
+        "";
+      const code =
+        number ||
+        (type && (t.taskId || t.id)
+          ? `${type}-${String(t.taskId || t.id).padStart(3, "0")}`
+          : "");
+      const subject =
+        inner.subject ||
+        inner.title ||
+        inner.taskActivityName ||
+        "";
+      if (!code) return null;
+      return {
+        id: String(t.id ?? t.taskId ?? code),
+        type,
+        code,
+        subject,
+      };
+    })
+    .filter(Boolean) as Array<{ id: string; type: string; code: string; subject: string }>;
+  const [taskRefOpen, setTaskRefOpen] = useState(false);
+  const [taskRefSearch, setTaskRefSearch] = useState("");
+  const [taskRefTypeFilter, setTaskRefTypeFilter] = useState<string>("ALL");
+  const TYPE_FILTERS = ["ALL", "VO", "RFI", "SI", "DC", "CPI"];
+  const filteredTaskOptions = taskOptions.filter((opt) => {
+    if (taskRefTypeFilter !== "ALL" && opt.type !== taskRefTypeFilter) return false;
+    if (!taskRefSearch.trim()) return true;
+    const q = taskRefSearch.trim().toLowerCase();
+    return (
+      opt.code.toLowerCase().includes(q) ||
+      opt.subject.toLowerCase().includes(q)
+    );
+  });
 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
@@ -101,8 +174,10 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       location: formData.location || undefined,
       urgency: formData.urgency || "Normal",
       due_date: formData.dueDate ? format(formData.dueDate, "yyyy-MM-dd") : undefined,
-      vo_reference: formData.voReference || undefined,
-      expectedCostImpact: formData.costImpact || undefined,
+      // Backend field name kept as vo_reference for backwards compat.
+      // Frontend label was renamed to "Task Reference" and the picker
+      // now accepts any project task type, not just VOs.
+      vo_reference: formData.taskReference || undefined,
       taskStatus: initialStatus || "Open",
     };
 
@@ -271,31 +346,142 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       </div>
 
       <div>
-        <Label>VO Reference</Label>
-        <Input
-          className="mt-1"
-          placeholder="Optional"
-          value={formData.voReference}
-          onChange={(e) => handleChange("voReference", e.target.value)}
-        />
-      </div>
+        <Label>Task Reference</Label>
+        <Popover open={taskRefOpen} onOpenChange={setTaskRefOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "mt-1 w-full justify-between font-normal",
+                !formData.taskReference && "text-muted-foreground",
+              )}
+            >
+              <span className="truncate">
+                {formData.taskReference || "Select a task (optional)"}
+              </span>
+              {formData.taskReference ? (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Clear task reference"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleChange("taskReference", "");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleChange("taskReference", "");
+                    }
+                  }}
+                  className="ml-2 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </span>
+              ) : (
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="p-3 bg-white"
+            style={{ width: "var(--radix-popover-trigger-width)" }}
+          >
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                autoFocus
+                value={taskRefSearch}
+                onChange={(e) => setTaskRefSearch(e.target.value)}
+                placeholder="Search VOs, RFIs, or other documents…"
+                className="pl-9"
+              />
+            </div>
 
-      <div>
-        <Label>Expected Cost Impact</Label>
-        <Select
-          value={formData.costImpact}
-          onValueChange={(val) => handleChange("costImpact", val)}
-        >
-          <SelectTrigger className="mt-1">
-            <SelectValue placeholder="Select range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0-20k">R 0 - 20K</SelectItem>
-            <SelectItem value="20-50k">R 20K - 50K</SelectItem>
-            <SelectItem value="50-100k">R 50K - 100K</SelectItem>
-            <SelectItem value="above100k">R Above 100K</SelectItem>
-          </SelectContent>
-        </Select>
+            {/* Type filter chips */}
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {TYPE_FILTERS.map((t) => {
+                const isActive = taskRefTypeFilter === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTaskRefTypeFilter(t)}
+                    className={cn(
+                      "text-xs px-3 py-1 rounded-full border transition-colors",
+                      isActive
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-white border-border text-foreground hover:bg-muted",
+                    )}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Task list */}
+            <div className="mt-3 max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5">
+              {filteredTaskOptions.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  {taskOptions.length === 0
+                    ? "No tasks on this project yet"
+                    : "No tasks match"}
+                </p>
+              )}
+              {filteredTaskOptions.map((opt) => {
+                const isSelected = formData.taskReference === opt.code;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      handleChange("taskReference", opt.code);
+                      setTaskRefOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors",
+                      isSelected
+                        ? "bg-primary/[0.06] border-primary"
+                        : "bg-white border-border hover:bg-muted/40",
+                    )}
+                  >
+                    <span className="shrink-0 w-9 h-9 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
+                      <Link2 className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-foreground truncate">
+                        {opt.code}
+                      </span>
+                      {opt.subject && (
+                        <span className="block text-xs text-muted-foreground truncate">
+                          {opt.subject}
+                        </span>
+                      )}
+                    </span>
+                    {/* Radio indicator */}
+                    <span
+                      className={cn(
+                        "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                        isSelected
+                          ? "border-primary"
+                          : "border-border bg-background",
+                      )}
+                    >
+                      {isSelected && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <S3AttachmentSection s3Upload={s3Upload} inputId="si-upload" label="Attachments" />

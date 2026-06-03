@@ -3,6 +3,7 @@ import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronU
 import { toast } from "sonner";
 import { fetchData, postData } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
+import { formatTime } from "@/lib/dateUtils";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
@@ -135,16 +136,62 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     };
 
     switch (type) {
-      case 'VO':
+      case 'VO': {
+        // Werner — the contractor's pricing reply carries VAT in its
+        // structuredData blob, but the VO entity's own sub_total /
+        // tax_amount fields aren't always written back. Mirror the
+        // TaskDetails page rule: prefer the latest priced reply when it
+        // has any pricing data, otherwise fall back to the entity.
+        const responses: any[] = taskDetails?.responses || [];
+        const latestPricing = (() => {
+          for (let i = responses.length - 1; i >= 0; i--) {
+            const sd = responses[i]?.structuredData || {};
+            if (
+              sd.subTotal != null
+              || sd.grandTotal != null
+              || sd.tax?.amount != null
+              || (Array.isArray(sd.lineItems) && sd.lineItems.length > 0)
+            ) {
+              return sd;
+            }
+          }
+          return null;
+        })();
+        const replyHasPricing = !!(
+          latestPricing && (
+            Number(latestPricing.grandTotal ?? 0) > 0
+            || Number(latestPricing.subTotal ?? 0) > 0
+            || Number(latestPricing.tax?.amount ?? 0) > 0
+          )
+        );
+        const subTotal = replyHasPricing
+          ? Number(latestPricing.subTotal ?? 0)
+          : Number(task.subTotal ?? task.sub_total ?? 0);
+        const grandTotal = replyHasPricing
+          ? Number(latestPricing.grandTotal ?? 0)
+          : Number(task.grandTotal ?? task.grand_total ?? 0);
+        const taxBlock = replyHasPricing
+          ? (latestPricing.tax || {})
+          : (task.tax || {});
+        const taxRate = Number(taxBlock.rate ?? task.taxRate ?? 0);
+        const taxAmount = Number(taxBlock.amount ?? 0)
+          || (grandTotal && subTotal && grandTotal !== subTotal ? grandTotal - subTotal : 0)
+          || (subTotal && taxRate ? Math.round(subTotal * taxRate) / 100 : 0);
+        const taxLabel = taxRate ? `VAT (${taxRate}%)` : "VAT";
+        const fmt = (n: number) =>
+          `R ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         return {
           ...common,
-          cost: task.grandTotal ? `R ${Number(task.grandTotal).toLocaleString()}` : null,
+          cost: grandTotal ? fmt(grandTotal) : null,
           impact: "Cost & Time",
           details: [
-            { label: "Amount", value: `R ${Number(task.grandTotal || 0).toLocaleString()}` },
-            { label: "Extension", value: task.extensionDays ? `${task.extensionDays} Days` : "None" }
-          ]
+            { label: "Sub-total", value: fmt(subTotal) },
+            { label: taxLabel, value: fmt(taxAmount) },
+            { label: "Total", value: fmt(grandTotal) },
+            { label: "Extension", value: task.extensionDays ? `${task.extensionDays} Days` : "None" },
+          ],
         };
+      }
       case 'DC':
         return {
           ...common,
@@ -203,10 +250,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
           sender_id: msg.sender_id,
           content: msg.content,
           sender_name: msg.sender_name,
-          timestamp: new Date(msg.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          timestamp: formatTime(msg.created_at),
           files: (msg.attachments || []).map((a: any) => ({
             name: a.fileName || a.file_name || a.name || "",
             type: a.fileType || a.file_type || a.type || "",
@@ -617,19 +661,52 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                   </div>
                 )}
                 {messages.map((msg) => {
-                  // System / status-change messages render as centered elements
-                  if (msg.message_type === 'status_change' || msg.is_system) {
-                    // Completion messages get a prominent green banner
-                    const isCompletion = msg.content?.includes('is now complete') || msg.content?.includes('✅');
-                    // Strip emoji prefix from backend content
-                    const cleanContent = (msg.content || '').replace(/^[✅📋]\s*/, '').trim();
+                  // System / status-change messages render as centered elements.
+                  // Backend uses message_type='system' for milestone events
+                  // (close-out, sign & issue, escalation) and 'status_change'
+                  // for status transitions. is_system is a redundant boolean
+                  // some legacy messages set.
+                  if (
+                    msg.message_type === 'status_change'
+                    || msg.message_type === 'system'
+                    || msg.is_system
+                  ) {
+                    const rawContent = msg.content || '';
+                    // Strip leading milestone emojis from backend content so
+                    // the banner / pill body reads cleanly. Covers risk
+                    // pills (🟢🟠🔴), escalation (↗️📋), close-out (🔒) and
+                    // sign (📄✅). Some of these render as the broken
+                    // replacement char on certain fonts — stripping fixes it.
+                    const cleanContent = rawContent
+                      .replace(/^[\u{1F7E2}\u{1F7E0}\u{1F534}↗\u{1F4CB}\u{1F512}\u{1F4C4}✅]️?\s*/u, '')
+                      .trim();
+                    // Banner-worthy events: anything that ends or signs the
+                    // doc. Detect via either the original emoji prefix or
+                    // canonical phrases the backend uses.
+                    const lower = rawContent.toLowerCase();
+                    const isCompletion =
+                      rawContent.includes('✅')
+                      || rawContent.includes('🔒')
+                      || rawContent.includes('📄')
+                      || lower.includes('is now complete')
+                      || lower.includes('closed out')
+                      || lower.includes('signed and issued');
                     if (isCompletion) {
+                      // Pick a banner label appropriate to the event so the
+                      // chat reads "Task Closed" for close-outs and "Signed
+                      // & Issued" for sign actions, not a generic "Task
+                      // Completed" for everything.
+                      const bannerLabel = lower.includes('signed and issued')
+                        ? 'Signed & Issued'
+                        : lower.includes('closed out')
+                          ? 'Task Closed'
+                          : 'Task Completed';
                       return (
                         <div key={msg.id} className="w-full self-center py-2 px-2">
                           <div className="mx-auto max-w-sm rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm">
                             <div className="flex items-center gap-2 bg-primary px-4 py-2">
                               <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
-                              <span className="text-[11px] font-normal text-white uppercase tracking-wider">Task Completed</span>
+                              <span className="text-[11px] font-normal text-white uppercase tracking-wider">{bannerLabel}</span>
                             </div>
                             <div className="px-4 py-3 text-center">
                               <p className="text-[12px] text-foreground leading-relaxed">{cleanContent}</p>
@@ -935,10 +1012,17 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
               )}
               <textarea
                 ref={messageInputRef}
-                placeholder={isRecording ? "Add a caption (optional)…" : "Type a message… (use @ to mention)"}
-                className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto"
+                placeholder={
+                  isTaskCompleted
+                    ? "This task is closed — no new messages can be sent."
+                    : isRecording
+                    ? "Add a caption (optional)…"
+                    : "Type a message… (use @ to mention)"
+                }
+                className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto disabled:opacity-60 disabled:cursor-not-allowed"
                 rows={1}
                 value={message}
+                disabled={isTaskCompleted}
                 onChange={(e) => {
                   e.target.style.height = "auto";
                   e.target.style.height = `${e.target.scrollHeight}px`;
@@ -951,7 +1035,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             {/* Send Button */}
             <button
               onClick={handleSend}
-              disabled={(message.trim() === "" && attachedFiles.length === 0 && !isRecording) || isUploading}
+              disabled={isTaskCompleted || (message.trim() === "" && attachedFiles.length === 0 && !isRecording) || isUploading}
               className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
                 ? "bg-[#101828] cursor-pointer"
                 : "bg-[#e0e0e0] cursor-not-allowed"

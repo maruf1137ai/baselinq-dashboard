@@ -91,7 +91,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
-import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
+import { formatDate, formatDateOrNoDate, formatDateTime, formatTime } from "@/lib/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
@@ -142,8 +142,8 @@ const getRelativeTime = (dateStr: string): string => {
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (diffDays === 1) return `Yesterday at ${formatTime(date)}`;
+  return formatTime(date);
 };
 
 const groupLogsByDate = (logs: any[]) => {
@@ -1083,7 +1083,59 @@ export default function TaskDetails() {
 
     // Type-specific transformations
     switch (taskType) {
-      case "VO":
+      case "VO": {
+        // Werner — the contractor's pricing reply carries the priced
+        // line items + VAT in its structuredData blob, but the VO
+        // entity's own sub_total / tax_rate / tax_amount / line_items
+        // columns aren't always written back from the reply flow. Prefer
+        // the latest priced reply for these fields so the entity-level
+        // Financial Breakdown matches what was actually priced; fall
+        // back to the entity's own fields when no reply has pricing
+        // (e.g. the VO was created with line items pre-filled by an
+        // admin and no contractor reply has come in yet).
+        const latestPricing = (() => {
+          const resps: any[] = apiResponse.responses || [];
+          for (let i = resps.length - 1; i >= 0; i--) {
+            const sd = resps[i]?.structuredData || {};
+            if (
+              sd.subTotal != null ||
+              sd.grandTotal != null ||
+              sd.tax?.amount != null ||
+              (Array.isArray(sd.lineItems) && sd.lineItems.length > 0)
+            ) {
+              return sd;
+            }
+          }
+          return null;
+        })();
+        // Pick ONE source of truth — mixing entity values for some
+        // pricing fields and reply values for others lets you end up
+        // with e.g. subtotal=300 + VAT=45 + total=300 (the entity's
+        // total never had the reply's VAT applied to it).
+        //
+        // Rule: prefer the reply when it has any pricing data; otherwise
+        // use the entity's own values. This keeps Subtotal + VAT + Total
+        // consistent because they all come from the same place.
+        const replyHasPricing = !!(
+          latestPricing && (
+            Number(latestPricing.grandTotal ?? 0) > 0 ||
+            Number(latestPricing.subTotal ?? 0) > 0 ||
+            Number(latestPricing.tax?.amount ?? 0) > 0 ||
+            (Array.isArray(latestPricing.lineItems) && latestPricing.lineItems.length > 0)
+          )
+        );
+        const lineItems = replyHasPricing && Array.isArray(latestPricing.lineItems) && latestPricing.lineItems.length > 0
+          ? latestPricing.lineItems
+          : (Array.isArray(task.lineItems) ? task.lineItems : []);
+        const subTotal = replyHasPricing
+          ? Number(latestPricing?.subTotal ?? 0)
+          : Number(task.subTotal ?? 0);
+        const tax = replyHasPricing
+          ? (latestPricing?.tax || { type: "VAT", rate: 15, amount: 0 })
+          : (task.tax || { type: "VAT", rate: 15, amount: 0 });
+        const grandTotal = replyHasPricing
+          ? Number(latestPricing?.grandTotal ?? 0)
+          : Number(task.grandTotal ?? 0);
         return {
           ...baseData,
           displayId: `#${task.voNumber || `VO-${task._id}`}`,
@@ -1095,10 +1147,10 @@ export default function TaskDetails() {
             discipline: task.discipline,
             description: task.description,
             currency: task.currency || "ZAR",
-            subTotal: task.subTotal || 0,
-            grandTotal: task.grandTotal || 0,
-            tax: task.tax || { type: "VAT", rate: 15, amount: 0 },
-            lineItems: task.lineItems || [],
+            subTotal,
+            grandTotal,
+            tax,
+            lineItems,
             voTimeImpact: task.voTimeImpact
               ?? apiResponse.responses?.slice(-1)?.[0]?.structuredData?.voTimeImpact,
           },
@@ -1122,6 +1174,7 @@ export default function TaskDetails() {
           },
           isWithinMandate: task.isWithinMandate,
         };
+      }
 
       case "RFI":
         return {
@@ -1835,8 +1888,7 @@ export default function TaskDetails() {
                         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
                         return (
                           <>
-                            {d.toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}
-                            {' '}{d.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            {formatDateTime(d)}
                             {' '}<span className="text-muted-foreground">({tz})</span>
                           </>
                         );
@@ -1852,6 +1904,72 @@ export default function TaskDetails() {
                       <dd className="text-foreground">{displayTask.formFields.discipline}</dd>
                     </>
                   )}
+
+                  {/* Task Reference — manually linked sibling doc set on
+                      the create form (SI's "Task Reference" picker). The
+                      value is a doc code like "RFI-007" / "VO-045"; we
+                      look it up against the project's task list so we
+                      can render it as a link to that task's detail page.
+                      Falls back to a non-clickable chip when the code
+                      doesn't match (e.g. typo on a legacy free-text
+                      entry, or the referenced task was deleted).
+                      Backend field is still `voReference` (camel-cased
+                      from `vo_reference`) for backwards compat. */}
+                  {displayTask.formFields?.voReference && (() => {
+                    const refCode = String(displayTask.formFields.voReference).trim();
+                    // Find the wrapping Task PK in the project task list
+                    // by matching the doc-number on the entity. Mirrors
+                    // the resolution in Task.tsx so the link target is
+                    // exactly what the kanban card would open.
+                    const matched = (projectTasksData?.tasks || []).find((t: any) => {
+                      const inner = t.task || {};
+                      const candidates = [
+                        inner.rfiNumber, inner.siNumber, inner.voNumber,
+                        inner.giNumber, inner.icNumber, inner.dcNumber,
+                        inner.rfi_number, inner.si_number, inner.vo_number,
+                        inner.gi_number, inner.ic_number, inner.dc_number,
+                      ];
+                      return candidates.some(
+                        (n) => n && String(n).toLowerCase() === refCode.toLowerCase(),
+                      );
+                    });
+                    const matchedTaskId =
+                      matched?.id ??
+                      matched?.taskId ??
+                      matched?.task?._id ??
+                      matched?.task?.id ??
+                      null;
+                    const chipClasses =
+                      "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-muted border border-border font-medium";
+                    return (
+                      <>
+                        <dt className="text-muted-foreground">Task reference:</dt>
+                        <dd className="text-foreground">
+                          {matchedTaskId ? (
+                            <Link
+                              to={`/tasks/${matchedTaskId}`}
+                              className={cn(
+                                chipClasses,
+                                "text-primary hover:bg-primary/10 hover:border-primary/40 transition-colors cursor-pointer",
+                              )}
+                              title="Open the referenced task"
+                            >
+                              <Link2 className="h-3 w-3" />
+                              {refCode}
+                            </Link>
+                          ) : (
+                            <span
+                              className={chipClasses}
+                              title="Referenced task not found on this project"
+                            >
+                              <Link2 className="h-3 w-3 text-muted-foreground" />
+                              {refCode}
+                            </span>
+                          )}
+                        </dd>
+                      </>
+                    );
+                  })()}
 
                   {/* Werner spec — "Originated from" row: when this doc
                       was auto-created via escalation (RFI→SI, SI→VO,
@@ -2124,7 +2242,7 @@ export default function TaskDetails() {
                               </div>
                               <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                {new Date(resp.date).toLocaleString()}
+                                {formatDateTime(resp.date)}
                               </span>
                             </div>
                             <div className="px-5 py-4">
@@ -2923,6 +3041,11 @@ export default function TaskDetails() {
                           ?? (tdr?.task as any)?.broker_notified
                           ?? false
                         }
+                        // Werner — needed to resolve the user's
+                        // project-level role for Sign & Issue / risk
+                        // pills. PM is usually assigned via
+                        // ProjectTeamMember, not the User record itself.
+                        projectId={projectId}
                         // Werner spec — SI doesn't lock on signed_at; it
                         // locks at Verified. Escalation (e.g. SI → VO if
                         // cost/time impact surfaces mid-flow) must stay
@@ -2981,7 +3104,11 @@ export default function TaskDetails() {
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {currentTask.rounds.map((round: any, idx: number) => (
+                    {/* Reverse-chronological — newest round on top so the
+                        latest counter-offer / response is the first thing
+                        the user sees. The roundNumber chip still reflects
+                        the chronological order they were submitted in. */}
+                    {[...currentTask.rounds].reverse().map((round: any, idx: number) => (
                       <Card
                         key={idx}
                         className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"
@@ -3003,7 +3130,7 @@ export default function TaskDetails() {
                             </div>
                             <div>
                               <p className="text-sm font-normal text-foreground">{round.sender}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {new Date(round.timestamp).toLocaleString()}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {formatDateTime(round.timestamp)}</p>
                             </div>
                           </div>
                           {round.timeConsequence > 0 && (
@@ -3611,7 +3738,7 @@ export default function TaskDetails() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>{selectedResponse.role}</span>
                       <span>•</span>
-                      <span>{new Date(selectedResponse.timestamp || selectedResponse.date).toLocaleString()}</span>
+                      <span>{formatDateTime(selectedResponse.timestamp || selectedResponse.date)}</span>
                     </div>
                   </div>
                 </div>

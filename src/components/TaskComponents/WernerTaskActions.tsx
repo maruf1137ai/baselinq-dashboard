@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePost } from "@/hooks/usePost";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { cn } from "@/lib/utils";
 
 type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPATHITEM" | string;
@@ -62,7 +63,9 @@ const SI_SIGN_ROLES = new Set([
   "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "PRINCIPAL_AGENT", "PA",
 ]);
 
-const PM_ROLES = new Set(["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
+// Werner — CLIENT (project owner) is included so the creator can sign
+// VO / Claim. Matches the backend SIGNING_ROLES update.
+const PM_ROLES = new Set(["CLIENT", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
 
 interface Props {
   /** Task type from the API (e.g. 'RFI', 'SI', 'VO', 'IC', 'DC'). */
@@ -96,6 +99,10 @@ interface Props {
   respondentId?: number | string | null;
   /** IC-only: whether the broker has already been notified for this IC. */
   brokerNotified?: boolean;
+  /** Project ID — used to resolve the user's project-level role for
+   *  Sign & Issue / risk-pill visibility. PM is usually assigned at the
+   *  project level (ProjectTeamMember), not globally (User.role). */
+  projectId?: number | string | null;
   /** Refetch the task after a state change. */
   onChanged: () => void | Promise<void>;
 }
@@ -115,7 +122,7 @@ const ESCALATION_TARGETS: Partial<Record<TaskType, { type: string; label: string
 // Excluded VO here so only the contextual Approve & Sign renders.
 // SI, DC, and Claim still use this top-bar Sign & Issue (their
 // signing isn't tied to a pricing-response review step).
-const SIGNABLE_TYPES = new Set<string>(["SI", "DC", "CLAIM"]);
+const SIGNABLE_TYPES = new Set<string>(["SI", "VO", "DC", "CLAIM"]);
 
 // Werner spec — high-stakes signs (contract amendment, claim
 // determination) MUST require a PIN. The click-confirm fallback is
@@ -134,10 +141,16 @@ export function WernerTaskActions({
   currentStatus,
   respondentId,
   brokerNotified,
+  projectId,
   onChanged,
 }: Props) {
   const { mutateAsync: postRequest } = usePost();
   const { data: currentUser } = useCurrentUser();
+  // Resolve the user's role IN THIS PROJECT (e.g. ProjectTeamMember.role).
+  // Sign & Issue depends on this — a user is often Project Manager on a
+  // project but has no global User.role.code set.
+  const projectIdNum = projectId != null && projectId !== "" ? Number(projectId) : null;
+  const { data: effectivePerms } = useEffectivePermissions(projectIdNum);
   const [signOpen, setSignOpen] = useState(false);
   const [signMethod, setSignMethod] = useState<"pin" | "click-confirm">("click-confirm");
   const [pin, setPin] = useState("");
@@ -161,7 +174,14 @@ export function WernerTaskActions({
   const [escalatingClaim, setEscalatingClaim] = useState(false);
 
   // Werner rev H — derive the current user's role bucket once.
-  const userRoleCode = (currentUser?.role?.code || "").toUpperCase();
+  // Prefer the project-resolved role (ProjectTeamMember.role.code) over
+  // the user's global role — a Project Manager is usually assigned at
+  // the project level, not on the User record itself.
+  const userRoleCode = (
+    effectivePerms?.roleCode
+    || currentUser?.role?.code
+    || ""
+  ).toUpperCase();
   const isContractor = CONTRACTOR_ROLES.has(userRoleCode);
   const isProfessional = PROFESSIONAL_ROLES.has(userRoleCode);
   const isPM = PM_ROLES.has(userRoleCode);

@@ -34,7 +34,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { hasPermission, COMPANY_TYPES } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigate, Link } from "react-router-dom";
-import { isMeetingPast } from "@/lib/dateUtils";
+import { isMeetingPast, formatDate as formatDateUk } from "@/lib/dateUtils";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { useRoles } from "@/hooks/useRoles";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
@@ -280,8 +280,12 @@ const Index = () => {
   const DEMO_PRIORITIES = ["High", "Medium", "Critical", "Low", "High", "Medium", "High", "Low", "Critical", "Medium"];
 
   const taskList = (tasksResponse?.tasks || []).map((item: any, idx: number) => {
-    const apiType = item.taskType;
-    // If all tasks are the same type, diversify for demo realism
+    // Backend returns "CRITICALPATHITEM" — normalise to the short "CPI"
+    // code the rest of the dashboard uses for badges / filters.
+    const rawType = (item.taskType || "").toString().toUpperCase();
+    const apiType = rawType === "CRITICALPATHITEM" ? "CPI" : rawType;
+    // Demo fallback only fires when the backend genuinely returned no
+    // type for this row (rare — usually means a malformed Task wrapper).
     const type = apiType || DEMO_TYPES[idx % DEMO_TYPES.length];
     return {
       id: item.taskId || item.task?._id,
@@ -298,19 +302,12 @@ const Index = () => {
     };
   });
 
-  // Always diversify types and dates for demo realism
-  {
-    const now = new Date();
-    const DEMO_DUE_OFFSETS = [-14, -7, -3, -1, 0, 2, 5, 7, 14, 21];
-    taskList.forEach((task: any, idx: number) => {
-      task.type = DEMO_TYPES[idx % DEMO_TYPES.length];
-      task.priority = DEMO_PRIORITIES[idx % DEMO_PRIORITIES.length];
-      const offset = DEMO_DUE_OFFSETS[idx % DEMO_DUE_OFFSETS.length];
-      const demoDate = new Date(now);
-      demoDate.setDate(demoDate.getDate() + offset);
-      task.due_date = demoDate.toISOString();
-    });
-  }
+  // Note: a previous demo-realism block here unconditionally overwrote
+  // task.type / task.priority / task.due_date with randomly cycled
+  // values, which made an SI show up as "CPI: Test SI 0001" on the
+  // dashboard. Removed — the real backend fields are the source of
+  // truth, and the fallbacks above already cover the empty-project
+  // demo case.
 
   const myActions = taskList.filter((t: any) => {
     const s = t.status?.toLowerCase();
@@ -1519,8 +1516,8 @@ function ProgrammeMilestonesCard({
               {visibleMilestones.map((m) => {
                 const cfg = MILESTONE_STATUS_CONFIG[m.status] ?? MILESTONE_STATUS_CONFIG.planned;
                 const pct = milestoneProgress(m.startDate, m.endDate);
-                const start = new Date(m.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-                const end   = new Date(m.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" });
+                const start = formatDateUk(m.startDate);
+                const end = formatDateUk(m.endDate);
                 return (
                   <div key={m._id} className="flex items-center gap-3 px-2 py-3">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />

@@ -222,8 +222,18 @@ export function TaskMetaFields({
   }));
 
   const handleToSelect = (user: any) => {
-    // single-select — replace
-    onChange({ ...value, to: [user] });
+    // single-select — replace To, and auto-append the same user to CC
+    // if they aren't already there. The user can still remove them from
+    // CC manually if they don't want the duplicate notification.
+    const userKey = String(user.userId || user.id);
+    const alreadyInCc = value.cc.some(
+      (u) => String(u.userId || u.id) === userKey,
+    );
+    onChange({
+      ...value,
+      to: [user],
+      cc: alreadyInCc ? value.cc : [...value.cc, user],
+    });
   };
 
   const handleToRemove = () => {
