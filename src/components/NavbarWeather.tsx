@@ -64,12 +64,14 @@ const geocodeAddress = async (address: string): Promise<{ lat: number; lon: numb
 const NavbarWeather = () => {
   const [weather, setWeather] = useState<any>(null);
   const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false); // click-pinned popup (stays open until dismissed)
   const [aiOpen, setAiOpen] = useState(false);
   const [fromProjectLocation, setFromProjectLocation] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     () => localStorage.getItem("selectedProjectId")
   );
   const popupRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const currentProject = projects.find((p: any) => p._id === selectedProjectId);
@@ -81,6 +83,25 @@ const NavbarWeather = () => {
     window.addEventListener("project-change", handleProjectChange);
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
+
+  // While the popup is pinned open, dismiss it on outside-click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const handlePointer = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (projectsLoading) return;
@@ -119,19 +140,30 @@ const NavbarWeather = () => {
   const visibility = weather.visibility ? Math.round(weather.visibility / 1000) : null;
 
   return (
-    <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      {/* Inline display */}
-      <div className="flex items-center gap-1.5 text-sm cursor-default select-none">
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Inline display — click to pin the popup open */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="flex items-center gap-1.5 text-sm cursor-pointer select-none appearance-none border-0 bg-transparent p-0 text-inherit"
+      >
         <span>{icon}</span>
         <span className="font-medium">{weather.name}</span>
         <span className="text-muted-foreground">•</span>
         <span>{condition}</span>
         <span className="text-muted-foreground">•</span>
         <span className="font-medium">{temp}°C</span>
-      </div>
+      </button>
 
-      {/* Hover popup */}
-      {hovered && (
+      {/* Popup — shown on hover, or pinned open after a click */}
+      {(open || hovered) && (
         <div
           ref={popupRef}
           className="absolute top-8 left-0 z-50 bg-white border border-border rounded-xl shadow-lg p-4 w-56 text-sm"
@@ -173,7 +205,7 @@ const NavbarWeather = () => {
           {fromProjectLocation && (
             <button
               type="button"
-              onClick={() => setAiOpen(true)}
+              onClick={() => { setOpen(false); setHovered(false); setAiOpen(true); }}
               className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <Sparkles className="h-3.5 w-3.5" />
