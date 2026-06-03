@@ -52,7 +52,7 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
  *     ref chip on right. Visually unmistakeable from a folder.
  */
 function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: FolderRowProps) {
-  const [isOpen, setIsOpen] = useState(docs.length > 0);
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleUpload = (e: React.MouseEvent) => {

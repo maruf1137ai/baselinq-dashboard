@@ -81,8 +81,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   const hasRecent = hasRecentActivityById.get(folder._id) ?? false;
   const hasAiFlags = hasAiFlagsById.get(folder._id) ?? false;
 
-  // Auto-open any folder whose subtree contains at least one document.
-  const [isOpen, setIsOpen] = useState(descendantCount > 0);
+  // Default to collapsed — folders open only when the user clicks them.
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleUpload = (e: React.MouseEvent) => {
