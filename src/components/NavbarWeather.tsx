@@ -162,12 +162,17 @@ const NavbarWeather = () => {
         <span className="font-medium">{temp}°C</span>
       </button>
 
-      {/* Popup — shown on hover, or pinned open after a click */}
+      {/* Popup — shown on hover, or pinned open after a click.
+          Outer wrapper sits flush against the button (top-full) and uses
+          pt-2 to create the visual gap; that 8px strip is hover-receptive,
+          so the popup doesn't vanish when the mouse crosses it on the way
+          to the Analyze button. */}
       {(open || hovered) && (
         <div
           ref={popupRef}
-          className="absolute top-8 left-0 z-50 bg-white border border-border rounded-xl shadow-lg p-4 w-56 text-sm"
+          className="absolute top-full left-0 z-50 pt-2 w-56 text-sm"
         >
+          <div className="bg-white border border-border rounded-xl shadow-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-2xl">{icon}</span>
             <div>
@@ -212,6 +217,7 @@ const NavbarWeather = () => {
               Analyze with AI
             </button>
           )}
+          </div>
         </div>
       )}
 
