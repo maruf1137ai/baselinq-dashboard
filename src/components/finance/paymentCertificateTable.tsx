@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -40,15 +41,7 @@ const PAGE_SIZE = 10;
 
 const formatCurrency = formatZAR;
 
-const formatDate = (iso: string) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-  });
-};
+const formatDate = (iso: string) => formatDateCanonical(iso, "short", "—");
 
 const ApprovalBadge = ({ status }: { status: string }) => {
   const config: Record<string, { bg: string; text: string; label: string }> = {

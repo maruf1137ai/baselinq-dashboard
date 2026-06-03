@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, User, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal, FileText } from "lucide-react";
 import AiIcon from "@/components/icons/AiIcon";
 import { cn } from "@/lib/utils";
+import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -279,7 +280,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
 
               {/* Timestamp */}
               <span className="text-[10px] font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {formatTime(msg.timestamp)}
               </span>
             </div>
           </div>

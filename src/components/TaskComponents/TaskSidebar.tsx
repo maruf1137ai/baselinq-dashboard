@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { TaskAttachments } from "./TaskAttachments";
 import { cn } from "@/lib/utils";
+import { formatTime } from "@/lib/dateUtils";
 import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface TaskSidebarProps {
@@ -47,8 +48,8 @@ const getRelativeTime = (dateStr: string): string => {
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (diffDays === 1) return `Yesterday at ${formatTime(date)}`;
+  return formatTime(date);
 };
 
 const groupLogsByDate = (logs: any[]) => {

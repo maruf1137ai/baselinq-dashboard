@@ -109,3 +109,52 @@ export const formatDate = (
 // render the string "No Date" verbatim.
 export const formatDateOrNoDate = (value: DateInput): string =>
   formatDate(value, "short", "No Date");
+
+// ── Time helpers (UK 24-hour clock) ────────────────────────────────────
+//
+// UK convention is 24-hour ("14:30"), forced via en-GB locale so it never
+// renders as "2:30 PM" on a US browser. Mirrors formatDate above so every
+// time in the app is the same shape regardless of viewer locale.
+
+/** "14:30" — UK 24-hour time. */
+export const formatTime = (value: DateInput, fallback = ""): string => {
+  if (value == null || value === "") return fallback;
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return fallback;
+    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return fallback;
+  }
+};
+
+/** "03 Jun 2026, 14:30" — date + 24-hour time. */
+export const formatDateTime = (
+  value: DateInput,
+  variant: "short" | "long" = "short",
+  fallback = "",
+): string => {
+  const d = formatDate(value, variant, "");
+  const t = formatTime(value, "");
+  if (!d) return fallback;
+  return t ? `${d}, ${t}` : d;
+};
+
+/** "Today at 14:30" / "Yesterday at 14:30" / "03 Jun 2026, 14:30" —
+ *  human-friendly for activity feeds and audit timestamps. */
+export const formatRelativeDateTime = (value: DateInput, fallback = ""): string => {
+  if (value == null || value === "") return fallback;
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return fallback;
+    const now = new Date();
+    const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+    const diffDays = Math.floor((startOfDay(now) - startOfDay(d)) / 86400000);
+    const time = formatTime(d);
+    if (diffDays === 0) return `Today at ${time}`;
+    if (diffDays === 1) return `Yesterday at ${time}`;
+    return formatDateTime(d);
+  } catch {
+    return fallback;
+  }
+};

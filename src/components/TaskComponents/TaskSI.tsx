@@ -6,7 +6,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { postData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
+import { formatDate, formatDateOrNoDate, formatDateTime } from "@/lib/dateUtils";
 
 interface TaskSIProps {
   formFields: any;
@@ -303,7 +303,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
               {formFields.verifiedBy && (
                 <p className="text-xs text-green-700 mt-2">
                   Verified by: {formFields.verifiedBy.name} on{" "}
-                  {formFields.verifiedAt ? new Date(formFields.verifiedAt).toLocaleString() : ""}
+                  {formatDateTime(formFields.verifiedAt)}
                 </p>
               )}
             </div>

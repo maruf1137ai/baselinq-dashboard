@@ -23,6 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import AiIcon from '@/components/icons/AiIcon';
+import { formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchData, postData } from '@/lib/Api';
@@ -102,7 +103,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
         role: msg.role || (msg.isUser ? 'user' : 'assistant'),
         content: msg.content || msg.message || '',
         timestamp: msg.createdAt
-          ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          ? formatTime(msg.createdAt)
           : '',
         citations: msg.sources?.map((s: any) => ({
           docName: s.document_name || s.documentName || '',
@@ -149,7 +150,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response.reply || response.content || '',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: formatTime(new Date()),
         citations: response.sources?.map((s: any) => ({
           docName: s.document_name || s.documentName || '',
           version: '',
@@ -177,7 +178,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
       id: Date.now().toString(),
       role: 'user',
       content: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: formatTime(new Date())
     };
 
     setMessages(prev => [...prev, userMsg]);

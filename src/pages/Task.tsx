@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { formatDate } from '@/lib/dateUtils';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -265,7 +266,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     if (hoursUntilDue !== null && hoursUntilDue <= 6) return "Due today";
     if (isUnder24h && hoursUntilDue !== null) return `Due in ${hoursUntilDue}h`;
     if (isWarning && daysUntilDue !== null) return `Due in ${daysUntilDue}d`;
-    return task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    return task.due_date ? formatDate(task.due_date) : '';
   })();
 
   // Is this task resolved/done?
@@ -418,7 +419,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
               ) : isResolved && task.due_date ? (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                   <Calendar className="h-3 w-3" />
-                  {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  {formatDate(task.due_date)}
                 </span>
               ) : null}
             </div>

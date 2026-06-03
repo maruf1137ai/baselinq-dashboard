@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '@/lib/dateUtils';
 import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useContractsFolders } from '@/hooks/useFolders';
@@ -52,7 +53,7 @@ function formatRelative(iso?: string): string {
   const diffDay = Math.floor((Date.now() - then) / 86_400_000);
   if (diffDay < 1) return 'today';
   if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+  return formatDate(iso);
 }
 
 /**

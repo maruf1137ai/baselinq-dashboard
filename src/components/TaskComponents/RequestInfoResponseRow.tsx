@@ -14,6 +14,8 @@ import { useState } from "react";
 import { CheckCircle, Reply } from "lucide-react";
 import { toast } from "sonner";
 
+import { formatDateTime } from "@/lib/dateUtils";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,7 +135,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
             {request.respondedBy && (
               <p className="text-[11px] text-muted-foreground mt-1.5">
                 Responded by {request.respondedBy.name}
-                {request.respondedAt && ` · ${new Date(request.respondedAt).toLocaleString()}`}
+                {request.respondedAt && ` · ${formatDateTime(request.respondedAt)}`}
               </p>
             )}
           </div>

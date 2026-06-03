@@ -26,6 +26,7 @@
 // import { formatDate } from '@/lib/utils';
 
 import UpcomingFeature from "@/components/settings/UpcomingFeature";
+import { formatDate } from "@/lib/dateUtils";
 
 // // JBCC contractual time limits per task type (in calendar days)
 // const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: string }[]> = {
@@ -369,7 +370,7 @@ const Audit = () => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(log.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })} &middot; {log.createdByName}
+                      {formatDate(log.created_at)} &middot; {log.createdByName}
                     </p>
                     {log.description && (
                       <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{log.description}</p>

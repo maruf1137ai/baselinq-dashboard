@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/dateUtils";
 import { useProject } from "@/hooks/useProjects";
 import React, { useState, useEffect } from "react";
 import {
@@ -756,7 +757,7 @@ const AssociatedCompanies = () => {
                                     isExpired ? "text-amber-600" : "text-muted-foreground"
                                   )}>
                                     {isExpired ? "Expired" : "Expires"}{" "}
-                                    {new Date(comp.insurance_expiry).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+                                    {formatDate(comp.insurance_expiry, "long")}
                                   </p>
                                 ) : (
                                   <p className="text-[10px] text-muted-foreground mt-0.5">No expiry date recorded</p>

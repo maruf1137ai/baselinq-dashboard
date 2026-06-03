@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/dateUtils';
 import { useFolders } from '@/hooks/useFolders';
 import type { Folder, FolderTab } from '@/types/folder';
 import type { ApiDocument } from '@/components/documents/DocumentTable';
@@ -37,7 +38,7 @@ function formatRelative(iso?: string): string {
   const diffDay = Math.floor((Date.now() - then) / 86_400_000);
   if (diffDay < 1) return 'today';
   if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+  return formatDate(iso);
 }
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;

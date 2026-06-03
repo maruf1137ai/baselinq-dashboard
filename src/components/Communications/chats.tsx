@@ -1,5 +1,6 @@
 // src/components/ChatApp.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { formatDateTime } from "@/lib/dateUtils";
 
 /**
  * Initial messages (taken from the JSON above).
@@ -98,7 +99,7 @@ export default function Chats() {
     const newMessage = {
       id: "m" + (messages.length + 1),
       author: "You",
-      time: new Date().toLocaleString(),
+      time: formatDateTime(new Date()),
       text: text.trim(),
       attachments: files.map((f) => ({
         name: f.file.name,

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { FilePreviewModal } from "./FilePreviewModal";
-import { formatDate } from "@/lib/utils";
 import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
 
 interface TaskAttachmentsProps {
