@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { addDays, format, isAfter, parseISO, startOfToday } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
-  Sparkles,
   CalendarDays,
   RefreshCw,
   AlertTriangle,
@@ -28,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { analyzeWeather } from "@/lib/Api";
+import AiIcon from "@/components/icons/AiIcon";
 
 const CONDITION_ICON: Record<string, string> = {
   Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Drizzle: "🌦️", Thunderstorm: "⛈️",
@@ -106,7 +106,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
       <DialogContent className="max-w-3xl bg-white max-h-[88vh] overflow-y-auto font-sans">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <AiIcon className="h-5 w-5 text-primary" />
             AI Weather Analysis
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -119,7 +119,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
         {data?.ai_project_header && (
           <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 text-sm text-foreground">
             <div className="flex items-center gap-2 mb-1.5 text-xs font-medium text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
+              <AiIcon className="h-3.5 w-3.5" />
               AI project weather brief
             </div>
             <p className="leading-relaxed">{data.ai_project_header}</p>
@@ -307,7 +307,7 @@ const Metric = ({ icon, label, value }: { icon: ReactNode; label: string; value:
 const AiNote = ({ text }: { text: string }) => (
   <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 text-sm text-foreground">
     <div className="flex items-center gap-2 mb-1.5 text-xs font-medium text-primary">
-      <Sparkles className="h-3.5 w-3.5" />
+      <AiIcon className="h-3.5 w-3.5" />
       AI analysis
     </div>
     <p className="leading-relaxed">{text}</p>
