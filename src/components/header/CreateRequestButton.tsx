@@ -14,8 +14,10 @@ import CreateRequestDialog from "./CreateRequestDialog";
 import { HelpCircle, Plus } from "lucide-react";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
-// "+ Action" menu — order matches Werner's spec rev G: SI, VO, RFI, GI, Claim.
+// "+ Action" menu — order matches Werner's spec rev G: SI, VO, RFI, GI, IC.
 // CPI removed per spec; existing rows remain readable (frozen).
+// DC (Claim) removed from manual creation — Claims are only created via
+// escalation from an IC's mitigation gate, never by hand.
 const btns = [
   {
     code: "SI",
@@ -46,12 +48,6 @@ const btns = [
     code: "IC",
     title: "IC - Intention to Claim",
     description: "Contractor → PM. Preliminary notice — preserves right to claim. File this first.",
-    active: false,
-  },
-  {
-    code: "DC",
-    title: "Claim",
-    description: "Contractor → PM. Formal claim with detailed substantiation. Must follow an Intention to Claim.",
     active: false,
   },
 ];

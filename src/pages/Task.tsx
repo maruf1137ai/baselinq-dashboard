@@ -34,9 +34,11 @@ import {
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 
 // "+ Action" menu — order matches Werner's spec (rev G):
-//   SI → VO → RFI → GI → DC (renamed to Claim)
+//   SI → VO → RFI → GI
 // CPI removed per spec; existing CPI rows remain readable but no new ones.
 // GI is listed but its backend model lands in PR-2.
+// DC (Claim) removed from manual creation — Claims are only created via
+// escalation from an IC's mitigation gate, never by hand.
 const btns = [
   {
     code: "SI",
@@ -63,13 +65,6 @@ const btns = [
     code: "GI",
     title: "GI - General Instruction",
     description: "Professional → Professional. Same format as RFI, prof-to-prof only.",
-    time: "Just now",
-    active: false,
-  },
-  {
-    code: "DC",
-    title: "Claim - Delay or Cost",
-    description: "Contractor → PM. Two-stage: Intention to Claim, then formal Claim.",
     time: "Just now",
     active: false,
   },
@@ -225,6 +220,11 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   };
 
   const displayId = `${task.task_code}`;
+  // SLA-default dates (user didn't pick one) still drive escalation /
+  // overdue indicators so the user is warned when an SLA is breached —
+  // we just don't print the literal "09 Jun 2026" text on the card,
+  // because the user never set that date themselves.
+  const isDefaultDue = !!(task.due_date_is_default || task.dueDateIsDefault);
   const dueDateInfo = getDueDateInfo(task.due_date, task.created_at);
   const docTypeTextColor = DOC_TYPE_TEXT_COLORS[normalizedTaskType] || 'text-muted-foreground';
   const attachmentCount = task?.attachments?.length || 0;
@@ -266,6 +266,10 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     if (hoursUntilDue !== null && hoursUntilDue <= 6) return "Due today";
     if (isUnder24h && hoursUntilDue !== null) return `Due in ${hoursUntilDue}h`;
     if (isWarning && daysUntilDue !== null) return `Due in ${daysUntilDue}d`;
+    // For SLA defaults, drop the literal-date fallback — leave nothing.
+    // Escalation labels above this line ("Xd overdue", "Due in Xd") still
+    // render because they're driven by status, not the date the user picked.
+    if (isDefaultDue) return '';
     return task.due_date ? formatDate(task.due_date) : '';
   })();
 
@@ -404,7 +408,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   <Calendar className="h-3 w-3" />
                   {`${overdueDays}d overdue`}
                 </span>
-              ) : task.due_date && !isResolved ? (
+              ) : !isDefaultDue && task.due_date && !isResolved ? (
                 <span className={`flex items-center gap-1 text-xs shrink-0 ${dueDateInfo.isOverdue
                   ? 'text-red-600 font-medium'
                   : isUnder24h
@@ -416,7 +420,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   <Calendar className="h-3 w-3" />
                   {dueDisplay}
                 </span>
-              ) : isResolved && task.due_date ? (
+              ) : !isDefaultDue && isResolved && task.due_date ? (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                   <Calendar className="h-3 w-3" />
                   {formatDate(task.due_date)}
@@ -713,6 +717,10 @@ export default function Task() {
             || item.task?.dc_number
             || `${type}-${String(item.taskId || item.id || '0').padStart(3, '0')}`,
           due_date: dueDate,
+          // Backend stamps this True when due_date was filled in from the
+          // SLA table (user didn't pick one) — TaskCard hides the chip in
+          // that case so the user sees no date instead of an invented one.
+          due_date_is_default: !!(item.dueDateIsDefault || item.due_date_is_default),
           created_at: item.created_at || item.task?.createdAt,
           assignedTo: item.assignedTo,
           assignedBy: item.assignedBy,

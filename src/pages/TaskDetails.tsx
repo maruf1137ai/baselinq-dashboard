@@ -1808,7 +1808,9 @@ export default function TaskDetails() {
                         <Badge
                           variant="secondary"
                           className="bg-amber-50 rounded-full px-3 py-1 text-amber-700 border-amber-200 text-xs">
-                          Due {displayTask.dueDate}
+                          {currentTask?.dueDateIsDefault || currentTask?.due_date_is_default
+                            ? `Escalate by ${displayTask.dueDate}`
+                            : `Due ${displayTask.dueDate}`}
                         </Badge>
                       )}
                       <DropdownMenu>
@@ -2067,7 +2069,11 @@ export default function TaskDetails() {
                     {displayTask.formFields?.subject || displayTask.title || "—"}
                   </dd>
 
-                  <dt className="text-muted-foreground">Date required:</dt>
+                  <dt className="text-muted-foreground">
+                    {currentTask?.dueDateIsDefault || currentTask?.due_date_is_default
+                      ? "Escalate by:"
+                      : "Date required:"}
+                  </dt>
                   <dd className="text-foreground">
                     {displayTask.dueDate && displayTask.dueDate !== "No Date"
                       ? <>
