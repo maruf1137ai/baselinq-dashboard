@@ -68,7 +68,7 @@ export function DashboardSidebar() {
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
-  const { setUserRole, clearUserRole } = useUserRoleStore();
+  const { userRole, setUserRole, clearUserRole } = useUserRoleStore();
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
@@ -393,7 +393,7 @@ export function DashboardSidebar() {
                       "User"}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {user?.email || ""}
+                    {userRole || ""}
                   </p>
                 </div>
 
