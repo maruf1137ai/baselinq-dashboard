@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink, X } from "lucide-react";
 import AiIcon from "@/components/icons/AiIcon";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Link, useParams } from "react-router-dom";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
@@ -394,7 +396,9 @@ export default function MeetingDetails() {
               </div>
             )}
 
-            {/* Notes available */}
+            {/* Notes available — overview renders as prose, section
+                bodies render markdown so v2's themed bullets show as
+                actual bullets (Micro-style) and v1's prose still works. */}
             {hasAiNotes && (
               <>
                 <p className="text-sm text-foreground leading-relaxed mb-4">{meeting.summary.overview}</p>
@@ -402,7 +406,25 @@ export default function MeetingDetails() {
                   {meeting.summary.sections.map((s, i) => (
                     <div key={i}>
                       <p className="text-sm font-medium text-foreground mb-1">{s.title}</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+                      <div className="text-sm text-muted-foreground leading-relaxed">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            // Match the existing v5 muted-paragraph styling and
+                            // render Micro-style bullets explicitly so v2's
+                            // themed `- bullet` bodies look like real bullets,
+                            // not literal "- " strings.
+                            p: ({ children }) => <p className="my-1">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc pl-4 space-y-0.5 my-1">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-4 space-y-0.5 my-1">{children}</ol>,
+                            li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
+                            strong: ({ children }) => <strong className="text-foreground font-medium">{children}</strong>,
+                            a: ({ href, children }) => (
+                              <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>
+                            ),
+                          }}
+                        >{s.body}</ReactMarkdown>
+                      </div>
                     </div>
                   ))}
                 </div>
