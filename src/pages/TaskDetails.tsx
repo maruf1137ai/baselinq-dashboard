@@ -1138,9 +1138,16 @@ export default function TaskDetails() {
           : Number(task.grandTotal ?? 0);
         return {
           ...baseData,
-          displayId: `#${task.voNumber || `VO-${task._id}`}`,
+          // Werner rev H — fallback chain must read BOTH camelCase
+          // (task.voNumber) and snake_case (task.vo_number) before
+          // synthesising "VO-{taskId}" from the Task PK. The mixed
+          // serializer paths sometimes emit one or the other, and the
+          // PK fallback was producing "VO-43" when the canonical
+          // "VO-001" actually existed on the entity → conflicting
+          // numbers in board vs comms.
+          displayId: `#${task.voNumber || task.vo_number || `VO-${task._id}`}`,
           title: task.title,
-          task_code: task.voNumber,
+          task_code: task.voNumber || task.vo_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -1179,9 +1186,10 @@ export default function TaskDetails() {
       case "RFI":
         return {
           ...baseData,
-          displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.rfiNumber || task.rfi_number || `RFI-${task._id}`}`,
           title: task.subject,
-          task_code: task.rfiNumber,
+          task_code: task.rfiNumber || task.rfi_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             subject: task.subject,
@@ -1213,9 +1221,10 @@ export default function TaskDetails() {
       case "SI":
         return {
           ...baseData,
-          displayId: `#${task.siNumber || `SI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.siNumber || task.si_number || `SI-${task._id}`}`,
           title: task.title,
-          task_code: task.siNumber,
+          task_code: task.siNumber || task.si_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -3182,9 +3191,13 @@ export default function TaskDetails() {
               </Card>}
 
               {/* VO Negotiation Rounds moved ABOVE the reply form — see
-                  block earlier in this component. Reading order is now:
-                  existing replies → rounds → reply form (with Pricing
-                  Response inside). */}
+                  block earlier in this component (around line 2336),
+                  which already renders rounds chronologically (round 1
+                  first, then 2, 3 …). David's upstream chronological fix
+                  is effectively applied there; this is just the
+                  placeholder for where the block used to live. Reading
+                  order is now: existing replies → rounds → reply form
+                  (with Pricing Response inside). */}
 
               {/* AI Chatbot Block — Werner spec rev H: appears ABOVE the
                   reply thread when triggered, so the order reads:
