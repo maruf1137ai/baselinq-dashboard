@@ -3533,7 +3533,16 @@ export default function TaskDetails() {
                     // shown here because they read as "System / Other"
                     // mystery rows between every real event and bury the
                     // actual story.
-                    const visibleLogs = (auditLogs || []).filter((log: any) => {
+                    //
+                    // Normalise auditLogs to an array first — the audits
+                    // endpoint returns a DRF paginated object
+                    // ({ results: [...] }) in some configurations and a
+                    // bare array in others, so accept both.
+                    const rawLogs: any = auditLogs;
+                    const logArr: any[] = Array.isArray(rawLogs)
+                      ? rawLogs
+                      : (Array.isArray(rawLogs?.results) ? rawLogs.results : []);
+                    const visibleLogs = logArr.filter((log: any) => {
                       const action = (log.action || '').toLowerCase();
                       const desc = (log.description || '').toLowerCase();
                       return !(action === 'other' && desc.startsWith('notified '));
