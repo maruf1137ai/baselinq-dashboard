@@ -20,24 +20,49 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
   const [filter, setFilter] = useState<'All' | 'Unread'>('All');
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredTasks = tasks.filter(task => {
-    // Search filter
-    const searchLower = searchQuery.toLowerCase();
-    const taskName = task.name?.toLowerCase() || "";
-    const taskIdString = task.taskId ? String(task.taskId) : "";
-    const isPrivate = !task.taskId;
-    const matchesSearch =
-      taskName.includes(searchLower) ||
-      taskIdString.includes(searchLower) ||
-      (isPrivate && "private".includes(searchLower));
+  // Sort by most-recent activity (newest first). Backend returns
+  // `last_message_at` (latest chat message) and `updated_at` (any
+  // channel-level change — title, members, etc.). We pick the more
+  // recent of the two so a task that was renamed or had a new system
+  // banner posted bubbles up alongside ones with fresh chat replies.
+  // Falls back to `created_at` for brand-new channels with no activity.
+  const channelActivityTs = (channel: any): number => {
+    const candidates = [
+      channel.last_message_at,
+      channel.lastMessageAt,
+      channel.updated_at,
+      channel.updatedAt,
+      channel.created_at,
+      channel.createdAt,
+    ];
+    for (const c of candidates) {
+      if (!c) continue;
+      const t = new Date(c).getTime();
+      if (!Number.isNaN(t)) return t;
+    }
+    return 0;
+  };
 
-    if (!matchesSearch) return false;
+  const filteredTasks = tasks
+    .filter(task => {
+      // Search filter
+      const searchLower = searchQuery.toLowerCase();
+      const taskName = task.name?.toLowerCase() || "";
+      const taskIdString = task.taskId ? String(task.taskId) : "";
+      const isPrivate = !task.taskId;
+      const matchesSearch =
+        taskName.includes(searchLower) ||
+        taskIdString.includes(searchLower) ||
+        (isPrivate && "private".includes(searchLower));
 
-    // Tab filter
-    if (filter === 'All') return true;
-    if (filter === 'Unread') return (task.unread_count || 0) > 0;
-    return true;
-  });
+      if (!matchesSearch) return false;
+
+      // Tab filter
+      if (filter === 'All') return true;
+      if (filter === 'Unread') return (task.unread_count || 0) > 0;
+      return true;
+    })
+    .sort((a, b) => channelActivityTs(b) - channelActivityTs(a));
 
   return (
     <div
