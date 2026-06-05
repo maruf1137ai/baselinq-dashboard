@@ -1138,9 +1138,16 @@ export default function TaskDetails() {
           : Number(task.grandTotal ?? 0);
         return {
           ...baseData,
-          displayId: `#${task.voNumber || `VO-${task._id}`}`,
+          // Werner rev H — fallback chain must read BOTH camelCase
+          // (task.voNumber) and snake_case (task.vo_number) before
+          // synthesising "VO-{taskId}" from the Task PK. The mixed
+          // serializer paths sometimes emit one or the other, and the
+          // PK fallback was producing "VO-43" when the canonical
+          // "VO-001" actually existed on the entity → conflicting
+          // numbers in board vs comms.
+          displayId: `#${task.voNumber || task.vo_number || `VO-${task._id}`}`,
           title: task.title,
-          task_code: task.voNumber,
+          task_code: task.voNumber || task.vo_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -1179,9 +1186,10 @@ export default function TaskDetails() {
       case "RFI":
         return {
           ...baseData,
-          displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.rfiNumber || task.rfi_number || `RFI-${task._id}`}`,
           title: task.subject,
-          task_code: task.rfiNumber,
+          task_code: task.rfiNumber || task.rfi_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             subject: task.subject,
@@ -1213,9 +1221,10 @@ export default function TaskDetails() {
       case "SI":
         return {
           ...baseData,
-          displayId: `#${task.siNumber || `SI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.siNumber || task.si_number || `SI-${task._id}`}`,
           title: task.title,
-          task_code: task.siNumber,
+          task_code: task.siNumber || task.si_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -3110,11 +3119,13 @@ export default function TaskDetails() {
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {/* Reverse-chronological — newest round on top so the
-                        latest counter-offer / response is the first thing
-                        the user sees. The roundNumber chip still reflects
-                        the chronological order they were submitted in. */}
-                    {[...currentTask.rounds].reverse().map((round: any, idx: number) => (
+                    {/* Werner rev H — email-thread chronological order:
+                        oldest round at top, newest at bottom near the
+                        reply form. Mirrors the Replies render at line
+                        ~2227 which also reads chronologically per spec
+                        page 3. The roundNumber chip on each card still
+                        reflects the order they were submitted in. */}
+                    {currentTask.rounds.map((round: any, idx: number) => (
                       <Card
                         key={idx}
                         className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"

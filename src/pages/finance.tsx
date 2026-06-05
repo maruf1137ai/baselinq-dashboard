@@ -88,7 +88,10 @@ const Finance = () => {
         const estimatedImpact = item.task?.impact ?? (value > 300000 ? 14 : value > 100000 ? 7 : value > 50000 ? 3 : 0);
 
         return {
-          id: item.task?.voNumber || `VO-${item.taskId}`,
+          // Werner rev H — read camelCase OR snake_case before
+          // falling back to "VO-{taskId}" (the PK). Without this the
+          // finance list shows "VO-43" while the chat/board show "VO-001".
+          id: item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`,
           taskId: String(item.taskId),
           title: item.task?.title || "-",
           value,
