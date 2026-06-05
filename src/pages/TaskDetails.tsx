@@ -1138,9 +1138,16 @@ export default function TaskDetails() {
           : Number(task.grandTotal ?? 0);
         return {
           ...baseData,
-          displayId: `#${task.voNumber || `VO-${task._id}`}`,
+          // Werner rev H — fallback chain must read BOTH camelCase
+          // (task.voNumber) and snake_case (task.vo_number) before
+          // synthesising "VO-{taskId}" from the Task PK. The mixed
+          // serializer paths sometimes emit one or the other, and the
+          // PK fallback was producing "VO-43" when the canonical
+          // "VO-001" actually existed on the entity → conflicting
+          // numbers in board vs comms.
+          displayId: `#${task.voNumber || task.vo_number || `VO-${task._id}`}`,
           title: task.title,
-          task_code: task.voNumber,
+          task_code: task.voNumber || task.vo_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -1179,9 +1186,10 @@ export default function TaskDetails() {
       case "RFI":
         return {
           ...baseData,
-          displayId: `#${task.rfiNumber || `RFI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.rfiNumber || task.rfi_number || `RFI-${task._id}`}`,
           title: task.subject,
-          task_code: task.rfiNumber,
+          task_code: task.rfiNumber || task.rfi_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             subject: task.subject,
@@ -1213,9 +1221,10 @@ export default function TaskDetails() {
       case "SI":
         return {
           ...baseData,
-          displayId: `#${task.siNumber || `SI-${task._id}`}`,
+          // Robust fallback — camelCase OR snake_case before PK synth.
+          displayId: `#${task.siNumber || task.si_number || `SI-${task._id}`}`,
           title: task.title,
-          task_code: task.siNumber,
+          task_code: task.siNumber || task.si_number,
           dueDate: formatDateOrNoDate(task.dueDate),
           formFields: {
             title: task.title,
@@ -1771,7 +1780,15 @@ export default function TaskDetails() {
                           {displayTask.title}
                         </h1>
                         <span className="text-muted-foreground text-sm whitespace-nowrap">
-                          {`#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}
+                          {/* Use the entity's canonical number (VO-052,
+                              RFI-006, …) from displayTask.displayId, which
+                              already reads task.voNumber / rfiNumber / etc.
+                              Falling back to taskType + Task wrapper PK
+                              (currentTask.taskId) printed "#VO-177" for
+                              an actual VO-052 — wrapper PK is just the
+                              join-table id, not the doc number. */}
+                          {displayTask.displayId
+                            || `#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2315,6 +2332,81 @@ export default function TaskDetails() {
                   </div>
                 )}
 
+
+              {/* VO Negotiation Rounds — rendered BEFORE the reply form so
+                  the user sees the round history (and the latest pricing
+                  context) directly above the form where the next round
+                  is composed. */}
+              {displayTask.type === "VO" && currentTask?.rounds && currentTask.rounds.length > 0 && (
+                <div className="space-y-4 mb-4 mt-6">
+                  <div className="flex items-center justify-between px-1">
+                    <h2 className="text-sm font-normal text-foreground">
+                      Negotiation Rounds
+                    </h2>
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
+                      {currentTask.rounds.length} {currentTask.rounds.length === 1 ? 'Round' : 'Rounds'}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {/* Chronological — round 1 first, then 2, 3 … so the
+                        list reads the same way the negotiation actually
+                        happened. */}
+                    {currentTask.rounds.map((round: any, idx: number) => (
+                      <Card
+                        key={idx}
+                        className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"
+                        onClick={() => {
+                          const isCreator = String(displayTask.creator?.id) === String(user?.id);
+                          const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
+                          if (isCreator && (currentStatusNorm === 'submitted' || currentStatusNorm === 'priced')) {
+                            const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
+                            updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
+                          }
+                          setSelectedResponse(round);
+                          setIsResponseModalOpen(true);
+                        }}
+                      >
+                        <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-normal">
+                              {round.roundNumber}
+                            </div>
+                            <div>
+                              <p className="text-sm font-normal text-foreground">{round.sender}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {formatDateTime(round.timestamp)}</p>
+                            </div>
+                          </div>
+                          {round.timeConsequence > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 bg-amber-50">
+                              +{round.timeConsequence} Days EOT
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="p-4 pt-1">
+                          {round.message && (
+                            <div
+                              className="text-xs text-muted-foreground mb-4 prose-sm max-w-none line-clamp-2 leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: round.message }}
+                            />
+                          )}
+
+                          {round.financials?.grandTotal > 0 && (
+                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-muted-foreground">Round Total:</span>
+                                <span className="text-sm font-normal text-foreground">{formatVOCurrency(round.financials.grandTotal)}</span>
+                              </div>
+                              <span className="text-[10px] text-primary flex items-center gap-0.5 font-normal">
+                                View breakdown <ChevronRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Response Form — hidden only when the task is locked.
                   Werner spec rev H: gray title strip + white body, matches
@@ -3098,78 +3190,14 @@ export default function TaskDetails() {
                 </div>{/* end .px-6.py-5 form body */}
               </Card>}
 
-              {/* VO Rounds Section */}
-              {displayTask.type === "VO" && currentTask.rounds && currentTask.rounds.length > 0 && (
-                <div className="space-y-4 mb-4 mt-6">
-                  <div className="flex items-center justify-between px-1">
-                    <h2 className="text-sm font-normal text-foreground">
-                      Negotiation Rounds
-                    </h2>
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
-                      {currentTask.rounds.length} {currentTask.rounds.length === 1 ? 'Round' : 'Rounds'}
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {/* Reverse-chronological — newest round on top so the
-                        latest counter-offer / response is the first thing
-                        the user sees. The roundNumber chip still reflects
-                        the chronological order they were submitted in. */}
-                    {[...currentTask.rounds].reverse().map((round: any, idx: number) => (
-                      <Card
-                        key={idx}
-                        className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"
-                        onClick={() => {
-                          const isCreator = String(displayTask.creator?.id) === String(user?.id);
-                          const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-                          if (isCreator && (currentStatusNorm === 'submitted' || currentStatusNorm === 'priced')) {
-                            const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-                            updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
-                          }
-                          setSelectedResponse(round);
-                          setIsResponseModalOpen(true);
-                        }}
-                      >
-                        <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-normal">
-                              {round.roundNumber}
-                            </div>
-                            <div>
-                              <p className="text-sm font-normal text-foreground">{round.sender}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {formatDateTime(round.timestamp)}</p>
-                            </div>
-                          </div>
-                          {round.timeConsequence > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 bg-amber-50">
-                              +{round.timeConsequence} Days EOT
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="p-4 pt-1">
-                          {round.message && (
-                            <div
-                              className="text-xs text-muted-foreground mb-4 prose-sm max-w-none line-clamp-2 leading-relaxed"
-                              dangerouslySetInnerHTML={{ __html: round.message }}
-                            />
-                          )}
-
-                          {round.financials?.grandTotal > 0 && (
-                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-muted-foreground">Round Total:</span>
-                                <span className="text-sm font-normal text-foreground">{formatVOCurrency(round.financials.grandTotal)}</span>
-                              </div>
-                              <span className="text-[10px] text-primary flex items-center gap-0.5 font-normal">
-                                View breakdown <ChevronRight className="w-3 h-3" />
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* VO Negotiation Rounds moved ABOVE the reply form — see
+                  block earlier in this component (around line 2336),
+                  which already renders rounds chronologically (round 1
+                  first, then 2, 3 …). David's upstream chronological fix
+                  is effectively applied there; this is just the
+                  placeholder for where the block used to live. Reading
+                  order is now: existing replies → rounds → reply form
+                  (with Pricing Response inside). */}
 
               {/* AI Chatbot Block — Werner spec rev H: appears ABOVE the
                   reply thread when triggered, so the order reads:
@@ -3497,14 +3525,40 @@ export default function TaskDetails() {
                     <h3 className="text-xs font-medium text-foreground">Audit Trail</h3>
                   </div>
                   <div className="px-4 py-4">
-                  {auditLogs && auditLogs.length > 0 ? (
-                    groupLogsByDate(auditLogs.slice(0, 30)).map((group) => (
+                  {(() => {
+                    // Hide notification-dispatch rows from the user-facing
+                    // timeline. The backend writes a TaskAudit per push
+                    // recipient ("Notified Architect via push (task_updated)")
+                    // as a legal trail — still saved in the DB, just not
+                    // shown here because they read as "System / Other"
+                    // mystery rows between every real event and bury the
+                    // actual story.
+                    //
+                    // Normalise auditLogs to an array first — the audits
+                    // endpoint returns a DRF paginated object
+                    // ({ results: [...] }) in some configurations and a
+                    // bare array in others, so accept both.
+                    const rawLogs: any = auditLogs;
+                    const logArr: any[] = Array.isArray(rawLogs)
+                      ? rawLogs
+                      : (Array.isArray(rawLogs?.results) ? rawLogs.results : []);
+                    const visibleLogs = logArr.filter((log: any) => {
+                      const action = (log.action || '').toLowerCase();
+                      const desc = (log.description || '').toLowerCase();
+                      return !(action === 'other' && desc.startsWith('notified '));
+                    });
+                    return visibleLogs.length > 0 ? (
+                    groupLogsByDate(visibleLogs.slice(0, 30)).map((group) => (
                       <div key={group.label} className="mb-5">
                         <p className="text-xs font-normal text-muted-foreground mb-3 pl-2">{group.label}</p>
                         <div>
                           {group.logs.map((log: any, i: number) => {
                             const { bg, icon } = getLogIconConfig(log);
-                            const taskNumber = currentTask ? `#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}` : displayTask?.displayId;
+                            // Same canonical-number reasoning as the header
+                            // above — prefer displayTask.displayId (entity's
+                            // own VO-052 / RFI-006) over the Task wrapper PK.
+                            const taskNumber = displayTask?.displayId
+                              || (currentTask ? `#${currentTask.taskType}-${String(currentTask.taskId).padStart(3, '0')}` : '');
                             const { text, oldStatus, newStatus, detail, hideUserName, chips } = getActionLabel(log, taskNumber);
                             const relTime = getRelativeTime(log.created_at || log.createdAt);
                             const isLast = i === group.logs.length - 1;
@@ -3572,7 +3626,8 @@ export default function TaskDetails() {
                       </div>
                       <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
                     </div>
-                  )}
+                  );
+                  })()}
                   </div>
                 </Card>
 
