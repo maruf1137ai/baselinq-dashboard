@@ -5,11 +5,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from '@/components/ui/button';
 import {
   Send,
   Paperclip,
-  ExternalLink,
   Link2,
   ChevronRight,
   FileText,
@@ -291,41 +296,6 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                       </div>
                     )}
 
-                    {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-8 space-y-4 pt-6 border-t border-gray-50">
-                        <h4 className="text-xs font-normal text-gray-400 normal-case pl-1">Sources</h4>
-                        <div className="space-y-3">
-                          {msg.citations.map((cite, ci) => (
-                            <div key={ci} className="bg-gray-50/50 border border-gray-100/50 rounded-xl p-3 flex items-start justify-between group/source hover:bg-white hover:border-primary/20 transition-all">
-                              <div className="flex gap-3">
-                                <div className="mt-1 h-6 w-6 rounded bg-white border border-gray-100 flex items-center justify-center shrink-0">
-                                  <FileText className="h-3 w-3 text-gray-400" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium text-gray-900 mb-0.5">
-                                    {cite.docName}
-                                  </p>
-                                  <p className="text-xs text-gray-600 font-normal">
-                                    {cite.clause && <span className="text-purple-600 font-medium">Clause {cite.clause}</span>}
-                                    {cite.clauseTitle && <span> — {cite.clauseTitle}</span>}
-                                    {cite.page && <span className="text-gray-400"> · Page {cite.page}</span>}
-                                  </p>
-                                  {cite.snippet && (
-                                    <p className="text-xs text-gray-400 font-normal mt-1 line-clamp-2 italic">
-                                      "{cite.snippet}"
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover/source:opacity-100 text-primary">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     {msg.role === 'assistant' && msg.hasActions && (
                       <div className="mt-4 flex items-center gap-1 pt-3 border-t border-gray-50">
                         <button
@@ -376,6 +346,32 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
+                    <TooltipProvider delayDuration={200}>
+                      <div className="flex flex-wrap gap-1.5">
+                        {msg.citations.map((cite, ci) => (
+                          <Tooltip key={ci}>
+                            <TooltipTrigger asChild>
+                              <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
+                                <FileText className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-[11px] text-muted-foreground font-medium">Clause {cite.clause}</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="w-72 p-3 overflow-visible">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <p className="text-xs font-normal truncate">{cite.clauseTitle ?? `Clause ${cite.clause}`}, Page {cite.page}</p>
+                              </div>
+                              {cite.snippet && (
+                                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 whitespace-normal">{cite.snippet}</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    </TooltipProvider>
+                  )}
 
                   {msg.followUps && msg.followUps.length > 0 && (
                     <div className="mt-2 space-y-3">
