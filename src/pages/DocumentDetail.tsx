@@ -47,6 +47,7 @@ import { VersionHistoryModal } from '@/components/documents/VersionHistoryModal'
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { EditDocumentModal } from '@/components/documents/EditDocumentModal';
 import { DocumentPreviewCard } from '@/components/documents/DocumentPreviewCard';
+import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData, patchData, deleteData } from '@/lib/Api';
 import type { LinkItem } from '@/components/documents/LinkDocumentModal';
@@ -57,6 +58,7 @@ import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
 const DocumentDetail = () => {
   const { docId } = useParams();
   const navigate = useNavigate();
+  const [isAskOpen, setIsAskOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isVersionUploadOpen, setIsVersionUploadOpen] = useState(false);
@@ -369,6 +371,13 @@ const DocumentDetail = () => {
               Upload revision) — just reorganised. Dead "Share" button
               removed. */}
           <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
+              onClick={() => setIsAskOpen(true)}
+            >
+              <AiIcon size={13} className="mr-1.5" /> Ask AI
+            </Button>
             {doc.userPermissions?.canDownload !== false && (
               <Button
                 variant="outline"
@@ -1123,6 +1132,12 @@ const DocumentDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AskRegulationsDrawer
+        isOpen={isAskOpen}
+        onClose={() => setIsAskOpen(false)}
+        documentId={docId}
+      />
 
       <FilePreviewModal
         isOpen={!!previewFile}
