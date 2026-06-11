@@ -44,6 +44,11 @@ interface ActionItem {
   // "Awaiting <assignee>" pill instead so the user isn't presented with
   // a button that would 403.
   can_approve?: boolean;
+  // LLM-inferred task type from the notetaker (VO/SI/RFI/DC/CPI).
+  // Used as the pre-approval chip + the POST body's task_type so the
+  // task is created with a type that fits the actual content, not a
+  // round-robin pick.
+  suggested_task_type?: string | null;
 }
 interface TranscriptSegment { id: number; speaker: string; time: string; text: string; }
 interface MeetingDetail {
@@ -66,16 +71,14 @@ interface MeetingDetail {
 }
 
 // Visual styling for the small task-type chip on each action item row.
-// Mirrors the doc-type colours used on the Tasks board so the same
-// document family wears the same colour everywhere in the app.
-const DOC_TYPE_CHIP_CLASSES: Record<string, string> = {
-  VO:  "bg-purple-50 text-purple-700 border-purple-200",
-  SI:  "bg-green-50  text-green-700  border-green-200",
-  RFI: "bg-blue-50   text-blue-700   border-blue-200",
-  DC:  "bg-orange-50 text-orange-700 border-orange-200",
-  CPI: "bg-amber-50  text-amber-700  border-amber-200",
-};
+// Plain / muted by user request — colour-coding the chip created visual
+// noise. We keep a single neutral style for every type, just enough to
+// distinguish it from the surrounding text.
+const TYPE_CHIP_CLASS = "bg-muted text-muted-foreground border-border";
 
+// Task types creatable from a meeting action item. Matches the manual
+// `+ Action` menu — CPI was retired and DC is excluded because formal
+// Claims only come from IC escalation, not direct creation.
 const TASK_CONFIGS = [
   {
     type: "VO",
@@ -103,18 +106,19 @@ const TASK_CONFIGS = [
     }),
   },
   {
-    type: "DC",
-    url: "tasks/delay-claims/",
+    type: "GI",
+    url: "tasks/general-instructions/",
     payload: (title: string, projectId: string) => ({
-      project: parseInt(projectId), title, description: title,
-      taskStatus: "Draft", estimated_cost_currency: "ZAR",
+      project: parseInt(projectId), subject: title, description: title,
+      taskStatus: "Draft", discipline: "Architectural",
     }),
   },
   {
-    type: "CPI",
-    url: "tasks/critical-path-items/",
+    type: "IC",
+    url: "tasks/intentions-to-claim/",
     payload: (title: string, projectId: string) => ({
-      project: parseInt(projectId), task_activity_name: title, description: title,
+      project: parseInt(projectId), subject: title, description: title,
+      taskStatus: "Draft",
     }),
   },
 ];
@@ -183,17 +187,24 @@ export default function MeetingDetails() {
     setApprovingIndex(index);
     try {
       // Preferred path: server-side idempotent approval that creates the
-      // task atomically and persists state across users/devices. Falls
-      // back to the legacy localStorage + TASK_CONFIGS path on any error
-      // so older backends keep working.
-      const config = TASK_CONFIGS[index % TASK_CONFIGS.length];
+      // task atomically and persists state across users/devices. The task
+      // type is the one the notetaker LLM inferred for THIS specific
+      // action (item.suggested_task_type), so a "delay claim" becomes a
+      // DC, an info request becomes an RFI, etc. We only fall back to the
+      // round-robin TASK_CONFIGS rotation (legacy placeholder) when the
+      // backend response doesn't carry a suggestion — e.g. older meetings
+      // processed before the notetaker started emitting the field.
+      const suggested = (item.suggested_task_type || "").toUpperCase();
+      const fallbackType = TASK_CONFIGS[index % TASK_CONFIGS.length].type;
+      const taskType = suggested || fallbackType;
+      const config = TASK_CONFIGS.find(c => c.type === taskType) ?? TASK_CONFIGS[index % TASK_CONFIGS.length];
       try {
         await postRequest({
           url: `meetings/${id}/action-items/${item.id}/approve/`,
-          data: { task_type: config.type },
+          data: { task_type: taskType },
         });
         persistDecision(String(item.id), "approved");
-        toast.success(`${config.type} task created.`);
+        toast.success(`${taskType} task created.`);
         await refetch();
         return;
       } catch (e: any) {
@@ -510,7 +521,7 @@ export default function MeetingDetails() {
                   <tr className="bg-muted/50">
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5">Action</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-20">Type</th>
-                    <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-40">Owner</th>
+                    <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-40">Assignee</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-28">Due</th>
                     <th className="text-right text-xs text-muted-foreground font-normal px-4 py-2.5 w-44">Actions</th>
                   </tr>
@@ -526,9 +537,14 @@ export default function MeetingDetails() {
                     // logic; a real picker / AI-suggestion path is on
                     // the open-questions list, see
                     // docs/meeting-action-item-task-fix.md §7).
-                    const prospectiveType = TASK_CONFIGS[i % TASK_CONFIGS.length].type;
+                    // Pre-approval chip: prefer the LLM-suggested type from
+                    // the notetaker (`item.suggested_task_type`). Only fall
+                    // back to the rotating TASK_CONFIGS placeholder when
+                    // the suggestion is missing (older meetings processed
+                    // before the notetaker emitted this field).
+                    const prospectiveType = (item.suggested_task_type || "").toUpperCase()
+                      || TASK_CONFIGS[i % TASK_CONFIGS.length].type;
                     const taskTypeForChip = (item.linked_task_type || prospectiveType || "").toUpperCase();
-                    const chipClass = DOC_TYPE_CHIP_CLASSES[taskTypeForChip] ?? "bg-muted text-muted-foreground border-border";
                     return (
                       <tr key={item.id} className={`border-t border-border transition-colors ${isCreating ? "bg-primary/5" : ""}`}>
                         <td className="text-sm text-foreground px-4 py-3">
@@ -544,7 +560,7 @@ export default function MeetingDetails() {
                         <td className="px-4 py-3">
                           {taskTypeForChip && (
                             <span
-                              className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border ${chipClass}`}
+                              className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border ${TYPE_CHIP_CLASS}`}
                               title={item.linked_task_type ? `Task created as ${taskTypeForChip}` : `Will be created as ${taskTypeForChip}`}
                             >
                               {taskTypeForChip}
