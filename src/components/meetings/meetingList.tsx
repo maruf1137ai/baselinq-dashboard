@@ -213,7 +213,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function RsvpBadge({ rsvp }: { rsvp: RsvpStatus | null }) {
   if (rsvp === "declined") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-200 text-gray-500 shrink-0">
+      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-muted border-border text-muted-foreground shrink-0">
         <X className="h-3 w-3" /> Declined
       </span>
     );
