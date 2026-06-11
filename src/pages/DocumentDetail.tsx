@@ -494,7 +494,7 @@ const DocumentDetail = () => {
                     secondary tab. */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* About — description as a prose block */}
-                  <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="bg-card rounded-lg border border-border p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-5 bg-primary rounded-full" />
                       <h3 className="text-sm font-medium text-foreground">About</h3>
@@ -514,7 +514,7 @@ const DocumentDetail = () => {
                       existing VersionHistoryModal for the full audit log.
                       Always visible: versions are the legal record for
                       construction docs. */}
-                  <div className="bg-white rounded-xl border border-border overflow-hidden">
+                  <div className="bg-card rounded-lg border border-border overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                       <div className="flex items-center gap-2">
                         <FileClock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -588,7 +588,7 @@ const DocumentDetail = () => {
                   </div>
 
                   {/* Key dates */}
-                  <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="bg-card rounded-lg border border-border p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
                       <h3 className="text-sm font-medium text-foreground">Key dates</h3>
@@ -618,7 +618,7 @@ const DocumentDetail = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* AI summary */}
                 <div className={cn(
-                  "rounded-xl border bg-white p-4 flex items-center gap-3",
+                  "rounded-lg border bg-card p-4 flex items-center gap-3",
                   doc.aiSeverity === 'high' && doc.aiFlags > 0
                     ? "border-red-100"
                     : doc.aiSeverity === 'medium' && doc.aiFlags > 0
@@ -649,7 +649,7 @@ const DocumentDetail = () => {
                 </div>
 
                 {/* Linked summary */}
-                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
                     <Link2 className="w-4 h-4" />
                   </div>
@@ -667,7 +667,7 @@ const DocumentDetail = () => {
                 </div>
 
                 {/* Obligations summary */}
-                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
@@ -708,7 +708,7 @@ const DocumentDetail = () => {
               </div>
 
               {doc.aiStatus === 'running' && (
-                <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-100 bg-amber-50 text-amber-700">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm font-normal">AI analysis is currently running...</span>
                 </div>
@@ -719,7 +719,7 @@ const DocumentDetail = () => {
               )}
 
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-lg border border-dashed border-border bg-muted/20">
                   <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
                     <AiIcon size={20} />
                   </div>
@@ -747,7 +747,7 @@ const DocumentDetail = () => {
                     <div
                       key={finding._id}
                       className={cn(
-                        "p-4 rounded-xl border bg-white transition-all",
+                        "p-4 rounded-lg border bg-card transition-all",
                         finding.isResolved
                           ? "border-border opacity-60"
                           : finding.severity === 'high'
@@ -826,7 +826,7 @@ const DocumentDetail = () => {
               {linksLoading ? (
                 <AwesomeLoader message="Loading Links" />
               ) : links.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-lg border border-dashed border-border bg-muted/20">
                   <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
                     <Link2 className="w-4 h-4" strokeWidth={1.5} />
                   </div>
@@ -850,7 +850,7 @@ const DocumentDetail = () => {
                     <div
                       key={link._id}
                       onClick={() => link.taskId && navigate(`/tasks/${link.taskId}`)}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:border-primary/30 hover:bg-muted/20 transition-all group/link cursor-pointer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-muted/20 transition-all group/link cursor-pointer"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-8 w-12 bg-primary/5 border border-primary/10 rounded-md flex items-center justify-center shrink-0">
@@ -901,7 +901,7 @@ const DocumentDetail = () => {
               </div>
 
               {showObligationForm && (
-                <div className="p-4 rounded-xl border border-primary/20 bg-primary/[0.02] space-y-3">
+                <div className="p-4 rounded-lg border border-primary/20 bg-primary/[0.02] space-y-3">
                   <div>
                     <label className="text-xs font-normal text-muted-foreground uppercase block mb-1.5">Title <span className="text-red-500">*</span></label>
                     <input
@@ -954,7 +954,7 @@ const DocumentDetail = () => {
               {obligationsLoading ? (
                 <AwesomeLoader message="Loading Obligations" />
               ) : obligations.length === 0 && !showObligationForm ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
+                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-lg border border-dashed border-border bg-muted/20">
                   <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
                     <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
                   </div>
@@ -975,7 +975,7 @@ const DocumentDetail = () => {
               ) : (
                 <div className="space-y-3">
                   {obligations.map((ob: any) => (
-                    <div key={ob._id} className="p-5 rounded-xl border border-border bg-white hover:shadow-sm transition-all">
+                    <div key={ob._id} className="p-5 rounded-lg border border-border bg-card hover:shadow-sm transition-all">
                       {editingObligation?._id === ob._id ? (
                         <div className="space-y-3">
                           <input
@@ -1067,7 +1067,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={!!linkToDelete} onOpenChange={(open) => !open && setLinkToDelete(null)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-background">
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Link</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1113,7 +1113,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-background">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
