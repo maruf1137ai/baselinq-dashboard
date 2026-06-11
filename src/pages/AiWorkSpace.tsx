@@ -22,6 +22,7 @@ interface ChatSource {
   page_number: string | number;
   similarity: number;
   excerpt: string;
+  document_name?: string;
 }
 
 interface Message {
@@ -401,7 +402,7 @@ const AiWorkSpace = () => {
                               if (!hasClauseSources && !hasPriceSources) return null;
 
                               // Build combined citation list
-                              const citations: { type: 'clause' | 'market'; label: string; detail: string; subtext: string }[] = [];
+                              const citations: { type: 'clause' | 'market'; label: string; detail: string; subtext: string; docName?: string }[] = [];
 
                               // Contract clause citations
                               message.sources?.forEach((source) => {
@@ -410,6 +411,7 @@ const AiWorkSpace = () => {
                                   label: `Clause ${source.clause_number}`,
                                   detail: `${source.clause_title}, Page ${source.page_number}`,
                                   subtext: source.excerpt,
+                                  docName: source.document_name,
                                 });
                               });
 
@@ -445,7 +447,10 @@ const AiWorkSpace = () => {
                                         <span className="text-xs text-muted-foreground font-medium">{cite.label}</span>
                                       </button>
                                       {/* Hover popover */}
-                                      <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+                                      <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+                                        {cite.type === 'clause' && cite.docName && (
+                                          <p className="text-[10px] font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
+                                        )}
                                         <div className="flex items-center gap-1.5 mb-1">
                                           {cite.type === 'clause' ? (
                                             <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -454,7 +459,7 @@ const AiWorkSpace = () => {
                                           )}
                                           <p className="text-xs font-normal text-foreground truncate">{cite.detail}</p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{cite.subtext}</p>
+                                        <p className="text-xs text-muted-foreground leading-relaxed">{cite.subtext}</p>
                                       </div>
                                     </div>
                                   ))}

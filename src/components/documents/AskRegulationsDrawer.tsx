@@ -358,13 +358,16 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                                 <span className="text-[11px] text-muted-foreground font-medium">Clause {cite.clause}</span>
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent side="top" className="w-72 p-3 overflow-visible">
+                            <TooltipContent side="top" className="w-80 p-3 overflow-visible">
+                              {cite.docName && (
+                                <p className="text-[10px] font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
+                              )}
                               <div className="flex items-center gap-1.5 mb-1">
                                 <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                                 <p className="text-xs font-normal truncate">{cite.clauseTitle ?? `Clause ${cite.clause}`}, Page {cite.page}</p>
                               </div>
                               {cite.snippet && (
-                                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 whitespace-normal">{cite.snippet}</p>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-normal">{cite.snippet}</p>
                               )}
                             </TooltipContent>
                           </Tooltip>

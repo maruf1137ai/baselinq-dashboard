@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { fetchData, postData } from "@/lib/Api";
+import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { Badge } from "../ui/badge";
@@ -439,11 +439,24 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const handleAudioUploadAndSend = async (audioFile: File) => {
     setIsUploading(true);
     try {
+      // Step 1: Get presigned S3 upload URL
+      const { upload_url, key } = await getPresignedUrl({
+        filename: audioFile.name,
+        content_type: 'audio/webm',
+        folder: 'channel_attachments',
+      });
+
+      // Step 2: Upload directly to S3 (bypasses Django local storage)
+      await uploadFileToPresignedUrl(upload_url, audioFile, 'audio/webm');
+
+      // Step 3: Send message referencing the S3 key instead of the file binary
       const formData = new FormData();
       formData.append("content", "");
       formData.append("is_urgent", "false");
       formData.append("message_type", "voice");
-      formData.append("attachments", audioFile, audioFile.name);
+      formData.append("s3_key", key);
+      formData.append("file_name", audioFile.name);
+      formData.append("file_type", "audio/webm");
 
       await postData({
         url: `channels/${channel.id}/messages/`,

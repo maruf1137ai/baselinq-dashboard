@@ -13,6 +13,7 @@ interface ChatSource {
   page_number: string | number;
   similarity: number;
   excerpt: string;
+  document_name?: string;
 }
 
 interface Message {
@@ -266,12 +267,15 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                         <FileText className="h-3 w-3 text-muted-foreground" />
                         <span className="text-[11px] text-muted-foreground font-medium">Clause {source.clause_number}</span>
                       </button>
-                      <div className="absolute bottom-full left-0 mb-1.5 w-72 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+                      <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+                        {source.document_name && (
+                          <p className="text-[10px] font-medium text-primary/70 mb-1 truncate">{source.document_name}</p>
+                        )}
                         <div className="flex items-center gap-1.5 mb-1">
                           <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                           <p className="text-xs font-normal text-foreground truncate">{source.clause_title}, Page {source.page_number}</p>
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{source.excerpt}</p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">{source.excerpt}</p>
                       </div>
                     </div>
                   ))}
