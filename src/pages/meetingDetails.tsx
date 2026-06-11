@@ -38,6 +38,12 @@ interface ActionItem {
   assigned_user_name?: string | null;
   linked_task_id?: number | null;
   linked_task_type?: string | null;
+  // True when the current user is allowed to approve THIS item per the
+  // backend rule (assignee, meeting organiser, or PM/CPM/CLIENT). When
+  // false we hide the Approve / Decline buttons and show an
+  // "Awaiting <assignee>" pill instead so the user isn't presented with
+  // a button that would 403.
+  can_approve?: boolean;
 }
 interface TranscriptSegment { id: number; speaker: string; time: string; text: string; }
 interface MeetingDetail {
@@ -58,6 +64,17 @@ interface MeetingDetail {
   participants: Participant[];
   transcript: TranscriptSegment[];
 }
+
+// Visual styling for the small task-type chip on each action item row.
+// Mirrors the doc-type colours used on the Tasks board so the same
+// document family wears the same colour everywhere in the app.
+const DOC_TYPE_CHIP_CLASSES: Record<string, string> = {
+  VO:  "bg-purple-50 text-purple-700 border-purple-200",
+  SI:  "bg-green-50  text-green-700  border-green-200",
+  RFI: "bg-blue-50   text-blue-700   border-blue-200",
+  DC:  "bg-orange-50 text-orange-700 border-orange-200",
+  CPI: "bg-amber-50  text-amber-700  border-amber-200",
+};
 
 const TASK_CONFIGS = [
   {
@@ -492,6 +509,7 @@ export default function MeetingDetails() {
                 <thead>
                   <tr className="bg-muted/50">
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5">Action</th>
+                    <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-20">Type</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-40">Owner</th>
                     <th className="text-left text-xs text-muted-foreground font-normal px-4 py-2.5 w-28">Due</th>
                     <th className="text-right text-xs text-muted-foreground font-normal px-4 py-2.5 w-44">Actions</th>
@@ -500,6 +518,17 @@ export default function MeetingDetails() {
                 <tbody>
                   {meeting.action_items.map((item, i) => {
                     const isCreating = approvingIndex === i;
+                    // Type chip: after approval, show the type the task
+                    // ACTUALLY became (item.linked_task_type from the
+                    // backend). Before approval, surface the type the
+                    // action WILL create — currently picked by
+                    // TASK_CONFIGS[index % N] (placeholder rotating
+                    // logic; a real picker / AI-suggestion path is on
+                    // the open-questions list, see
+                    // docs/meeting-action-item-task-fix.md §7).
+                    const prospectiveType = TASK_CONFIGS[i % TASK_CONFIGS.length].type;
+                    const taskTypeForChip = (item.linked_task_type || prospectiveType || "").toUpperCase();
+                    const chipClass = DOC_TYPE_CHIP_CLASSES[taskTypeForChip] ?? "bg-muted text-muted-foreground border-border";
                     return (
                       <tr key={item.id} className={`border-t border-border transition-colors ${isCreating ? "bg-primary/5" : ""}`}>
                         <td className="text-sm text-foreground px-4 py-3">
@@ -511,6 +540,16 @@ export default function MeetingDetails() {
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {taskTypeForChip && (
+                            <span
+                              className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border ${chipClass}`}
+                              title={item.linked_task_type ? `Task created as ${taskTypeForChip}` : `Will be created as ${taskTypeForChip}`}
+                            >
+                              {taskTypeForChip}
+                            </span>
+                          )}
                         </td>
                         <td className="text-sm text-muted-foreground px-4 py-3">{item.assigned_user_name || item.owner}</td>
                         <td className="text-sm text-muted-foreground px-4 py-3">{item.due}</td>
@@ -540,6 +579,41 @@ export default function MeetingDetails() {
                               >
                                 Declined
                               </span>
+                            ) : item.can_approve === false ? (
+                              // Backend says this user can't approve.
+                              // Show a quiet pill identifying who CAN
+                              // act, rather than a button that would 403.
+                              // Naming the assignee (or falling back to
+                              // "Project Manager") avoids overloading
+                              // the word "Owner" — which is also the
+                              // CLIENT/Owner role name elsewhere.
+                              //
+                              // We only name the assignee when we have a
+                              // REAL matched system user (`assigned_user_id`
+                              // is set). The raw `item.owner` is just the
+                              // AI-extracted name string and can be a
+                              // person who isn't actually on the platform
+                              // — naming them in the pill would mislead.
+                              (() => {
+                                const hasMatchedAssignee = !!item.assigned_user_id;
+                                const assigneeName = hasMatchedAssignee
+                                  ? (item.assigned_user_name || "").trim()
+                                  : "";
+                                const pillLabel = assigneeName
+                                  ? `Awaiting ${assigneeName}`
+                                  : "Awaiting Project Manager";
+                                const tooltip = assigneeName
+                                  ? `Only ${assigneeName} or a Project Manager can approve this action item.`
+                                  : "Assignee could not be matched. Only a Project Manager or the meeting organiser can approve.";
+                                return (
+                                  <span
+                                    className="text-xs text-muted-foreground bg-muted border border-border px-2.5 py-1 rounded-full"
+                                    title={tooltip}
+                                  >
+                                    {pillLabel}
+                                  </span>
+                                );
+                              })()
                             ) : (
                               <>
                                 <Button
