@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { RequestInfoDialog } from '../commons/RequestInfoDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilePreviewModal } from '../TaskComponents/FilePreviewModal';
+import { ChannelAttachmentsPanel } from './ChannelAttachmentsPanel';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import useFetch from '@/hooks/useFetch';
@@ -16,10 +17,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const ChatSammary = ({ task: channelTask }: { task: any }) => {
+const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages?: any[] }) => {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type?: string; streamUrl?: string } | null>(null);
 
   // Fetch full task details using the taskId from the channel
   const taskId = channelTask?.taskId;
@@ -182,6 +184,11 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
           </p>
         </div>
 
+        {/* Shared Files — all attachments, media and links shared in this channel */}
+        <div className="border-t border-gray-100 pt-2">
+          <ChannelAttachmentsPanel messages={messages} onPreview={setPreviewFile} />
+        </div>
+
         {/* Action Buttons */}
         {/* <div className="grid grid-cols-3 gap-2">
           <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={handleViewTask}>Approve</Button>
@@ -222,6 +229,13 @@ const ChatSammary = ({ task: channelTask }: { task: any }) => {
             name: selectedDocument.name,
             url: selectedDocument.streamUrl || selectedDocument.stream_url || selectedDocument.url || ""
           } : null}
+        />
+
+        {/* Preview for files opened from the Shared Files panel */}
+        <FilePreviewModal
+          isOpen={!!previewFile}
+          onOpenChange={(open) => !open && setPreviewFile(null)}
+          file={previewFile ? { name: previewFile.name, url: previewFile.url, fileType: previewFile.type, streamUrl: previewFile.streamUrl } : null}
         />
 
         {/* Legacy Sections (Next Steps / Risks) - Kept if needed, but data usually comes from AI analysis */}

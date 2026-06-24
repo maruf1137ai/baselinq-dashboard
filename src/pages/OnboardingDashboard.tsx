@@ -18,6 +18,7 @@ import {
   Phone,
   MapPin,
   Briefcase,
+  CreditCard,
   Save,
   Loader2,
   FolderOpen,
@@ -139,6 +140,14 @@ const OnboardingDashboard = () => {
     insurance_document: {
       expiry_date: "",
     },
+    banking_details: {
+      bank_name: "",
+      branch_name: "",
+      branch_code: "",
+      account_number: "",
+      account_type: "",
+      swift_code: "",
+    },
   });
 
   useEffect(() => {
@@ -167,6 +176,14 @@ const OnboardingDashboard = () => {
         insurance_document: {
           expiry_date: user.insurance_document?.expiry_date || "",
         },
+        banking_details: {
+          bank_name: (user as any).banking_details?.bank_name || "",
+          branch_name: (user as any).banking_details?.branch_name || "",
+          branch_code: (user as any).banking_details?.branch_code || "",
+          account_number: (user as any).banking_details?.account_number || "",
+          account_type: (user as any).banking_details?.account_type || "",
+          swift_code: (user as any).banking_details?.swift_code || "",
+        },
       });
     }
   }, [user]);
@@ -191,6 +208,7 @@ const OnboardingDashboard = () => {
           ...formData.insurance_document,
           expiry_date: formData.insurance_document.expiry_date || null,
         },
+        banking_details: formData.banking_details,
       });
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       toast.success("Saved successfully");
@@ -525,6 +543,63 @@ const OnboardingDashboard = () => {
                     value={formData.profile.postal_code}
                     onChange={e => setFormData({ ...formData, profile: { ...formData.profile, postal_code: e.target.value } })}
                     className={INPUT_CLS}
+                  />
+                </Field>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Banking Details"
+              subtitle="Your payment details for invoices and payment certificates"
+              icon={<CreditCard className="w-5 h-5" />}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <Field label="Bank Name">
+                  <Input
+                    value={formData.banking_details.bank_name}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, bank_name: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. First National Bank"
+                  />
+                </Field>
+                <Field label="Branch Name">
+                  <Input
+                    value={formData.banking_details.branch_name}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_name: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. Sandton City"
+                  />
+                </Field>
+                <Field label="Branch Code">
+                  <Input
+                    value={formData.banking_details.branch_code}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_code: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. 250655"
+                  />
+                </Field>
+                <Field label="Account Number">
+                  <Input
+                    value={formData.banking_details.account_number}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_number: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. 62012345678"
+                  />
+                </Field>
+                <Field label="Account Type">
+                  <Input
+                    value={formData.banking_details.account_type}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_type: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. Cheque, Savings"
+                  />
+                </Field>
+                <Field label="SWIFT / BIC Code">
+                  <Input
+                    value={formData.banking_details.swift_code}
+                    onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, swift_code: e.target.value } })}
+                    className={INPUT_CLS}
+                    placeholder="e.g. FIRNZAJJ"
                   />
                 </Field>
               </div>

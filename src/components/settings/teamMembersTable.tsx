@@ -115,6 +115,7 @@ interface TeamMember {
   discipline: string;
   companyName: string;
   isActive: boolean;
+  invitationStatus?: string; // "pending" for invited-but-not-yet-accepted users
   addedBy: {
     userId: string;
     name: string;
@@ -171,19 +172,24 @@ const ActionsCell = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
+  const isPendingInvitation = member._id.startsWith("inv_");
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteData({
-        url: `projects/${projectId}/team-members/${member._id}/`,
-        data: undefined,
-      });
-      toast.success("User removed successfully");
+      if (isPendingInvitation) {
+        const invId = member._id.replace("inv_", "");
+        await deleteData({ url: `projects/${projectId}/invitations/${invId}/`, data: undefined });
+        toast.success("Invitation revoked successfully");
+      } else {
+        await deleteData({ url: `projects/${projectId}/team-members/${member._id}/`, data: undefined });
+        toast.success("User removed successfully");
+      }
       setShowDeleteDialog(false);
       onRefetch();
     } catch (error: any) {
       console.error("Error removing team member:", error);
-      const errorMessage = error?.response?.data?.error || error?.message || "Failed to remove team member. Please try again.";
+      const errorMessage = error?.response?.data?.error || error?.message || "Failed to remove. Please try again.";
       toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
@@ -241,18 +247,18 @@ const ActionsCell = ({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
-          {canEdit && (
+          {canEdit && !isPendingInvitation && (
             <DropdownMenuItem onSelect={() => setShowEditDialog(true)}>
               Edit Role
             </DropdownMenuItem>
           )}
           {canRemove && (
             <>
-              <DropdownMenuSeparator />
+              {canEdit && !isPendingInvitation && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onSelect={() => setShowDeleteDialog(true)}
                 className="text-red-600 focus:bg-red-50 focus:text-red-700">
-                Remove
+                {isPendingInvitation ? "Revoke Invitation" : "Remove"}
               </DropdownMenuItem>
             </>
           )}
@@ -262,9 +268,11 @@ const ActionsCell = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove User</AlertDialogTitle>
+            <AlertDialogTitle>{isPendingInvitation ? "Revoke Invitation" : "Remove User"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {member.user.name} from this project? This action cannot be undone.
+              {isPendingInvitation
+                ? `Are you sure you want to revoke the invitation sent to ${member.user.email}? They will no longer be able to join this project using that invite link.`
+                : `Are you sure you want to remove ${member.user.name} from this project? This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -273,7 +281,7 @@ const ActionsCell = ({
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-              {isDeleting ? "Removing..." : "Remove"}
+              {isDeleting ? (isPendingInvitation ? "Revoking..." : "Removing...") : (isPendingInvitation ? "Revoke" : "Remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -833,7 +841,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <StatusBadge status={member.user?.is_active ? "Active" : "Rejected"} />
+                    <StatusBadge status={member.invitationStatus === "pending" ? "Pending" : member.user?.is_active ? "Active" : "Rejected"} />
                   </td>
                   {canManageTeam && (
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-center">

@@ -643,6 +643,41 @@ export const deleteProjectDocument = async (
 };
 
 // ==============================================================================
+// Document move / copy (folder reorganization)
+// ==============================================================================
+
+/**
+ * Move a document into another folder (same tab only). Folder is pure
+ * metadata — the file and document id never change, so AI analysis / RAG keep
+ * resolving the contract by its stable `doc-{id}` key. `postData` rethrows the
+ * raw axios error so callers can read `err.response.data.error`.
+ */
+export const moveDocument = (
+  projectId: string | number,
+  docId: string | number,
+  folderId: string | number | null,
+) =>
+  postData({
+    url: `documents/${docId}/move/?project_id=${projectId}`,
+    data: { folderId },
+  });
+
+/**
+ * Duplicate a document into a folder as a new, independent document (own
+ * reference, own copy of the file in storage, its own AI indexing). The
+ * project contract cannot be copied — the backend returns 400.
+ */
+export const duplicateDocument = (
+  projectId: string | number,
+  docId: string | number,
+  folderId: string | number | null,
+) =>
+  postData({
+    url: `documents/${docId}/duplicate/?project_id=${projectId}`,
+    data: { folderId },
+  });
+
+// ==============================================================================
 // Task attachments (VO, SI, RFI, DC, CPI) – upload via backend (S3 when configured)
 // ==============================================================================
 

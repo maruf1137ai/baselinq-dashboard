@@ -191,7 +191,6 @@ const ProjectDetails = () => {
       office_number: "",
       physical_address: { street: "", city: "", province: "", postal_code: "" },
       postal_address: { street: "", city: "", province: "", postal_code: "" },
-      banking_details: { bank_name: "", account_number: "", branch_code: "" },
     },
     principal_agent_mandate: "0",
   });
@@ -201,7 +200,6 @@ const ProjectDetails = () => {
     const cd = (selectedProject as any).clientDetails || (selectedProject as any).client_details || {};
     const pa = cd.physical_address || {};
     const postal = cd.postal_address || {};
-    const bank = cd.banking_details || {};
 
     setFormData({
       name: selectedProject.name || "",
@@ -243,11 +241,6 @@ const ProjectDetails = () => {
           city: typeof postal === "string" ? "" : postal.city || "",
           province: typeof postal === "string" ? "" : postal.province || "",
           postal_code: typeof postal === "string" ? "" : postal.postal_code || "",
-        },
-        banking_details: {
-          bank_name: typeof bank === "string" ? bank : bank.bank_name || "",
-          account_number: typeof bank === "string" ? "" : bank.account_number || "",
-          branch_code: typeof bank === "string" ? "" : bank.branch_code || "",
         },
       },
       principal_agent_mandate: String(
@@ -316,15 +309,6 @@ const ProjectDetails = () => {
       client_details: {
         ...prev.client_details,
         [type]: { ...prev.client_details[type], [key]: value },
-      },
-    }));
-
-  const setBankingField = (key: string, value: string) =>
-    setFormData((prev) => ({
-      ...prev,
-      client_details: {
-        ...prev.client_details,
-        banking_details: { ...prev.client_details.banking_details, [key]: value },
       },
     }));
 
@@ -755,42 +739,6 @@ const ProjectDetails = () => {
                       setAddressField("postal_address", "postal_code", e.target.value)
                     }
                     className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            {/* Banking Details */}
-            <div>
-              <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
-                Banking Details
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <Field label="Bank Name">
-                  <Input
-                    readOnly={!canEditProject}
-                    value={formData.client_details.banking_details.bank_name}
-                    onChange={(e) => setBankingField("bank_name", e.target.value)}
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                    placeholder="e.g. First National Bank"
-                  />
-                </Field>
-                <Field label="Account Number">
-                  <Input
-                    readOnly={!canEditProject}
-                    value={formData.client_details.banking_details.account_number}
-                    onChange={(e) => setBankingField("account_number", e.target.value)}
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                    placeholder="e.g. 62012345678"
-                  />
-                </Field>
-                <Field label="Branch Code">
-                  <Input
-                    readOnly={!canEditProject}
-                    value={formData.client_details.banking_details.branch_code}
-                    onChange={(e) => setBankingField("branch_code", e.target.value)}
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
-                    placeholder="e.g. 250655"
                   />
                 </Field>
               </div>

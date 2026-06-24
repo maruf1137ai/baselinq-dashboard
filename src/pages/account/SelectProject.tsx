@@ -873,16 +873,18 @@ const SelectProject = () => {
                         )}>
                           {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProjectToDelete(project);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {project.userId === String(user?.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -31,6 +31,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
+
+const DRAFT_TYPE = "SI";
 
 const initialValues = {
   title: "",
@@ -46,12 +49,29 @@ const initialValues = {
   taskReference: "",
 };
 
-export default function SIForm({ setOpen, initialStatus }: any) {
-  const [formData, setFormData] = useState(initialValues);
+export default function SIForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [formData, setFormData] = useState(() => {
+    if (!draft?.formData) return initialValues;
+    return {
+      ...initialValues,
+      ...draft.formData,
+      // dueDate serialises to an ISO string — restore it as a Date.
+      dueDate: draft.formData.dueDate ? new Date(draft.formData.dueDate) : undefined,
+    };
+  });
   // Werner spec rev H — shared To / CC meta. Date Required is already
   // handled by the existing dueDate field on this form so we hide it
   // in the shared component.
-  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+  const [meta, setMeta] = useState<TaskMetaValue>(
+    draft?.meta ?? { to: [], cc: [], dateRequired: "" }
+  );
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, { formData, meta });
 
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
@@ -187,23 +207,10 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       if (taskId) {
         await applyMetaToTask(taskId, meta, patchRequest);
       }
-      // Create channel after SI is created
-      console.log("SI created:", result);
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: formData.title,
-            description: formData.instruction,
-            channel_type: "public"
-          }
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. SI-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       if (s3Upload.entries.length > 0 && result?._id) {
         await registerAttachments(result._id);
@@ -217,6 +224,7 @@ export default function SIForm({ setOpen, initialStatus }: any) {
       await queryClient.invalidateQueries({ queryKey: ["sis"] });
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
 
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
       setLoading(false);
     };
@@ -488,7 +496,11 @@ export default function SIForm({ setOpen, initialStatus }: any) {
 
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

@@ -28,6 +28,9 @@ export interface ApiDocument {
   _id: string;
   projectId: string;
   folderId: string | null;
+  /** Tab of the folder this doc is filed in; null when unfiled. Drives which
+   *  file-browser tab the doc appears under (see getCategoryForDoc). */
+  folderTab?: 'contracts' | 'drawings' | 'documents' | null;
   name: string;
   type: string;
   reference: string;

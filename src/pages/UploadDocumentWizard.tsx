@@ -248,6 +248,9 @@ export default function UploadDocumentWizard() {
       toast.success('Document uploaded successfully');
       queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
       queryClient.invalidateQueries({ queryKey: ['folders', projectId] });
+      if (selectedFolderName === 'Insurance_Certificates') {
+        queryClient.invalidateQueries({ queryKey: ['insurance-status'] });
+      }
       navigate('/documents');
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Failed to upload document');

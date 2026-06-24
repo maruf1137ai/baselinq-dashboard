@@ -26,13 +26,24 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
+
+const DRAFT_TYPE = "VO";
 
 export default function VOForm({ setOpen, initialStatus, initialData, taskId }: any) {
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [discipline, setDiscipline] = useState(initialData?.discipline || "");
-  const [description, setDescription] = useState(initialData?.description || "");
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [title, setTitle] = useState(initialData?.title || draft?.title || "");
+  const [discipline, setDiscipline] = useState(initialData?.discipline || draft?.discipline || "");
+  const [description, setDescription] = useState(initialData?.description || draft?.description || "");
   const [dateInstructed, setDateInstructed] = useState<Date | undefined>(
-    initialData?.dateInstructed ? new Date(initialData.dateInstructed) : undefined
+    initialData?.dateInstructed
+      ? new Date(initialData.dateInstructed)
+      : draft?.dateInstructed
+        ? new Date(draft.dateInstructed)
+        : undefined
   );
   const [items, setItems] = useState(
     initialData?.lineItems?.length
@@ -41,11 +52,25 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
           qty: li.quantity ?? 1,
           rate: li.unitRate ?? 0,
         }))
-      : [{ description: "", qty: 1, rate: 0 }]
+      : draft?.items?.length
+        ? draft.items
+        : [{ description: "", qty: 1, rate: 0 }]
   );
 
   // Werner spec rev H — shared To / CC / Date Required.
-  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+  const [meta, setMeta] = useState<TaskMetaValue>(
+    draft?.meta ?? { to: [], cc: [], dateRequired: "" }
+  );
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
+    title,
+    discipline,
+    description,
+    dateInstructed,
+    items,
+    meta,
+  });
 
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
@@ -135,23 +160,10 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       if (taskId) {
         await applyMetaToTask(taskId, meta, patchRequest);
       }
-      // Create channel after VO is created
-      // console.log("VO created:", result);
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: title,
-            description: description,
-            channel_type: "public"
-          }
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. VO-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       // Register any S3-uploaded attachments (upload already happened in background)
       if (s3Upload.entries.length > 0 && result?._id) {
@@ -167,6 +179,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
       await queryClient.invalidateQueries({ queryKey: [`tasks/tasks/?taskType=VO&project=${projectId}`] });
 
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
       setLoading(false);
     };
@@ -347,7 +360,11 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
 
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

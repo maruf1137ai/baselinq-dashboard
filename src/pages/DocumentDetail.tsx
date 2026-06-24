@@ -20,6 +20,7 @@ import {
   Calendar,
   CheckCircle2,
   MoreHorizontal,
+  ExternalLink,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -65,7 +66,7 @@ const DocumentDetail = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; ref: string } | null>(null);
-  const [previewFile, setPreviewFile] = useState<{ name: string; url: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string; streamUrl?: string } | null>(null);
 
   // Obligation state
   const [showObligationForm, setShowObligationForm] = useState(false);
@@ -382,10 +383,19 @@ const DocumentDetail = () => {
               <Button
                 variant="outline"
                 className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
-                onClick={() => doc.downloadUrl && window.open(doc.downloadUrl, '_blank')}
-                disabled={!doc.downloadUrl}
+                onClick={() => {
+                  // Cert link-docs have no file — open the rendered certificate
+                  // page instead of the (empty) S3 download URL.
+                  const target = doc.certificateUrl || doc.downloadUrl;
+                  if (target) window.open(target, '_blank');
+                }}
+                disabled={!doc.downloadUrl && !doc.certificateUrl}
               >
-                <Download className="w-3.5 h-3.5 mr-1.5" /> Download
+                {doc.certificateUrl ? (
+                  <><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open certificate</>
+                ) : (
+                  <><Download className="w-3.5 h-3.5 mr-1.5" /> Download</>
+                )}
               </Button>
             )}
             {doc.userPermissions?.canUploadVersion !== false && (
@@ -564,7 +574,7 @@ const DocumentDetail = () => {
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() => setPreviewFile({ name: v.fileName, url: v.downloadUrl })}
+                                    onClick={() => setPreviewFile({ name: v.fileName, url: v.downloadUrl, streamUrl: v.streamUrl })}
                                     className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
                                     title="View this version"
                                   >

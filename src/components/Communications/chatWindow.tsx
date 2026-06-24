@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
@@ -14,9 +14,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel: any, projectName?: string, taskDetails?: any }) => {
+const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesChange }: { channel: any, projectName?: string, taskDetails?: any, onMessagesChange?: (m: any[]) => void }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+
+  // Update local message state AND notify the parent so the right-side
+  // summary panel can derive shared attachments/links from the same list
+  // (avoids a second poll of channels/{id}/messages/).
+  const applyMessages = (u: any[] | ((p: any[]) => any[])) =>
+    setMessages((prev) => {
+      const next = typeof u === "function" ? (u as (p: any[]) => any[])(prev) : u;
+      onMessagesChange?.(next);
+      return next;
+    });
   const [showContext, setShowContext] = useState(true);
 
   const [isTyping, setIsTyping] = useState(false);
@@ -31,7 +41,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type?: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type?: string; streamUrl?: string } | null>(null);
 
   // @mention state
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
@@ -255,12 +265,20 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
             name: a.fileName || a.file_name || a.name || "",
             type: a.fileType || a.file_type || a.type || "",
             url: a.url || a.file_url || "",
+            // Same-origin inline preview URL (backend proxy); falls back to
+            // `url` in the modal when absent (non-S3 / non-previewable types).
+            streamUrl: a.streamUrl || a.stream_url || "",
           })),
           is_urgent: msg.is_urgent,
           message_type: msg.message_type,
           is_system: msg.is_system,
         }));
-        setMessages(formattedMessages);
+        applyMessages((prev) => {
+          // Preserve any still-pending optimistic messages until their real
+          // server copy has been removed explicitly by the send handlers.
+          const pending = prev.filter((m) => m.pending);
+          return [...formattedMessages, ...pending];
+        });
       }
     } catch (error) {
       console.error("Failed to fetch messages", error);
@@ -270,7 +288,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
   };
 
   useEffect(() => {
-    setMessages([]);
+    applyMessages([]);
     fetchMessages(true);
 
     // Set up polling to refetch messages every 2.5 seconds
@@ -310,14 +328,49 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
     }
 
     setIsUploading(true);
+
+    // Snapshot what we're sending so we can render an optimistic message and
+    // restore the composer if the send fails.
+    const outgoingMessage = message.trim();
+    const outgoingFiles = attachedFiles;
+    const outgoingMentions = mentionedUserIds;
+    const tempId = `temp-${Date.now()}`;
+    // Local object URLs let the just-sent attachment show instantly (before
+    // the server returns its real url). file.type is the real MIME so the
+    // existing in-bubble image/audio detection renders the preview.
+    const objectUrls: string[] = [];
+    const tempFiles = outgoingFiles.map((f) => {
+      const url = URL.createObjectURL(f.file);
+      objectUrls.push(url);
+      return { name: f.name, type: f.file?.type || f.type, url, size: f.file?.size };
+    });
+
+    // Insert the optimistic message and clear the composer immediately.
+    applyMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender_id: currentUser?.id,
+        sender_name: currentUser?.name || "You",
+        content: outgoingMessage,
+        timestamp: formatTime(new Date().toISOString()),
+        files: tempFiles,
+        message_type: "text",
+        pending: true,
+      },
+    ]);
+    setMessage("");
+    setAttachedFiles([]);
+    setMentionedUserIds([]);
+
     try {
       const formData = new FormData();
-      formData.append("content", message.trim() || "");
+      formData.append("content", outgoingMessage || "");
       formData.append("is_urgent", "false");
-      if (mentionedUserIds.length > 0) {
-        mentionedUserIds.forEach((id) => formData.append("mentioned_user_ids", String(id)));
+      if (outgoingMentions.length > 0) {
+        outgoingMentions.forEach((id) => formData.append("mentioned_user_ids", String(id)));
       }
-      attachedFiles.forEach((fileData) => {
+      outgoingFiles.forEach((fileData) => {
         formData.append("attachments", fileData.file, fileData.name);
       });
 
@@ -327,15 +380,21 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         config: { headers: { "Content-Type": "multipart/form-data" } },
       });
 
-      setMessage("");
-      setAttachedFiles([]);
-      setMentionedUserIds([]);
+      // Drop the optimistic copy, then refetch so the real (persisted)
+      // message replaces it. The poll never returns temp- ids, so no dup.
+      applyMessages((prev) => prev.filter((m) => m.id !== tempId));
       await fetchMessages();
     } catch (error) {
       console.error("Failed to send message", error);
       toast.error("Failed to send message");
+      // Remove the failed optimistic message and restore the composer.
+      applyMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setMessage(outgoingMessage);
+      setAttachedFiles(outgoingFiles);
+      setMentionedUserIds(outgoingMentions);
     } finally {
       setIsUploading(false);
+      objectUrls.forEach((u) => URL.revokeObjectURL(u));
     }
   };
 
@@ -438,6 +497,25 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
 
   const handleAudioUploadAndSend = async (audioFile: File) => {
     setIsUploading(true);
+
+    // Optimistic voice note so the user sees the clip immediately while it
+    // uploads to S3, instead of just a spinner.
+    const tempId = `temp-${Date.now()}`;
+    const objectUrl = URL.createObjectURL(audioFile);
+    applyMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender_id: currentUser?.id,
+        sender_name: currentUser?.name || "You",
+        content: "",
+        timestamp: formatTime(new Date().toISOString()),
+        files: [{ name: audioFile.name, type: "audio/webm", url: objectUrl, size: audioFile.size }],
+        message_type: "voice",
+        pending: true,
+      },
+    ]);
+
     try {
       // Step 1: Get presigned S3 upload URL
       const { upload_url, key } = await getPresignedUrl({
@@ -464,12 +542,15 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
         config: { headers: { "Content-Type": "multipart/form-data" } },
       });
 
+      applyMessages((prev) => prev.filter((m) => m.id !== tempId));
       await fetchMessages();
     } catch (error) {
       console.error("Failed to send voice message", error);
       toast.error("Failed to send voice message");
+      applyMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setIsUploading(false);
+      URL.revokeObjectURL(objectUrl);
     }
   };
 
@@ -753,7 +834,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                       className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
                       {isCurrentUser ? (
                         // Current User Message (right side)
-                        <div className="relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4">
+                        <div className={`relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4 ${msg.pending ? "opacity-70" : ""}`}>
                           <div className="relative text-[#101828] text-base">
                             <p className="leading-[26px] whitespace-pre-wrap">
                               {msg.content}
@@ -794,6 +875,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
                                   </button>
                                 );
                               })}
+                            </div>
+                          )}
+                          {msg.pending && (
+                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-gray-400">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Sending…
                             </div>
                           )}
                         </div>
@@ -1066,7 +1153,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails }: { channel
       <FilePreviewModal
         isOpen={!!previewFile}
         onOpenChange={(open) => !open && setPreviewFile(null)}
-        file={previewFile ? { name: previewFile.name, url: previewFile.url, fileType: previewFile.type } : null}
+        file={previewFile ? { name: previewFile.name, url: previewFile.url, fileType: previewFile.type, streamUrl: previewFile.streamUrl } : null}
       />
     </>
   );

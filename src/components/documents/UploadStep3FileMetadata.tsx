@@ -30,7 +30,7 @@ import AiIcon from '@/components/icons/AiIcon';
 import { useS3Upload } from '@/hooks/useS3Upload';
 import { validateFile, postData } from '@/lib/Api';
 import useFetch from '@/hooks/useFetch';
-import { CATEGORY_TO_TYPES, type DocCategory } from '@/lib/documentTaxonomy';
+import { CATEGORY_TO_TYPES, ISSUE_STATUSES, type DocCategory } from '@/lib/documentTaxonomy';
 import type { FolderTab, FolderVisibility } from '@/types/folder';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UserMultiSelect } from './UserMultiSelect';
@@ -80,14 +80,6 @@ export interface UploadFormData {
 
 const DONE_STATUSES = ['done', 'Done', 'DONE', 'Closed', 'closed', 'CLOSED', 'Approved', 'approved'];
 const TYPE_FILTERS = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'];
-
-const ISSUE_STATUSES = [
-  'For Information',
-  'For Approval',
-  'For Construction',
-  'For Tender',
-  'For Construction Issue',
-];
 
 /**
  * Step 3: File Upload and Metadata

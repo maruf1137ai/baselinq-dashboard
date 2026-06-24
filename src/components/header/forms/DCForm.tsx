@@ -30,16 +30,35 @@ import { registerS3TaskAttachment } from "@/lib/Api";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
 
-export default function DCForm({ setOpen, initialStatus }: any) {
-  const [title, setTitle] = useState("");
-  const [causeCategory, setCauseCategory] = useState("");
-  const [costImpact, setCostImpact] = useState("");
-  const [description, setDescription] = useState("");
-  const [requestedExtension, setRequestedExtension] = useState("");
+const DRAFT_TYPE = "DC";
+
+export default function DCForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [title, setTitle] = useState(draft?.title || "");
+  const [causeCategory, setCauseCategory] = useState(draft?.causeCategory || "");
+  const [costImpact, setCostImpact] = useState(draft?.costImpact || "");
+  const [description, setDescription] = useState(draft?.description || "");
+  const [requestedExtension, setRequestedExtension] = useState(draft?.requestedExtension || "");
 
   // Werner spec rev H — shared To / CC / Date Required.
-  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+  const [meta, setMeta] = useState<TaskMetaValue>(
+    draft?.meta ?? { to: [], cc: [], dateRequired: "" }
+  );
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
+    title,
+    causeCategory,
+    costImpact,
+    description,
+    requestedExtension,
+    meta,
+  });
 
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
@@ -103,22 +122,10 @@ export default function DCForm({ setOpen, initialStatus }: any) {
       if (taskId) {
         await applyMetaToTask(taskId, meta, patchRequest);
       }
-      // Create channel after DC is created
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: title,
-            description: description,
-            channel_type: "public"
-          }
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. DC-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       if (s3Upload.entries.length > 0 && result?._id) {
         await registerAttachments(result._id);
@@ -132,6 +139,7 @@ export default function DCForm({ setOpen, initialStatus }: any) {
       await queryClient.invalidateQueries({ queryKey: ["dcs"] });
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
 
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
       setLoading(false);
     };
@@ -248,7 +256,11 @@ export default function DCForm({ setOpen, initialStatus }: any) {
 
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>
