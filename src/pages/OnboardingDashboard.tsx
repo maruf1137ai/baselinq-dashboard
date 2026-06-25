@@ -550,7 +550,11 @@ const OnboardingDashboard = () => {
 
             <SectionCard
               title="Banking Details"
-              subtitle="Your payment details for invoices and payment certificates"
+              subtitle={
+                user?.account_type === "organisation"
+                  ? "Your company's bank account — shown on the invoices and payment certificates your company issues"
+                  : "Your payment details for invoices and payment certificates"
+              }
               icon={<CreditCard className="w-5 h-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
