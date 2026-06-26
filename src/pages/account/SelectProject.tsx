@@ -934,7 +934,7 @@ const SelectProject = () => {
                         )}>
                           {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
-                        {project.userId === String(user?.id) && (
+                        {project.canDelete && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

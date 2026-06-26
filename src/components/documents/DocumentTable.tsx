@@ -213,17 +213,17 @@ function DocumentRow({
             <DropdownMenuItem onClick={() => onRowClick(doc._id)} className="gap-2 text-sm font-normal">
               <Eye className="w-4 h-4" /> View Details
             </DropdownMenuItem>
-            {doc.downloadUrl && doc.userPermissions?.canDownload !== false && (
+            {doc.downloadUrl && doc.userPermissions?.canDownload === true && (
               <DropdownMenuItem onClick={() => window.open(doc.downloadUrl, '_blank')} className="gap-2 text-sm font-normal">
                 <Download className="w-4 h-4" /> Download
               </DropdownMenuItem>
             )}
-            {onVersionUpload && doc.userPermissions?.canUploadVersion !== false && (
+            {onVersionUpload && doc.userPermissions?.canUploadVersion === true && (
               <DropdownMenuItem onClick={() => onVersionUpload(doc)} className="gap-2 text-sm font-normal">
                 <Upload className="w-4 h-4" /> Upload Version
               </DropdownMenuItem>
             )}
-            {onDelete && doc.userPermissions?.canDelete !== false && (
+            {onDelete && doc.userPermissions?.canDelete === true && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(doc)} className="gap-2 text-sm font-normal text-red-600 focus:text-red-600">

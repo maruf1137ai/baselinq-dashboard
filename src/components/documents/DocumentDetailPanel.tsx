@@ -129,7 +129,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                         <p className="text-xs text-gray-500">PDF Document • 12 Pages</p>
                       </div>
                     </div>
-                    {document.userPermissions?.canDownload !== false && (
+                    {document.userPermissions?.canDownload === true && (
                       <Button size="sm" variant="outline" className="h-9 px-4 gap-2 border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm font-normal">
                         <Download className="h-4 w-4" /> Download
                       </Button>
@@ -179,7 +179,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                               </Badge>
                             </div>
                           </div>
-                          {document.userPermissions?.canResolve !== false && (
+                          {document.userPermissions?.canResolve === true && (
                             <Button variant="ghost" size="sm" className="h-8 text-xs font-normal opacity-0 group-hover:opacity-100 transition-opacity">
                               Resolve
                             </Button>
@@ -202,7 +202,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                       >
                         View full history
                       </Button>
-                      {document.userPermissions?.canUploadVersion !== false && (
+                      {document.userPermissions?.canUploadVersion === true && (
                         <Button
                           variant="outline"
                           size="sm"

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { formatDate } from '@/lib/dateUtils';
 import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, Sparkles } from 'lucide-react';
@@ -194,6 +195,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   // Default to collapsed — folders open only when the user clicks them.
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { canUploadDocument } = usePermissions();
 
   // Each folder header is its own drop target.
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: folder._id });
@@ -314,16 +316,18 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
             <FileText className="w-3 h-3 mr-1" />
             Register
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={handleUpload}
-            title="Upload Document"
-          >
-            <Upload className="w-3 h-3 mr-1" />
-            Upload
-          </Button>
+          {canUploadDocument && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={handleUpload}
+              title="Upload Document"
+            >
+              <Upload className="w-3 h-3 mr-1" />
+              Upload
+            </Button>
+          )}
         </div>
       )}
     </div>

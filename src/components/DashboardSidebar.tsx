@@ -46,7 +46,7 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Programme", url: "/programme", icon: <Programme />, permission: "viewProgramme" },
   { title: "Meetings", url: "/meetings", icon: <Meetings />, permission: null },
   { title: "Communications", url: "/communications", icon: <Communication />, permission: null },
-  { title: "Documents", url: "/documents", icon: <Document2 />, permission: null },
+  { title: "Documents", url: "/documents", icon: <Document2 />, permission: "viewDocuments" },
   { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },

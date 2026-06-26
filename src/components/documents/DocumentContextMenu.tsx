@@ -34,8 +34,8 @@ export const DocItemContextMenu: React.FC<{
   const { copy, cut, paste, canPasteInto, getDocPath } = useDocumentClipboard();
   const isContract = doc.type === CONTRACT_TYPE;
   const canPaste = canPasteInto(tab) && !!pasteFolderId;
-  const canEdit = doc.userPermissions?.canEdit !== false;
-  const canDelete = doc.userPermissions?.canDelete !== false;
+  const canEdit = doc.userPermissions?.canEdit === true;
+  const canDelete = doc.userPermissions?.canDelete === true;
 
   const handleCopyPath = async () => {
     const path = getDocPath(doc);

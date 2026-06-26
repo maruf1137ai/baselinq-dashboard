@@ -50,6 +50,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const SORT_OPTIONS = [
   { value: 'recently_updated', label: 'Recently updated' },
@@ -190,6 +191,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
     enabled: !!projectId,
   });
   const canUploadAny = (capabilities?.documentTypes?.length || 0) > 0;
+  const { canUploadDocument } = usePermissions();
 
   const { mutate: handleDeleteDoc, isPending: isDeletingDoc } = useMutation({
     mutationFn: (docId: string) =>
@@ -306,7 +308,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
             >
               Ask AI
             </Button>
-            {canUploadAny && (
+            {canUploadAny && canUploadDocument && (
               <Button
                 className="h-8 text-xs rounded-lg bg-primary text-white"
                 onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}

@@ -119,7 +119,7 @@ interface Permission {
 /**
  * Inner content: permission matrix.
  */
-export function PermissionsContent({ readOnly = false }: { readOnly?: boolean }) {
+export function PermissionsContent({ readOnly = false, projectId = null }: { readOnly?: boolean; projectId?: number | null }) {
   return (
     <div className="space-y-6">
       {readOnly && (
@@ -127,7 +127,7 @@ export function PermissionsContent({ readOnly = false }: { readOnly?: boolean })
           You have read-only access to this matrix. Contact an admin to make changes.
         </p>
       )}
-      <MatrixTab mode="org" readOnly={readOnly} />
+      <MatrixTab mode="org" readOnly={readOnly} projectId={projectId} />
     </div>
   );
 }
@@ -420,19 +420,15 @@ function RoleForm({ form, onChange }: { form: RoleFormState; onChange: (f: RoleF
 // ──────────────────────────────────────────────────────────────────────────────
 
 
-function MatrixTab({ mode, readOnly }: { mode: "org"; readOnly?: boolean }) {
+function MatrixTab({ mode, readOnly, projectId = null }: { mode: "org"; readOnly?: boolean; projectId?: number | null }) {
   const { data: rolesRaw } = useFetch<Role[] | { results: Role[] }>("permissions/roles/");
   const { data: permsRaw } = useFetch<Permission[] | { results: Permission[] }>("permissions/");
   const roles = asArray<Role>(rolesRaw);
   const permissions = asArray<Permission>(permsRaw);
 
-  // Always use org-level context here — passing a projectId would cause
-  // non-project-scoped permissions (settings.view, settings.edit, etc.) to be
-  // saved as ProjectRolePermission overrides which the resolver ignores for
-  // non-project-scoped codes, making the toggles appear to have no effect.
   if (roles.length === 0 || permissions.length === 0) return <AwesomeLoader message="Loading matrix" />;
 
-  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={null} readOnly={readOnly} />;
+  return <MatrixGrid mode={mode} roles={roles} permissions={permissions} projectId={projectId} readOnly={readOnly} />;
 }
 
 function MatrixGrid({
@@ -608,29 +604,47 @@ function MatrixGrid({
     const roleIds = Object.keys(dirty).map(Number);
     let successCount = 0;
 
+    // Build lookup once — determines whether each code saves at project or org level
+    const scopedLookup: Record<string, boolean> = {};
+    for (const p of permissions) {
+      scopedLookup[p.code] = p.is_project_scoped;
+    }
+
     for (const roleId of roleIds) {
       const codes = Array.from(dirty[roleId] ?? []);
       if (codes.length === 0) continue;
 
       try {
-        const items = codes.map((code) => ({
+        const allItems = codes.map((code) => ({
           code,
           granted: projectId && isOverridden(roleId, code)
             ? projectOverrides[roleId]?.[code] ?? false
             : matrix[roleId]?.[code] ?? false,
         }));
 
-        const data = projectId
-          ? {
-              permissions: items,
-              project_id: projectId,
-            }
-          : { permissions: items };
+        if (projectId) {
+          // Split: project-scoped perms → project PUT, non-scoped (settings.*) → org PUT
+          const projectItems = allItems.filter(item => scopedLookup[item.code]);
+          const orgItems     = allItems.filter(item => !scopedLookup[item.code]);
 
-        await putData({
-          url: `permissions/roles/${roleId}/matrix/`,
-          data: data,
-        });
+          if (projectItems.length > 0) {
+            await putData({
+              url: `permissions/roles/${roleId}/matrix/`,
+              data: { permissions: projectItems, project_id: projectId },
+            });
+          }
+          if (orgItems.length > 0) {
+            await putData({
+              url: `permissions/roles/${roleId}/matrix/`,
+              data: { permissions: orgItems },
+            });
+          }
+        } else {
+          await putData({
+            url: `permissions/roles/${roleId}/matrix/`,
+            data: { permissions: allItems },
+          });
+        }
 
         successCount++;
         setDirty((prev) => {
@@ -666,6 +680,17 @@ function MatrixGrid({
 
   return (
     <div className="space-y-4 pb-24">
+      {/* Warn that org-level saves will clear any project-level overrides for the same permissions */}
+      {!readOnly && !projectId && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
+          <span>
+            Changes saved here apply to <strong>all projects</strong> as org-wide defaults.
+            Saving will also remove any project-specific overrides for the same permissions.
+            To set permissions for a single project only, use the <strong>Project Settings → Permissions</strong> tab.
+          </span>
+        </div>
+      )}
       {/* Premium Floating Save Bar */}
       {!readOnly && dirtyRolesCount > 0 && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -767,26 +792,14 @@ function MatrixGrid({
                           {roles.map((role) => {
                             const val = effective(role.id, perm.code);
                             const disabled = isDisabled(role.id, perm.code);
-                            const override = isOverridden(role.id, perm.code);
                             return (
                               <td key={role.id} className={`text-center px-3 py-2 ${disabled || readOnly ? "opacity-30" : ""}`}>
-                                <div className="flex items-center justify-center gap-1">
-                                  <Checkbox
-                                    checked={val}
-                                    disabled={disabled || readOnly}
-                                    onCheckedChange={() => !disabled && !readOnly && handleToggle(role.id, perm.code)}
-                                    className={`h-4 w-4 ${
-                                      override
-                                        ? "border-primary data-[state=checked]:bg-primary"
-                                        : projectId
-                                        ? "opacity-60"
-                                        : ""
-                                    }`}
-                                  />
-                                  {override && (
-                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" title="Project override" />
-                                  )}
-                                </div>
+                                <Checkbox
+                                  checked={val}
+                                  disabled={disabled || readOnly}
+                                  onCheckedChange={() => !disabled && !readOnly && handleToggle(role.id, perm.code)}
+                                  className="h-4 w-4"
+                                />
                               </td>
                             );
                           })}
@@ -801,9 +814,7 @@ function MatrixGrid({
       </Accordion>
 
       <p className="text-xs text-muted-foreground">
-        {projectId
-          ? `Changes affect only this project. Organization defaults are shown in gray, overrides are highlighted.`
-          : `Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.`}
+        Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.
       </p>
     </div>
   );

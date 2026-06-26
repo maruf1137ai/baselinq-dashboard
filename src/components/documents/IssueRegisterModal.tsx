@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export function IssueRegisterModal({
   tab,
 }: IssueRegisterModalProps) {
   const navigate = useNavigate();
+  const { canUploadDocument } = usePermissions();
   const { data: rows } = useQuery<IssueRegisterRow[]>({
     queryKey: ['issue-register', folderId, projectId],
     queryFn: () =>
@@ -126,19 +128,21 @@ export function IssueRegisterModal({
               Export CSV
             </Button>
           ) : (
-            <Button
-              onClick={() => {
-                const params = new URLSearchParams();
-                if (tab) params.set('tab', tab);
-                params.set('folder_id', folderId);
-                navigate(`/documents/upload?${params.toString()}`);
-                onClose();
-              }}
-              className="gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Upload Documents
-            </Button>
+            canUploadDocument && (
+              <Button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (tab) params.set('tab', tab);
+                  params.set('folder_id', folderId);
+                  navigate(`/documents/upload?${params.toString()}`);
+                  onClose();
+                }}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Documents
+              </Button>
+            )
           )}
         </DialogFooter>
       </DialogContent>
