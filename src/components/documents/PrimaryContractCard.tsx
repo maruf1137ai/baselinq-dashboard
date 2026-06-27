@@ -16,6 +16,7 @@
  */
 
 import { useState, useRef } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -52,6 +53,7 @@ function relativeAge(iso: string | null): string {
 export const PrimaryContractCard = ({ projectId }: { projectId: string | number }) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canUploadDocument } = usePermissions();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -149,28 +151,30 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
                 if (f) handleFileSelected(f);
               }}
             />
-            <div className="mt-4 flex items-center gap-2">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="h-9 px-4 bg-amber-700 hover:bg-amber-800 text-white"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                    Uploading… {uploadProgress}%
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5 mr-2" />
-                    Upload primary contract (PDF)
-                  </>
-                )}
-              </Button>
-              <span className="text-xs text-amber-800/70">
-                PDF only · max 50&nbsp;MB
-              </span>
-            </div>
+            {canUploadDocument && (
+              <div className="mt-4 flex items-center gap-2">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="h-9 px-4 bg-amber-700 hover:bg-amber-800 text-white"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      Uploading… {uploadProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5 mr-2" />
+                      Upload primary contract (PDF)
+                    </>
+                  )}
+                </Button>
+                <span className="text-xs text-amber-800/70">
+                  PDF only · max 50&nbsp;MB
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -228,24 +232,26 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
             }}
           />
           <div className="mt-3 flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="h-8 px-3 text-xs"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                  Replacing… {uploadProgress}%
-                </>
-              ) : (
-                <>
-                  <RefreshCcw className="w-3 h-3 mr-1.5" />
-                  Replace
-                </>
-              )}
-            </Button>
+            {canUploadDocument && (
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="h-8 px-3 text-xs"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    Replacing… {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-3 h-3 mr-1.5" />
+                    Replace
+                  </>
+                )}
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => {

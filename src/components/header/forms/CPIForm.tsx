@@ -20,16 +20,39 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
 
-export default function CPIForm({ setOpen, initialStatus }: any) {
-  const [activityName, setActivityName] = useState("");
-  const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [finishDate, setFinishDate] = useState<Date | undefined>(undefined);
-  const [predecessors, setPredecessors] = useState("");
-  const [successors, setSuccessors] = useState("");
-  const [resources, setResources] = useState("");
+const DRAFT_TYPE = "CPI";
+
+export default function CPIForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [activityName, setActivityName] = useState(draft?.activityName || "");
+  const [description, setDescription] = useState(draft?.description || "");
+  const [duration, setDuration] = useState(draft?.duration || "");
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    draft?.startDate ? new Date(draft.startDate) : undefined
+  );
+  const [finishDate, setFinishDate] = useState<Date | undefined>(
+    draft?.finishDate ? new Date(draft.finishDate) : undefined
+  );
+  const [predecessors, setPredecessors] = useState(draft?.predecessors || "");
+  const [successors, setSuccessors] = useState(draft?.successors || "");
+  const [resources, setResources] = useState(draft?.resources || "");
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
+    activityName,
+    description,
+    duration,
+    startDate,
+    finishDate,
+    predecessors,
+    successors,
+    resources,
+  });
 
   const [loading, setLoading] = useState(false);
   const s3Upload = useS3Upload("task-attachments/pending");
@@ -90,22 +113,10 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
     };
 
     const handleSuccess = async (result: any) => {
-      // Create channel after CPI is created
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: activityName,
-            description: description,
-            channel_type: "public"
-          }
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. CPI-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       if (s3Upload.entries.length > 0 && result?._id) {
         await registerAttachments(result._id);
@@ -119,6 +130,7 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
       await queryClient.invalidateQueries({ queryKey: ["cpis"] });
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
 
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
       setLoading(false);
     };
@@ -273,7 +285,11 @@ export default function CPIForm({ setOpen, initialStatus }: any) {
 
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

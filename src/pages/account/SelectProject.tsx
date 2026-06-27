@@ -104,6 +104,17 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
   const [postalCode, setPostalCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
 
+  // Step 3 — Banking details (the consultant gets paid by the client). For org
+  // accounts the backend files this on the Organization (company account); for
+  // individuals it stays on the user. `bankAccountType` is named to avoid
+  // shadowing the wizard's `accountType` (organisation/individual) state.
+  const [bankName, setBankName] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [branchCode, setBranchCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankAccountType, setBankAccountType] = useState("");
+  const [swift, setSwift] = useState("");
+
   // Step 4 — Invite (org only)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { id: crypto.randomUUID(), name: "", email: "", position: "" },
@@ -177,6 +188,19 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
         payload.company_size = companySize || undefined;
       } else {
         payload.id_number = idNumber || undefined;
+      }
+      // Banking details (consultant's payment account). Sent for both org and
+      // individual consultants; the backend routes it to the Organization for
+      // org accounts and to the user for individuals. Only include when filled.
+      if (bankName || branchName || branchCode || accountNumber || bankAccountType || swift) {
+        payload.banking_details = {
+          bank_name: bankName || undefined,
+          branch_name: branchName || undefined,
+          branch_code: branchCode || undefined,
+          account_number: accountNumber || undefined,
+          account_type: bankAccountType || undefined,
+          swift_code: swift || undefined,
+        };
       }
       await updateProfile(payload);
 
@@ -475,6 +499,43 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="8001015009087" className={INPUT_CLS} />
                       </div>
                     )}
+
+                    {/* Banking — the consultant's payment account (the client pays
+                        the consultant). For organisations this is filed as the
+                        company account; for individuals it stays on the user. */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <div className="h-px flex-1 bg-gray-100" />
+                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Banking Details</span>
+                      <div className="h-px flex-1 bg-gray-100" />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>Bank Name <span className="text-gray-300">(optional)</span></label>
+                      <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. First National Bank" className={INPUT_CLS} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={LABEL_CLS}>Branch Name <span className="text-gray-300">(optional)</span></label>
+                        <input type="text" value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="e.g. Sandton City" className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Branch Code <span className="text-gray-300">(optional)</span></label>
+                        <input type="text" value={branchCode} onChange={(e) => setBranchCode(e.target.value)} placeholder="e.g. 250655" className={INPUT_CLS} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={LABEL_CLS}>Account Number <span className="text-gray-300">(optional)</span></label>
+                        <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. 62012345678" className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Account Type <span className="text-gray-300">(optional)</span></label>
+                        <input type="text" value={bankAccountType} onChange={(e) => setBankAccountType(e.target.value)} placeholder="e.g. Cheque / Current" className={INPUT_CLS} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={LABEL_CLS}>SWIFT / BIC Code <span className="text-gray-300">(optional)</span></label>
+                      <input type="text" value={swift} onChange={(e) => setSwift(e.target.value)} placeholder="e.g. FIRNZAJJ" className={INPUT_CLS} />
+                    </div>
 
                     {/* Address */}
                     <div className="flex items-center gap-3 pt-1">
@@ -873,16 +934,18 @@ const SelectProject = () => {
                         )}>
                           {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProjectToDelete(project);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {project.canDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

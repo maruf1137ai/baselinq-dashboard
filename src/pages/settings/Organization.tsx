@@ -101,6 +101,14 @@ const OrganizationPage = () => {
     insurance_document: {
       expiry_date: "",
     },
+    banking_details: {
+      bank_name: "",
+      branch_name: "",
+      branch_code: "",
+      account_number: "",
+      account_type: "",
+      swift_code: "",
+    },
   });
 
   useEffect(() => {
@@ -127,6 +135,14 @@ const OrganizationPage = () => {
         },
         insurance_document: {
           expiry_date: user.insurance_document?.expiry_date || null,
+        },
+        banking_details: {
+          bank_name: (user as any).banking_details?.bank_name || "",
+          branch_name: (user as any).banking_details?.branch_name || "",
+          branch_code: (user as any).banking_details?.branch_code || "",
+          account_number: (user as any).banking_details?.account_number || "",
+          account_type: (user as any).banking_details?.account_type || "",
+          swift_code: (user as any).banking_details?.swift_code || "",
         },
       });
     }
@@ -165,7 +181,8 @@ const OrganizationPage = () => {
           expiry_date: formData.insurance_document.expiry_date || null,
           ...(insurance_s3_key && { s3_key: insurance_s3_key }),
           ...(insurance_file_name && { file_name: insurance_file_name }),
-        }
+        },
+        banking_details: formData.banking_details,
       };
 
       await updateProfile(sanitizedData);
@@ -572,6 +589,74 @@ const OrganizationPage = () => {
                         profile: { ...formData.profile, postal_code: e.target.value }
                       })}
                       className={INPUT_CLS}
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
+
+              {/* ── Banking Details ── */}
+              <SectionCard
+                title="Banking Details"
+                subtitle={
+                  user?.account_type === "organisation"
+                    ? "Your company's bank account — shown on the invoices and payment certificates your company issues"
+                    : "Your payment details for invoices and payment certificates"
+                }
+                icon={<CreditCard className="w-5 h-5" />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <Field label="Bank Name">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.bank_name}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, bank_name: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. First National Bank"
+                    />
+                  </Field>
+                  <Field label="Branch Name">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.branch_name}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_name: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. Sandton City"
+                    />
+                  </Field>
+                  <Field label="Branch Code">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.branch_code}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_code: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. 250655"
+                    />
+                  </Field>
+                  <Field label="Account Number">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.account_number}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_number: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. 62012345678"
+                    />
+                  </Field>
+                  <Field label="Account Type">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.account_type}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_type: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. Cheque, Savings"
+                    />
+                  </Field>
+                  <Field label="SWIFT / BIC Code">
+                    <Input
+                      readOnly={!canEditOrg}
+                      value={formData.banking_details.swift_code}
+                      onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, swift_code: e.target.value } })}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      placeholder="e.g. FIRNZAJJ"
                     />
                   </Field>
                 </div>

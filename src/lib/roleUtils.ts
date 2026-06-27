@@ -118,6 +118,9 @@ export const PERMISSIONS = {
   // Meeting actions
   scheduleMeeting: ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS", "ARCH"],
   updateMeeting:   ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "CQS", "ARCH"],
+  // Document actions
+  viewDocuments:   ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS", "FOREMAN", "QS", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG"],
+  uploadDocument:  ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "ELEC_ENG", "QS", "STRUCT_ENG", "MECH_ENG"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

@@ -18,6 +18,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
+
+const DRAFT_TYPE = "IC";
 
 /**
  * Werner rev H — Intention to Claim (page 13-14).
@@ -32,13 +35,22 @@ import { cn } from "@/lib/utils";
  * fan-out. The PM can then assign a risk level (low / medium / high)
  * from the doc page. HIGH risk triggers a broker email.
  */
-export default function ICForm({ setOpen, initialStatus }: any) {
-  const [subject, setSubject] = useState("");
-  const [description, setDescription] = useState("");
-  const [dateRequired, setDateRequired] = useState("");
+export default function ICForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [subject, setSubject] = useState(draft?.subject || "");
+  const [description, setDescription] = useState(draft?.description || "");
+  const [dateRequired, setDateRequired] = useState(draft?.dateRequired || "");
 
   // Werner spec rev H — shared To / CC / Date Required strip.
-  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+  const [meta, setMeta] = useState<TaskMetaValue>(
+    draft?.meta ?? { to: [], cc: [], dateRequired: "" }
+  );
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, { subject, description, dateRequired, meta });
 
   const [loading, setLoading] = useState(false);
   // Werner rev H — attachment upload (spec page 13).
@@ -104,27 +116,16 @@ export default function ICForm({ setOpen, initialStatus }: any) {
         await registerAttachments(result._id);
       }
 
-      // Create channel after IC is created (existing prod pattern).
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: subject,
-            description: description,
-            channel_type: "public",
-          },
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. IC-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       toast.success("Intention to Claim created");
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
       await queryClient.invalidateQueries({ queryKey: ["ics"] });
       await queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -204,7 +205,11 @@ export default function ICForm({ setOpen, initialStatus }: any) {
         <S3AttachmentSection s3Upload={s3Upload} inputId="ic-upload" label="Attachments" />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

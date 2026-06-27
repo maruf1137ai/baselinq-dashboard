@@ -214,23 +214,29 @@ const App = () => (
           />
           <Route path="/documents" element={
             <ProtectedRoute>
-              <ProjectProtectedRoute>
-                <Documents />
-              </ProjectProtectedRoute>
+              <RoleRoute permission="viewDocuments">
+                <ProjectProtectedRoute>
+                  <Documents />
+                </ProjectProtectedRoute>
+              </RoleRoute>
             </ProtectedRoute>
           } />
           <Route path="/documents/upload" element={
             <ProtectedRoute>
-              <ProjectProtectedRoute>
-                <UploadDocument />
-              </ProjectProtectedRoute>
+              <RoleRoute permission="uploadDocument">
+                <ProjectProtectedRoute>
+                  <UploadDocument />
+                </ProjectProtectedRoute>
+              </RoleRoute>
             </ProtectedRoute>
           } />
           <Route path="/documents/:docId" element={
             <ProtectedRoute>
-              <ProjectProtectedRoute>
-                <DocumentDetail />
-              </ProjectProtectedRoute>
+              <RoleRoute permission="viewDocuments">
+                <ProjectProtectedRoute>
+                  <DocumentDetail />
+                </ProjectProtectedRoute>
+              </RoleRoute>
             </ProtectedRoute>
           } />
           <Route

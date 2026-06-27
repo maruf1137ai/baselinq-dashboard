@@ -21,6 +21,9 @@ import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaF
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
+import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
+
+const DRAFT_TYPE = "GI";
 
 // Werner rev H p.10: GI is Professional → Professional OR Main Contractor →
 // Subcontractor. It never crosses the prof/contractor boundary. The UI
@@ -38,10 +41,22 @@ const initialValues = {
   direction: "prof_to_prof" as (typeof GI_DIRECTION_OPTIONS)[number]["value"],
 };
 
-export default function GIForm({ setOpen, initialStatus }: any) {
-  const [formData, setFormData] = useState(initialValues);
+export default function GIForm({ setOpen, initialStatus, initialData, taskId }: any) {
+  // Draft auto-fill is create-mode only — never restore/save while editing.
+  const draftEnabled = !taskId && !initialData;
+  const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
+
+  const [formData, setFormData] = useState(() =>
+    draft?.formData ? { ...initialValues, ...draft.formData } : initialValues
+  );
   // Werner spec rev H — shared To / CC / Date Required pickers.
-  const [meta, setMeta] = useState<TaskMetaValue>({ to: [], cc: [], dateRequired: "" });
+  const [meta, setMeta] = useState<TaskMetaValue>(
+    draft?.meta ?? { to: [], cc: [], dateRequired: "" }
+  );
+
+  // Keep the draft in sync so "minimize" can restore it later.
+  useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, { formData, meta });
+
   const [loading, setLoading] = useState(false);
   // Werner rev H — attachment upload (required on every doc per spec p.3-15).
   const s3Upload = useS3Upload("task-attachments/pending");
@@ -115,22 +130,10 @@ export default function GIForm({ setOpen, initialStatus }: any) {
         await registerAttachments(result._id);
       }
 
-      // Create channel after GI is created — mirrors the RFI/SI flow.
-      try {
-        await postRequest({
-          url: "channels/",
-          data: {
-            project: parseInt(projectId),
-            taskId: result?.task?.id,
-            taskType: result?.task?.taskType,
-            name: formData.title,
-            description: formData.instruction,
-            channel_type: "public",
-          },
-        });
-      } catch (error) {
-        console.error("Error creating channel:", error);
-      }
+      // NOTE: the discussion channel is created by the backend automatically
+      // when the task is created (tasks auto-create one PUBLIC channel named
+      // after the reference number, e.g. GI-001). Do NOT create one here too —
+      // doing so produced a duplicate channel per task in the Communications feed.
 
       toast.success("GI created successfully");
       await queryClient.invalidateQueries({ queryKey: [`projects/${projectId}/tasks/`] });
@@ -138,6 +141,7 @@ export default function GIForm({ setOpen, initialStatus }: any) {
       await queryClient.invalidateQueries({
         queryKey: [`channels/?projectId=${projectId}`],
       });
+      if (draftEnabled) clearTaskDraft(DRAFT_TYPE);
       setOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -225,7 +229,11 @@ export default function GIForm({ setOpen, initialStatus }: any) {
         <S3AttachmentSection s3Upload={s3Upload} inputId="gi-upload" label="Attachments" />
       </div>
       <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
-        <Button variant="outline" onClick={() => setOpen(false)} type="button">
+        <Button
+          variant="outline"
+          onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
+          type="button"
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>

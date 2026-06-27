@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Maximize2, Loader2 } from 'lucide-react';
+import { FileText, Download, Maximize2, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { XlsxPreview } from './XlsxPreview';
 
 interface DocumentPreviewCardProps {
   doc: {
@@ -24,6 +25,7 @@ function formatBytes(bytes: number | undefined): string | null {
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 const PDF_EXTS = new Set(['pdf']);
+const XLSX_EXTS = new Set(['xlsx', 'xls']);
 
 /**
  * Inline file preview card for the Document Detail Overview tab.
@@ -50,8 +52,15 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
     '';
   const fileSize = (doc.fileSize as number | undefined) ?? (doc.file_size as number | undefined);
 
+  // Signed-certificate link-docs (VO / SI / Claim) have no real file — the
+  // backend exposes the rendered certificate at this relative URL instead.
+  // When present we embed that page inline rather than showing the
+  // "No inline preview for .html files" fallback for the fictitious .html name.
+  const certUrl = (doc.certificateUrl as string) || '';
+
   const isImage = IMAGE_EXTS.has(ext);
   const isPdf = PDF_EXTS.has(ext);
+  const isXlsx = XLSX_EXTS.has(ext);
 
   // Fetch PDF bytes and create a local blob URL so the iframe has no
   // Content-Disposition: attachment header (S3 presigned URLs carry that
@@ -78,6 +87,39 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
 
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [url, isPdf]);
+
+  // Certificate link-doc: embed the rendered certificate page inline. Checked
+  // before the file-extension branches because these docs have no `url`.
+  if (certUrl) {
+    return (
+      <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground truncate">{fileName}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(certUrl, '_blank')}
+              className="h-7 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open certificate
+            </Button>
+          </div>
+        </div>
+        <div className="bg-muted/10">
+          <iframe
+            src={certUrl}
+            title={fileName}
+            className="w-full border-0"
+            style={{ height: '640px' }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const handleOpen = () => {
     if (!url) return;
@@ -163,7 +205,12 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
             style={{ height: '640px' }}
           />
         )}
-        {url && !isImage && !isPdf && (
+        {url && isXlsx && (
+          <div className="min-h-[420px] max-h-[640px] overflow-auto">
+            <XlsxPreview url={url} />
+          </div>
+        )}
+        {url && !isImage && !isPdf && !isXlsx && (
           <EmptyState message={`No inline preview for .${ext || 'unknown'} files. Use Full view or Download.`} />
         )}
       </div>

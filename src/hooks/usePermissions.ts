@@ -54,6 +54,9 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   // Meetings — 2 codes
   scheduleMeeting:     "meeting.schedule",
   updateMeeting:       "meeting.update",
+  // Documents — route-level gates
+  viewDocuments:       "document.view",
+  uploadDocument:      "document.upload",
   // Finance — legacy sub-tab flags now collapse to finance.view / finance.edit
   viewCostLedger:         "finance.view",
   editCostLedger:         "finance.edit",
@@ -129,6 +132,9 @@ export function usePermissions() {
     canCreateProject:      perm("project.create"),
     // Tasks
     canCreateTasks:        perm("task.create"),
+    // Documents — route-level gates
+    canViewDocuments:      perm("document.view"),
+    canUploadDocument:     perm("document.upload"),
     // Meetings — 2 flags
     canScheduleMeeting:    isOrgAdmin || perm("meeting.schedule"),
     canUpdateMeeting:      isOrgAdmin || perm("meeting.update"),

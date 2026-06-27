@@ -3,5 +3,8 @@
 // The standalone page lives at /settings/permissions via src/pages/settings/permissions.tsx.
 import { PermissionsContent } from "@/pages/settings/permissions";
 
-const RolePermissions = ({ readOnly }: { readOnly?: boolean }) => <PermissionsContent readOnly={readOnly} />;
+const RolePermissions = ({ readOnly }: { readOnly?: boolean }) => {
+  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+  return <PermissionsContent readOnly={readOnly} projectId={projectId} />;
+};
 export default RolePermissions;

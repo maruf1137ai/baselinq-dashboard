@@ -64,10 +64,19 @@ api.interceptors.request.use((config) => {
 });
 
 const handleError = (error) => {
+  // Surface the backend-provided message (e.g. DRF `error`/`detail`) so toasts
+  // show the real reason instead of a bare "HTTP error! status: NNN". Only use a
+  // string — DRF validation errors can be objects/arrays, which fall back to the
+  // status. Still throws an Error (no `.response`), preserving the prior contract.
+  const data = error.response?.data;
+  const backendMessage = [data?.error, data?.detail, data?.message].find(
+    (m) => typeof m === "string" && m.trim().length > 0,
+  );
   throw new Error(
-    error.response
-      ? `HTTP error! status: ${error.response.status}`
-      : error.message,
+    backendMessage ||
+      (error.response
+        ? `HTTP error! status: ${error.response.status}`
+        : error.message),
   );
 };
 
@@ -641,6 +650,41 @@ export const deleteProjectDocument = async (
     handleError(error);
   }
 };
+
+// ==============================================================================
+// Document move / copy (folder reorganization)
+// ==============================================================================
+
+/**
+ * Move a document into another folder (same tab only). Folder is pure
+ * metadata — the file and document id never change, so AI analysis / RAG keep
+ * resolving the contract by its stable `doc-{id}` key. `postData` rethrows the
+ * raw axios error so callers can read `err.response.data.error`.
+ */
+export const moveDocument = (
+  projectId: string | number,
+  docId: string | number,
+  folderId: string | number | null,
+) =>
+  postData({
+    url: `documents/${docId}/move/?project_id=${projectId}`,
+    data: { folderId },
+  });
+
+/**
+ * Duplicate a document into a folder as a new, independent document (own
+ * reference, own copy of the file in storage, its own AI indexing). The
+ * project contract cannot be copied — the backend returns 400.
+ */
+export const duplicateDocument = (
+  projectId: string | number,
+  docId: string | number,
+  folderId: string | number | null,
+) =>
+  postData({
+    url: `documents/${docId}/duplicate/?project_id=${projectId}`,
+    data: { folderId },
+  });
 
 // ==============================================================================
 // Task attachments (VO, SI, RFI, DC, CPI) – upload via backend (S3 when configured)

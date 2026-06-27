@@ -10,7 +10,28 @@ export const TYPE_TO_CATEGORY: Record<string, DocCategory> = {
   "Certificate": "Documents",
 };
 
-export function getCategoryForDoc(doc: { type?: string }): DocCategory {
+// Map from a folder's backend tab → frontend category. A filed document's
+// category follows the folder it lives in — this is authoritative over the
+// type→category guess below.
+export const TAB_TO_CATEGORY: Record<string, DocCategory> = {
+  contracts: "Contracts",
+  drawings: "Drawings",
+  documents: "Documents",
+};
+
+/**
+ * Which tab a document belongs to in the Documents file browser.
+ *
+ * When the doc is FILED (has a folder), route by the folder's tab — that's
+ * where the user put it, and it's the only correct answer when a type maps to
+ * a different category than its folder (e.g. a signed VO certificate has
+ * type "Certificate" → would map to "Documents", but it's filed in the
+ * Contracts tree, so it must show under Contracts). Fall back to the
+ * type→category map only for unfiled docs (no folder tab available).
+ */
+export function getCategoryForDoc(doc: { type?: string; folderTab?: string | null }): DocCategory {
+  const byTab = doc.folderTab ? TAB_TO_CATEGORY[doc.folderTab] : undefined;
+  if (byTab) return byTab;
   return TYPE_TO_CATEGORY[doc.type ?? ""] ?? "Documents";
 }
 
@@ -28,6 +49,16 @@ export const CATEGORY_TO_TYPES: Record<DocCategory, string[]> = {
   Documents: ["Specification", "Report", "Certificate"],
   Contracts: ["Contract", "Contract Agreement"],
 };
+
+// Issue-register statuses (shared by the upload wizard and the cross-tab
+// move dialog — single source of truth).
+export const ISSUE_STATUSES = [
+  "For Information",
+  "For Approval",
+  "For Construction",
+  "For Tender",
+  "For Construction Issue",
+] as const;
 
 // Expanded fixed discipline list (from client meeting, see proposal §4).
 export const DISCIPLINES = [

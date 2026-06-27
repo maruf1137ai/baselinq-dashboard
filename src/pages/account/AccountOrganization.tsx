@@ -8,7 +8,7 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock, Paperclip, ShieldCheck, Lock } from "lucide-react";
+import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock, Paperclip, ShieldCheck, Lock, CreditCard } from "lucide-react";
 import { hasPermission } from "@/lib/roleUtils";
 
 type Member = { id: number; name: string; email: string; role: string | null; role_code: string | null };
@@ -56,6 +56,10 @@ const AccountOrganization = () => {
   // Org details form
   const [formData, setFormData] = useState({
     organization: { name: "", company_reg_number: "", ck_number: "", vat_number: "", company_size: "" },
+    // Company bank account. The backend routes this to the Organization for
+    // org accounts (and surfaces it back under `banking_details`), so the
+    // whole firm shares one account shown on invoices / payment certificates.
+    banking_details: { bank_name: "", branch_name: "", branch_code: "", account_number: "", account_type: "", swift_code: "" },
   });
 
   // Insurance certificate
@@ -84,6 +88,14 @@ const AccountOrganization = () => {
           ck_number: user.organization?.ck_number || "",
           vat_number: user.organization?.vat_number || "",
           company_size: user.organization?.company_size || "",
+        },
+        banking_details: {
+          bank_name: (user as any).banking_details?.bank_name || "",
+          branch_name: (user as any).banking_details?.branch_name || "",
+          branch_code: (user as any).banking_details?.branch_code || "",
+          account_number: (user as any).banking_details?.account_number || "",
+          account_type: (user as any).banking_details?.account_type || "",
+          swift_code: (user as any).banking_details?.swift_code || "",
         },
       });
       setInsuranceExpiry(user.insurance_document?.expiry_date || "");
@@ -297,6 +309,36 @@ const AccountOrganization = () => {
                 onChange={e => setInsuranceExpiry(e.target.value)}
                 className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")}
               />
+            </Field>
+          </div>
+        </SectionCard>
+
+        {/* Banking details — the consultant firm's account, shown on invoices /
+            payment certificates. Stored at the company (Organization) level; the
+            backend routes `banking_details` here for org admins. */}
+        <SectionCard
+          title="Banking Details"
+          subtitle="Your company's bank account — shown on the invoices and payment certificates your company issues"
+          icon={<CreditCard className="w-4 h-4" />}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <Field label="Bank Name">
+              <Input readOnly={!canEdit} value={formData.banking_details.bank_name} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, bank_name: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. First National Bank" />
+            </Field>
+            <Field label="Branch Name">
+              <Input readOnly={!canEdit} value={formData.banking_details.branch_name} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_name: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. Sandton City" />
+            </Field>
+            <Field label="Branch Code">
+              <Input readOnly={!canEdit} value={formData.banking_details.branch_code} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_code: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. 250655" />
+            </Field>
+            <Field label="Account Number">
+              <Input readOnly={!canEdit} value={formData.banking_details.account_number} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_number: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. 62012345678" />
+            </Field>
+            <Field label="Account Type">
+              <Input readOnly={!canEdit} value={formData.banking_details.account_type} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_type: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. Cheque / Current" />
+            </Field>
+            <Field label="SWIFT / BIC Code">
+              <Input readOnly={!canEdit} value={formData.banking_details.swift_code} onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, swift_code: e.target.value } })} className={cn(INPUT_CLS, !canEdit && "bg-slate-50/50 cursor-not-allowed")} placeholder="e.g. FIRNZAJJ" />
             </Field>
           </div>
         </SectionCard>

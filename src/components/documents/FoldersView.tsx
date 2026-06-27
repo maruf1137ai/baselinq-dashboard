@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/dateUtils';
@@ -13,6 +15,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
+
+/** Spring-load delay before a drag-hovered folder auto-expands (ms). */
+const SPRING_FOLDER_DELAY = 500;
 
 interface FoldersViewProps {
   projectId: string;
@@ -20,6 +26,8 @@ interface FoldersViewProps {
   documents?: ApiDocument[];
   onDocumentClick?: (id: string) => void;
   onViewRegister?: (folderId: string, folderName: string) => void;
+  onRenameDoc?: (doc: ApiDocument) => void;
+  onDeleteDoc?: (doc: ApiDocument) => void;
 }
 
 interface FolderRowProps {
@@ -28,6 +36,8 @@ interface FolderRowProps {
   tab: FolderTab;
   onDocumentClick?: (id: string) => void;
   onViewRegister?: (folderId: string, folderName: string) => void;
+  onRenameDoc?: (doc: ApiDocument) => void;
+  onDeleteDoc?: (doc: ApiDocument) => void;
 }
 
 /** Compact relative-time formatter — matches ContractsTree. */
@@ -44,21 +54,136 @@ function formatRelative(iso?: string): string {
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Folder row for Drawings / Documents. Two visual levels:
- *   - Folder header: subtle bg, folder icon, name, count chip,
- *     activity dot + AI-flag indicator, hover actions.
- *   - Document rows inside: distinct styling — file icon in primary
- *     well, two-line layout (name + type · uploader · when), monospace
- *     ref chip on right. Visually unmistakeable from a folder.
+ * A filed document row — draggable (move to another folder) and right-clickable
+ * (Copy / Cut / Paste / Copy path / Rename / Delete).
  */
-function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: FolderRowProps) {
+function DocumentRow({
+  doc, idx, tab, onDocumentClick, onRenameDoc, onDeleteDoc,
+}: {
+  doc: ApiDocument;
+  idx: number;
+  tab: FolderTab;
+  onDocumentClick?: (id: string) => void;
+  onRenameDoc?: (doc: ApiDocument) => void;
+  onDeleteDoc?: (doc: ApiDocument) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: doc._id,
+    data: { doc },
+  });
+
+  return (
+    <DocItemContextMenu
+      doc={doc}
+      tab={tab}
+      pasteFolderId={doc.folderId}
+      onRename={onRenameDoc}
+      onDelete={onDeleteDoc}
+    >
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "flex items-center gap-3 py-2 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
+          idx > 0 && "border-t border-border/40",
+          isDragging && "opacity-40",
+        )}
+        onClick={() => onDocumentClick?.(doc._id)}
+      >
+        {/* Primary accent stripe down the left — matches ContractsTree. */}
+        <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
+        <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+        </div>
+        <p className="text-sm truncate flex-1 min-w-0">
+          <span className="text-foreground group-hover/doc:text-primary transition-colors">
+            {doc.name}
+          </span>
+          <span className="text-muted-foreground ml-2 hidden sm:inline">
+            {' · '}{doc.type || '—'}
+            {doc.uploadedBy?.name && <>{' · '}{doc.uploadedBy.name}</>}
+            {doc.createdAt && <>{' · '}{formatRelative(doc.createdAt)}</>}
+          </span>
+        </p>
+        {doc.reference && (
+          <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
+            {doc.reference}
+          </span>
+        )}
+        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+      </div>
+    </DocItemContextMenu>
+  );
+}
+
+/**
+ * Unfiled document row — draggable into a folder, right-clickable.
+ * Paste-into is disabled here (no folder to paste into).
+ */
+function UnfiledRow({
+  doc, tab, onDocumentClick, onRenameDoc, onDeleteDoc,
+}: {
+  doc: ApiDocument;
+  tab: FolderTab;
+  onDocumentClick?: (id: string) => void;
+  onRenameDoc?: (doc: ApiDocument) => void;
+  onDeleteDoc?: (doc: ApiDocument) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: doc._id,
+    data: { doc },
+  });
+
+  return (
+    <DocItemContextMenu
+      doc={doc}
+      tab={tab}
+      pasteFolderId={null}
+      onRename={onRenameDoc}
+      onDelete={onDeleteDoc}
+    >
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "flex items-center gap-3 py-2 px-4 hover:bg-muted/30 cursor-pointer transition-colors",
+          isDragging && "opacity-40",
+        )}
+        onClick={() => onDocumentClick?.(doc._id)}
+      >
+        <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
+        <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
+        {doc.reference && (
+          <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+            {doc.reference}
+          </span>
+        )}
+      </div>
+    </DocItemContextMenu>
+  );
+}
+
+/**
+ * Folder row for Drawings / Documents. Folder header is a drop target that
+ * spring-loads open while a document is dragged over it.
+ */
+function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc }: FolderRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { canUploadDocument } = usePermissions();
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: folder._id });
+
+  // Spring-load: auto-expand while a document is dragged over this folder.
+  useEffect(() => {
+    if (!isOver || isOpen) return;
+    const t = window.setTimeout(() => setIsOpen(true), SPRING_FOLDER_DELAY);
+    return () => window.clearTimeout(t);
+  }, [isOver, isOpen]);
 
   const handleUpload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Build "Documents > Architectural > Tender Drawings" so Step 3 can
-    // show the destination breadcrumb instead of just the leaf folder.
     const tabLabel =
       tab === 'drawings' ? 'Drawings' :
       tab === 'documents' ? 'Documents' :
@@ -84,6 +209,8 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div ref={setDropRef} className={cn("transition-colors", isOver && "ring-2 ring-inset ring-primary/50 bg-primary/[0.04]")}>
+      <FolderItemContextMenu folderId={folder._id} tab={tab}>
       <CollapsibleTrigger asChild>
         <div
           className={cn(
@@ -131,19 +258,23 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
               <FileText className="w-3 h-3 mr-1" />
               Register
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
-              onClick={handleUpload}
-              title="Upload Document"
-            >
-              <Upload className="w-3 h-3 mr-1" />
-              Upload
-            </Button>
+            {canUploadDocument && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={handleUpload}
+                title="Upload Document"
+              >
+                <Upload className="w-3 h-3 mr-1" />
+                Upload
+              </Button>
+            )}
           </div>
         </div>
       </CollapsibleTrigger>
+      </FolderItemContextMenu>
+      </div>
       <CollapsibleContent>
         {docs.length === 0 ? (
           <div className="py-3 px-4 pl-12 text-xs text-muted-foreground italic border-t border-border/30">
@@ -152,41 +283,15 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
         ) : (
           <div className="ml-7">
             {docs.map((doc, idx) => (
-              <div
+              <DocumentRow
                 key={doc._id}
-                className={cn(
-                  "flex items-center gap-3 py-2 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
-                  idx > 0 && "border-t border-border/40"
-                )}
-                onClick={() => onDocumentClick?.(doc._id)}
-              >
-                {/* Primary accent stripe down the left — matches the
-                    treatment in ContractsTree so docs read consistent
-                    across all three tabs. */}
-                <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
-                <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
-                  <FileText className="w-3.5 h-3.5 text-primary" />
-                </div>
-                {/* Single-line name + meta — uses the wide horizontal
-                    space instead of stacking. Meta clips first when
-                    narrow. */}
-                <p className="text-sm truncate flex-1 min-w-0">
-                  <span className="text-foreground group-hover/doc:text-primary transition-colors">
-                    {doc.name}
-                  </span>
-                  <span className="text-muted-foreground ml-2 hidden sm:inline">
-                    {' · '}{doc.type || '—'}
-                    {doc.uploadedBy?.name && <>{' · '}{doc.uploadedBy.name}</>}
-                    {doc.createdAt && <>{' · '}{formatRelative(doc.createdAt)}</>}
-                  </span>
-                </p>
-                {doc.reference && (
-                  <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
-                    {doc.reference}
-                  </span>
-                )}
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
-              </div>
+                doc={doc}
+                idx={idx}
+                tab={tab}
+                onDocumentClick={onDocumentClick}
+                onRenameDoc={onRenameDoc}
+                onDeleteDoc={onDeleteDoc}
+              />
             ))}
           </div>
         )}
@@ -197,18 +302,13 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister }: Folde
 
 /**
  * Discipline → Folder → Documents view for Drawings and Documents tabs.
- *
- * Visual hierarchy:
- *   - Discipline group header (e.g. "Architectural"): prominent — accent
- *     stripe, bigger label, doc count summary.
- *   - Folder rows within each discipline: secondary — folder icon, name,
- *     count chip, activity indicators.
- *   - Document rows inside each folder: distinct file-card style, two
- *     lines, primary-coloured icon well, monospace ref chip.
+ * The drag-and-drop context lives at the page level (Documents.tsx) so a drag
+ * can cross tabs.
  */
-export function FoldersView({ projectId, tab, documents, onDocumentClick, onViewRegister }: FoldersViewProps) {
+export function FoldersView({ projectId, tab, documents, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc }: FoldersViewProps) {
   const { data, isLoading, error } = useFolders({ projectId, tab });
   const navigate = useNavigate();
+  const { canUploadDocument } = usePermissions();
 
   // For drawings/documents the seeded tree is empty; folders are created flat.
   const allFolders = useMemo(() => {
@@ -283,13 +383,15 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
         <p className="text-xs text-muted-foreground mb-4">
           Upload your first {tabLabel.replace(/s$/, '').toLowerCase()} to create a folder.
         </p>
-        <Button
-          className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-          onClick={() => navigate(`/documents/upload?tab=${tab}`)}
-        >
-          <Upload className="w-3.5 h-3.5 mr-1.5" />
-          Upload {tabLabel.replace(/s$/, '')}
-        </Button>
+        {canUploadDocument && (
+          <Button
+            className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+            onClick={() => navigate(`/documents/upload?tab=${tab}`)}
+          >
+            <Upload className="w-3.5 h-3.5 mr-1.5" />
+            Upload {tabLabel.replace(/s$/, '')}
+          </Button>
+        )}
       </div>
     );
   }
@@ -310,13 +412,6 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
 
         return (
           <div key={discipline} className="border-b border-border last:border-b-0">
-            {/* Discipline header — strong visual band at the top of each
-                discipline section. Stone/warm tint so the section reads
-                as a "header strip" against the white doc rows below.
-
-                Only the doc count is shown — the folder count was
-                redundant (folder names are listed right below) and
-                usually 1, adding noise rather than information. */}
             <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 relative border-b border-border">
               <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary rounded-r" />
               <span className="text-sm font-medium text-foreground tracking-tight">{discipline}</span>
@@ -337,6 +432,8 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
                 tab={tab}
                 onDocumentClick={onDocumentClick}
                 onViewRegister={onViewRegister}
+                onRenameDoc={onRenameDoc}
+                onDeleteDoc={onDeleteDoc}
               />
             ))}
           </div>
@@ -348,23 +445,18 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
           <div className="px-4 py-2.5">
             <p className="text-xs font-medium text-foreground">Unfiled ({unfiledDocs.length})</p>
             <p className="text-[11px] text-muted-foreground">
-              Uploaded before folder structure was set up. Re-upload to file under a folder.
+              Uploaded before folder structure was set up. Drag into a folder or re-upload to file it.
             </p>
           </div>
           {unfiledDocs.map((doc) => (
-            <div
+            <UnfiledRow
               key={doc._id}
-              className="flex items-center gap-3 py-2 px-4 hover:bg-muted/30 cursor-pointer transition-colors"
-              onClick={() => onDocumentClick?.(doc._id)}
-            >
-              <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
-              <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
-              {doc.reference && (
-                <span className="font-mono text-[11px] text-muted-foreground shrink-0">
-                  {doc.reference}
-                </span>
-              )}
-            </div>
+              doc={doc}
+              tab={tab}
+              onDocumentClick={onDocumentClick}
+              onRenameDoc={onRenameDoc}
+              onDeleteDoc={onDeleteDoc}
+            />
           ))}
         </div>
       )}

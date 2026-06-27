@@ -31,6 +31,9 @@ const Communications = () => {
   );
   const channels = Array.isArray(channelsData) ? channelsData : [];
   const [selectedChannel, setSelectedChannel] = useState<any>(null);
+  // Messages lifted out of ChatWindow so the right-side summary panel can
+  // derive shared attachments/links from the same poll (no second fetch).
+  const [channelMessages, setChannelMessages] = useState<any[]>([]);
   const queryClient = useQueryClient();
 
   const [showNewChannel, setShowNewChannel] = useState(false);
@@ -145,6 +148,12 @@ const Communications = () => {
     }
   }, [channels, channelParamId]);
 
+  // Clear shared-files data when switching channels so stale attachments
+  // don't flash before the new channel's messages load.
+  useEffect(() => {
+    setChannelMessages([]);
+  }, [selectedChannel?.id]);
+
   const { data: projectData } = useFetch(projectId ? `projects/${projectId}/` : "");
   const projectName = projectData?.name || "Project";
 
@@ -178,10 +187,11 @@ const Communications = () => {
               channel={selectedChannel}
               projectName={projectName}
               taskDetails={taskDetails}
+              onMessagesChange={setChannelMessages}
             />
           </div>
           <div className="chatSummary flex-shrink-0 w-[300px] min-w-[300px] border-l border-border overflow-hidden">
-            <ChatSammary task={selectedChannel} />
+            <ChatSammary task={selectedChannel} messages={channelMessages} />
           </div>
         </div>
       </div>
