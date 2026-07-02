@@ -364,15 +364,32 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     setMentionedUserIds([]);
 
     try {
+      // Upload every attached file directly to S3 via a presigned PUT, then send
+      // only the resulting keys — never raw bytes to Django's local disk, which
+      // is served from /media/ and 403s on staging (reverse proxy + ephemeral
+      // disk). Mirrors the voice-note flow in handleAudioUploadAndSend.
+      const attachmentsMeta = await Promise.all(
+        outgoingFiles.map(async (fileData) => {
+          const contentType = fileData.file?.type || "application/octet-stream";
+          const { upload_url, key } = await getPresignedUrl({
+            filename: fileData.name,
+            content_type: contentType,
+            folder: "channel_attachments",
+          });
+          await uploadFileToPresignedUrl(upload_url, fileData.file, contentType);
+          return { s3_key: key, file_name: fileData.name, file_type: contentType };
+        })
+      );
+
       const formData = new FormData();
       formData.append("content", outgoingMessage || "");
       formData.append("is_urgent", "false");
       if (outgoingMentions.length > 0) {
         outgoingMentions.forEach((id) => formData.append("mentioned_user_ids", String(id)));
       }
-      outgoingFiles.forEach((fileData) => {
-        formData.append("attachments", fileData.file, fileData.name);
-      });
+      if (attachmentsMeta.length > 0) {
+        formData.append("attachments_meta", JSON.stringify(attachmentsMeta));
+      }
 
       await postData({
         url: `channels/${channel.id}/messages/`,
