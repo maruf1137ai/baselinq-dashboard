@@ -227,7 +227,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
                 placeholder="Describe the work completed, any challenges faced, or additional notes..."
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
-                className="min-h-[120px] bg-white border-green-300 focus:border-green-500"
+                className="min-h-[120px] bg-card border-green-300 focus:border-green-500"
               />
               <Button
                 onClick={handleProvideFeedback}
@@ -257,7 +257,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
               </p>
 
               {formFields.feedbackText && (
-                <div className="bg-white border border-purple-300 rounded-lg p-4 space-y-2">
+                <div className="bg-card rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">
                       Implementation Feedback

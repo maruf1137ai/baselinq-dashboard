@@ -175,7 +175,7 @@ export default function ICForm({ setOpen, initialStatus, initialData, taskId }: 
                   : "Pick a date"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0 bg-card" align="start">
               <Calendar
                 mode="single"
                 selected={dateRequired ? parseISO(dateRequired) : undefined}
@@ -184,7 +184,7 @@ export default function ICForm({ setOpen, initialStatus, initialData, taskId }: 
               />
             </PopoverContent>
           </Popover>
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Date by which the PM must assess the event. Most contracts require
             an IC to be filed within 7-14 days of the event.
           </p>
@@ -204,7 +204,7 @@ export default function ICForm({ setOpen, initialStatus, initialData, taskId }: 
         {/* Werner rev H — Attachment upload (spec page 13). */}
         <S3AttachmentSection s3Upload={s3Upload} inputId="ic-upload" label="Attachments" />
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}

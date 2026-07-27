@@ -50,7 +50,7 @@ export function EmptyState({
       className={cn(
         "flex flex-col items-center justify-center text-center",
         size === "sm" ? "py-10 gap-2" : "py-16 gap-3",
-        variant === "bordered" && "rounded-lg border border-dashed border-border",
+        variant === "bordered" && "rounded-xl border border-dashed border-border",
         className
       )}
       {...props}

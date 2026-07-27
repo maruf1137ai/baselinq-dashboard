@@ -92,7 +92,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
   // before the file-extension branches because these docs have no `url`.
   if (certUrl) {
     return (
-      <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -136,7 +136,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Header strip — file name + size + quick actions. Size moved here
           so the right-rail metadata cards don't carry it as a separate row
           (kept all file-level info next to the file itself). */}

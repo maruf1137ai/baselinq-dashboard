@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,9 +27,9 @@ function SectionCard({ title, subtitle, icon, children }: {
   title: string; subtitle?: string; icon: React.ReactNode; children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-5">
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-border bg-slate-50/50">
-        <div className="w-9 h-9 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">{icon}</div>
+    <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden mb-5">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-border bg-muted/50">
+        <div className="w-9 h-9 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">{icon}</div>
         <div>
           <h3 className="text-sm font-normal text-foreground tracking-tight">{title}</h3>
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -42,13 +43,13 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">{label}</label>
+      <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">{label}</label>
       {children}
     </div>
   );
 }
 
-const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm";
+const INPUT_CLS = "h-10 border border-border bg-card focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm";
 
 const AccountProfile = () => {
   const { data: user, isLoading } = useCurrentUser();
@@ -232,7 +233,7 @@ const AccountProfile = () => {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading..." /></div>;
+  if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading" /></div>;
 
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -257,10 +258,10 @@ const AccountProfile = () => {
               <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={cn(INPUT_CLS, "font-normal")} />
             </Field>
             <Field label="Work Email Address">
-              <div className="flex items-center gap-2.5 px-3 h-10 bg-slate-100/50 rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
+              <div className="flex items-center gap-2.5 px-3 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
                 <Mail className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{user?.email}</span>
-                <span className="ml-auto text-[9px] bg-slate-200 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">Verified</span>
+                <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">Verified</span>
               </div>
             </Field>
             <Field label="Phone Number">
@@ -286,10 +287,10 @@ const AccountProfile = () => {
                   onValueChange={(val) => setFormData({ ...formData, role: val })}
                   disabled={!isAdmin && !!user?.role?.code}
                 >
-                  <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-slate-50 cursor-not-allowed")}>
+                  <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-muted/50 cursor-not-allowed")}>
                     <SelectValue placeholder="Select Discipline..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-card">
                     <SelectItem value="architect">Architect</SelectItem>
                     <SelectItem value="client">Client / Owner</SelectItem>
                     <SelectItem value="cpm">Client Project Manager</SelectItem>
@@ -375,26 +376,24 @@ const AccountProfile = () => {
               {/* Member list */}
               <div className="space-y-2 mb-4">
                 {myCompany.members.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">No members yet — invite your team below.</p>
+                  <p className="text-sm text-muted-foreground py-2">No colleagues from your company on this project yet — invite them below.</p>
                 ) : (
                   myCompany.members.map(m => (
-                    <div key={m.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border bg-slate-50/40">
+                    <div key={m.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/50">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-medium shrink-0">
                           {(m.name || m.email || "?")[0].toUpperCase()}
                         </div>
                         <div>
                           <p className="text-sm text-foreground">{m.name || m.email}</p>
-                          <p className="text-[11px] text-muted-foreground">{m.email}</p>
+                          <p className="text-xs text-muted-foreground">{m.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {m.status && m.status !== "Joined" && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-slate-100 text-muted-foreground">
-                            {m.status}
-                          </span>
+                          <Badge variant="neutral">{m.status}</Badge>
                         )}
-                        <span className="text-[11px] text-muted-foreground">{m.role}</span>
+                        <span className="text-xs text-muted-foreground">{m.role}</span>
                         {m.team_member_id && (
                           <button
                             type="button"
@@ -417,7 +416,7 @@ const AccountProfile = () => {
 
               {/* Invite form */}
               {showInviteForm ? (
-                <div className="border border-border rounded-xl p-4 bg-slate-50/50 space-y-3">
+                <div className="rounded-xl p-4 bg-muted/50 space-y-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs font-medium text-foreground">Invite a team member</p>
                     <button type="button" onClick={() => setShowInviteForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -426,7 +425,7 @@ const AccountProfile = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] text-muted-foreground tracking-wider">Full Name</label>
+                      <label className="text-xs text-muted-foreground tracking-wider">Full Name</label>
                       <Input
                         className={INPUT_CLS}
                         placeholder="Jane Smith"
@@ -435,7 +434,7 @@ const AccountProfile = () => {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] text-muted-foreground tracking-wider">Email Address <span className="text-destructive">*</span></label>
+                      <label className="text-xs text-muted-foreground tracking-wider">Email Address <span className="text-destructive">*</span></label>
                       <Input
                         className={INPUT_CLS}
                         type="email"
@@ -445,7 +444,7 @@ const AccountProfile = () => {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] text-muted-foreground tracking-wider">Position / Role</label>
+                      <label className="text-xs text-muted-foreground tracking-wider">Position / Role</label>
                       <Select
                         value={inviteForm.position}
                         onValueChange={val => setInviteForm(f => ({ ...f, position: val }))}

@@ -94,7 +94,7 @@ export function UserMultiSelect({ projectId, value, onChange }: UserMultiSelectP
           <Command>
             <CommandInput placeholder="Search users..." />
             <CommandEmpty>
-              {isLoading ? 'Loading users...' : 'No users found.'}
+              {isLoading ? 'Loading users...' : 'No users match this search'}
             </CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {users?.map((user) => (

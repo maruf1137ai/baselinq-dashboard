@@ -172,14 +172,14 @@ const NavbarWeather = () => {
           ref={popupRef}
           className="absolute top-full left-0 z-50 pt-2 w-56 text-sm"
         >
-          <div className="bg-white border border-border rounded-xl shadow-lg p-4">
+          <div className="bg-card border border-border rounded-xl shadow-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-2xl">{icon}</span>
             <div>
               <p className="font-medium text-foreground">{weather.name}</p>
               <p className="text-muted-foreground capitalize text-xs">{description}</p>
               {fromProjectLocation && (
-                <p className="text-[10px] text-primary/70 mt-0.5">Site weather</p>
+                <p className="text-xs text-primary/70 mt-0.5">Site weather</p>
               )}
             </div>
           </div>

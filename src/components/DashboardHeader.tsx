@@ -75,7 +75,7 @@ function NotificationItem({
 
   return (
     <div
-      className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-white"}`}
+      className={`group relative border-b border-border hover:bg-[#E8F1FF4D] transition ${!item.isRead ? "bg-[#E8F1FF4D]" : "bg-card"}`}
     >
       <button
         onClick={() => onNavigate(item)}
@@ -185,7 +185,7 @@ export function DashboardHeader() {
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDropdownOpen(true)}
-                className="relative h-10 w-10 flex justify-center items-center bg-[#FFFFFF] border border-border rounded-lg">
+                className="relative h-10 w-10 flex justify-center items-center bg-card border border-border rounded-lg">
                 <Bell className="h-6 w-6" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
@@ -208,7 +208,7 @@ export function DashboardHeader() {
 
       {/* Notification side panel */}
       <div
-        className={`fixed right-0 top-0 h-full w-[384px] bg-white shadow-xl z-[60] flex flex-col transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
+        className={`fixed right-0 top-0 h-full w-[384px] bg-card shadow-xl z-[60] flex flex-col transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <h3 className="text-lg">Notifications</h3>
           <div className="flex items-center gap-2">

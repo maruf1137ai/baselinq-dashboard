@@ -25,11 +25,11 @@ export function ActionItem({
     Critical: "bg-red-50 text-red-700 border-red-200",
     High: "bg-orange-50 text-orange-700 border-orange-200",
     Medium: "bg-blue-50 text-blue-700 border-blue-200",
-    Low: "bg-gray-50 text-gray-700 border-gray-200",
+    Low: "bg-muted/50 text-gray-700 border-border",
   };
 
   return (
-    <div className={`p-4 border rounded-lg hover:border-primary/50 transition-colors ${isOverdue ? 'bg-red-50 border-red-200' : 'border-[rgba(0,0,0,0.04)] bg-[#F3F2F05C] bg-card'}`} >
+    <div className={`p-4 border rounded-xl hover:border-primary/50 transition-colors ${isOverdue ? 'bg-red-50 border-red-200' : 'border-border bg-card'}`} >
       <div className="flex items-start justify-between gap-3 mb-1">
         <h4 className="text-sm text-foreground flex-1 ">{title}</h4>
         <Badge

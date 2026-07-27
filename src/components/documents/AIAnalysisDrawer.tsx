@@ -46,7 +46,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[550px] p-0 flex flex-col border-border bg-white">
+      <SheetContent className="sm:max-w-[550px] p-0 flex flex-col border-border bg-card">
         <SheetHeader className="px-6 py-4 border-b border-border pr-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
           {visibleFindings.map((finding, i) => (
             <div
               key={i}
-              className="bg-white rounded-lg border border-border p-4 space-y-2"
+              className="bg-muted/50 rounded-xl p-4 space-y-2"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">

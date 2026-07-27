@@ -26,7 +26,7 @@ function initials(name: string): string {
 export function UserChip({ name, role }: Props) {
   return (
     <span className="inline-flex items-center gap-2 text-sm">
-      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-[10px] font-medium border border-primary/20 shrink-0">
+      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20 shrink-0">
         {initials(name)}
       </span>
       <span className="text-foreground">

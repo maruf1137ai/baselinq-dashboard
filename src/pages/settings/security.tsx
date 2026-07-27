@@ -143,7 +143,7 @@ const Security = () => {
       </div>
 
       {/* ── Signing PIN card ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -233,7 +233,7 @@ const Security = () => {
             )}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Tip: pick a PIN you don't use elsewhere. It only protects this app's signing
             action — not your login. You can change or clear it at any time.
           </p>
@@ -244,7 +244,7 @@ const Security = () => {
           Werner — when an Intention to Claim is filed against this user
           and the PM rates it HIGH risk, the broker entered here is the
           recipient of the automated warning email. */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -308,7 +308,7 @@ const Security = () => {
                 className={!brokerEmailValid ? "border-red-300 focus-visible:ring-red-200" : ""}
               />
               {!brokerEmailValid && (
-                <p className="text-[11px] text-red-600 mt-1">
+                <p className="text-xs text-red-600 mt-1">
                   Enter a valid email address.
                 </p>
               )}
@@ -337,7 +337,7 @@ const Security = () => {
             )}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Only used to send broker warnings when an IC against you reaches
             HIGH risk. Leave empty and you'll get an in-app reminder instead.
           </p>

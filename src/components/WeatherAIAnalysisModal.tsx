@@ -103,7 +103,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-white max-h-[88vh] overflow-y-auto font-sans">
+      <DialogContent className="max-w-3xl bg-card max-h-[88vh] overflow-y-auto font-sans">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
             <AiIcon className="h-5 w-5 text-primary" />
@@ -203,14 +203,14 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
               <TabsList className="grid w-full grid-cols-2 mb-5 bg-muted p-1 rounded-xl">
                 <TabsTrigger
                   value="today"
-                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-2"
                 >
                   <CloudSun className="h-4 w-4" />
                   Today
                 </TabsTrigger>
                 <TabsTrigger
                   value="future"
-                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2"
+                  className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-2"
                 >
                   <CloudRain className="h-4 w-4" />
                   Future conditions
@@ -220,7 +220,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
               {/* TODAY */}
               <TabsContent value="today" className="m-0 border-none outline-none space-y-4">
                 {today ? (
-                  <div className="rounded-xl border border-border bg-white p-4">
+                  <div className="rounded-xl bg-muted/50 p-4">
                     <div className="flex items-center gap-3 mb-4">
                       <span className="text-4xl">{CONDITION_ICON[today.main] ?? "🌡️"}</span>
                       <div>
@@ -241,7 +241,9 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No current conditions available.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No current conditions recorded for this site. Weather records support inclement-weather delay claims, so it is worth confirming the site location is set.
+                  </p>
                 )}
                 {data.ai_today && (
                   <AiNote text={data.ai_today} />
@@ -259,7 +261,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
                 {forecast.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     {forecast.map((d) => (
-                      <div key={d.date} className="rounded-xl border border-border bg-white p-3 text-center">
+                      <div key={d.date} className="rounded-xl bg-muted/50 p-3 text-center">
                         <p className="text-xs font-medium text-muted-foreground">
                           {format(parseISO(d.date), "EEE, MMM d")}
                         </p>
@@ -267,12 +269,12 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
                         <p className="text-sm font-semibold text-foreground">
                           {d.temp_min}° / {d.temp_max}°
                         </p>
-                        <p className="text-[11px] text-muted-foreground capitalize mt-0.5">{d.description || d.main}</p>
-                        <div className="mt-2 flex items-center justify-center gap-1 text-[11px] text-blue-600">
+                        <p className="text-xs text-muted-foreground capitalize mt-0.5">{d.description || d.main}</p>
+                        <div className="mt-2 flex items-center justify-center gap-1 text-xs text-blue-600">
                           <Droplets className="h-3 w-3" />
                           {d.pop}%
                         </div>
-                        <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                           <Wind className="h-3 w-3" />
                           {d.wind_speed} m/s
                         </div>
@@ -281,7 +283,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No forecast data is available within the selected window.
+                    No forecast covers the selected window. Choose dates nearer to today to see conditions that could affect the programme.
                   </p>
                 )}
                 {data.ai_future && <AiNote text={data.ai_future} />}
@@ -295,7 +297,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
 };
 
 const Metric = ({ icon, label, value }: { icon: ReactNode; label: string; value: string }) => (
-  <div className="rounded-lg bg-sidebar p-2.5">
+  <div className="rounded-lg border border-border bg-card p-2.5">
     <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-0.5">
       {icon}
       {label}

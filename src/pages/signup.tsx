@@ -7,10 +7,10 @@ import AiIcon from "@/components/icons/AiIcon";
 import { fetchData } from "@/lib/Api";
 
 const INPUT_CLS =
-  "w-full px-4 py-3.5 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3.5 bg-muted/50 border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
 
 const INPUT_ERROR_CLS =
-  "w-full px-4 py-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 focus:bg-white transition-all";
+  "w-full px-4 py-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 focus:bg-card transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -77,7 +77,7 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#eeeef4]">
+    <div className="flex h-screen overflow-hidden bg-background">
 
       {/* ── Left dark panel ── */}
       <aside className="hidden lg:flex w-[45%] shrink-0 flex-col h-full"
@@ -86,28 +86,28 @@ const SignupPage = () => {
         {/* Logo */}
         <div className="px-10 pt-10">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0 border border-white/10">
+            <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+            <span className="text-sm text-white/90 tracking-tight">baselinq</span>
           </div>
         </div>
 
         {/* Headline */}
         <div className="flex-1 flex flex-col justify-center px-10">
-          <h1 className="text-[38px] text-white">
+          <h1 className="text-3xl font-normal text-white leading-tight tracking-tight">
             Let's get you<br />started!
           </h1>
-          <p className="text-[14px] text-white/50 mt-4 leading-relaxed max-w-xs">
+          <p className="text-sm text-white/50 mt-4 leading-relaxed max-w-xs">
             Create your account in seconds. You'll complete your profile after signing in.
           </p>
 
           {/* Info card */}
-          <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+          <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
               <AiIcon size={16} className="text-[#6c5ce7]" />
             </div>
-            <p className="text-[13px] text-white/60 leading-snug">
+            <p className="text-xs text-white/60 leading-snug">
               AI-powered contracts, compliance, and document management, all in one workspace.
             </p>
           </div>
@@ -116,13 +116,13 @@ const SignupPage = () => {
         {/* Bottom */}
         <div className="px-10 pb-10">
           <div className="border-t border-white/10 pt-6 space-y-3">
-            <p className="text-[13px] text-white/50">
+            <p className="text-xs text-white/50">
               Already have an account?{" "}
               <button onClick={() => navigate("/login")} className="text-[#6c5ce7] hover:underline">
                 Sign in
               </button>
             </p>
-            <p className="text-[11px] text-white/25 leading-relaxed">
+            <p className="text-xs text-white/25 leading-relaxed">
               By creating an account you agree to our{" "}
               <span className="underline cursor-pointer hover:text-white/40 transition-colors">Terms of Service</span>
               {" "}and{" "}
@@ -133,24 +133,24 @@ const SignupPage = () => {
       </aside>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
+      <div className="flex-1 flex flex-col h-full bg-card overflow-hidden">
 
         {/* Mobile top bar */}
-        <div className="lg:hidden border-b border-[#ededed] px-5 py-3 flex items-center justify-between shrink-0">
+        <div className="lg:hidden border-b border-border px-5 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
+            <div className="h-8 w-8 bg-[#121212] rounded-lg flex items-center justify-center shrink-0">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
+            <span className="text-sm text-[#121212] tracking-tight">baselinq</span>
           </div>
-          <button onClick={() => navigate("/login")} className="text-[13px] text-[#6c5ce7] hover:underline">
+          <button onClick={() => navigate("/login")} className="text-xs text-[#6c5ce7] hover:underline">
             Sign in
           </button>
         </div>
 
         {/* Desktop top bar */}
         <div className="hidden lg:flex items-center justify-end px-8 pt-5 pb-3 shrink-0">
-          <button onClick={() => navigate("/login")} className="text-[12px] text-[#6c5ce7] hover:underline">
+          <button onClick={() => navigate("/login")} className="text-xs text-[#6c5ce7] hover:underline">
             Already have an account? Sign in
           </button>
         </div>
@@ -160,7 +160,7 @@ const SignupPage = () => {
           <div className="w-full max-w-[420px]">
 
             <div className="mb-8">
-              <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">Create your account</h2>
+              <h2 className="text-2xl font-normal text-[#101828] tracking-tight">Create your account</h2>
               <p className="text-sm text-gray-400 mt-1">You'll complete your profile after signing in</p>
             </div>
 

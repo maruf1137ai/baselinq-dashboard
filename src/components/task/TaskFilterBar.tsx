@@ -14,7 +14,7 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   DC: 'Claim',
 };
 
-const DOC_TYPE_COLOR = { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-white text-foreground border-border hover:bg-zinc-50' };
+const DOC_TYPE_COLOR = { active: 'bg-primary/10 text-primary border-primary', inactive: 'bg-card text-foreground border-border hover:bg-muted/50' };
 const DOC_TYPE_COLORS: Record<string, { active: string; inactive: string }> = {
   All: DOC_TYPE_COLOR,
   VO: DOC_TYPE_COLOR,
@@ -91,7 +91,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
           <button
             onClick={() => onFiltersChange({ ...filters, myItems: true })}
             className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${filters.myItems
-              ? 'bg-white text-foreground shadow-sm'
+              ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
               }`}
           >
@@ -101,7 +101,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
           <button
             onClick={() => onFiltersChange({ ...filters, myItems: false })}
             className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${!filters.myItems
-              ? 'bg-white text-foreground shadow-sm'
+              ? 'bg-card text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
               }`}
           >
@@ -135,10 +135,10 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
           value={filters.assignee}
           onValueChange={val => onFiltersChange({ ...filters, assignee: val })}
         >
-          <SelectTrigger className="w-[150px] h-8 text-xs border-border bg-white rounded-lg">
+          <SelectTrigger className="w-[150px] h-8 text-xs border-border bg-card rounded-lg">
             <SelectValue placeholder="Assignee" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             <SelectItem value="all">All Assignees</SelectItem>
             {assigneeOptions.map(a => (
               <SelectItem key={a.id} value={a.id}>
@@ -153,10 +153,10 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
           value={filters.dateRange}
           onValueChange={val => onFiltersChange({ ...filters, dateRange: val })}
         >
-          <SelectTrigger className="w-[140px] h-8 text-xs border-border bg-white rounded-lg">
+          <SelectTrigger className="w-[140px] h-8 text-xs border-border bg-card rounded-lg">
             <SelectValue placeholder="Due Date" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             <SelectItem value="all">All Dates</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
             <SelectItem value="today">Due Today</SelectItem>

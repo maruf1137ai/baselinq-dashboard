@@ -4,7 +4,7 @@ import { ShieldOff, ArrowLeft } from "lucide-react";
 export default function Unauthorized() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center max-w-sm px-6">
         <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-5">
           <ShieldOff className="w-7 h-7 text-red-400" />

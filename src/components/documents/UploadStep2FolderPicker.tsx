@@ -196,7 +196,7 @@ export function UploadStep2FolderPicker({
 
       {/* Contracts: Tree Picker */}
       {selectedTab === 'contracts' && (
-        <div className="bg-white rounded-lg border border-border p-3 max-h-[420px] overflow-y-auto">
+        <div className="bg-card rounded-xl border border-border p-3 max-h-[420px] overflow-y-auto">
           {foldersLoading ? (
             <div className="flex items-center justify-center py-10">
               <AwesomeLoader />
@@ -216,7 +216,8 @@ export function UploadStep2FolderPicker({
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-10">
-              No folders found. Please contact support.
+              No contract folders have been set up on this project yet. Ask your project
+              administrator to create them, then upload against the right folder.
             </p>
           )}
         </div>
@@ -245,7 +246,7 @@ export function UploadStep2FolderPicker({
                         "px-3 py-2 rounded-lg border transition-colors text-left",
                         isSelected
                           ? "bg-primary/5 border-primary/40"
-                          : "bg-white border-border hover:border-primary/30"
+                          : "bg-card border-border hover:border-primary/30"
                       )}
                     >
                       <div className="flex items-center gap-2">

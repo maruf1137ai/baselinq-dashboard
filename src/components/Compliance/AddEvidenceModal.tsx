@@ -11,7 +11,7 @@ interface AddEvidenceModalProps {
 const AddEvidenceModal: React.FC<AddEvidenceModalProps> = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-white p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] bg-card p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-lg text-foreground font-normal">Add Evidence</DialogTitle>
         </DialogHeader>
@@ -24,20 +24,20 @@ const AddEvidenceModal: React.FC<AddEvidenceModalProps> = ({ isOpen, onClose }) 
             </div>
           </div>
 
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 flex flex-col items-center justify-center text-center space-y-4 bg-gray-50/50">
+          <div className="border-2 border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-center space-y-4 bg-muted/50">
             <Upload className="w-10 h-10 text-gray-400" />
             <div className="space-y-1">
               <p className="text-base font-medium text-gray-900">Drop files or browse</p>
               <p className="text-sm text-gray-500">Supported formats: PDF, DOC, DOCX, JPG, PNG</p>
             </div>
-            <Button variant="outline" className="bg-white">
+            <Button variant="outline" className="bg-card">
               Browse Files
             </Button>
           </div>
         </div>
 
         <DialogFooter className="px-6 py-4 border-t flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} className="bg-white">
+          <Button variant="outline" onClick={onClose} className="bg-card">
             Cancel
           </Button>
           <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">

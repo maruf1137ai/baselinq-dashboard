@@ -26,7 +26,7 @@ export default function AiRoutingBuilderDrawer() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-full max-w-[384px] !rounded-none border-0 bg-white text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right !p-0">
+      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-full max-w-[384px] !rounded-none border-0 bg-card text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right !p-0">
         {/* Drawer header */}
         {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
           <DialogTitle className="text-lg font-medium">

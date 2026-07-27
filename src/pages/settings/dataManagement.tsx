@@ -26,7 +26,7 @@ const DataManagement = () => {
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
       <div className="space-y-6">
-        <Card className="bg-white border-border  rounded-lg">
+        <Card className="bg-card border-border  rounded-lg">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 ">
@@ -63,7 +63,7 @@ const DataManagement = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-border rounded-lg">
+        <Card className="bg-card border-border rounded-lg">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -89,7 +89,7 @@ const DataManagement = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-destructive/20 ">
+        <Card className="bg-card border-destructive/20 ">
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 ">
@@ -113,7 +113,7 @@ const DataManagement = () => {
       </div>
 
       <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[500px] bg-card p-0 gap-0 overflow-hidden">
           <DialogHeader className="py-[18px] px-6  border-b">
             <DialogTitle className="flex items-center gap-2 text-sm text-foreground font-normal">
               <TriangleAlert className="w-4 h-4" />

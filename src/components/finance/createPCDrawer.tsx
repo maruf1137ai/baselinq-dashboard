@@ -189,7 +189,7 @@ const fmtCard = (v: number) =>
 const SectionHeader: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => (
-  <h3 className="text-sm text-foreground mb-3">{children}</h3>
+  <h3 className="text-sm font-medium text-foreground mb-3">{children}</h3>
 );
 
 const CurrencyInput: React.FC<{
@@ -223,10 +223,10 @@ const CurrencyInput: React.FC<{
 
   return (
     <div
-      className={`flex items-center border border-gray-200 rounded-md overflow-hidden bg-white focus-within:ring-1 focus-within:ring-[#6c5ce7] focus-within:border-[#6c5ce7] ${disabled ? "bg-gray-50" : ""
+      className={`flex items-center border border-border rounded-md overflow-hidden bg-card focus-within:ring-1 focus-within:ring-[#6c5ce7] focus-within:border-[#6c5ce7] ${disabled ? "bg-muted/50" : ""
         } ${className}`}
     >
-      <span className="px-2.5 py-1.5 text-sm text-muted-foreground bg-gray-50 border-r border-gray-200 select-none">
+      <span className="px-2.5 py-1.5 text-sm text-muted-foreground bg-muted/50 border-r border-border select-none">
         R
       </span>
       <input
@@ -237,7 +237,7 @@ const CurrencyInput: React.FC<{
         onBlur={handleBlur}
         onChange={handleChange}
         disabled={disabled}
-        className="flex-1 px-2.5 py-1.5 text-sm text-foreground focus:outline-none bg-transparent disabled:bg-gray-50 disabled:text-muted-foreground w-full"
+        className="flex-1 px-2.5 py-1.5 text-sm text-foreground focus:outline-none bg-transparent disabled:bg-muted/50 disabled:text-muted-foreground w-full"
         placeholder="0"
       />
     </div>
@@ -269,7 +269,7 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
     className={`flex justify-between items-center py-2 ${doubleBorder
       ? "border-t-2 border-[#0E1C2E] mt-3 pt-3"
       : border
-        ? "border-t border-gray-200 mt-2 pt-3"
+        ? "border-t border-border mt-2 pt-3"
         : ""
       } ${indent ? "pl-4" : ""}`}
   >
@@ -551,18 +551,18 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
       {/* Drawer panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-white shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-card shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-pc-title"
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0">
+        <header className="flex justify-between items-center px-6 py-4 border-b border-border shrink-0">
           <div>
             <h2
               id="create-pc-title"
-              className="text-base text-foreground"
+              className="text-sm font-medium text-foreground"
             >
               New Payment Certificate
             </h2>
@@ -595,7 +595,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     type="text"
                     value={pcNumber}
                     readOnly
-                    className="w-full px-3 py-2 text-sm text-muted-foreground bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed"
+                    className="w-full px-3 py-2 text-sm text-muted-foreground bg-muted/50 border border-border rounded-md cursor-not-allowed"
                   />
                 </div>
                 {/* Valuation Period */}
@@ -605,7 +605,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-[#6c5ce7]">
+                      <button className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground border border-border rounded-md hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-[#6c5ce7]">
                         <span>
                           {valuationPeriod
                             ? format(valuationPeriod, "MMMM yyyy")
@@ -614,7 +614,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-white" align="start">
+                    <PopoverContent className="w-auto p-0 bg-card" align="start">
                       <Calendar
                         mode="single"
                         selected={valuationPeriod}
@@ -636,7 +636,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-[#6c5ce7]">
+                      <button className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground border border-border rounded-md hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-[#6c5ce7]">
                         <span>
                           {certificateDate
                             ? format(certificateDate, "dd MMM yyyy")
@@ -645,7 +645,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-white" align="start">
+                    <PopoverContent className="w-auto p-0 bg-card" align="start">
                       <Calendar
                         mode="single"
                         selected={certificateDate}
@@ -671,10 +671,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 </button>
               </div>
 
-              <div className="overflow-x-auto no-scrollbar rounded-lg border border-gray-200">
+              <div className="overflow-x-auto no-scrollbar rounded-lg border border-border">
                 <table className="w-full text-sm min-w-[780px]">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr className="bg-muted/50 border-b border-border">
                       <th className="px-3 py-2.5 text-left text-xs font-normal text-muted-foreground ">
                         Description
                       </th>
@@ -696,7 +696,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       <th className="px-3 py-2.5 w-8" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-card">
                     {workItems.map((item) => {
                       const cumulative =
                         item.previouslyCertified + item.thisPeriod;
@@ -705,7 +705,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           ? (cumulative / item.contractValue) * 100
                           : 0;
                       return (
-                        <tr key={item.id} className="hover:bg-gray-50/60">
+                        <tr key={item.id} className="hover:bg-muted/50">
                           <td className="px-3 py-2">
                             <input
                               type="text"
@@ -768,7 +768,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     })}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-50 border-t-2 border-gray-200">
+                    <tr className="bg-muted/50 border-t-2 border-border">
                       <td className="px-3 py-2.5 text-xs text-foreground">
                         Totals
                       </td>
@@ -794,10 +794,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             {/* ── 3. Approved Variation Orders ─────────────────────────────────── */}
             <section>
               <SectionHeader>Approved Variation Orders</SectionHeader>
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr className="bg-muted/50 border-b border-border">
                       <th className="px-3 py-2.5 w-10" />
                       <th className="px-3 py-2.5 text-left text-xs font-normal text-muted-foreground ">
                         VO #
@@ -816,13 +816,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-card">
                     {voItems.map((vo) => (
                       <tr
                         key={vo.voNumber}
                         className={`transition-colors ${vo.included
                           ? "bg-[#6c5ce7]/5"
-                          : "hover:bg-gray-50/60"
+                          : "hover:bg-muted/50"
                           }`}
                       >
                         <td className="px-3 py-3 text-center">
@@ -830,7 +830,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             type="checkbox"
                             checked={vo.included}
                             onChange={() => toggleVO(vo.voNumber)}
-                            className="w-4 h-4 rounded border-gray-300 accent-[#6c5ce7] cursor-pointer"
+                            className="w-4 h-4 rounded border-border accent-[#6c5ce7] cursor-pointer"
                           />
                         </td>
                         <td className="px-3 py-3 text-[#3A6FF7] text-sm">
@@ -915,7 +915,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             {/* ── 6. Financial Summary ─────────────────────────────────────────── */}
             <section>
               <SectionHeader>Financial Summary</SectionHeader>
-              <div className="bg-muted rounded-lg border border-gray-200 px-5 py-4">
+              <div className="bg-muted rounded-lg border border-border px-5 py-4">
                 {/* Build-up */}
                 <SummaryLine
                   label="Gross Work Value"
@@ -972,7 +972,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 />
 
                 {/* Retention & Release */}
-                <div className="border-t border-gray-200 mt-2 pt-3 space-y-2">
+                <div className="border-t border-border mt-2 pt-3 space-y-2">
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">
                       Less: Retention @ 5%
@@ -995,7 +995,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 </div>
 
                 {/* Subtotal + VAT */}
-                <div className="border-t border-gray-200 mt-3 pt-3">
+                <div className="border-t border-border mt-3 pt-3">
                   <SummaryLine
                     label="Subtotal (ex VAT)"
                     value={calc.subtotal}
@@ -1011,10 +1011,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
                 {/* Amount Due — Net column */}
                 <div className="border-t-2 border-[#0E1C2E] mt-3 pt-4 flex justify-between items-center">
-                  <span className="text-base text-foreground">
+                  <span className="text-sm text-foreground">
                     Amount Due to Contractor
                   </span>
-                  <span className="text-base text-[#6c5ce7]">
+                  <span className="text-sm text-[#6c5ce7]">
                     {fmt(calc.amountDue)}
                   </span>
                 </div>
@@ -1022,15 +1022,15 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
               {/* Quick reference — 3 inline cards */}
               <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="flex justify-between items-center border border-gray-200 rounded-lg px-4 py-3">
+                <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
                   <span className="text-xs text-muted-foreground">Claim</span>
                   <span className="text-sm text-foreground">{fmtCard(calc.netValuationThisPeriod)}</span>
                 </div>
-                <div className="flex justify-between items-center border border-gray-200 rounded-lg px-4 py-3">
+                <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
                   <span className="text-xs text-muted-foreground">Retention @ 5%</span>
                   <span className="text-sm text-foreground">{fmtCard(calc.retention)}</span>
                 </div>
-                <div className="flex justify-between items-center border border-gray-200 rounded-lg px-4 py-3 bg-primary/10">
+                <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3 bg-primary/10">
                   <span className="text-xs text-muted-foreground">Net (Amount Due)</span>
                   <span className="text-sm text-[#6c5ce7]">{fmtCard(calc.amountDue)}</span>
                 </div>
@@ -1050,7 +1050,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2.5 text-sm text-foreground border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] resize-none placeholder:text-gray-400"
+                    className="w-full px-3 py-2.5 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] resize-none placeholder:text-gray-400"
                     placeholder="Add valuation methodology, site notes, or special instructions…"
                   />
                 </div>
@@ -1062,7 +1062,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   </label>
                   <div
                     onClick={() => fileRef.current?.click()}
-                    className="border-2 border-dashed border-gray-200 rounded-lg p-5 text-center cursor-pointer hover:border-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-colors"
+                    className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-colors"
                   >
                     <Paperclip className="w-5 h-5 text-gray-400 mx-auto mb-1.5" />
                     <p className="text-sm text-muted-foreground">
@@ -1085,7 +1085,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       {attachments.map((file, i) => (
                         <li
                           key={i}
-                          className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-md"
+                          className="flex items-center justify-between px-3 py-2 bg-muted/50 border border-border rounded-md"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -1113,7 +1113,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────────── */}
-        <footer className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white shrink-0">
+        <footer className="flex items-center justify-between px-6 py-4 border-t border-border bg-card shrink-0">
           <p className="text-xs text-muted-foreground max-w-xs">
             Submitting will trigger the QS → PA → Employer approval chain.
             Status and dates are system-managed.
@@ -1121,7 +1121,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-muted-foreground border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted/50 transition-colors"
             >
               Cancel
             </button>

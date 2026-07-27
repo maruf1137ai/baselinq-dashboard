@@ -106,7 +106,7 @@ export function IssueRegisterModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0 bg-white dark:bg-zinc-900 z-[60] shadow-xl border">
+      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0 bg-card dark:bg-zinc-900 z-[60] shadow-xl border">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="text-xl">Issue Register</DialogTitle>
           <DialogDescription>

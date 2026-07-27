@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /** Spring-load delay before a drag-hovered folder auto-expands (ms). */
 const SPRING_FOLDER_DELAY = 500;
@@ -85,7 +86,7 @@ function DocumentRow({
         {...listeners}
         {...attributes}
         className={cn(
-          "flex items-center gap-3 py-2 pr-4 pl-4 bg-white hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
+          "flex items-center gap-3 py-2 pr-4 pl-4 bg-card hover:bg-primary/[0.03] cursor-pointer transition-colors group/doc relative",
           idx > 0 && "border-t border-border/40",
           isDragging && "opacity-40",
         )}
@@ -107,7 +108,7 @@ function DocumentRow({
           </span>
         </p>
         {doc.reference && (
-          <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
+          <span className="font-mono text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
             {doc.reference}
           </span>
         )}
@@ -156,7 +157,7 @@ function UnfiledRow({
         <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
         <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
-          <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+          <span className="font-mono text-xs text-muted-foreground shrink-0">
             {doc.reference}
           </span>
         )}
@@ -278,7 +279,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
       <CollapsibleContent>
         {docs.length === 0 ? (
           <div className="py-3 px-4 pl-12 text-xs text-muted-foreground italic border-t border-border/30">
-            No documents in this folder yet.
+            No documents filed in this folder yet.
           </div>
         ) : (
           <div className="ml-7">
@@ -377,22 +378,22 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
 
   if (!hasAnyFolders && !hasAnyDocs) {
     return (
-      <div className="bg-white rounded-lg border border-border py-10 text-center">
-        <FolderPlus className="w-6 h-6 mx-auto mb-3 text-muted-foreground" strokeWidth={1.5} />
-        <p className="text-sm text-foreground mb-1">No {tab} yet</p>
-        <p className="text-xs text-muted-foreground mb-4">
-          Upload your first {tabLabel.replace(/s$/, '').toLowerCase()} to create a folder.
-        </p>
-        {canUploadDocument && (
-          <Button
-            className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-            onClick={() => navigate(`/documents/upload?tab=${tab}`)}
-          >
-            <Upload className="w-3.5 h-3.5 mr-1.5" />
-            Upload {tabLabel.replace(/s$/, '')}
-          </Button>
-        )}
-      </div>
+      <EmptyState
+        icon={FolderPlus}
+        title={`No ${tab} yet`}
+        description={`Uploads are filed by folder and discipline so every revision stays traceable. Upload your first ${tabLabel.replace(/s$/, '').toLowerCase()} to create a folder.`}
+        action={
+          canUploadDocument ? (
+            <Button
+              className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+              onClick={() => navigate(`/documents/upload?tab=${tab}`)}
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              Upload {tabLabel.replace(/s$/, '')}
+            </Button>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -404,7 +405,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
   });
 
   return (
-    <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {disciplineKeys.map((discipline) => {
         const folders = foldersByDiscipline.get(discipline) ?? [];
         const totalDocs = folders.reduce((sum, f) => sum + (docsByFolderId.get(f._id)?.length ?? 0), 0);
@@ -441,10 +442,10 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
       })}
 
       {unfiledDocs.length > 0 && (
-        <div className="border-t-2 border-border bg-muted/10">
+        <div className="border-t border-border bg-muted/50">
           <div className="px-4 py-2.5">
             <p className="text-xs font-medium text-foreground">Unfiled ({unfiledDocs.length})</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Uploaded before folder structure was set up. Drag into a folder or re-upload to file it.
             </p>
           </div>

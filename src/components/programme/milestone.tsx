@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -39,7 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  planned: "text-gray-600 bg-gray-100",
+  planned: "text-gray-600 bg-muted",
   in_progress: "text-purple-700 bg-purple-100",
   completed: "text-green-700 bg-green-100",
   delayed: "text-red-700 bg-red-100",
@@ -205,17 +206,17 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
 
       {/* Empty state */}
       {!isLoading && milestones.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center border border-border rounded-lg">
-          <CircleCheck className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">No phases added yet</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            Define programme phases to track contract costs by timeline
-          </p>
-          <Button size="sm" variant="outline" onClick={onAddMilestone} className="mt-4 gap-1.5">
-            <Plus className="h-3 w-3" />
-            Add first phase
-          </Button>
-        </div>
+        <EmptyState
+          icon={CircleCheck}
+          title="No programme phases yet"
+          description="Define the phases of the works so cost and progress can be tracked against the contract programme."
+          action={
+            <Button size="sm" variant="outline" onClick={onAddMilestone} className="gap-1.5">
+              <Plus className="h-3 w-3" />
+              Add first phase
+            </Button>
+          }
+        />
       )}
 
       {/* Milestone rows */}
@@ -224,7 +225,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
           deleteConfirmId === m._id ? (
             <div
               key={m._id}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg border border-red-200 bg-red-50">
+              className="flex items-center gap-4 px-4 py-3 rounded-xl border border-red-200 bg-red-50">
               <span className="text-xs text-red-700 flex-1">
                 Delete <strong>"{m.name}"</strong>? This cannot be undone.
               </span>
@@ -247,7 +248,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
           ) : (
             <div
               key={m._id}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+              className="flex items-center gap-4 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted/30 transition-colors">
               <CircleCheck
                 className="h-4 w-4 shrink-0"
                 style={{ color: m.status === "completed" ? "#10B981" : "#D1D5DB" }}
@@ -262,7 +263,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
               <span className="w-28 shrink-0">
                 <span
                   className={cn(
-                    "inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium",
+                    "inline-flex px-2 py-0.5 rounded-full text-xs font-medium",
                     STATUS_COLORS[m.status]
                   )}>
                   {STATUS_LABELS[m.status]}

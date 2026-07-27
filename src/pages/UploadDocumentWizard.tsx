@@ -268,7 +268,7 @@ export default function UploadDocumentWizard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/documents')}
-              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-white hover:bg-muted transition-colors"
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
             >
               <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
@@ -289,13 +289,13 @@ export default function UploadDocumentWizard() {
 
         {/* Wizard Steps Indicator (the 3-step indicator at the top — your
             approved layout) */}
-        <div className="bg-white rounded-xl border border-border px-4 py-3">
+        <div className="bg-card rounded-xl border border-border px-4 py-3">
           <UploadWizardSteps currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
-        {/* Step Content — height driven by content (no min-h forcing dead
-            space) */}
-        <div className="bg-white rounded-xl border border-border p-5">
+        {/* Step Content — a recessed well, so the step's own panels can be
+            cards without stacking a bordered card inside a bordered card. */}
+        <div className="bg-muted/50 rounded-xl p-5">
           {currentStep === 1 && (
             <UploadStep1TabDiscipline
               selectedTab={selectedTab}

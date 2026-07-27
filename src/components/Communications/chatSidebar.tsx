@@ -70,7 +70,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
       <div className="p-3">
         {open && (
           <>
-            <button className="w-full rounded-lg flex items-center justify-center h-10 bg-white border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
+            <button className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
               <Plus className="h-4 w-4" />New Message
             </button>
             <div className="relative mb-4">
@@ -79,7 +79,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 placeholder="Search channels..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 bg-white placeholder:text-muted-foreground border-border rounded-lg text-sm"
+                className="pl-9 h-10 bg-card placeholder:text-muted-foreground border-border rounded-lg text-sm"
               />
             </div>
 
@@ -116,7 +116,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                     key={channel.id}
                     onClick={() => onSelectTask(channel)}
                     className={`py-3 px-4 rounded-lg cursor-pointer border relative transition-colors group
-                      ${isSelected ? 'bg-sidebar border-border' : 'bg-white hover:bg-sidebar border-border'}
+                      ${isSelected ? 'bg-sidebar border-border' : 'bg-card hover:bg-sidebar border-border'}
                     `}
                   >
                     {/* Header Row: ID/Title and Status */}
@@ -153,8 +153,22 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 );
               })}
               {!isLoading && filteredTasks.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No channels found
+                <div className="text-center py-8 px-4 text-muted-foreground text-sm">
+                  {searchQuery ? (
+                    <>
+                      <p>No channels match this search</p>
+                      <p className="text-xs mt-1 leading-relaxed">
+                        Try the item reference instead, or clear the search.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>No channels yet</p>
+                      <p className="text-xs mt-1 leading-relaxed">
+                        Each instruction, RFI and variation gets its own channel, so correspondence stays attached to the record it concerns.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -297,7 +297,7 @@ export default function HelpTasks() {
                 {s.description}
               </p>
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-white">
+              <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>

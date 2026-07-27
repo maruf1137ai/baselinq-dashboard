@@ -54,7 +54,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[650px] bg-white p-0">
+      <DialogContent className="max-w-[650px] bg-card p-0">
         <DialogHeader className="py-[22px] px-6 border-b border-border">
           <DialogTitle className="text-base text-foreground flex items-center gap-2">
             <AiIcon size={18} className="text-primary" />

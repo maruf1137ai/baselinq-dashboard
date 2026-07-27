@@ -78,7 +78,7 @@ const PaymentCertificate = () => {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <AwesomeLoader message="Verifying Certificates" />
+          <AwesomeLoader message="Verifying certificates" />
         </div>
       ) : (
         <PaymentCertificateTable

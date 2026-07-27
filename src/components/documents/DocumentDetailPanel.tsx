@@ -54,8 +54,8 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="sm:max-w-[600px] p-0 flex flex-col bg-white border-l h-full">
-          <SheetHeader className="px-6 py-6 border-b shrink-0 bg-gray-50/50">
+        <SheetContent className="sm:max-w-[600px] p-0 flex flex-col bg-card border-l h-full">
+          <SheetHeader className="px-6 py-6 border-b shrink-0 bg-muted/50">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 bg-purple-50 rounded-xl flex items-center justify-center">
@@ -76,7 +76,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
           <div className="flex-1 overflow-hidden flex flex-col">
             <Tabs defaultValue="info" className="flex-1 flex flex-col">
-              <div className="px-6 border-b shrink-0 bg-white">
+              <div className="px-6 border-b shrink-0 bg-card">
                 <TabsList className="bg-transparent h-12 w-full justify-start gap-6 rounded-none p-0">
                   <TabsTrigger value="info" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Info</TabsTrigger>
                   <TabsTrigger value="ai" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal flex gap-1.5 grayscale data-[state=active]:grayscale-0">
@@ -121,7 +121,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
                   <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center border border-blue-100 shadow-sm">
+                      <div className="h-10 w-10 bg-card rounded-lg flex items-center justify-center border border-blue-100 shadow-sm">
                         <FileText className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
@@ -130,7 +130,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                       </div>
                     </div>
                     {document.userPermissions?.canDownload === true && (
-                      <Button size="sm" variant="outline" className="h-9 px-4 gap-2 border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm font-normal">
+                      <Button size="sm" variant="outline" className="h-9 px-4 gap-2 border-blue-200 text-blue-700 bg-card hover:bg-blue-50 shadow-sm font-normal">
                         <Download className="h-4 w-4" /> Download
                       </Button>
                     )}
@@ -152,7 +152,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                       { title: 'Ambiguous Notice Period', severity: 'medium', code: 'JBCC 5.2' },
                       { title: 'Typo in Project Name', severity: 'low', code: 'General' },
                     ].map((finding, i) => (
-                      <div key={i} className="group p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white">
+                      <div key={i} className="group p-4 rounded-xl border border-border hover:border-border hover:shadow-sm transition-all bg-card">
                         <div className="flex items-start justify-between">
                           <div className="flex gap-3">
                             <div className={cn(
@@ -174,7 +174,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                                 </Badge>
                               </div>
                               <p className="text-xs text-gray-500 mt-1">Found in Section 4. This contradicts the previously signed MoU regarding retention payments.</p>
-                              <Badge className="mt-3 bg-gray-100 text-gray-600 hover:bg-gray-100 border-0 text-xs font-normal">
+                              <Badge className="mt-3 bg-muted text-gray-600 hover:bg-muted border-0 text-xs font-normal">
                                 {finding.code}
                               </Badge>
                             </div>
@@ -206,7 +206,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs font-normal gap-1.5 border-gray-200"
+                          className="h-8 text-xs font-normal gap-1.5 border-border"
                           onClick={() => setIsVersionUploadOpen(true)}
                         >
                           Upload New Version
@@ -222,7 +222,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                     ].map((ver, i) => (
                       <div key={i} className={cn(
                         "flex items-center justify-between p-4 rounded-xl border transition-all",
-                        ver.current ? "bg-white border-primary/20 shadow-sm" : "bg-gray-50/50 border-gray-100"
+                        ver.current ? "bg-card border-primary/20 shadow-sm" : "bg-muted/50 border-border"
                       )}>
                         <div className="flex items-center gap-3">
                           <div className={cn(
@@ -254,7 +254,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs font-normal gap-1.5 border-gray-200"
+                      className="h-8 text-xs font-normal gap-1.5 border-border"
                       onClick={() => setIsLinkModalOpen(true)}
                     >
                       <Link2 className="h-3 w-3" /> Add Link
@@ -262,9 +262,9 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                   </div>
                   <div className="grid gap-3">
                     {linkedItems.map(link => (
-                      <div key={link} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white hover:border-primary/20 hover:shadow-sm cursor-pointer transition-all group/link">
+                      <div key={link} className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/20 hover:shadow-sm cursor-pointer transition-all group/link">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 bg-gray-50 rounded flex items-center justify-center">
+                          <div className="h-8 w-8 bg-muted/50 rounded flex items-center justify-center">
                             <Badge className="bg-transparent text-[#3A6FF7] border-0 p-0 text-xs hover:bg-transparent">{link.split('-')[0]}</Badge>
                           </div>
                           <div>
@@ -287,8 +287,8 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
             </Tabs>
           </div>
 
-          <div className="p-6 border-t bg-gray-50/50 flex gap-3 shrink-0">
-            <Button variant="outline" className="flex-1 font-normal h-11 border-gray-200 bg-white" onClick={onClose}>Close</Button>
+          <div className="p-6 border-t bg-muted/50 flex gap-3 shrink-0">
+            <Button variant="outline" className="flex-1 font-normal h-11 border-border bg-card" onClick={onClose}>Close</Button>
             <Button className="flex-1 font-normal h-11 shadow-lg shadow-primary/20">Open Document</Button>
           </div>
         </SheetContent>

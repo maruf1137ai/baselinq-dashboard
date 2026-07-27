@@ -186,7 +186,7 @@ const Finance = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`text-base py-4 px-6 border-b-2 transition-all ${activeTab === tab
+                  className={`text-sm py-4 px-6 border-b-2 transition-all ${activeTab === tab
                     ? "border-[#6c5ce7] text-foreground"
                     : "text-muted-foreground border-transparent"
                     }`}>
@@ -200,7 +200,7 @@ const Finance = () => {
             <main className="pt-6">
               {isLoadingVO ? (
                 <div className="flex items-center justify-center py-20">
-                  <AwesomeLoader message="Pricing Variation Orders" />
+                  <AwesomeLoader message="Pricing variation orders" />
                 </div>
               ) : (
                 <VariationOrdersTable
@@ -226,7 +226,7 @@ const Finance = () => {
 
       {/* Create VO drawer */}
       <Sheet open={canEditVariationOrder && isVOModalOpen} onOpenChange={setIsVOModalOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
+        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-card">
           <SheetHeader className="px-6 py-4 border-b shrink-0">
             <SheetTitle>New Variation Order</SheetTitle>
           </SheetHeader>
@@ -238,7 +238,7 @@ const Finance = () => {
 
       {/* Edit VO drawer */}
       <Sheet open={canEditVariationOrder && isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white">
+        <SheetContent side="right" className="w-full sm:max-w-[600px] p-0 flex flex-col bg-card">
           <SheetHeader className="px-6 py-4 border-b shrink-0">
             <SheetTitle>Edit Variation Order</SheetTitle>
           </SheetHeader>
@@ -262,7 +262,7 @@ const Finance = () => {
 
       {/* Delete confirmation modal */}
       <Dialog open={canEditVariationOrder && isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
-        <DialogContent className="bg-white sm:max-w-md">
+        <DialogContent className="bg-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Variation Order</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground mt-1">

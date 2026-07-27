@@ -18,7 +18,6 @@ import {
   FileText,
   Save,
   Loader2,
-  ShieldCheck,
   CreditCard,
   Paperclip,
   X,
@@ -39,9 +38,9 @@ function SectionCard({ title, subtitle, icon, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-6">
-      <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-slate-50/50">
-        <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+    <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden mb-6">
+      <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-muted/50">
+        <div className="w-10 h-10 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
           {icon}
         </div>
         <div>
@@ -57,7 +56,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">
+      <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">
         {label}
       </label>
       {children}
@@ -65,7 +64,7 @@ function Field({ label, children, colSpan }: { label: string; children: React.Re
   );
 }
 
-const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
+const INPUT_CLS = "h-10 border border-border bg-card focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
@@ -151,7 +150,7 @@ const OrganizationPage = () => {
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-100px)] flex items-center justify-center">
-        <AwesomeLoader message="Initialising Profile Settings..." />
+        <AwesomeLoader message="Initialising profile settings" />
       </div>
     );
   }
@@ -225,30 +224,29 @@ const OrganizationPage = () => {
   const stats = getCompletionStats();
 
   return (
-    <div className="w-full bg-slate-50/30">
-      <div className="max-w-5xl mx-auto p-8 pb-32">
+    <div className="w-full">
+      <div className="max-w-5xl mx-auto p-6 pb-32">
 
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 border-b border-border pb-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
-              <ShieldCheck className="w-3 h-3" />
-              Organisation Settings
-            </div>
-            <h1 className="text-3xl font-regular text-foreground tracking-tight">Organisation</h1>
+            <h2 className="text-2xl font-normal tracking-tight text-foreground">Organisation</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage your organisation identity, compliance documents, and banking details.
+            </p>
           </div>
           {activeTab === "details" && (
             canEditOrg ? (
               <Button
                 onClick={handleUpdate}
                 disabled={isSaving}
-                className="h-11 px-8 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-3 shrink-0"
+                className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-all flex items-center gap-2 shrink-0"
               >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
               </Button>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
                 <Lock className="w-3.5 h-3.5" />
                 <span>Read-only access</span>
               </div>
@@ -284,7 +282,7 @@ const OrganizationPage = () => {
           <>
             {/* ── Completion Reminder Banner ── */}
             {stats.percentage < 100 && (
-              <div className="mb-10 p-6 rounded-2xl bg-white border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="mb-6 p-6 rounded-xl bg-card border border-primary/20 shadow-sm flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="flex-1 text-center md:text-left">
                   <h4 className="text-sm font-normal text-foreground">Complete your profile</h4>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -294,12 +292,12 @@ const OrganizationPage = () => {
                   {stats.missing.length > 0 && (
                     <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
                       {stats.missing.slice(0, 3).map(f => (
-                        <span key={f} className="inline-flex px-2 py-0.5 rounded bg-slate-100 text-[9px] text-muted-foreground border border-border">
+                        <span key={f} className="inline-flex px-2 py-0.5 rounded bg-muted text-xs text-muted-foreground border border-border">
                           Missing {f}
                         </span>
                       ))}
                       {stats.missing.length > 3 && (
-                        <span className="text-[9px] text-muted-foreground self-center">+{stats.missing.length - 3} more</span>
+                        <span className="text-xs text-muted-foreground self-center">+{stats.missing.length - 3} more</span>
                       )}
                     </div>
                   )}
@@ -310,7 +308,7 @@ const OrganizationPage = () => {
                       const firstMissing = document.querySelector(`input[value=""], select[value=""]`);
                       firstMissing?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }}
-                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] rounded-lg transition-all border border-primary/10"
+                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs rounded-lg transition-all border border-primary/10"
                   >
                     Review Missing Fields
                   </button>
@@ -335,10 +333,10 @@ const OrganizationPage = () => {
                     />
                   </Field>
                   <Field label="Work Email Address">
-                    <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
+                    <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
                       <Mail className="w-4 h-4" />
                       {user?.email}
-                      <span className="ml-auto text-[10px] bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
+                      <span className="ml-auto text-xs bg-muted border border-border px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
                     </div>
                   </Field>
                   <Field label="Phone Number">
@@ -386,7 +384,7 @@ const OrganizationPage = () => {
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Primary Discipline / Role">
-                    <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
+                    <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
                       <Briefcase className="w-4 h-4 text-primary" />
                       {user?.role?.name || "Architect"}
                     </div>
@@ -422,16 +420,16 @@ const OrganizationPage = () => {
                         ...formData,
                         insurance_document: { ...formData.insurance_document, expiry_date: e.target.value }
                       })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="Insurance Certificate" colSpan>
                     {/* Show existing certificate */}
                     {!insuranceFile && user?.insurance_document?.file_name && (
-                      <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-50 rounded-lg border border-border text-sm text-foreground mb-2">
+                      <div className="flex items-center gap-3 px-3.5 h-10 bg-muted/50 rounded-lg border border-border text-sm text-foreground mb-2">
                         <Paperclip className="w-4 h-4 text-primary shrink-0" />
                         <span className="truncate flex-1">{user.insurance_document.file_name}</span>
-                        <span className="text-[10px] text-muted-foreground bg-slate-100 border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
+                        <span className="text-xs text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
                       </div>
                     )}
                     {/* File picker */}
@@ -440,7 +438,7 @@ const OrganizationPage = () => {
                       insuranceFile
                         ? "border-primary bg-primary/5 text-primary"
                         : "border-border text-muted-foreground",
-                      canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-slate-50/50 opacity-60"
+                      canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-muted/50 opacity-60"
                     )}>
                       <Paperclip className="w-4 h-4 shrink-0" />
                       <span className="truncate flex-1 text-xs">
@@ -464,7 +462,7 @@ const OrganizationPage = () => {
                         />
                       )}
                     </label>
-                    <p className="text-[10px] text-muted-foreground mt-1">PDF, JPG or PNG. Certificate is saved when you click Save Details.</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG or PNG. Certificate is saved when you click Save Details.</p>
                   </Field>
                 </div>
               </SectionCard>
@@ -485,7 +483,7 @@ const OrganizationPage = () => {
                           ...formData,
                           organization: { ...formData.organization, name: e.target.value }
                         })}
-                        className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                        className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       />
                     </Field>
                     <Field label="Company Registration No.">
@@ -496,7 +494,7 @@ const OrganizationPage = () => {
                           ...formData,
                           organization: { ...formData.organization, company_reg_number: e.target.value }
                         })}
-                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       />
                     </Field>
                     <Field label="VAT Registration Number">
@@ -507,7 +505,7 @@ const OrganizationPage = () => {
                           ...formData,
                           organization: { ...formData.organization, vat_number: e.target.value }
                         })}
-                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       />
                     </Field>
                     <Field label="CK Number">
@@ -518,7 +516,7 @@ const OrganizationPage = () => {
                           ...formData,
                           organization: { ...formData.organization, ck_number: e.target.value }
                         })}
-                        className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                        className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       />
                     </Field>
                     <Field label="Enterprise Size">
@@ -529,7 +527,7 @@ const OrganizationPage = () => {
                           ...formData,
                           organization: { ...formData.organization, company_size: e.target.value }
                         })}
-                        className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                        className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       >
                         <option value="">Select Scale...</option>
                         <option value="1-10">Micro (1–10 people)</option>
@@ -610,7 +608,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.bank_name}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, bank_name: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. First National Bank"
                     />
                   </Field>
@@ -619,7 +617,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.branch_name}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_name: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. Sandton City"
                     />
                   </Field>
@@ -628,7 +626,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.branch_code}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, branch_code: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. 250655"
                     />
                   </Field>
@@ -637,7 +635,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.account_number}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_number: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. 62012345678"
                     />
                   </Field>
@@ -646,7 +644,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.account_type}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, account_type: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. Cheque, Savings"
                     />
                   </Field>
@@ -655,7 +653,7 @@ const OrganizationPage = () => {
                       readOnly={!canEditOrg}
                       value={formData.banking_details.swift_code}
                       onChange={e => setFormData({ ...formData, banking_details: { ...formData.banking_details, swift_code: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                       placeholder="e.g. FIRNZAJJ"
                     />
                   </Field>

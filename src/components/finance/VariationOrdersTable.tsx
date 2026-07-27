@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatZAR } from '@/lib/formatCurrency';
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
@@ -112,7 +113,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-border overflow-hidden">
+    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
@@ -122,7 +123,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
             value={search}
             onChange={handleSearch}
             placeholder="Search by VO #, title, requested by..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
         {onNew && (
@@ -150,11 +151,25 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-border">
+          <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                  {search ? "No results match your search." : "No variation orders found."}
+                <td colSpan={9}>
+                  {search ? (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No variation orders match this search"
+                      description="Try a different VO number, title or requester, or clear the search to see the full register."
+                    />
+                  ) : (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No variation orders yet"
+                      description="Variations raised against this project appear here with their approval status and cost impact."
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -166,7 +181,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.title}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium tabular-nums">
                     {formatCurrency(order.value)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -214,7 +229,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                           <MoreIcon className="w-5 h-5" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white w-32">
+                      <DropdownMenuContent align="end" className="bg-card w-32">
                         <DropdownMenuItem
                           className="cursor-pointer text-sm"
                           onClick={() => onEdit?.(order)}>
@@ -236,7 +251,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <p className="text-sm text-muted-foreground">
           {filtered.length === 0
             ? "No results"

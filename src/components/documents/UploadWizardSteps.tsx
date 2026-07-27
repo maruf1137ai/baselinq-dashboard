@@ -37,8 +37,8 @@ export function UploadWizardSteps({ currentStep, onStepClick }: UploadWizardStep
                     "w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm transition-all",
                     "border-2",
                     isCompleted && "bg-primary border-primary text-white",
-                    isCurrent && "bg-white border-primary text-primary ring-4 ring-primary/10",
-                    !isCompleted && !isCurrent && "bg-white border-border text-muted-foreground",
+                    isCurrent && "bg-card border-primary text-primary ring-4 ring-primary/10",
+                    !isCompleted && !isCurrent && "bg-card border-border text-muted-foreground",
                     isClickable && "cursor-pointer hover:scale-105"
                   )}
                 >

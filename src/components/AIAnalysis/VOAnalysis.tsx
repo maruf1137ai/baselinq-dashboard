@@ -77,7 +77,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
       {/* Required items analysis — materials/labour needed to execute the VO */}
       {requiredItems.length > 0 && (
         <div className={sectionClass(visibleSections, 2)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Package className="h-4 w-4 text-primary" />Required Items &amp; SA Market Costs
             </h4>
@@ -105,7 +105,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">{item.unit || "—"}</td>
                       <td className="py-3 pl-4">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.source?.includes("Stats SA") ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.source?.includes("Stats SA") ? "bg-green-50 text-green-700" : "bg-muted text-gray-600"}`}>
                           {item.source || "—"}
                         </span>
                       </td>
@@ -120,7 +120,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.procedural_compliance && (
         <div className={sectionClass(visibleSections, 3)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />Procedural Compliance
             </h4>
@@ -151,7 +151,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.valuation_assessment && (
         <div className={sectionClass(visibleSections, 4)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Scale className="h-4 w-4 text-primary" />Valuation Assessment
             </h4>
@@ -176,7 +176,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
               <div className="grid grid-cols-2 gap-4">
                 {data.valuation_assessment.new_rates_permitted && (
-                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                  <div className="p-4 bg-indigo-50 rounded-lg">
                     <p className="text-xs font-medium text-indigo-700 normal-case mb-2">New Rates Permitted</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.new_rates_permitted.permitted ? "YES" : "NO"}</p>
                     {data.valuation_assessment.new_rates_permitted.clause_reference && (
@@ -186,7 +186,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </div>
                 )}
                 {data.valuation_assessment.threshold_triggered && (
-                  <div className={`p-4 rounded-lg border ${data.valuation_assessment.threshold_triggered.triggered ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100"}`}>
+                  <div className={`p-4 rounded-lg ${data.valuation_assessment.threshold_triggered.triggered ? "bg-amber-50" : "bg-muted/50"}`}>
                     <p className="text-xs font-medium normal-case mb-2">Threshold Triggers</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.threshold_triggered.triggered ? "TRIGGERED" : "NONE"}</p>
                     {data.valuation_assessment.threshold_triggered.threshold_details && (
@@ -202,7 +202,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.time_impact && (
         <div className={sectionClass(visibleSections, 5)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />Time & Schedule Impact
             </h4>
@@ -227,7 +227,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </div>
 
             {data.time_impact.eot_entitlement && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                 <p className="text-xs font-medium text-blue-700 normal-case mb-2">EOT Entitlement</p>
                 <p className="text-sm font-medium italic">"{data.time_impact.eot_entitlement.clause_text || data.time_impact.eot_entitlement}"</p>
                 {data.time_impact.eot_entitlement.clause_reference && (

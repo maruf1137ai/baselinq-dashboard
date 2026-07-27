@@ -207,11 +207,11 @@ const Audit = () => {
 
       <Tabs defaultValue="overview">
         <TabsList className="bg-sidebar p-1 rounded-lg h-auto w-full">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm w-full">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm w-full">
             <BarChart3 className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="audit-trail" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm w-full">
+          <TabsTrigger value="audit-trail" className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm w-full">
             <Activity className="w-4 h-4 mr-2" />
             Audit Trail
           </TabsTrigger>
@@ -219,13 +219,13 @@ const Audit = () => {
 
         <TabsContent value="overview" className="mt-6 space-y-6">
           <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="bg-[#F3F2F0] !border-0 rounded-[13px] shadow-none">
+            <Card className="bg-muted/50 !border-0 rounded-xl shadow-none">
               <CardContent className="p-2.5">
                 <div className="flex items-center gap-2.5 mb-2">
                   <CashIcon />
                   <p className="text-sm text-muted-foreground mb-1">Compliance Score</p>
                 </div>
-                <div className="bg-white py-[6px] px-[14px] rounded-[6px]">
+                <div className="bg-card py-[6px] px-[14px] rounded-lg">
                   <h3 className="text-2xl text-[#0F172A]">{complianceScore}%</h3>
                   <Progress value={complianceScore} className="h-[8px] my-2.5" />
                   <p className="text-xs text-[#717784]">
@@ -235,13 +235,13 @@ const Audit = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+            <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
               <CardContent className="p-2.5 flex-1 flex flex-col">
                 <div className="flex items-center gap-2.5 mb-2">
                   <CashIcon />
                   <p className="text-sm text-muted-foreground mb-1">Pending Deadlines</p>
                 </div>
-                <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                   <h3 className="text-2xl text-[#0F172A]">
                     {deadlineItems.filter((d) => !d.isCompleted && d.daysRemaining >= 0 && d.daysRemaining <= 7).length}
                   </h3>
@@ -250,13 +250,13 @@ const Audit = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+            <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
               <CardContent className="p-2.5 flex-1 flex flex-col">
                 <div className="flex items-center gap-2.5 mb-2">
                   <CashIcon />
                   <p className="text-sm text-muted-foreground mb-1">Overdue Items</p>
                 </div>
-                <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                   <h3 className="text-2xl text-[#0F172A]">
                     <span className={overdueItems > 0 ? 'text-[#DC2626]' : ''}>{overdueItems}</span>
                   </h3>
@@ -267,13 +267,13 @@ const Audit = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+            <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
               <CardContent className="p-2.5 flex-1 flex flex-col">
                 <div className="flex items-center gap-2.5 mb-2">
                   <Asterisk />
                   <p className="text-sm text-muted-foreground mb-1">Risk Level</p>
                 </div>
-                <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                   <Badge className={`${riskColors[riskLevel]} border w-fit text-sm`}>{riskLevel}</Badge>
                   <p className="text-xs text-[#717784] mt-2">Based on {overdueItems} overdue items</p>
                 </div>
@@ -281,13 +281,13 @@ const Audit = () => {
             </Card>
           </div>
 
-          <div className="bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#E5E7EB]">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-border">
               <h3 className="text-sm font-normal text-[#1A1A1A]">Compliance by Document Type</h3>
             </div>
             <Table>
-              <TableHeader className="bg-[#FAFAFA]">
-                <TableRow className="hover:bg-[#FAFAFA]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-muted/50">
                   <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Document Type</TableHead>
                   <TableHead className="text-[#6B7280] font-normal">Total</TableHead>
                   <TableHead className="text-[#6B7280] font-normal">Compliant</TableHead>
@@ -303,7 +303,7 @@ const Audit = () => {
                     <TableRow key={item.type} className="hover:bg-muted border-b border-border last:border-0">
                       <TableCell className="pl-6 py-4">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs font-normal">{item.type}</Badge>
+                          <Badge className="bg-muted text-[#1A1A1A] border-none text-xs font-normal">{item.type}</Badge>
                           <span className="text-sm text-[#6B7280]">{TASK_TYPE_LABELS[item.type] || item.type}</span>
                         </div>
                       </TableCell>
@@ -336,7 +336,7 @@ const Audit = () => {
               <span className="text-sm">Filter by type:</span>
             </div>
             <Select value={auditTypeFilter} onValueChange={setAuditTypeFilter}>
-              <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
+              <SelectTrigger className="w-[160px] bg-card border-border">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
@@ -351,12 +351,12 @@ const Audit = () => {
             </Select>
           </div>
 
-          <div className="bg-white rounded-lg border border-border p-6">
+          <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="text-sm font-normal text-foreground mb-6">Compliance Activity Timeline</h3>
             <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
               {filteredAuditTrail.map((log, i) => (
                 <div key={i} className="relative pl-8">
-                  <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${(log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
+                  <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-card border-2 rounded-full z-10 ${(log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
                     ? 'border-green-600'
                     : (log.action || '').toLowerCase().includes('rejected') || (log.action || '').toLowerCase().includes('overdue')
                       ? 'border-red-600'
@@ -366,7 +366,7 @@ const Audit = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-xs font-normal text-foreground">{log.action}</p>
                       {log.taskType && (
-                        <Badge className="bg-[#F3F4F6] text-[#6B7280] border-none text-[10px]">{log.taskType}</Badge>
+                        <Badge className="bg-muted text-[#6B7280] border-none text-xs">{log.taskType}</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">

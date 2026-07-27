@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import AiIcon from '@/components/icons/AiIcon';
+import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,8 +58,8 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-white flex flex-col max-h-[90vh]">
-        <DialogHeader className="px-8 py-6 border-b bg-gray-50/50">
+      <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl bg-card flex flex-col max-h-[90vh]">
+        <DialogHeader className="px-8 py-6 border-b border-border bg-muted/50">
           <div className="flex flex-col gap-1">
             <DialogTitle className="text-xl font-normal text-foreground">Version History, {doc.reference}</DialogTitle>
             <p className="text-sm text-gray-500 font-normal">{doc.name}</p>
@@ -68,24 +69,26 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {isLoading ? (
             <div className="py-16">
-              <AwesomeLoader message="Loading Versions" />
+              <AwesomeLoader message="Loading versions" />
             </div>
           ) : versions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-              <History className="w-8 h-8" />
-              <p className="text-sm">No versions found</p>
-            </div>
+            <EmptyState
+              variant="plain"
+              icon={History}
+              title="No revisions recorded yet"
+              description="Each upload of this document is kept as a superseded revision, so you can show which version was current on any date."
+            />
           ) : (
             <div className="px-8 py-10 relative">
-              <div className="absolute left-[51px] top-10 bottom-10 w-px bg-gray-100" />
+              <div className="absolute left-[51px] top-10 bottom-10 w-px bg-muted" />
               <div className="space-y-12">
                 {versions.map((ver: any) => {
                   const sizeMB = ver.fileSize ? `${(ver.fileSize / (1024 * 1024)).toFixed(2)} MB` : null;
                   return (
                     <div key={ver._id} className="relative pl-16">
                       <div className={cn(
-                        "absolute left-[-15px] top-0 h-8 w-8 rounded-full border-4 border-white shadow-sm flex items-center justify-center z-10",
-                        ver.isCurrent ? "bg-emerald-500" : "bg-gray-200"
+                        "absolute left-[-15px] top-0 h-8 w-8 rounded-full border-4 border-card shadow-sm flex items-center justify-center z-10",
+                        ver.isCurrent ? "bg-emerald-500" : "bg-muted"
                       )}>
                         {ver.isCurrent && <CheckCircle2 className="h-4 w-4 text-white" />}
                       </div>
@@ -118,7 +121,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="bg-gray-50/80 rounded-2xl p-5 space-y-4 border border-gray-100/50">
+                        <div className="bg-muted/50 rounded-xl p-5 space-y-4">
                           {ver.changelog && (
                             <div>
                               <p className="text-xs font-normal text-gray-400 normal-case mb-2">Changelog</p>
@@ -128,13 +131,13 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between pt-2 border-t border-gray-100/50">
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
                             <div className="flex items-center gap-3">
                               <p className="text-xs font-normal text-gray-400 normal-case flex items-center gap-1.5">
                                 <AiIcon size={12} className="text-primary" /> AI Analysis
                               </p>
                               {ver.aiFlags !== undefined && ver.aiFlags > 0 && (
-                                <Badge variant="outline" className="text-xs font-normal border-gray-200 bg-white">
+                                <Badge variant="outline" className="text-xs font-normal border-border bg-card">
                                   {ver.aiFlags} flags
                                 </Badge>
                               )}
@@ -161,7 +164,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                               onClick={() => restoreVersion(ver._id)}
                               variant="outline"
                               size="sm"
-                              className="h-9 px-4 gap-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl font-normal"
+                              className="h-9 px-4 gap-2 border-border text-gray-600 hover:bg-muted/50 rounded-xl font-normal"
                               disabled={isRestoring}
                             >
                               {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}

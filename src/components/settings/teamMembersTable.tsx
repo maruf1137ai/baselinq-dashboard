@@ -266,7 +266,7 @@ const ActionsCell = ({
       </DropdownMenu>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>{isPendingInvitation ? "Revoke Invitation" : "Remove User"}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -289,7 +289,7 @@ const ActionsCell = ({
 
       {/* Edit Role Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -500,7 +500,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <AwesomeLoader message="Analyzing Team Permissions" />
+        <AwesomeLoader message="Analyzing team permissions" />
       </div>
     );
   }
@@ -510,7 +510,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
       <div className="top flex items-center gap-2.5 mb-4">
         <input
           type="text"
-          className="py-2 px-6 text-sm text-muted-foreground border border-border bg-white rounded-lg w-full"
+          className="py-2 px-6 text-sm text-muted-foreground border border-border bg-card rounded-lg w-full"
           placeholder="Search users…"
         />
         <FilterBtns />
@@ -526,34 +526,34 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
       {showAddMemberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-[#f0fdf4] flex items-center justify-center">
                   <UserIcon className="w-4 h-4 text-[#00b894]" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add User</h3>
-                  <p className="text-[12px] text-[#9ca3af]">Add existing users or invite new ones</p>
+                  <h3 className="text-sm font-normal text-[#1a1a2e]">Add User</h3>
+                  <p className="text-xs text-[#9ca3af]">Add existing users or invite new ones</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={resetModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[#f3f4f6] shrink-0">
+            <div className="flex border-b border-border shrink-0">
               {(["add", "invite"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${activeTab === tab
+                  className={`flex-1 py-3 text-xs font-normal transition-all border-b-2 ${activeTab === tab
                     ? "border-[#6c5ce7] text-[#6c5ce7]"
                     : "border-transparent text-[#6b7280] hover:text-[#374151]"
                     }`}>
@@ -567,33 +567,33 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
               {activeTab === "add" ? (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
+                    <label className="block text-xs font-normal text-[#6b7280]">Select User</label>
                     <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
                           {selectedUser ? (
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                                 {(selectedUser.name || selectedUser.email).charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <p className="text-[13px] text-[#374151]">{selectedUser.name || selectedUser.email}</p>
-                                <p className="text-[11px] text-[#9ca3af]">{selectedUser.email}</p>
+                                <p className="text-xs text-[#374151]">{selectedUser.name || selectedUser.email}</p>
+                                <p className="text-xs text-[#9ca3af]">{selectedUser.email}</p>
                               </div>
                             </div>
                           ) : (
-                            <span className="text-[13px] text-[#9ca3af]">Select a user...</span>
+                            <span className="text-xs text-[#9ca3af]">Select a user...</span>
                           )}
                           <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
                         <Command>
-                          <CommandInput placeholder="Search users…" className="text-[13px]" />
+                          <CommandInput placeholder="Search users…" className="text-xs" />
                           <CommandList>
-                            <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found</CommandEmpty>
+                            <CommandEmpty className="text-xs text-[#9ca3af] py-4 text-center">No users match this search</CommandEmpty>
                             <CommandGroup>
                               {availableUsers.map((u) => {
                                 const isSelected = selectedUser?.id === u.id;
@@ -618,17 +618,17 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                                     className="cursor-pointer px-3 py-2.5">
                                     <div className="flex items-center justify-between w-full">
                                       <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                                           {(u.name || u.email).charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                          <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
-                                          <p className="text-[11px] text-[#9ca3af]">{u.email}</p>
+                                          <p className="text-xs text-[#374151]">{u.name || u.email}</p>
+                                          <p className="text-xs text-[#9ca3af]">{u.email}</p>
                                         </div>
                                       </div>
                                       <div className={cn(
                                         "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                        isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-[#e2e5ea] bg-white"
+                                        isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
                                       )}>
                                         {isSelected && <Check className="h-3 w-3 text-white" />}
                                       </div>
@@ -644,16 +644,16 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[12px] font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
                     <Select
                       value={selectedRole?.code || ""}
                       onValueChange={(val) => setSelectedRole(roles.find((r) => r.code === val) || null)}>
-                      <SelectTrigger className="w-full text-[13px]">
+                      <SelectTrigger className="w-full text-xs">
                         <SelectValue placeholder="Select a role…" />
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((r) => (
-                          <SelectItem key={r.code} value={r.code} className="text-[13px]">{r.name}</SelectItem>
+                          <SelectItem key={r.code} value={r.code} className="text-xs">{r.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -662,22 +662,22 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   {getOrgName(selectedUser?.organization ?? null) ? (
                     <div className="rounded-lg bg-[#f0fdf4] border border-[#bbf7d0] px-3.5 py-2.5 flex items-start gap-2.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-[#00b894] mt-1.5 shrink-0" />
-                      <p className="text-[12px] text-[#374151] leading-relaxed">
+                      <p className="text-xs text-[#374151] leading-relaxed">
                         This user is from <span className="font-medium">{getOrgName(selectedUser!.organization)}</span>. They'll represent that company on this project.
                       </p>
                     </div>
                   ) : associatedCompanies.length > 0 && (
                     <div className="space-y-1.5">
-                      <label className="block text-[12px] font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
+                      <label className="block text-xs font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
                       <Select
                         value={selectedCompanyId != null ? String(selectedCompanyId) : ""}
                         onValueChange={(val) => setSelectedCompanyId(Number(val))}>
-                        <SelectTrigger className="w-full text-[13px]">
+                        <SelectTrigger className="w-full text-xs">
                           <SelectValue placeholder="Select a company…" />
                         </SelectTrigger>
                         <SelectContent>
                           {associatedCompanies.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)} className="text-[13px]">
+                            <SelectItem key={c.id} value={String(c.id)} className="text-xs">
                               {c.name}{c.role ? ` — ${c.role}` : ""}
                             </SelectItem>
                           ))}
@@ -689,42 +689,42 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
+                    <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Full Name</label>
                     <div className="relative">
                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
                       <input
                         type="text"
                         value={inviteName}
                         onChange={(e) => setInviteName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
                         placeholder="e.g. John Doe"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
                       <input
                         type="email"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
                         placeholder="e.g. john@example.com"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[12px] font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-normal text-[#6b7280]">Role <span className="text-red-400">*</span></label>
                     <Select
                       value={selectedRole?.code || ""}
                       onValueChange={(val) => setSelectedRole(roles.find((r) => r.code === val) || null)}>
-                      <SelectTrigger className="w-full text-[13px]">
+                      <SelectTrigger className="w-full text-xs">
                         <SelectValue placeholder="Select a role…" />
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((r) => (
-                          <SelectItem key={r.code} value={r.code} className="text-[13px]">{r.name}</SelectItem>
+                          <SelectItem key={r.code} value={r.code} className="text-xs">{r.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -732,22 +732,22 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
 
                   {associatedCompanies.length > 0 && (
                     <div className="space-y-1.5">
-                      <label className="block text-[12px] font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
+                      <label className="block text-xs font-normal text-[#6b7280]">Associated Company <span className="text-[#9ca3af]">(optional)</span></label>
                       <Select
                         value={selectedCompanyId != null ? String(selectedCompanyId) : ""}
                         onValueChange={(val) => setSelectedCompanyId(Number(val))}>
-                        <SelectTrigger className="w-full text-[13px]">
+                        <SelectTrigger className="w-full text-xs">
                           <SelectValue placeholder="Select a company…" />
                         </SelectTrigger>
                         <SelectContent>
                           {associatedCompanies.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)} className="text-[13px]">
+                            <SelectItem key={c.id} value={String(c.id)} className="text-xs">
                               {c.name}{c.role ? ` — ${c.role}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-[11px] text-[#9ca3af]">If left blank, the company will be linked automatically when the user accepts the invite.</p>
+                      <p className="text-xs text-[#9ca3af]">If left blank, the company will be linked automatically when the user accepts the invite.</p>
                     </div>
                   )}
                 </div>
@@ -755,11 +755,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border shrink-0">
               <button
                 type="button"
                 onClick={resetModal}
-                className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                className="px-4 py-2 rounded-lg text-xs text-[#6b7280] hover:text-[#374151] hover:bg-muted transition-all">
                 Cancel
               </button>
               <button
@@ -770,7 +770,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   !selectedRole ||
                   (activeTab === "add" ? !selectedUser : !inviteEmail || !inviteName)
                 }
-                className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
                 {isSubmitting ? (
                   activeTab === "add" ? "Adding..." : "Inviting..."
@@ -810,7 +810,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-border">
+            <tbody className="bg-card divide-y divide-border">
               {teamMembers.map((member: TeamMember) => (
                 <tr
                   key={member._id}

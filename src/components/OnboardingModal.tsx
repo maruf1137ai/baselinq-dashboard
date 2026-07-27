@@ -181,7 +181,7 @@ function StepAddressFields({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
   return (
     <div className="space-y-2">
@@ -212,10 +212,10 @@ function StepPersonnelCard({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
   return (
-    <div className="rounded-xl border border-border bg-white p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <User className="w-3.5 h-3.5 text-muted-foreground/50" />
@@ -645,12 +645,12 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
 
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-[#f5f6f8] border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] bg-white max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="sm:max-w-[720px] bg-card max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle>
             {project ? "Edit Project" : "Welcome! Let's set up your first project"}
@@ -679,7 +679,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                   </span>
                 </div>
                 {index < STEPS.length - 1 && (
-                  <div className={cn("flex-1 h-[2px] mx-1 mb-4 transition-colors", currentStep > step.id ? "bg-primary" : "bg-[#E5E7EB]")} />
+                  <div className={cn("flex-1 h-[2px] mx-1 mb-4 transition-colors", currentStep > step.id ? "bg-primary" : "bg-muted")} />
                 )}
               </React.Fragment>
             ))}
@@ -895,7 +895,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 <div className="space-y-4">
                   <div className="relative group">
                     <textarea
-                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-[#f5f6f8] border border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 resize-none leading-relaxed"
+                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-muted/50 border border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 resize-none leading-relaxed"
                       placeholder="Describe the project scope, deliverables, and key requirements..."
                       value={taskOrderBrief}
                       onChange={(e) => {
@@ -925,7 +925,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white" align="start">
+                        <PopoverContent className="w-auto p-0 bg-card" align="start">
                           <Calendar mode="single" selected={field.value ? parseISO(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
                         </PopoverContent>
                       </Popover>
@@ -944,7 +944,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white" align="start">
+                        <PopoverContent className="w-auto p-0 bg-card" align="start">
                           <Calendar mode="single" selected={field.value ? parseISO(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
                         </PopoverContent>
                       </Popover>
@@ -954,9 +954,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 </div>
 
                 {getDurationLabel() && (
-                  <div className="flex items-center gap-3 rounded-lg bg-muted border border-border px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3">
                     <div className="flex-1">
-                      <div className="h-2 rounded-full bg-[#E5E7EB] overflow-hidden">
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full bg-primary" style={{ width: "100%" }} />
                       </div>
                     </div>
@@ -990,7 +990,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                       <FormLabel>Contract Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select contract type" /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-card">
                           <SelectItem value="JBCC">JBCC</SelectItem>
                           <SelectItem value="NEC">NEC</SelectItem>
                           <SelectItem value="FIDIC">FIDIC</SelectItem>

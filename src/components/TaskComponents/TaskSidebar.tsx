@@ -257,7 +257,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                         "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
                         isComplete
                           ? "bg-[#6c5ce7] border-[#6c5ce7]"
-                          : "bg-white border-border",
+                          : "bg-card border-border",
                       )}
                     />
                     <span
@@ -276,7 +276,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         )}
 
         {/* Impact Summary */}
-        {/* <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+        {/* <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
           <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Impact Summary
           </h3>
@@ -309,7 +309,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </Card> */}
 
         {/* Claim Details */}
-        {/* <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+        {/* <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
           <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Claim Details
           </h3>
@@ -339,7 +339,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </Card> */}
 
         {/* Status & Actions */}
-        <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+        <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
           <h3 className="text-xs font-normal text-muted-foreground mb-4">
             Actions
           </h3>
@@ -391,7 +391,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   // RFI specific content
   const renderRFIContent = () => (
     <>
-      <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+      <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
         <h3 className="text-xs font-normal text-muted-foreground mb-4">
           RFI Information
         </h3>
@@ -411,7 +411,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         </div>
       </Card>
 
-      <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+      <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
         <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Response Status
         </h3>
@@ -436,7 +436,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   // SI specific content
   const renderSIContent = () => (
     <>
-      <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+      <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
         <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Instruction Details
         </h3>
@@ -471,7 +471,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   // VO specific content
   const renderVOContent = () => (
     <>
-      <Card className="p-4 bg-white shadow-none border border-border rounded-lg">
+      <Card className="p-4 bg-card shadow-none border border-border rounded-lg">
         <h3 className="text-xs font-normal text-muted-foreground mb-4">
           Variation Order Summary
         </h3>
@@ -482,13 +482,13 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
               {taskData?.formFields?.discipline}
             </p>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-xs text-blue-700 mb-1">Cost Impact</p>
             <p className="text-xl font-normal text-blue-900">
               {taskData?.impact?.cost || "R 0"}
             </p>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="bg-amber-50 rounded-lg p-3">
             <p className="text-xs text-amber-700 mb-1">Time Impact</p>
             <p className="text-xl font-normal text-amber-900">
               {taskData?.impact?.time || "0 days"}
@@ -523,7 +523,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                         <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
                           {icon}
                         </div>
-                        {!isLast && <div className="w-0.5 flex-1 bg-[#e9ecef] mt-1 mb-1" />}
+                        {!isLast && <div className="w-0.5 flex-1 bg-muted mt-1 mb-1" />}
                       </div>
                       <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
                         <div className="flex items-start justify-between gap-2">
@@ -546,7 +546,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {chips.map((name, idx) => (
                               <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
-                                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-normal shrink-0">
+                                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
                                   {name.charAt(0).toUpperCase()}
                                 </span>
                                 {name}
@@ -579,7 +579,12 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
               <Circle className="w-3 h-3 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
+            <div className="pt-1">
+              <p className="text-sm text-muted-foreground">No activity recorded yet</p>
+              <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">
+                Every status change, response and approval on this item is logged here with who did it and when.
+              </p>
+            </div>
           </div>
         )}
       </div>

@@ -101,7 +101,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
 
   if (isLoading) {
     return (
-      <div className="border border-border rounded-xl bg-white shadow-sm p-5 flex items-center gap-3 text-sm text-muted-foreground">
+      <div className="border border-border rounded-xl bg-card p-5 flex items-center gap-3 text-sm text-muted-foreground">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading primary contract…
       </div>
@@ -113,7 +113,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
   // ── EMPTY state — prominent CTA ─────────────────────────────────
   if (!filled) {
     return (
-      <div className="relative border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-2xl p-6 shadow-sm">
+      <div className="relative border border-dashed border-amber-300 bg-amber-50/50 rounded-xl p-6">
         <div className="flex items-start gap-4">
           <div className="shrink-0 w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-amber-700" />
@@ -123,7 +123,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               <h3 className="text-base font-medium text-amber-900">
                 Upload your project's official contract
               </h3>
-              <span className="text-[10px] uppercase tracking-wider text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded">
+              <span className="text-xs uppercase tracking-wider text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded">
                 Required for AI analysis
               </span>
             </div>
@@ -186,21 +186,21 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
   const supportingCount = data?.supporting_documents?.length ?? 0;
 
   return (
-    <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-white rounded-2xl p-5 shadow-sm">
+    <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-card rounded-xl p-5">
       <div className="flex items-start gap-4">
         <div className="shrink-0 w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
           <ShieldCheck className="w-6 h-6 text-emerald-700" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">
+            <span className="text-xs uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">
               Primary Contract
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               AI anchor
             </span>
             {supportingCount > 0 && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 · {supportingCount} supporting document{supportingCount !== 1 ? "s" : ""}
               </span>
             )}

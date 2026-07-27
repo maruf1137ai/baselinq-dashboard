@@ -125,7 +125,7 @@ export const XlsxPreview: React.FC<XlsxPreviewProps> = ({ url, className }) => {
   }
 
   return (
-    <div className={`flex flex-col bg-white ${className ?? ''}`}>
+    <div className={`flex flex-col bg-card ${className ?? ''}`}>
       {/* Sheet tabs — only when there's more than one sheet. */}
       {sheets.length > 1 && (
         <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/20 px-2 py-1.5 shrink-0">

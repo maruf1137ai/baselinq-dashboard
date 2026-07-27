@@ -99,7 +99,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
         </PopoverTrigger>
 
         <PopoverContent
-          className="p-0 bg-white shadow-lg border border-border rounded-xl overflow-hidden"
+          className="p-0 bg-card shadow-lg border border-border rounded-xl overflow-hidden"
           style={{ width: "var(--radix-popover-trigger-width)" }}
           align="start"
         >
@@ -118,7 +118,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
           {/* List */}
           <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users found</li>
+              <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users match this search</li>
             )}
             {filtered.map((m) => {
               const selected_ = isSelected(m);
@@ -152,7 +152,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                         : "border-border bg-background"
                     }`}
                   >
-                    {selected_ && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {selected_ && <span className="w-1.5 h-1.5 rounded-full bg-card" />}
                   </span>
                 </li>
               );
@@ -296,7 +296,7 @@ export function TaskMetaFields({
                   : "Pick a date"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0 bg-card" align="start">
               <Calendar
                 mode="single"
                 selected={value.dateRequired ? parseISO(value.dateRequired) : undefined}

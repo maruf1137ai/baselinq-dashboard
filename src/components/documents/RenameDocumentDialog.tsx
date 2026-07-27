@@ -53,7 +53,7 @@ export const RenameDocumentDialog: React.FC<RenameDocumentDialogProps> = ({
 
   return (
     <Dialog open={!!doc} onOpenChange={(open) => !open && !isPending && onClose()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white border border-border shadow-xl rounded-xl">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-card border border-border shadow-xl rounded-xl">
         <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">

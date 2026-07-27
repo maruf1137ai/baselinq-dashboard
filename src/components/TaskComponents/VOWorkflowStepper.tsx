@@ -40,7 +40,7 @@ export const VOWorkflowStepper: React.FC<VOWorkflowStepperProps> = ({ currentSta
   const currentStageIndex = getStageIndex(currentStatus);
 
   return (
-    <div className="w-full bg-white border border-border rounded-lg p-4 mt-4">
+    <div className="w-full bg-card border border-border rounded-lg p-4 mt-4">
       <div className="flex items-center justify-between relative">
         {/* Progress Line */}
         <div className="absolute left-0 right-0 top-[18px] h-[2px] bg-muted z-0">

@@ -297,7 +297,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="bg-white border border-border rounded-lg h-8 pl-9 pr-3 w-[260px] text-xs focus:ring-1 focus:ring-primary/20 transition-all outline-none"
+                className="bg-card border border-border rounded-lg h-8 pl-9 pr-3 w-[260px] text-xs focus:ring-1 focus:ring-primary/20 transition-all outline-none"
                 placeholder="Search by name, ref, or type"
               />
             </div>
@@ -344,7 +344,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                 className="flex-1"
               >
                 <div className="flex justify-between items-center">
-                  <TabsList className="bg-white border border-border h-10">
+                  <TabsList className="bg-card border border-border h-10">
                     {TAB_VALUES.map((tabVal) => (
                       <DroppableTabTrigger key={tabVal} value={tabVal} count={categoryCounts[tabVal]}>
                         {tabVal}
@@ -361,7 +361,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                       {currentSortLabel} <ChevronDown className="w-4 h-4" />
                     </button>
                     {showSortMenu && (
-                      <div className="absolute right-0 top-8 bg-white border border-border rounded-xl shadow-lg z-10 py-1 w-48">
+                      <div className="absolute right-0 top-8 bg-card border border-border rounded-xl shadow-lg z-10 py-1 w-48">
                         {SORT_OPTIONS.map(opt => (
                           <button
                             key={opt.value}
@@ -450,11 +450,11 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
       />
 
       <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-medium text-[#1A1A1A]">{docToDelete?.name}</span>. This action cannot be undone.
+              This will permanently delete <span className="font-medium text-foreground">{docToDelete?.name}</span>. This action cannot be undone.
               {(docToDelete?.linkedCount ?? 0) > 0 && (
                 <span className="mt-2 block text-amber-700">
                   This document is linked to {docToDelete?.linkedCount} task{(docToDelete?.linkedCount ?? 0) !== 1 ? 's' : ''}/item{(docToDelete?.linkedCount ?? 0) !== 1 ? 's' : ''}. Deleting it will remove those links.

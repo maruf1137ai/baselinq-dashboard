@@ -54,7 +54,7 @@ export default function CreateRequestDialog({
       <SheetContent
         hideClose
         side="right"
-        className="w-full sm:max-w-[600px] p-0 flex flex-col bg-white"
+        className="w-full sm:max-w-[600px] p-0 flex flex-col bg-card"
         // The create-task form is intentionally non-dismissable from outside:
         // clicking the dimmed overlay or pressing Esc must NOT close it (that
         // silently discarded a half-filled form). The only ways out are the

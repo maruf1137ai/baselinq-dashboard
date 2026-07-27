@@ -208,7 +208,7 @@ export default function CPIForm({ setOpen, initialStatus, initialData, taskId }:
                 {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0 bg-card" align="start">
               <Calendar
                 mode="single"
                 selected={startDate}
@@ -238,7 +238,7 @@ export default function CPIForm({ setOpen, initialStatus, initialData, taskId }:
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0 bg-card" align="start">
               <Calendar
                 mode="single"
                 selected={finishDate}
@@ -284,7 +284,7 @@ export default function CPIForm({ setOpen, initialStatus, initialData, taskId }:
       <S3AttachmentSection s3Upload={s3Upload} inputId="cpi-upload" label="Attachments" />
 
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}

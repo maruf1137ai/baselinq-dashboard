@@ -149,7 +149,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
 
   return (
     <Dialog open onOpenChange={(open) => !open && !isBusy && onCancel()}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-white border border-border shadow-xl rounded-xl">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-card border border-border shadow-xl rounded-xl">
         <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
@@ -166,9 +166,9 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
 
         <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
           {/* From → To summary (always shown) */}
-          <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm space-y-1.5">
+          <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1.5">
             <div className="flex items-start gap-2">
-              <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground pt-0.5">From</span>
+              <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground pt-0.5">From</span>
               <span className="break-all text-foreground leading-snug" title={pending.sourcePath}>
                 {pending.sourcePath}
               </span>
@@ -177,7 +177,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
               <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </div>
             <div className="flex items-start gap-2">
-              <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground pt-0.5">To</span>
+              <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground pt-0.5">To</span>
               <span className="break-all font-medium text-foreground leading-snug" title={pending.destPath}>
                 {pending.destPath}
               </span>

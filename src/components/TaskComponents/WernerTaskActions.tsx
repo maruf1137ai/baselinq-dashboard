@@ -475,7 +475,7 @@ export function WernerTaskActions({
                   "text-xs px-2.5 py-1 rounded-full border transition-colors",
                   isActive
                     ? `bg-${colour}-600 text-white border-${colour}-600`
-                    : `bg-white text-${colour}-700 border-${colour}-300 hover:bg-${colour}-50`,
+                    : `bg-card text-${colour}-700 border-${colour}-300 hover:bg-${colour}-50`,
                 )}
               >
                 {lvl[0].toUpperCase() + lvl.slice(1)}
@@ -537,7 +537,7 @@ export function WernerTaskActions({
       {canCloseOut && (
         <Button
           variant="outline"
-          className="font-normal text-slate-700 border-slate-300 hover:bg-slate-50"
+          className="font-normal text-slate-700 border-border hover:bg-muted/50"
           onClick={openCloseModal}
         >
           <Lock className="mr-1 h-3.5 w-3.5" />

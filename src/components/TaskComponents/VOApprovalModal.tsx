@@ -104,7 +104,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-white border-none shadow-2xl">
+      <DialogContent className="max-w-xl bg-card border-none shadow-2xl">
         <DialogHeader>
           <DialogTitle className="font-normal">{title}</DialogTitle>
           <DialogDescription>
@@ -146,7 +146,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
           {/* Financial summary */}
           <div className="space-y-2 pt-2">
-            <p className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest">
+            <p className="text-xs font-normal text-muted-foreground uppercase tracking-widest">
               Financial Summary
             </p>
             <div className="flex justify-between text-sm">
@@ -159,7 +159,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             </div>
             <Separator className="my-2" />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground uppercase tracking-wider text-[11px]">
+              <span className="text-muted-foreground uppercase tracking-wider text-xs">
                 TOTAL {mode === "approve" ? "APPROVED" : "RECOMMENDED"} AMOUNT
               </span>
               <span className="text-foreground">{fmt(vo.grandTotal, currency)}</span>
@@ -169,21 +169,21 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           {/* Time consequence */}
           {vo.timeExtensionDays != null && vo.timeExtensionDays > 0 && (
             <div className="space-y-1 pt-2">
-              <p className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest">
+              <p className="text-xs font-normal text-muted-foreground uppercase tracking-widest">
                 Time Consequence
               </p>
               <p className="text-sm text-foreground">
                 Extension of Time: {vo.timeExtensionDays}{" "}
                 {vo.timeExtensionDays === 1 ? "day" : "days"}
               </p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Revised Practical Completion date to be updated post-approval.
               </p>
             </div>
           )}
 
           {/* Warning banner */}
-          <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-[13px] text-amber-900 leading-relaxed translate-y-2">
+          <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-xs text-amber-900 leading-relaxed translate-y-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
             <span>
               Once {mode === "approve" ? "approved" : "recommended"}, this Variation Order becomes a
@@ -208,7 +208,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
                 placeholder="••••"
                 className="w-full font-mono tracking-[0.6em] text-center text-lg border border-border rounded-md py-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Set or change your PIN in Settings → Security.
               </p>
             </div>

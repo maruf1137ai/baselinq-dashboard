@@ -23,7 +23,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.procedural_compliance && (
         <div className={sectionClass(visibleSections, 2)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />Procedural Validity
             </h4>
@@ -52,7 +52,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.scope_assessment && (
         <div className={sectionClass(visibleSections, 3)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />Scope & Cost Assessment
             </h4>
@@ -95,13 +95,13 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <CheckCircle2 className="h-4 w-4" />Safety & Quality Controls
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-white rounded-lg border border-green-100">
+              <div className="p-4 bg-card rounded-lg">
                 <p className="text-xs font-medium text-green-700 normal-case mb-2">Requirements</p>
                 <p className="text-sm text-green-900 font-medium">{data.safety_and_quality.quality_requirements.assessment}</p>
                 <p className="text-xs text-green-600 mt-1 italic">Ref: {data.safety_and_quality.quality_requirements.clause_reference}</p>
                 <p className="text-xs text-gray-500 mt-1">{data.safety_and_quality.quality_requirements.finding}</p>
               </div>
-              <div className="p-4 bg-white rounded-lg border border-green-100">
+              <div className="p-4 bg-card rounded-lg">
                 <p className="text-xs font-medium text-green-700 normal-case mb-2">Inspections</p>
                 <p className="text-sm text-green-900 font-medium">{data.safety_and_quality.inspection_needs.inspection_type}</p>
                 <p className="text-xs text-green-600 mt-1">{data.safety_and_quality.inspection_needs.finding}</p>
@@ -114,7 +114,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.time_impact && (
         <div className={sectionClass(visibleSections, 5)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />Time & Urgency
             </h4>

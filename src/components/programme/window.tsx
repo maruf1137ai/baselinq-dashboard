@@ -88,7 +88,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
   return (
     <div className="space-y-6">
       {/* AI Summary */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <div className="flex items-center gap-1.5 mb-3">
           <Sparkles className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-medium text-foreground">AI Programme Analysis</h2>
@@ -114,7 +114,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Delay Risks */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <TrendingDown className="h-4 w-4 text-red-500" />
           Delay Risks
@@ -136,7 +136,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Financial Impact */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           Financial Impact
@@ -158,7 +158,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Compliance Gates */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <Shield className="h-4 w-4 text-primary" />
           Compliance Gates
@@ -180,7 +180,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Recommended Actions */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           Recommended Actions

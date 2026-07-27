@@ -5,7 +5,7 @@ import { useLogin } from "@/hooks/useLogin";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -58,7 +58,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f5f7]">
+    <div className="flex h-screen overflow-hidden bg-background">
 
       {/* ── Left panel ── */}
       <aside className="hidden lg:flex w-[45%] shrink-0 flex-col h-full"
@@ -67,19 +67,19 @@ const LoginPage = () => {
         {/* Logo */}
         <div className="px-10 pt-10">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0 border border-white/10">
+            <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+            <span className="text-sm text-white/90 tracking-tight">baselinq</span>
           </div>
         </div>
 
         {/* Center content */}
         <div className="flex-1 flex flex-col justify-center px-10">
-          <h1 className="text-[36px] font-normal text-white leading-tight tracking-tight">
+          <h1 className="text-3xl font-normal text-white leading-tight tracking-tight">
             Welcome back.
           </h1>
-          <p className="text-[14px] text-white/50 mt-3 leading-relaxed max-w-xs">
+          <p className="text-sm text-white/50 mt-3 leading-relaxed max-w-xs">
             Sign in to manage your projects, team, and documents — all in one place.
           </p>
 
@@ -89,7 +89,7 @@ const LoginPage = () => {
                 <div className="w-5 h-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
                   <Check className="w-3 h-3 text-[#6c5ce7]" />
                 </div>
-                <p className="text-[13px] text-white/60 leading-snug">{feature}</p>
+                <p className="text-xs text-white/60 leading-snug">{feature}</p>
               </div>
             ))}
           </div>
@@ -98,13 +98,13 @@ const LoginPage = () => {
         {/* Bottom */}
         <div className="px-10 pb-10 mt-auto">
           <div className="border-t border-white/10 pt-6 space-y-3">
-            <p className="text-[13px] text-white/50">
+            <p className="text-xs text-white/50">
               Don't have an account?{" "}
               <button onClick={() => navigate("/signup")} className="text-[#6c5ce7] hover:underline">
                 Create one
               </button>
             </p>
-            <p className="text-[11px] text-white/25 leading-relaxed">
+            <p className="text-xs text-white/25 leading-relaxed">
               By signing in you agree to our{" "}
               <span className="underline cursor-pointer hover:text-white/40 transition-colors">Terms of Service</span>
               {" "}and{" "}
@@ -115,18 +115,18 @@ const LoginPage = () => {
       </aside>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-white">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-card">
 
         {/* Top bar */}
         <div className="flex items-center justify-between px-8 pt-5 pb-3 shrink-0">
           <div className="lg:hidden flex items-center gap-2.5">
-            <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
+            <div className="h-8 w-8 bg-[#121212] rounded-lg flex items-center justify-center shrink-0">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
+            <span className="text-sm text-[#121212] tracking-tight">baselinq</span>
           </div>
           <div className="hidden lg:block" />
-          <button onClick={() => navigate("/signup")} className="text-[12px] text-[#6c5ce7] hover:underline">
+          <button onClick={() => navigate("/signup")} className="text-xs text-[#6c5ce7] hover:underline">
             Create account
           </button>
         </div>
@@ -136,7 +136,7 @@ const LoginPage = () => {
           <div className="w-full max-w-sm">
 
             <div className="mb-8">
-              <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">Sign in</h2>
+              <h2 className="text-2xl font-normal text-[#101828] tracking-tight">Sign in</h2>
               <p className="text-sm text-gray-400 mt-1">Enter your credentials to continue</p>
             </div>
 

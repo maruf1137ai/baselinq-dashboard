@@ -82,7 +82,7 @@ const ChecklistItem: React.FC<{
           <CircleCheck className="w-2.5 h-2.5 text-white" />
         </div>
       ) : (
-        <div className="w-5 h-5 border-2 border-gray-300 rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
+        <div className="w-5 h-5 border-2 border-border rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
       )}
       <span
         className={`text-gray-700 text-base ${
@@ -128,7 +128,7 @@ export default function RightSideDrawer() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 bg-white text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
+      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 bg-card text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
         {/* Drawer header */}
         {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
           <DialogTitle className="text-lg font-medium">
@@ -168,7 +168,7 @@ export default function RightSideDrawer() {
               </div>
             </div>
 
-            <div className="border-t border-b border-gray-200 mt-6">
+            <div className="border-t border-b border-border mt-6">
               <div className="flex items-center flex-wrap py-[3px]">
                 {TABS.map((tab) => (
                   <button

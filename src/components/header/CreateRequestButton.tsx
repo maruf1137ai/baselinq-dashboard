@@ -104,7 +104,7 @@ export default function CreateRequestButton() {
               >
                 <div
                   className={`border border-border p-4 w-full hover:bg-[#E8F1FF4D] transition ${
-                    item.active ? "bg-[#E8F1FF4D]" : "bg-white"
+                    item.active ? "bg-[#E8F1FF4D]" : "bg-card"
                   }`}
                 >
                   <div className="flex items-start gap-3">

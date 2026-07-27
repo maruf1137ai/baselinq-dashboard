@@ -383,7 +383,9 @@ export default function TaskDetails() {
   );
   // Fetch audit logs
   const { data: auditLogs, refetch: refetchAuditLogs } = useFetch<any[]>(
-    taskId ? `tasks/tasks/${taskId}/audits/` : "",
+    // Same reason as the task fetch above: this action hangs off TaskViewSet,
+    // so it inherits get_queryset and 404s without the project id.
+    taskId && projectId ? `tasks/tasks/${taskId}/audits/?projectId=${projectId}` : "",
     { enabled: !!taskId }
   );
 
@@ -1605,7 +1607,7 @@ export default function TaskDetails() {
     return (
       <DashboardLayout>
         <div className="flex-1 flex items-center justify-center min-h-[400px]">
-          <AwesomeLoader message="Processing Task Intelligence" />
+          <AwesomeLoader message="Processing task intelligence" />
         </div>
       </DashboardLayout>
     );
@@ -1735,7 +1737,7 @@ export default function TaskDetails() {
                       for the current task type. */}
                   <Link
                     to={`/help/tasks#${(currentTask.taskType || "").toLowerCase()}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm"
                     title={`Workflow reference for ${currentTask.taskType}`}
                   >
                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
@@ -1743,7 +1745,7 @@ export default function TaskDetails() {
                   </Link>
                   <button
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm">
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-all shadow-sm">
                     <Printer className="h-4 w-4 text-muted-foreground" />
                     Print / Export
                   </button>
@@ -1765,7 +1767,7 @@ export default function TaskDetails() {
                   WHITE card on grey page (production pattern). Title row
                   has visible status + priority pills. Inner sections use
                   subtle grey blocks for visual depth where it adds value. */}
-              <Card className="p-0 bg-white shadow-none rounded-lg border-border overflow-hidden">
+              <Card className="p-0 bg-card shadow-none border-border overflow-hidden">
                 {/* ─── Title strip — light grey banner with title, type tag,
                        status + priority pills + 3-dot menu ─── */}
                 <div className="bg-sidebar/50 px-6 py-4 border-b border-border">
@@ -1773,7 +1775,7 @@ export default function TaskDetails() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
                         {/* Type chip — small uppercase letter pill */}
-                        <Badge className="bg-amber-50 border-amber-200 text-amber-700 text-[10px] uppercase tracking-wide font-medium px-2 py-0.5">
+                        <Badge className="bg-amber-50 border-amber-200 text-amber-700 text-xs uppercase tracking-wide font-medium px-2 py-0.5">
                           {currentTask.taskType}
                         </Badge>
                         <h1 className="text-base font-medium text-foreground truncate">
@@ -1801,7 +1803,7 @@ export default function TaskDetails() {
                         {displayTask.timeline?.current && (
                           <>
                             <span className="text-xs text-muted-foreground">·</span>
-                            <Badge variant="outline" className="text-[10px] font-normal py-0 px-1.5 h-5 bg-white">
+                            <Badge variant="outline" className="text-xs font-normal py-0 px-1.5 h-5 bg-card">
                               {displayTask.timeline.current}
                             </Badge>
                           </>
@@ -1809,7 +1811,7 @@ export default function TaskDetails() {
                         {displayTask.priority && displayTask.priority !== "Normal" && (
                           <Badge
                             className={cn(
-                              "text-[10px] font-normal py-0 px-1.5 h-5 border",
+                              "text-xs font-normal py-0 px-1.5 h-5 border",
                               displayTask.priority === "Urgent" && "bg-red-50 text-red-700 border-red-200",
                               displayTask.priority === "High"   && "bg-orange-50 text-orange-700 border-orange-200",
                               displayTask.priority === "Low"    && "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -1832,11 +1834,11 @@ export default function TaskDetails() {
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-white">
+                          <button className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-card">
                             <MoreVertical className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white">
+                        <DropdownMenuContent align="end" className="bg-card">
                           <DropdownMenuItem
                             onClick={() => {
                               const assignedTo = currentTask?.assignedTo || [];
@@ -2136,7 +2138,7 @@ export default function TaskDetails() {
 
               {/* Locked banner — shown when task is at final stage */}
               {isTaskLocked && (
-                <Card className="p-6 shadow-none bg-white rounded-lg border-border">
+                <Card className="p-6 shadow-none bg-card border-border">
                   <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
                     <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
                       <LockIcon className="w-5 h-5 text-primary" />
@@ -2166,7 +2168,7 @@ export default function TaskDetails() {
                             href={certUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs text-foreground hover:bg-slate-50"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/50"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Open Certificate
@@ -2181,7 +2183,7 @@ export default function TaskDetails() {
                                 () => toast.error("Could not copy link"),
                               );
                             }}
-                            className="inline-flex items-center justify-center rounded-md border border-border bg-white p-1.5 hover:bg-slate-50"
+                            className="inline-flex items-center justify-center rounded-md border border-border bg-card p-1.5 hover:bg-muted/50"
                           >
                             <CopyIcon className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>
@@ -2196,7 +2198,7 @@ export default function TaskDetails() {
                   doesn't dominate the page. Werner spec rev H — minimise
                   vertical space, surface state without wasting room. */}
               {!isTaskLocked && canApprove && !(displayTask.responses?.length > 0) && (
-                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200 px-3 py-2 rounded-md">
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200 px-3 py-2 rounded-lg">
                   <Clock className="h-3.5 w-3.5 shrink-0" />
                   <span>Awaiting response from the assigned member.</span>
                 </div>
@@ -2212,7 +2214,7 @@ export default function TaskDetails() {
               {displayTask.type === "SI"
                 && (displayTask.timeline?.current || displayTask.status || "").toString().toLowerCase() === "draft"
                 && String(displayTask.creator?.id) === String(user?.id) && (
-                <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 px-3 py-2 rounded-md">
+                <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 px-3 py-2 rounded-lg">
                   <span className="text-base leading-none">🛡️</span>
                   <span>
                     This Site Instruction is still in <strong>Draft</strong>.
@@ -2231,7 +2233,7 @@ export default function TaskDetails() {
                       <h2 className="text-sm font-normal text-foreground">
                         Replies
                       </h2>
-                      <span className="text-[10px] bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
+                      <span className="text-xs bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
                         {displayTask.responses.length} Total
                       </span>
                     </div>
@@ -2246,12 +2248,12 @@ export default function TaskDetails() {
                         .slice().map((resp: any) => (
                           <Card
                             key={resp.id}
-                            className="p-0 bg-white border border-border rounded-lg overflow-hidden shadow-none"
+                            className="p-0 bg-card border border-border overflow-hidden shadow-none"
                           >
                             <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-7 w-7 border border-primary/20">
-                                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
                                     {resp.sender
                                       ?.split(" ")
                                       .map((n: string) => n[0])
@@ -2263,7 +2265,7 @@ export default function TaskDetails() {
                                   {resp.sender}
                                 </span>
                               </div>
-                              <span className="text-[11px] text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 {formatDateTime(resp.date)}
                               </span>
@@ -2294,7 +2296,7 @@ export default function TaskDetails() {
                                         ? "bg-amber-50 text-amber-700 border-amber-200"
                                         : "bg-muted text-muted-foreground border-border";
                                       return (
-                                        <span key={key} className={`text-[10px] px-2 py-0.5 rounded-md border ${tone}`}>
+                                        <span key={key} className={`text-xs px-2 py-0.5 rounded-md border ${tone}`}>
                                           {label}
                                         </span>
                                       );
@@ -2318,7 +2320,7 @@ export default function TaskDetails() {
                                     }
 
                                     return (
-                                      <span key={key} className="text-[10px] bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
+                                      <span key={key} className="text-xs bg-muted px-2 py-0.5 rounded-md text-muted-foreground border border-border">
                                         {label}: {display}
                                       </span>
                                     );
@@ -2343,7 +2345,7 @@ export default function TaskDetails() {
                     <h2 className="text-sm font-normal text-foreground">
                       Negotiation Rounds
                     </h2>
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
                       {currentTask.rounds.length} {currentTask.rounds.length === 1 ? 'Round' : 'Rounds'}
                     </span>
                   </div>
@@ -2354,7 +2356,7 @@ export default function TaskDetails() {
                     {currentTask.rounds.map((round: any, idx: number) => (
                       <Card
                         key={idx}
-                        className="overflow-hidden border-border bg-white shadow-sm hover:border-primary/50 transition-all cursor-pointer"
+                        className="overflow-hidden border-border bg-card shadow-sm hover:border-primary/50 transition-all cursor-pointer"
                         onClick={() => {
                           const isCreator = String(displayTask.creator?.id) === String(user?.id);
                           const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
@@ -2373,11 +2375,11 @@ export default function TaskDetails() {
                             </div>
                             <div>
                               <p className="text-sm font-normal text-foreground">{round.sender}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{round.role} • {formatDateTime(round.timestamp)}</p>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wider">{round.role} • {formatDateTime(round.timestamp)}</p>
                             </div>
                           </div>
                           {round.timeConsequence > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-600 bg-amber-50">
+                            <Badge variant="outline" className="text-xs border-amber-200 text-amber-600 bg-amber-50">
                               +{round.timeConsequence} Days EOT
                             </Badge>
                           )}
@@ -2393,10 +2395,10 @@ export default function TaskDetails() {
                           {round.financials?.grandTotal > 0 && (
                             <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-muted-foreground">Round Total:</span>
+                                <span className="text-xs text-muted-foreground">Round Total:</span>
                                 <span className="text-sm font-normal text-foreground">{formatVOCurrency(round.financials.grandTotal)}</span>
                               </div>
-                              <span className="text-[10px] text-primary flex items-center gap-0.5 font-normal">
+                              <span className="text-xs text-primary flex items-center gap-0.5 font-normal">
                                 View breakdown <ChevronRight className="w-3 h-3" />
                               </span>
                             </div>
@@ -2413,11 +2415,11 @@ export default function TaskDetails() {
                   the pattern used by the doc card and the right-panel
                   cards. Heading uses Werner's wording "Add a reply" so
                   the form is consistent across all task types. */}
-              {!isTaskLocked && <Card className="p-0 shadow-none bg-white rounded-lg border-border overflow-hidden">
+              {!isTaskLocked && <Card className="p-0 shadow-none bg-card border-border overflow-hidden">
                 <div className="bg-sidebar/50 px-6 py-3 border-b border-border flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {user?.name && (
-                      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
+                      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
                         {user.name.split(/\s+/).slice(0, 2).map((p: string) => p[0]?.toUpperCase() || "").join("")}
                       </span>
                     )}
@@ -2431,7 +2433,7 @@ export default function TaskDetails() {
                               ? "Comments & updates"
                               : "Add a reply"}
                       </h2>
-                      <p className="text-[11px] text-muted-foreground leading-tight">
+                      <p className="text-xs text-muted-foreground leading-tight">
                         Replying as {user?.name || "you"}
                       </p>
                     </div>
@@ -2541,9 +2543,9 @@ export default function TaskDetails() {
                             {voLineItems.map((item, idx) => {
                               const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
                               return (
-                                <div key={item.id} className="p-3 bg-white">
+                                <div key={item.id} className="p-3 bg-card">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}</span>
+                                    <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}</span>
                                     <input
                                       className="flex-1 text-sm px-2 py-1.5 rounded border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                                       placeholder="Item description"
@@ -2558,7 +2560,7 @@ export default function TaskDetails() {
                                   </div>
                                   <div className="flex items-center gap-2 pl-6">
                                     <div className="flex-1">
-                                      <p className="text-[10px] text-muted-foreground mb-1">Qty</p>
+                                      <p className="text-xs text-muted-foreground mb-1">Qty</p>
                                       <input
                                         type="text"
                                         inputMode="decimal"
@@ -2570,7 +2572,7 @@ export default function TaskDetails() {
                                       />
                                     </div>
                                     <div className="flex-1">
-                                      <p className="text-[10px] text-muted-foreground mb-1">Rate (R)</p>
+                                      <p className="text-xs text-muted-foreground mb-1">Rate (R)</p>
                                       <input
                                         type="text"
                                         inputMode="decimal"
@@ -2582,7 +2584,7 @@ export default function TaskDetails() {
                                       />
                                     </div>
                                     <div className="flex-1 text-right">
-                                      <p className="text-[10px] text-muted-foreground mb-1">Amount</p>
+                                      <p className="text-xs text-muted-foreground mb-1">Amount</p>
                                       <p className="text-sm font-normal text-foreground py-1.5">{formatVOCurrency(amount)}</p>
                                     </div>
                                   </div>
@@ -2687,7 +2689,7 @@ export default function TaskDetails() {
                 {displayTask.type === "CPI" && (
                   <div className="mb-6 pb-6 border-b border-border space-y-5">
                     {/* Progress */}
-                    <div className="bg-muted/40 rounded-xl p-4 border border-border space-y-3">
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-normal text-muted-foreground">Current Progress</Label>
                         <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${cpiProgress === 100 ? 'bg-green-100 text-green-700' :
@@ -2704,7 +2706,7 @@ export default function TaskDetails() {
                         onValueChange={([val]) => setCpiProgress(val)}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
                       </div>
                     </div>
@@ -2801,7 +2803,7 @@ export default function TaskDetails() {
                     acknowledgement (Werner does not have a separate
                     "I formally acknowledge receipt" gate). */}
                 {displayTask.type === "SI" && (
-                  <div className="space-y-3 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-lg border-primary/20">
+                  <div className="space-y-3 mb-6 pb-6 border-b border-border bg-primary/5 p-4 rounded-xl">
                     <p className="text-xs text-muted-foreground">
                       Tick if this instruction has a time and/or cost impact.
                       Either box ticked notifies the PM and QS so a Variation
@@ -2842,7 +2844,7 @@ export default function TaskDetails() {
                     is a separate action on the action bar (only the
                     originator can close). */}
                 {/* Toolbar */}
-                <div className="flex items-center gap-1 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-1 mb-4 pb-4 border-b border-border">
                   <button
                     onClick={() => editor?.chain().focus().toggleBold().run()}
                     className={`p-2 hover:bg-muted rounded ${editor?.isActive("bold") ? "bg-muted" : ""}`}>
@@ -2933,7 +2935,7 @@ export default function TaskDetails() {
                         <Command>
                           <CommandInput placeholder="Search team members…" />
                           <CommandList>
-                            <CommandEmpty>No members found</CommandEmpty>
+                            <CommandEmpty>No members match this search</CommandEmpty>
                             <CommandGroup>
                               {recipientOptions
                                 .filter((m: any) => !!m.userId)
@@ -3032,7 +3034,7 @@ export default function TaskDetails() {
                         <Command>
                           <CommandInput placeholder="Search project tasks…" />
                           <CommandList>
-                            <CommandEmpty>No tasks found</CommandEmpty>
+                            <CommandEmpty>No items match this search</CommandEmpty>
                             <CommandGroup>
                               {referenceOptions
                                 .filter((r: any) => !replyRefs.some(x => x.id === r.id))
@@ -3262,7 +3264,7 @@ export default function TaskDetails() {
 
                 return false;
               })() &&
-              <Card className="p-6 shadow-none pt-5 bg-white rounded-lg border-border">
+              <Card className="p-6 shadow-none pt-5 bg-card border-border">
                 <h2 className="text-sm  text-foreground mb-5">
                   Action Requests
                 </h2>
@@ -3334,7 +3336,7 @@ export default function TaskDetails() {
                     Reads naturally top→bottom, fits a narrow side panel,
                     and the line geometry is unambiguous (connector is
                     centred under the dot, not floating below it). */}
-                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                <Card className="p-0 bg-card shadow-none border border-border overflow-hidden">
                   <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
                     <h3 className="text-xs font-medium text-foreground">Decision Timeline</h3>
                   </div>
@@ -3364,7 +3366,7 @@ export default function TaskDetails() {
                                   "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300 mt-1",
                                   isComplete && "bg-[#6c5ce7] shadow-sm",
                                   isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
-                                  !isComplete && !isCurrent && "bg-white border-2 border-border",
+                                  !isComplete && !isCurrent && "bg-card border-2 border-border",
                                   canApprove && "cursor-pointer hover:scale-110",
                                   !canApprove && "cursor-default",
                                 )}
@@ -3399,7 +3401,7 @@ export default function TaskDetails() {
                                 {stage}
                               </p>
                               {isCurrent && (
-                                <p className="text-[11px] text-[#6c5ce7] mt-0.5">In progress</p>
+                                <p className="text-xs text-[#6c5ce7] mt-0.5">In progress</p>
                               )}
                             </div>
                           </li>
@@ -3412,7 +3414,7 @@ export default function TaskDetails() {
                         timeline doesn't pretend it just finished the
                         verified path. */}
                     {isTerminalBeyondStages && (
-                      <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5 text-xs text-muted-foreground">
                         <XCircle className="w-3.5 h-3.5" />
                         <span>
                           {displayTask.timeline?.current || "Closed"} — this task ended outside the normal stage flow.
@@ -3447,7 +3449,7 @@ export default function TaskDetails() {
 
 
                 {/* Impact */}
-                {/* <Card className="p-[17px] rounded-lg text-muted-foreground bg-white shadow-none border-border">
+                {/* <Card className="p-[17px] rounded-lg text-muted-foreground bg-card shadow-none border-border">
                   <h3 className="text-xs  text-muted-foreground mb-3">
                     Impact
                   </h3>
@@ -3488,7 +3490,7 @@ export default function TaskDetails() {
                 <TaskAttachments attachments={displayTask?.attachments} />
 
                 {/* Linked Documents - Phase 3 enhancement */}
-                {/* <Card className="p-[17px] mt-4 rounded-lg bg-white shadow-none border-border">
+                {/* <Card className="p-[17px] mt-4 rounded-lg bg-card shadow-none border-border">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-normal text-muted-foreground">
                       Linked Documents
@@ -3520,7 +3522,7 @@ export default function TaskDetails() {
                 </Card> */}
 
                 {/* Audit Trail — grey header strip + white body. */}
-                <Card className="p-0 bg-white shadow-none border border-border rounded-lg overflow-hidden">
+                <Card className="p-0 bg-card shadow-none border border-border overflow-hidden">
                   <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
                     <h3 className="text-xs font-medium text-foreground">Audit Trail</h3>
                   </div>
@@ -3568,7 +3570,7 @@ export default function TaskDetails() {
                                   <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
                                     {icon}
                                   </div>
-                                  {!isLast && <div className="w-0.5 flex-1 bg-[#e9ecef] mt-1 mb-1" />}
+                                  {!isLast && <div className="w-0.5 flex-1 bg-muted mt-1 mb-1" />}
                                 </div>
                                 <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
                                   <div className="flex items-start justify-between gap-2">
@@ -3591,7 +3593,7 @@ export default function TaskDetails() {
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                                       {chips.map((name, idx) => (
                                         <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
-                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-normal shrink-0">
+                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
                                             {name.charAt(0).toUpperCase()}
                                           </span>
                                           {name}
@@ -3662,7 +3664,7 @@ export default function TaskDetails() {
           setAssignUserPopoverOpen(false);
         }
       }}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Assign User</DialogTitle>
             <DialogDescription>
@@ -3697,11 +3699,11 @@ export default function TaskDetails() {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No users found</CommandEmpty>
+                      <CommandEmpty>No users match this search</CommandEmpty>
                       <CommandGroup>
                         {projectMembers.map((member: any) => {
                           const memberName = member.user?.name || member.name || member.user?.email || "";
@@ -3735,7 +3737,7 @@ export default function TaskDetails() {
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                    isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-white"
+                                    isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
                                   )}
                                 >
                                   {isSelected && <Check className="h-3 w-3 text-white" />}
@@ -3753,7 +3755,7 @@ export default function TaskDetails() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-foreground bg-white hover:bg-muted/50">
+              <button className="px-4 py-2 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50">
                 Cancel
               </button>
             </DialogClose>
@@ -3768,7 +3770,7 @@ export default function TaskDetails() {
         </DialogContent>
       </Dialog>
       <Dialog open={isResponseModalOpen} onOpenChange={setIsResponseModalOpen}>
-        <DialogContent className="max-w-2xl bg-white p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+        <DialogContent className="max-w-2xl bg-card p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
           {selectedResponse && (
             <div className="flex flex-col h-full max-h-[85vh]">
               {/* Header */}
@@ -3815,7 +3817,7 @@ export default function TaskDetails() {
                       const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                       return (
                         <div key={key} className="space-y-1">
-                          <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground/70">
+                          <span className="text-xs font-normal uppercase tracking-wider text-muted-foreground/70">
                             {label}
                           </span>
                           <p className="text-sm font-normal text-foreground">
@@ -3845,7 +3847,7 @@ export default function TaskDetails() {
                 {selectedResponse.lineItems && selectedResponse.lineItems.length > 0 && (
                   <div className="space-y-4">
                     <h4 className="text-xs font-normal text-muted-foreground uppercase tracking-wider">Price Breakdown</h4>
-                    <div className="rounded-xl border border-border overflow-hidden bg-white shadow-sm">
+                    <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
                       <table className="w-full text-xs">
                         <thead className="bg-muted/50 border-b border-border text-muted-foreground">
                           <tr>

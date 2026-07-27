@@ -13,6 +13,7 @@ import { ActivityFeedItem } from '@/components/ActivityFeedItem';
 import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check, MapPin, CalendarIcon, Building2 } from 'lucide-react';
 import { InsuranceBanner } from '@/components/InsuranceBanner';
 import { Calendar } from "@/components/ui/calendar";
@@ -462,7 +463,7 @@ const Index = () => {
         />
 
         {showCompletionCard && (
-          <div className="p-6 rounded-2xl bg-white border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="p-6 rounded-xl bg-card border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
             {/* Header */}
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
@@ -478,7 +479,7 @@ const Index = () => {
               {projectStats && projectStats.percentage < 100 && canEditProject && (
                 <Button
                   onClick={() => openQuickFill()}
-                  className="h-8 px-4 bg-primary text-white text-[11px] rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
+                  className="h-8 px-4 bg-primary text-white text-xs rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
                 >
                   Complete Setup
                   <ArrowRight className="w-3 h-3" />
@@ -491,13 +492,13 @@ const Index = () => {
               <div className="grid grid-cols-1 gap-3">
                 {projectStats.missing.map((item) => {
                   const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
-                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Describe the full construction scope." },
-                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
-                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the total project budget." },
-                    "Project Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
-                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Add the project site address or location." },
-                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: "Set the project start and end dates." },
-                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-slate-100", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
+                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Describe the full construction scope." },
+                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
+                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the total project budget." },
+                    "Project Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
+                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Add the project site address or location." },
+                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the project start and end dates." },
+                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
@@ -505,15 +506,15 @@ const Index = () => {
                     <button
                       key={item}
                       onClick={() => openQuickFillFor(item)}
-                      className="group text-left bg-slate-50 border border-[#e2e5ea] rounded-xl px-4 py-3.5 hover:border-primary/40 hover:bg-white hover:shadow-sm transition-all duration-200"
+                      className="group text-left bg-muted/50 rounded-xl px-4 py-3.5 hover:bg-muted hover:shadow-sm transition-all duration-200"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
                           {cfg.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-normal text-[#111827]">{item}</p>
-                          <p className="text-[11px] text-[#9ca3af] mt-0.5">{cfg.description}</p>
+                          <p className="text-xs font-normal text-[#111827]">{item}</p>
+                          <p className="text-xs text-[#9ca3af] mt-0.5">{cfg.description}</p>
                         </div>
                         <ArrowRight className="w-3.5 h-3.5 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
@@ -521,15 +522,15 @@ const Index = () => {
                   ) : (
                     <div
                       key={item}
-                      className="text-left bg-slate-50/60 border border-[#e2e5ea] rounded-xl px-4 py-3.5 opacity-60 cursor-not-allowed"
+                      className="text-left bg-muted/50 rounded-xl px-4 py-3.5 opacity-60 cursor-not-allowed"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
                           {cfg.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-normal text-[#111827]">{item}</p>
-                          <p className="text-[11px] text-[#9ca3af] mt-0.5">{cfg.description}</p>
+                          <p className="text-xs font-normal text-[#111827]">{item}</p>
+                          <p className="text-xs text-[#9ca3af] mt-0.5">{cfg.description}</p>
                         </div>
                       </div>
                     </div>
@@ -544,16 +545,16 @@ const Index = () => {
                 {draftProjects.slice(0, 2).map((p: any) => {
                   const id = String(p._id || p.id);
                   return (
-                    <div key={id} className="flex items-center justify-between gap-3 bg-slate-50/50 border border-border rounded-xl px-4 py-2.5 group transition-all hover:bg-white hover:shadow-sm">
+                    <div key={id} className="flex items-center justify-between gap-3 bg-muted/50 rounded-xl px-4 py-2.5 group transition-all hover:bg-muted hover:shadow-sm">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                         <span className="text-sm text-foreground truncate font-normal tracking-tight">{p.name || "Untitled Project"}</span>
-                        <span className="text-[9px] font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Draft</span>
+                        <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Draft</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Button
                           onClick={() => continueDraftProject(p)}
-                          className="h-8 px-4 bg-slate-200 text-slate-700 hover:bg-primary hover:text-white text-[11px] rounded-lg transition-all font-normal flex items-center gap-2"
+                          className="h-8 px-4 bg-slate-200 text-slate-700 hover:bg-primary hover:text-white text-xs rounded-lg transition-all font-normal flex items-center gap-2"
                         >
                           Finish
                           <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -569,7 +570,7 @@ const Index = () => {
                   );
                 })}
                 {draftProjects.length > 2 && (
-                  <p className="text-[10px] text-muted-foreground ml-2">+ {draftProjects.length - 2} more draft projects</p>
+                  <p className="text-xs text-muted-foreground ml-2">+ {draftProjects.length - 2} more draft projects</p>
                 )}
               </div>
             )}
@@ -577,13 +578,13 @@ const Index = () => {
         )}
         {/* No Projects Banner */}
         {hasNoProjects && (
-          <div className="w-full bg-white rounded-2xl border border-[#e2e5ea] p-8 text-center shadow-sm flex flex-col items-center">
+          <div className="w-full bg-card rounded-xl border border-border p-8 text-center shadow-sm flex flex-col items-center">
             <div className="w-14 h-14 bg-[#f0edff] rounded-2xl flex items-center justify-center mb-4">
               <FolderOpen className="w-7 h-7 text-[#6c5ce7]" />
             </div>
             <h2 className="text-lg font-medium text-[#111827] mb-1">No projects yet</h2>
             <p className="text-sm text-[#6b7280] mb-5 max-w-md leading-relaxed">
-              Create your first project to get started. You can manage tasks, documents, budgets, and users all in one place.
+              A project is where contract administration lives — instructions, variations, certificates and the documents behind them, all auditable in one place.
             </p>
             <button
               onClick={() => navigate("/create-project")}
@@ -595,7 +596,7 @@ const Index = () => {
           </div>
         )}
         {/* Project Context Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-4 bg-sidebar rounded-xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 bg-sidebar border border-border rounded-xl p-4">
           <div className="flex items-center gap-4">
             {/* Progress Ring */}
             <div className="relative h-12 w-12 shrink-0">
@@ -641,7 +642,7 @@ const Index = () => {
               </Badge>
             )}
             {project?.total_budget || project?.totalBudget ? (
-              <Badge variant="outline" className="text-xs font-medium px-3 py-1 bg-white text-foreground border-gray-200">
+              <Badge variant="outline" className="text-xs font-medium px-3 py-1 bg-card text-foreground border-border">
                 R {(project.total_budget || project.totalBudget || 0).toLocaleString()}
               </Badge>
             ) : null}
@@ -662,7 +663,7 @@ const Index = () => {
                 <h3 className="text-sm text-gray2">My Actions ({myActions.length})</h3>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 bg-white p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
+            <CardContent className="space-y-4 bg-card p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
               {loadingTasks ? (
                 <AwesomeLoader message="Loading tasks" />
               ) : sortedActions.length > 0 ? (
@@ -687,7 +688,12 @@ const Index = () => {
                   ))}
                 </>
               ) : (
-                <div className="p-4 text-center text-gray-500">No actions found</div>
+                <EmptyState
+                  variant="plain"
+                  size="sm"
+                  title="Nothing needs your attention"
+                  description="Instructions, RFIs and variations waiting on you appear here, with the ones nearest their time bar first."
+                />
               )}
             </CardContent>
           </Card>
@@ -702,7 +708,7 @@ const Index = () => {
                 <h3 className="text-sm text-gray2">Activity Feed</h3>
               </div>
             </CardHeader>
-            <CardContent className="space-y-0 bg-white p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
+            <CardContent className="space-y-0 bg-card p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
               {loadingTasks ? (
                 <AwesomeLoader message="Loading activity" />
               ) : recentActivity.length > 0 ? (
@@ -727,7 +733,12 @@ const Index = () => {
                   );
                 })
               ) : (
-                <div className="p-4 text-center text-gray-500">No recent activity</div>
+                <EmptyState
+                  variant="plain"
+                  size="sm"
+                  title="No activity recorded yet"
+                  description="Every instruction issued, response given and status change on this project is logged here as it happens."
+                />
               )}
             </CardContent>
           </Card>
@@ -750,7 +761,7 @@ const Index = () => {
               <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </CardHeader>
-          <CardContent className="bg-white p-2 mx-2 rounded-md">
+          <CardContent className="bg-card p-2 mx-2 rounded-md">
             {loadingMeetings ? (
               <AwesomeLoader message="Loading meetings" />
             ) : upcomingMeetings.length > 0 ? (
@@ -782,14 +793,14 @@ const Index = () => {
                       <div className="flex -space-x-1.5 ml-4 shrink-0">
                         {(m.attendees as string[]).slice(0, 3).map((name: string, i: number) => (
                           <div key={i} className="h-6 w-6 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center">
-                            <span className="text-[10px] text-primary font-medium">
+                            <span className="text-xs text-primary font-medium">
                               {name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         ))}
                         {m.extra_attendees > 0 && (
                           <div className="h-6 w-6 rounded-full bg-muted border-2 border-white flex items-center justify-center">
-                            <span className="text-[10px] text-muted-foreground">+{m.extra_attendees}</span>
+                            <span className="text-xs text-muted-foreground">+{m.extra_attendees}</span>
                           </div>
                         )}
                       </div>
@@ -798,7 +809,12 @@ const Index = () => {
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-500 text-sm">No upcoming meetings</div>
+              <EmptyState
+                variant="plain"
+                size="sm"
+                title="No meetings scheduled"
+                description="Site and progress meetings appear here once scheduled, with their minutes attached afterwards."
+              />
             )}
           </CardContent>
         </Card>
@@ -823,7 +839,7 @@ const Index = () => {
               <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </CardHeader>
-          <CardContent className="bg-white p-2 mx-2 rounded-md">
+          <CardContent className="bg-card p-2 mx-2 rounded-md">
             {recentDocuments.length > 0 ? (
               <div className="divide-y divide-border/50">
                 {recentDocuments.map((doc: any, i: number) => {
@@ -849,9 +865,12 @@ const Index = () => {
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                No documents uploaded yet
-              </div>
+              <EmptyState
+                variant="plain"
+                size="sm"
+                title="No documents uploaded yet"
+                description="The most recently uploaded contract documents, drawings and specifications will show here."
+              />
             )}
           </CardContent>
         </Card>
@@ -924,26 +943,26 @@ const Index = () => {
       {/* Quick-fill modal — shows all missing fields at once */}
       {projectStats && (
         <Dialog open={quickFillOpen} onOpenChange={(open) => { if (!open) closeQuickFill(); }}>
-          <DialogContent className="sm:max-w-[680px] w-full bg-white rounded-2xl p-0 overflow-hidden">
-            <DialogHeader className="px-8 pt-7 pb-5 border-b border-[#e2e5ea]">
-              <DialogTitle className="text-[16px] font-normal text-[#111827]">
+          <DialogContent className="sm:max-w-[680px] w-full bg-card rounded-2xl p-0 overflow-hidden">
+            <DialogHeader className="px-8 pt-7 pb-5 border-b border-border">
+              <DialogTitle className="text-base font-normal text-[#111827]">
                 {quickFillSection ?? "Complete Project Setup"}
               </DialogTitle>
-              <p className="text-[13px] text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
+              <p className="text-xs text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
             </DialogHeader>
 
             <div className="px-8 py-6 space-y-4 max-h-[72vh] overflow-y-auto">
 
               {/* ── Scope of Work card ── */}
               {(quickFillSection === null || quickFillSection === "Scope of Work") && projectStats.missing.includes("Scope of Work") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4 text-[#6c5ce7]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Scope of Work</p>
-                      <p className="text-[11px] text-[#9ca3af]">Describe the construction scope — auto-populates into contracts</p>
+                      <p className="text-xs font-normal text-[#111827]">Scope of Work</p>
+                      <p className="text-xs text-[#9ca3af]">Describe the construction scope — auto-populates into contracts</p>
                     </div>
                   </div>
                   <div className="p-5">
@@ -959,14 +978,14 @@ const Index = () => {
 
               {/* ── Client Details card ── */}
               {(quickFillSection === null || quickFillSection === "Client Details") && projectStats.missing.includes("Client Details") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
                       <Shield className="w-4 h-4 text-[#6c5ce7]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Client Details</p>
-                      <p className="text-[11px] text-[#9ca3af]">
+                      <p className="text-xs font-normal text-[#111827]">Client Details</p>
+                      <p className="text-xs text-[#9ca3af]">
                         {isClientOrContractor
                           ? "Fill once — auto-populates into all contracts and appointment letters"
                           : "Invite your client to fill in their company details"}
@@ -977,7 +996,7 @@ const Index = () => {
                     // CLIENT/CONTRACTOR: fill own client company details
                     <div className="p-5 space-y-4">
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">
                           Client Name or Company <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -989,7 +1008,7 @@ const Index = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
                           <input
                             className={qInputCls}
                             placeholder="Full name"
@@ -998,7 +1017,7 @@ const Index = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Email</label>
                           <input
                             type="email"
                             className={qInputCls}
@@ -1012,12 +1031,12 @@ const Index = () => {
                   ) : (
                     // NON-CLIENT: invite client by email
                     <div className="p-5 space-y-4">
-                      <p className="text-[12px] text-[#6b7280]">
+                      <p className="text-xs text-[#6b7280]">
                         We'll send an email invitation for the client to complete their company details.
                       </p>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Client Name</label>
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Client Name</label>
                           <input
                             className={qInputCls}
                             placeholder="e.g. John Smith"
@@ -1026,7 +1045,7 @@ const Index = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">
                             Client Email <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -1045,26 +1064,26 @@ const Index = () => {
 
               {/* ── Budget Allocation card ── */}
               {(quickFillSection === null || quickFillSection === "Budget Allocation") && projectStats.missing.includes("Budget Allocation") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center shrink-0">
                       <ClipboardList className="w-4 h-4 text-[#16a34a]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Budget Allocation</p>
-                      <p className="text-[11px] text-[#9ca3af]">Set the total project budget</p>
+                      <p className="text-xs font-normal text-[#111827]">Budget Allocation</p>
+                      <p className="text-xs text-[#9ca3af]">Set the total project budget</p>
                     </div>
                   </div>
                   <div className="p-5">
-                    <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                    <label className="block text-xs font-normal text-[#374151] mb-1.5">
                       Total Budget <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[16px] text-[#6b7280] pointer-events-none select-none">R</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-[#6b7280] pointer-events-none select-none">R</span>
                       <input
                         type="text"
                         inputMode="numeric"
-                        className={cn(qInputCls, "pl-10 text-[18px] h-[52px]")}
+                        className={cn(qInputCls, "pl-10 text-lg h-[52px]")}
                         placeholder="0"
                         value={quickForm.total_budget}
                         onChange={(e) => {
@@ -1079,14 +1098,14 @@ const Index = () => {
 
               {/* ── Location card ── */}
               {(quickFillSection === null || quickFillSection === "Location") && projectStats.missing.includes("Location") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0f9ff] flex items-center justify-center shrink-0">
                       <MapPin className="w-4 h-4 text-[#0284c7]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Location</p>
-                      <p className="text-[11px] text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
+                      <p className="text-xs font-normal text-[#111827]">Location</p>
+                      <p className="text-xs text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
                     </div>
                   </div>
                   <div className="p-5">
@@ -1105,20 +1124,20 @@ const Index = () => {
 
               {/* ── Project Timeline card ── */}
               {(quickFillSection === null || quickFillSection === "Project Timeline") && projectStats.missing.includes("Project Timeline") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fdf4ff] flex items-center justify-center shrink-0">
                       <CalendarIcon className="w-4 h-4 text-[#9333ea]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Project Timeline</p>
-                      <p className="text-[11px] text-[#9ca3af]">Start and end dates — used for scheduling and contract periods</p>
+                      <p className="text-xs font-normal text-[#111827]">Project Timeline</p>
+                      <p className="text-xs text-[#9ca3af]">Start and end dates — used for scheduling and contract periods</p>
                     </div>
                   </div>
                   <div className="p-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Start Date <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">Start Date <span className="text-red-500">*</span></label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
@@ -1139,7 +1158,7 @@ const Index = () => {
                         </Popover>
                       </div>
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">End Date <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">End Date <span className="text-red-500">*</span></label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
@@ -1167,16 +1186,16 @@ const Index = () => {
 
               {/* ── Associated Company card ── */}
               {(quickFillSection === null || quickFillSection === "Associated Company") && projectStats.missing.includes("Associated Company") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fefce8] flex items-center justify-center shrink-0">
                       <Building2 className="w-4 h-4 text-[#ca8a04]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">
+                      <p className="text-xs font-normal text-[#111827]">
                         {isClientOrContractor ? "Associated Companies" : "Associated Company Information"}
                       </p>
-                      <p className="text-[11px] text-[#9ca3af]">
+                      <p className="text-xs text-[#9ca3af]">
                         {isClientOrContractor
                           ? "Invite professional firms associated with this project"
                           : "Fill in your company details — auto-populates into contracts and appointment letters"}
@@ -1194,22 +1213,22 @@ const Index = () => {
                           {appointedCompanies
                             .filter(c => !["CLIENT", "OWNER", "CLIENT OWNER"].includes((c.role || "").toUpperCase().trim()))
                             .map((comp) => (
-                              <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e2e5ea] bg-slate-50/50">
-                                <div className="w-8 h-8 rounded-lg bg-white border border-[#e2e5ea] flex items-center justify-center shrink-0">
+                              <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
+                                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
                                   <Building2 className="w-4 h-4 text-muted-foreground" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-normal text-[#111827] truncate">{comp.company_name}</p>
-                                  <p className="text-[11px] text-muted-foreground">{comp.role || "Partner"}</p>
+                                  <p className="text-xs text-muted-foreground">{comp.role || "Partner"}</p>
                                 </div>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#e2e5ea] bg-white text-muted-foreground shrink-0">{comp.status}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full border border-border bg-card text-muted-foreground shrink-0">{comp.status}</span>
                               </div>
                             ))}
-                          <div className="h-px bg-[#e2e5ea]" />
+                          <div className="h-px bg-border" />
                         </div>
                       )}
                       {appointedInvites.map((entry) => (
-                        <div key={entry.id} className="border border-[#e2e5ea] rounded-xl p-4 space-y-3 bg-slate-50/50">
+                        <div key={entry.id} className="rounded-xl p-4 space-y-3 bg-muted/50">
                           <div className="flex justify-end">
                             <button
                               type="button"
@@ -1220,7 +1239,7 @@ const Index = () => {
                             </button>
                           </div>
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
                             <input
                               className={qInputCls}
                               placeholder="e.g. Smith Architects (Pty) Ltd"
@@ -1229,7 +1248,7 @@ const Index = () => {
                             />
                           </div>
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Type</label>
                             <div className="relative">
                               <select
                                 className={qSelectCls}
@@ -1244,7 +1263,7 @@ const Index = () => {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                              <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
                               <input
                                 className={qInputCls}
                                 placeholder="e.g. John Smith"
@@ -1253,7 +1272,7 @@ const Index = () => {
                               />
                             </div>
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Email Address <span className="text-red-500">*</span></label>
+                              <label className="block text-xs font-normal text-[#374151] mb-1.5">Email Address <span className="text-red-500">*</span></label>
                               <input
                                 type="email"
                                 className={qInputCls}
@@ -1268,7 +1287,7 @@ const Index = () => {
                       <button
                         type="button"
                         onClick={() => setAppointedInvites((prev) => [...prev, { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" }])}
-                        className="w-full py-3.5 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                        className="w-full py-3.5 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                       >
                         <Plus className="w-4 h-4" />
                         {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
@@ -1278,7 +1297,7 @@ const Index = () => {
                     // NON-CLIENT: fill own company details
                     <div className="p-5 space-y-4">
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">
                           Company Name <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1289,7 +1308,7 @@ const Index = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Type</label>
                         <div className="relative">
                           <select
                             className={qSelectCls}
@@ -1304,7 +1323,7 @@ const Index = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Name</label>
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
                           <input
                             className={qInputCls}
                             placeholder="e.g. John Smith"
@@ -1313,7 +1332,7 @@ const Index = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Contact Email</label>
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Email</label>
                           <input
                             type="email"
                             className={qInputCls}
@@ -1330,14 +1349,14 @@ const Index = () => {
 
               {/* ── Documents card ── */}
               {(quickFillSection === null || quickFillSection === "Project Documents") && projectStats.missing.includes("Project Documents") && (
-                <div className="border border-[#e2e5ea] rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[#f5f6f8] border-b border-[#e2e5ea]">
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
                       <CloudUpload className="w-4 h-4 text-[#ea580c]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-normal text-[#111827]">Project Documents</p>
-                      <p className="text-[11px] text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
+                      <p className="text-xs font-normal text-[#111827]">Project Documents</p>
+                      <p className="text-xs text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
                     </div>
                   </div>
                   <div className="p-5">
@@ -1356,31 +1375,31 @@ const Index = () => {
                       onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
                       className={cn(
                         "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200 border-2 border-dashed",
-                        isDragging ? "border-[#6c5ce7] bg-[#f8f7ff]" : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                        isDragging ? "border-[#6c5ce7] bg-[#f8f7ff]" : "border-border bg-card hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
                       )}
                     >
-                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-[#f3f4f6]")}>
+                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-muted")}>
                         <CloudUpload className={cn("w-6 h-6 transition-colors", isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]")} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-[14px] font-medium text-[#374151]">Drag and drop your files here</p>
-                        <p className="text-[12px] text-[#6b7280] mt-0.5">or <span className="text-[#6c5ce7] underline">click to browse</span></p>
-                        <p className="text-[11px] text-[#9ca3af] mt-1 uppercase tracking-tight">PDF, Excel, Images up to 20MB</p>
+                        <p className="text-sm font-medium text-[#374151]">Drag and drop your files here</p>
+                        <p className="text-xs text-[#6b7280] mt-0.5">or <span className="text-[#6c5ce7] underline">click to browse</span></p>
+                        <p className="text-xs text-[#9ca3af] mt-1 uppercase tracking-tight">PDF, Excel, Images up to 20MB</p>
                       </div>
                     </div>
                     {s3Upload.entries.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {s3Upload.entries.map((f) => (
-                          <div key={f.id} className="bg-[#f9fafb] rounded-[10px] px-4 py-3 border border-[#f3f4f6]">
+                          <div key={f.id} className="bg-muted/50 rounded-xl px-4 py-3">
                             <div className="flex items-center gap-3">
                               <FileText className="w-4 h-4 text-[#6c5ce7] shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-normal text-[#111827] truncate">{f.file.name}</p>
-                                <p className="text-[11px] text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                <p className="text-xs font-normal text-[#111827] truncate">{f.file.name}</p>
+                                <p className="text-xs text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
                                 <div className="mt-2">
                                   <input
                                     type="text"
-                                    className="w-full h-7 px-2 rounded-lg border border-[#e2e5ea] text-[11px] placeholder:text-[10px] focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                    className="w-full h-7 px-2 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
                                     placeholder="Document title (optional)"
                                     value={f.title || ""}
                                     onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
@@ -1394,10 +1413,10 @@ const Index = () => {
                             </div>
                             {f.status === "uploading" && (
                               <div className="mt-2.5">
-                                <div className="h-1 bg-[#e5e7eb] rounded-full overflow-hidden">
+                                <div className="h-1 bg-muted rounded-full overflow-hidden">
                                   <div className="h-full bg-[#6c5ce7] rounded-full transition-all duration-300" style={{ width: `${f.progress}%` }} />
                                 </div>
-                                <p className="text-[10px] text-[#9ca3af] mt-1">{f.progress}%</p>
+                                <p className="text-xs text-[#9ca3af] mt-1">{f.progress}%</p>
                               </div>
                             )}
                           </div>
@@ -1410,17 +1429,17 @@ const Index = () => {
 
             </div>
 
-            <div className="px-8 py-5 border-t border-[#e2e5ea] flex items-center justify-end gap-3">
+            <div className="px-8 py-5 border-t border-border flex items-center justify-end gap-3">
               <button
                 onClick={closeQuickFill}
-                className="px-4 py-2 text-[13px] text-[#6b7280] hover:text-[#111827] transition-colors"
+                className="px-4 py-2 text-xs text-[#6b7280] hover:text-[#111827] transition-colors"
               >
                 Cancel
               </button>
               <Button
                 onClick={() => submitQuickFill(quickFillSection ? [quickFillSection] : projectStats.missing)}
                 disabled={isSaving || !canEditProject}
-                className="h-10 px-6 bg-[#6c5ce7] text-white text-[13px] rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-10 px-6 bg-[#6c5ce7] text-white text-xs rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
@@ -1433,7 +1452,7 @@ const Index = () => {
 };
 
 const MILESTONE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  planned:     { label: "Planned",     color: "#6B7280", bg: "bg-gray-50",    border: "border-gray-200" },
+  planned:     { label: "Planned",     color: "#6B7280", bg: "bg-muted/50",    border: "border-border" },
   in_progress: { label: "In Progress", color: "#6c5ce7", bg: "bg-primary/5",  border: "border-primary/20" },
   completed:   { label: "Completed",   color: "#10B981", bg: "bg-emerald-50", border: "border-emerald-200" },
   delayed:     { label: "Delayed",     color: "#EF4444", bg: "bg-red-50",     border: "border-red-200" },
@@ -1488,11 +1507,16 @@ function ProgrammeMilestonesCard({
           <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </CardHeader>
-      <CardContent className="bg-white p-2 mx-2 rounded-md">
+      <CardContent className="bg-card p-2 mx-2 rounded-md">
         {isLoading ? (
           <AwesomeLoader message="Loading milestones" />
         ) : milestones.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">No programme phases added yet</div>
+          <EmptyState
+            variant="plain"
+            size="sm"
+            title="No programme milestones set"
+            description="Set the milestones that govern this project — practical completion, sectional handovers, key dates — to track slippage against them."
+          />
         ) : (
           <>
             {/* Status count chips */}
@@ -1501,7 +1525,7 @@ function ProgrammeMilestonesCard({
                 {statusCounts.map(({ key, count, label, color, bg, border }) => (
                   <span
                     key={key}
-                    className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${bg} ${border}`}
+                    className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${bg} ${border}`}
                     style={{ color }}
                   >
                     <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
@@ -1525,20 +1549,20 @@ function ProgrammeMilestonesCard({
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <p className="text-sm text-foreground truncate">{m.name}</p>
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full border shrink-0 ${cfg.bg} ${cfg.border}`}
+                          className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${cfg.bg} ${cfg.border}`}
                           style={{ color: cfg.color }}
                         >
                           {cfg.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{ width: `${pct}%`, backgroundColor: cfg.color, opacity: 0.7 }}
                           />
                         </div>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                           {start} – {end}
                         </span>
                       </div>

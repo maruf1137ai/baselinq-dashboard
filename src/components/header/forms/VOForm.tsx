@@ -231,7 +231,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="Select discipline" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             {DISCIPLINE_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
@@ -256,7 +256,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
               {dateInstructed ? format(dateInstructed, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-white" align="start">
+          <PopoverContent className="w-auto p-0 bg-card" align="start">
             <Calendar
               mode="single"
               selected={dateInstructed}
@@ -294,7 +294,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
                 <Label className="text-xs text-muted-foreground uppercase mb-1.5 block">Description</Label>
                 <Textarea
                   rows={2}
-                  className="bg-white resize-none"
+                  className="bg-card resize-none"
                   placeholder="Enter work description..."
                   value={item.description}
                   onChange={(e) => updateField(index, "description", e.target.value)}
@@ -315,7 +315,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
                 <Label className="text-xs text-muted-foreground uppercase mb-1.5 block">Quantity</Label>
                 <Input
                   type="number"
-                  className="bg-white"
+                  className="bg-card"
                   placeholder="0"
                   value={(item.qty as any) === 0 ? "" : item.qty}
                   onChange={(e) => updateField(index, "qty", e.target.value === "" ? "" : Number(e.target.value))}
@@ -328,7 +328,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R</span>
                   <Input
                     type="number"
-                    className="bg-white pl-7"
+                    className="bg-card pl-7"
                     placeholder="0.00"
                     value={(item.rate as any) === 0 ? "" : item.rate}
                     onChange={(e) => updateField(index, "rate", e.target.value === "" ? "" : Number(e.target.value))}
@@ -338,7 +338,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
 
               <div>
                 <Label className="text-xs text-muted-foreground uppercase mb-1.5 block">Total</Label>
-                <div className="h-10 flex items-center px-4 rounded-md border border-border bg-white text-foreground">
+                <div className="h-10 flex items-center px-4 rounded-md border border-border bg-card text-foreground">
                   R {getTotal(index).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
@@ -359,7 +359,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       <S3AttachmentSection s3Upload={s3Upload} inputId="vo-upload" label="Attachments" />
 
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}

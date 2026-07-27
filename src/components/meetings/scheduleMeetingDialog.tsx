@@ -106,7 +106,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[650px] bg-white p-0">
+      <DialogContent className="max-w-[650px] bg-card p-0">
         <DialogHeader className="py-[22px] px-6 border-b border-border">
           <DialogTitle className="text-base text-foreground">
             Schedule New Meeting
@@ -209,11 +209,11 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                             return (
                               <span
                                 key={member._id}
-                                className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[12px] px-2 py-1 rounded-md"
+                                className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md"
                               >
                                 {member.user?.name || member.user?.email}
                                 {isCreator ? (
-                                  <span className="text-[10px] text-primary/60 ml-0.5">You</span>
+                                  <span className="text-xs text-primary/60 ml-0.5">You</span>
                                 ) : (
                                   <X
                                     className="w-3 h-3 cursor-pointer hover:text-primary/70"
@@ -235,11 +235,11 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandEmpty>No users match this search</CommandEmpty>
                       <CommandGroup>
                         {users.map((member) => {
                           const u = member.user;
@@ -268,14 +268,14 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium">{name}</span>
                                     {email && name !== email && (
-                                      <span className="text-[11px] text-muted-foreground">{email}</span>
+                                      <span className="text-xs text-muted-foreground">{email}</span>
                                     )}
                                   </div>
                                 </div>
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                    isSelected ? "border-primary bg-primary" : "border-border bg-white"
+                                    isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                   )}
                                 >
                                   {isSelected && <Check className="h-3 w-3 text-white" />}

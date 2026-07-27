@@ -52,8 +52,8 @@ const FilterBtns = () => {
           <button
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all border border-border shadow-none ${
               activeFilterCount > 0
-                ? "bg-white text-primary hover:bg-muted"
-                : "bg-white text-foreground hover:bg-muted"
+                ? "bg-card text-primary hover:bg-muted"
+                : "bg-card text-foreground hover:bg-muted"
             }`}>
             <FilterIcon className="w-4 h-4" />
             <span>Filter</span>

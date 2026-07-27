@@ -94,7 +94,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
   };
 
   return (
-    <div className="flex flex-col gap-4 p-3 bg-white border rounded-lg">
+    <div className="flex flex-col gap-4 p-3 bg-card border rounded-lg">
       <div className="flex items-start gap-4">
       <Avatar className="h-10 w-10">
         <AvatarFallback className="bg-muted text-muted-foreground text-xs">
@@ -126,14 +126,14 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
         {/* Response shown inline once submitted. */}
         {isResponded && request.responseText && (
           <div className="mt-3 border-l-2 border-green-500 bg-green-50/40 px-3 py-2 rounded-r">
-            <div className="text-[11px] uppercase tracking-wide text-green-700 mb-1">
+            <div className="text-xs uppercase tracking-wide text-green-700 mb-1">
               Response
             </div>
             <p className="text-xs text-foreground whitespace-pre-wrap">
               {request.responseText}
             </p>
             {request.respondedBy && (
-              <p className="text-[11px] text-muted-foreground mt-1.5">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 Responded by {request.respondedBy.name}
                 {request.respondedAt && ` · ${formatDateTime(request.respondedAt)}`}
               </p>
@@ -169,7 +169,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
 
           <div className="py-2 space-y-3">
             <div className="bg-muted/30 rounded-md p-3 text-sm">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
                 Their question
               </div>
               <p className="whitespace-pre-wrap text-foreground">{request.task}</p>

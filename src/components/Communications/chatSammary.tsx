@@ -85,7 +85,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
 
   // Status Color Logic
   const getStatusColor = (status: string) => {
-    if (!status) return 'bg-gray-100 text-gray-600 border-gray-200';
+    if (!status) return 'bg-muted text-gray-600 border-border';
     const s = status.toLowerCase();
     if (s.includes('overdue') || s.includes('risk')) return 'bg-red-50 text-red-700 border-red-200';
     if (s.includes('approved') || s.includes('done') || s.includes('closed')) return 'bg-green-50 text-green-700 border-green-200';
@@ -94,9 +94,9 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-card">
       {/* Header */}
-      <div className="py-4 px-6 border-b border-[#DEDEDE]">
+      <div className="py-4 px-6 border-b border-border">
         <h2 className="text-base font-normal text-[#101828]">
           {taskId ? "Task Context" : "Channel Context"}
         </h2>
@@ -121,7 +121,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
               <Users className="w-4 h-4 text-gray-400" />
               Participants
             </h3>
-            <span className="text-[10px] text-gray-400 font-normal">
+            <span className="text-xs text-gray-400 font-normal">
               {channelTask.members?.length || 0} Users
             </span>
           </div>
@@ -154,22 +154,22 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
         {/* Core Fields Grid - only show for tasks */}
         {taskId && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="p-3 bg-muted/50 rounded-lg">
               <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                 <Tag className="w-3 h-3" /> Priority
               </div>
               <div className="text-sm font-normal text-gray-900">{priority || "Normal"}</div>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="p-3 bg-muted/50 rounded-lg">
               <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> Discipline
               </div>
               {taskType && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <FileText className="w-3 h-3" /> Type
                   </span>
-                  <span className="text-[10px] font-medium text-foreground truncate ml-2">{taskType}</span>
+                  <span className="text-xs font-medium text-foreground truncate ml-2">{taskType}</span>
                 </div>
               )}
             </div>
@@ -179,13 +179,13 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
         {/* Description */}
         <div>
           <h3 className="text-sm font-normal text-gray-900 mb-2">Description</h3>
-          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
+          <p className="text-sm text-gray-600 bg-muted/50 p-3 rounded-lg leading-relaxed">
             {isLoading ? "Loading details..." : description}
           </p>
         </div>
 
         {/* Shared Files — all attachments, media and links shared in this channel */}
-        <div className="border-t border-gray-100 pt-2">
+        <div className="border-t border-border pt-2">
           <ChannelAttachmentsPanel messages={messages} onPreview={setPreviewFile} />
         </div>
 
@@ -204,10 +204,10 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
               {documents.map((doc, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-2 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => setSelectedDocument(doc)}
                 >
-                  <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center shrink-0">
+                  <div className="h-8 w-8 bg-muted rounded flex items-center justify-center shrink-0">
                     <FileText className="h-4 w-4 text-gray-500" />
                   </div>
                   <div className="overflow-hidden">
@@ -242,7 +242,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
         {/* Can be re-enabled if present in taskDetails response */}
       </div>
 
-      <div className="p-4 border-t border-[#DEDEDE] mt-auto">
+      <div className="p-4 border-t border-border mt-auto">
         {taskId && (
           <div className="flex flex-col gap-2.5">
             <Button onClick={handleViewTask} className="w-full bg-[#6366F1] hover:bg-[#5558E3] text-white">

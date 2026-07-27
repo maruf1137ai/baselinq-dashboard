@@ -128,18 +128,18 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
           <h3 className="text-sm text-gray2">Budget Breakdown</h3>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray2">
-          <span className="py-1 px-3 bg-white rounded-full">{progress}% Complete</span>
-          <span className="text-red_dark border border-red_light py-1 px-3 bg-white rounded-full">{daysStatus}</span>
+          <span className="py-1 px-3 bg-card rounded-full">{progress}% Complete</span>
+          <span className="text-red_dark border border-red_light py-1 px-3 bg-card rounded-full">{daysStatus}</span>
           <button
             onClick={() => navigate("/programme")}
-            className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors py-1 px-2 rounded-full bg-white border border-primary/20"
+            className="flex items-center gap-1 text-primary hover:text-primary/80 transition-colors py-1 px-2 rounded-full bg-card border border-primary/20"
             title="View Programme">
             <ExternalLink className="h-3 w-3" />
             <span>Programme</span>
           </button>
         </div>
       </CardHeader>
-      <CardContent className="bg-white p-2 mx-2 rounded-md">
+      <CardContent className="bg-card p-2 mx-2 rounded-md">
         <div className="grid grid-cols-12 gap-8">
           <div className="flex items-center justify-center col-span-5">
             <div className="relative w-56 h-56">

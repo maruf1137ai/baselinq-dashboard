@@ -143,7 +143,7 @@ export function CostLedgerDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-[540px] p-0 flex flex-col bg-white">
+      <SheetContent side="right" className="w-full sm:max-w-[540px] p-0 flex flex-col bg-card">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>{editEntry ? "Edit Cost Ledger Entry" : "New Cost Ledger Entry"}</SheetTitle>
         </SheetHeader>
@@ -158,7 +158,7 @@ export function CostLedgerDrawer({
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal border-gray-200",
+                        "w-full justify-start text-left font-normal border-border",
                         !formData.date && "text-muted-foreground"
                       )}
                     >
@@ -166,7 +166,7 @@ export function CostLedgerDrawer({
                       {formData.date ? format(new Date(formData.date), "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-white" align="start">
+                  <PopoverContent className="w-auto p-0 bg-card" align="start">
                     <Calendar
                       mode="single"
                       selected={formData.date ? new Date(formData.date) : undefined}
@@ -183,10 +183,10 @@ export function CostLedgerDrawer({
                   value={formData.period}
                   onValueChange={(val) => handleChange("period", val)}
                 >
-                  <SelectTrigger id="period" className="border-gray-200">
+                  <SelectTrigger id="period" className="border-border">
                     <SelectValue placeholder="Select month" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-card">
                     {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
@@ -258,10 +258,10 @@ export function CostLedgerDrawer({
                   value={formData.category}
                   onValueChange={(val) => handleChange("category", val)}
                 >
-                  <SelectTrigger id="category" className="border-gray-200">
+                  <SelectTrigger id="category" className="border-border">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-card">
                     {CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
@@ -277,10 +277,10 @@ export function CostLedgerDrawer({
                   value={formData.entry_type}
                   onValueChange={(val) => handleChange("entry_type", val)}
                 >
-                  <SelectTrigger id="entry_type" className="border-gray-200">
+                  <SelectTrigger id="entry_type" className="border-border">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-card">
                     <SelectItem value="debit">Debit</SelectItem>
                     <SelectItem value="credit">Credit</SelectItem>
                   </SelectContent>
@@ -294,10 +294,10 @@ export function CostLedgerDrawer({
                 value={String(formData.linkedVOId)}
                 onValueChange={(val) => handleChange("linkedVOId", val)}
               >
-                <SelectTrigger id="linkedVOId" className="border-gray-200">
+                <SelectTrigger id="linkedVOId" className="border-border">
                   <SelectValue placeholder="Select VO" />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   <SelectItem value="none">None</SelectItem>
                   {approvedVOs.map((vo) => (
                     <SelectItem key={vo.id} value={String(vo.id)}>
@@ -310,7 +310,7 @@ export function CostLedgerDrawer({
             </div>
           </div>
 
-          <div className="p-6 border-t bg-gray-50/50 mt-auto">
+          <div className="p-6 border-t bg-muted/50 mt-auto">
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel

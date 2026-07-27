@@ -18,6 +18,7 @@ import {
 import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Plus, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
+import { EmptyState } from "@/components/ui/empty-state";
 
 export interface PCEntry {
   id: number;
@@ -73,7 +74,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <button className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
             <MoreHorizontal className="w-5 h-5" />
           </button>
         </DropdownMenuTrigger>
@@ -85,7 +86,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
       </DropdownMenu>
 
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
             <DialogDescription>Period: {entry.period}</DialogDescription>
@@ -99,7 +100,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-muted/50">
+              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
                 Close
               </button>
             </DialogClose>
@@ -108,7 +109,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
       </Dialog>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="bg-white">
+        <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Delete Entry</DialogTitle>
             <DialogDescription>
@@ -117,7 +118,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-muted/50">
+              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
                 Cancel
               </button>
             </DialogClose>
@@ -158,7 +159,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
@@ -168,7 +169,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             value={search}
             onChange={handleSearch}
             placeholder="Search by PC #, period, status..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/30 focus:border-[#6c5ce7]"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/30 focus:border-[#6c5ce7]"
           />
         </div>
         {onNew && (
@@ -196,11 +197,25 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-gray-200">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-sm text-gray-400">
-                  {search ? "No results match your search." : "No payment certificates found."}
+                <td colSpan={9}>
+                  {search ? (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No payment certificates match this search"
+                      description="Try a different certificate number or period, or clear the search to see every certificate issued."
+                    />
+                  ) : (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No payment certificates issued yet"
+                      description="Certificates appear here once a payment claim is assessed, showing the amount certified, retention held and net due."
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -212,13 +227,13 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.period}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
                     {formatCurrency(order.claimAmount)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
                     {formatCurrency(order.retentionAmount)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
                     {formatCurrency(order.netAmount)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -248,7 +263,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <p className="text-sm text-gray-500">
           {filtered.length === 0
             ? "No results"
@@ -258,7 +273,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronLeft className="w-4 h-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -276,7 +291,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-gray-100"
+                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-muted"
                   }`}>
                   {p}
                 </button>
@@ -285,7 +300,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

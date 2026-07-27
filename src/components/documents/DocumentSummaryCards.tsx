@@ -53,7 +53,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
                 badge.variant === 'warning' && "bg-orange-50 text-orange-700 border-orange-200",
                 badge.variant === 'destructive' && "bg-red-50 text-red-700 border-red-200",
                 badge.variant === 'success' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                badge.variant === 'default' && "bg-gray-100 text-gray-700 border-gray-200"
+                badge.variant === 'default' && "bg-muted text-gray-700 border-border"
               )}
             >
               {badge.text}
@@ -61,7 +61,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
           )}
         </div>
 
-        <div className="bg-white p-4 rounded-md">
+        <div className="bg-card p-4 rounded-md">
           <div className="flex flex-col">
             <h3 className={cn(
               "text-3xl font-normal",

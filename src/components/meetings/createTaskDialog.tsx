@@ -81,7 +81,7 @@ export function CreateTaskDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[650px] bg-white p-0">
+      <DialogContent className="max-w-[650px] bg-card p-0">
         <DialogHeader className="py-[22px] px-6 border-b border-border">
           <DialogTitle className="text-base text-foreground">
             Create Task from Meeting

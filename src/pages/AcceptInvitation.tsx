@@ -23,7 +23,7 @@ const STEPS_CLIENT = [
 ];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -163,12 +163,12 @@ export default function AcceptInvitation() {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden bg-background">
         <div
           className="hidden lg:flex w-[45%] shrink-0 flex-col h-full"
-          style={{ background: "linear-gradient(145deg, #121212 0%, #1a1535 100%)" }}
+          style={{ background: "linear-gradient(145deg, #1a1c3d 0%, #11132d 100%)" }}
         />
-        <div className="flex-1 flex items-center justify-center bg-white">
+        <div className="flex-1 flex items-center justify-center bg-card">
           <p className="text-sm text-gray-400">Loading invitation...</p>
         </div>
       </div>
@@ -178,19 +178,19 @@ export default function AcceptInvitation() {
   // ── Error state ────────────────────────────────────────────────────────────
   if (isError || !invite) {
     return (
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden bg-background">
         <div
           className="hidden lg:flex w-[45%] shrink-0 flex-col justify-between h-full px-10 py-10"
           style={{ background: "linear-gradient(145deg, #1a1c3d 0%, #11132d 100%)" }}
         >
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+            <span className="text-sm text-white/90 tracking-tight">baselinq</span>
           </div>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#f5f5f7] px-8">
+        <div className="flex-1 flex flex-col items-center justify-center bg-card px-8">
           <div className="w-full max-w-sm text-center">
             <p className="text-[#1A1A1A] text-lg mb-2">Invitation not found</p>
             <p className="text-sm text-gray-500 mb-6">This link may have expired or already been used.</p>
@@ -209,32 +209,32 @@ export default function AcceptInvitation() {
   // ── Existing user: skip signup form, just accept ───────────────────────────
   if (isExistingUser) {
     return (
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden bg-background">
         <div
           className="hidden lg:flex w-[45%] shrink-0 flex-col justify-between h-full px-10 py-10"
           style={{ background: "linear-gradient(145deg, #1a1c3d 0%, #11132d 100%)" }}
         >
           <div>
             <div className="flex items-center gap-3 mb-12">
-              <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0">
+              <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
                 <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
               </div>
-              <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+              <span className="text-sm text-white/90 tracking-tight">baselinq</span>
             </div>
-            <p className="text-[28px] text-white leading-tight font-normal mb-2">
+            <p className="text-3xl text-white leading-tight font-normal mb-2">
               You've been invited.
             </p>
-            <p className="text-[14px] text-white/50 mb-8">
+            <p className="text-sm text-white/50 mb-8">
               Your existing account will be used.
             </p>
             <div className="inline-flex items-center gap-2 bg-white/8 border border-white/10 rounded-full px-4 py-2">
               <div className="w-2 h-2 rounded-full bg-[#6c5ce7]" />
-              <span className="text-[13px] text-white/70">
+              <span className="text-xs text-white/70">
                 Invited by <span className="text-white/90">{invite.invited_by}</span>
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-white/25 leading-relaxed">
+          <p className="text-xs text-white/25 leading-relaxed">
             By accepting you agree to our{" "}
             <span className="underline cursor-pointer hover:text-white/50 transition-colors">Terms of Service</span>
             {" "}and{" "}
@@ -242,7 +242,7 @@ export default function AcceptInvitation() {
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center bg-white px-8">
+        <div className="flex-1 flex flex-col items-center justify-center bg-card px-8">
           <div className="w-full max-w-sm">
             <div className="mb-8">
               <h2 className="text-2xl text-[#1A1A1A] font-normal mb-2">Welcome back</h2>
@@ -253,7 +253,7 @@ export default function AcceptInvitation() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#ededed] bg-[#f9f9fb] px-5 py-4 mb-6 space-y-1.5">
+            <div className="rounded-xl bg-muted/50 px-5 py-4 mb-6 space-y-1.5">
               <p className="text-xs text-gray-400 uppercase tracking-wide">Joining as</p>
               <p className="text-sm font-medium text-[#1A1A1A]">
                 {invite.position
@@ -289,7 +289,7 @@ export default function AcceptInvitation() {
 
   // ── Main layout ────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
 
       {/* ══════════════════════════════ LEFT PANEL (45%) ══════════════════════ */}
       <div
@@ -299,23 +299,23 @@ export default function AcceptInvitation() {
         {/* Top: Logo + Heading */}
         <div>
           <div className="flex items-center gap-3 mb-12">
-            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+            <span className="text-sm text-white/90 tracking-tight">baselinq</span>
           </div>
 
-          <p className="text-[28px] text-white leading-tight font-normal mb-2">
+          <p className="text-3xl text-white leading-tight font-normal mb-2">
             You've been invited.
           </p>
-          <p className="text-[14px] text-white/50 mb-8">
+          <p className="text-sm text-white/50 mb-8">
             Complete your profile to join the team.
           </p>
 
           {/* Invite context pill */}
           <div className="inline-flex items-center gap-2 bg-white/8 border border-white/10 rounded-full px-4 py-2 mb-10">
             <div className="w-2 h-2 rounded-full bg-[#6c5ce7]" />
-            <span className="text-[13px] text-white/70">
+            <span className="text-xs text-white/70">
               Joining as <span className="text-white/90">{positionLabel}</span>
             </span>
           </div>
@@ -329,7 +329,7 @@ export default function AcceptInvitation() {
                 <React.Fragment key={s.id}>
                   <div className="flex items-start gap-3.5 px-3 py-3 rounded-xl">
                     <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-[13px] shrink-0 mt-0.5 transition-colors",
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5 transition-colors",
                       done ? "bg-[#6c5ce7] text-white" :
                         active ? "bg-white/15 text-white border border-white/25" :
                           "bg-white/5 text-white/30 border border-white/10"
@@ -338,13 +338,13 @@ export default function AcceptInvitation() {
                     </div>
                     <div className="min-w-0">
                       <p className={cn(
-                        "text-[13px] leading-tight",
+                        "text-xs leading-tight",
                         done || active ? "text-white/90" : "text-white/30"
                       )}>
                         {s.label}
                       </p>
                       <p className={cn(
-                        "text-[11px] mt-0.5",
+                        "text-xs mt-0.5",
                         done || active ? "text-white/50" : "text-white/20"
                       )}>
                         {s.description}
@@ -368,7 +368,7 @@ export default function AcceptInvitation() {
         </div>
 
         {/* Bottom: Terms */}
-        <p className="text-[11px] text-white/25 leading-relaxed">
+        <p className="text-xs text-white/25 leading-relaxed">
           By accepting you agree to our{" "}
           <span className="underline cursor-pointer hover:text-white/50 transition-colors">Terms of Service</span>
           {" "}and{" "}
@@ -377,10 +377,10 @@ export default function AcceptInvitation() {
       </div>
 
       {/* ══════════════════════════════ RIGHT PANEL (55%) ═════════════════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+      <div className="flex-1 flex flex-col overflow-hidden bg-card">
 
         {/* Mobile progress bar */}
-        <div className="lg:hidden border-b border-[#ededed] px-5 py-3">
+        <div className="lg:hidden border-b border-border px-5 py-3">
           <div className="flex gap-1.5 mb-2">
             {steps.map((s) => (
               <div
@@ -390,7 +390,7 @@ export default function AcceptInvitation() {
               />
             ))}
           </div>
-          <p className="text-[13px] text-[#374151]">
+          <p className="text-xs text-[#374151]">
             Step {step} of {totalSteps}: {steps[step - 1]?.label}
           </p>
         </div>
@@ -516,7 +516,7 @@ export default function AcceptInvitation() {
 
                 <div className="flex gap-3 mt-6">
                   <button type="button" onClick={() => setStep(1)}
-                    className="py-3 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+                    className="py-3 px-5 rounded-xl border border-border text-sm text-gray-500 hover:bg-muted/50 transition-all">
                     Back
                   </button>
                   <button type="button" onClick={() => setStep(3)}
@@ -561,7 +561,7 @@ export default function AcceptInvitation() {
 
                 <div className="flex gap-3 mt-6">
                   <button type="button" onClick={() => setStep(isClient ? 2 : 1)}
-                    className="py-3 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+                    className="py-3 px-5 rounded-xl border border-border text-sm text-gray-500 hover:bg-muted/50 transition-all">
                     Back
                   </button>
                   <button

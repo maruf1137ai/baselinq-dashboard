@@ -40,7 +40,7 @@ This matter requires your immediate attention as it blocks payment.
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-white   p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] bg-card   p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-lg text-foreground font-normal">Generate Notice</DialogTitle>
         </DialogHeader>
@@ -70,7 +70,7 @@ This matter requires your immediate attention as it blocks payment.
               value={newRecipient}
               onChange={(e) => setNewRecipient(e.target.value)}
               onKeyDown={handleAddRecipient}
-              className="bg-white"
+              className="bg-card"
             />
           </div>
 
@@ -85,7 +85,7 @@ This matter requires your immediate attention as it blocks payment.
         </div>
 
         <DialogFooter className="px-6 py-4 border-t  flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} className="bg-white">
+          <Button variant="outline" onClick={onClose} className="bg-card">
             Cancel
           </Button>
           <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">

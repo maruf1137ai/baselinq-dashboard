@@ -206,7 +206,7 @@ export function DashboardSidebar() {
           <div className="h-16 shrink-0 flex items-center px-3 border-b border-border">
             {location.pathname.startsWith("/account") ? (
               <div
-                className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 cursor-pointer hover:bg-white transition-colors group"
+                className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 cursor-pointer hover:bg-card transition-colors group"
                 onClick={() => navigate("/account")}
               >
                 <div className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
@@ -221,7 +221,7 @@ export function DashboardSidebar() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 hover:bg-white transition-colors cursor-pointer outline-none">
+                  <div className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 hover:bg-card transition-colors cursor-pointer outline-none">
                     <div
                       className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 hover:scale-105 transition-transform"
                       onClick={(e) => { e.stopPropagation(); navigate("/"); }}
@@ -291,7 +291,7 @@ export function DashboardSidebar() {
                             asChild
                             isActive={isActive}
                             className={isActive
-                              ? "!bg-white px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                               : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                             <NavLink to={item.url} className="flex items-center gap-3">
                               {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
@@ -328,13 +328,13 @@ export function DashboardSidebar() {
                               asChild
                               isActive={isActive}
                               className={isActive
-                              ? "!bg-white px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                               : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
                                 <span className="relative shrink-0">
                                   {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
                                   {!open && badge > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium leading-none">
+                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium leading-none">
                                       {badge > 99 ? "99+" : badge}
                                     </span>
                                   )}
@@ -368,7 +368,7 @@ export function DashboardSidebar() {
                               asChild
                               isActive={isActive}
                               className={isActive
-                              ? "!bg-white px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                               : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
                                 {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
@@ -411,7 +411,7 @@ export function DashboardSidebar() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-gray-100 outline-none">
+                    <button className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted outline-none">
                       <svg
                         className="h-4 w-4"
                         fill="none"

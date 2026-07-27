@@ -36,4 +36,4 @@ export const SETTINGS_INPUT_CLS =
  * Standard form label — small, muted, tracking-wider.
  */
 export const LABEL_CLS =
-  "text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5";
+  "text-xs font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5";

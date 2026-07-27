@@ -73,8 +73,8 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-white flex flex-col max-h-[90vh]">
-          <DialogHeader className="px-8 py-6 border-b bg-gray-50/50">
+        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-card flex flex-col max-h-[90vh]">
+          <DialogHeader className="px-8 py-6 border-b bg-muted/50">
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-xl font-normal text-foreground">Manage Links, {document.reference}</DialogTitle>
               <p className="text-sm text-gray-500 font-normal">{document.name}</p>
@@ -102,16 +102,16 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
                     <div
                       key={link.id}
                       className={cn(
-                        "group flex items-center justify-between p-4 rounded-2xl border transition-all",
+                        "group flex items-center justify-between p-4 rounded-xl border transition-all",
                         isRemoved
                           ? "bg-red-50/30 border-red-100 opacity-80"
-                          : "bg-white border-gray-100 hover:border-gray-200"
+                          : "bg-card border-border hover:border-border"
                       )}
                     >
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           "h-10 w-10 rounded-xl flex items-center justify-center border transition-colors",
-                          isRemoved ? "bg-red-100/50 border-red-100" : "bg-gray-50 border-gray-100"
+                          isRemoved ? "bg-red-100/50 border-red-100" : "bg-muted/50 border-border"
                         )}>
                           <Link2 className={cn("h-5 w-5", isRemoved ? "text-red-400" : "text-gray-400")} />
                         </div>
@@ -158,7 +158,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
               </div>
 
               {markedForRemoval.length > 0 && (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3">
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 flex gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800 font-normal leading-relaxed">
                     You have marked {markedForRemoval.length} item(s) to be unlinked. These changes will be applied once you save.
@@ -168,8 +168,8 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="px-8 py-6 border-t bg-gray-50/50 flex gap-3 sm:justify-between items-center">
-            <Button variant="outline" onClick={onClose} className="font-normal h-11 border-gray-200 px-6 bg-white">
+          <DialogFooter className="px-8 py-6 border-t bg-muted/50 flex gap-3 sm:justify-between items-center">
+            <Button variant="outline" onClick={onClose} className="font-normal h-11 border-border px-6 bg-card">
               Close
             </Button>
             <Button

@@ -173,7 +173,7 @@ const Communications = () => {
           <h1 className="text-2xl font-normal tracking-tight text-foreground">Communications</h1>
         </div>
         <div className="flex flex-1 overflow-hidden">
-          <div className="border-r border-border bg-white flex-shrink-0">
+          <div className="border-r border-border bg-card flex-shrink-0">
             <ChatSidebar
               tasks={channels}
               isLoading={isLoading}
@@ -197,23 +197,23 @@ const Communications = () => {
       </div>
       {showNewChannel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-[#f0edff] flex items-center justify-center">
                   <Hash className="w-4 h-4 text-[#6c5ce7]" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-normal text-[#1a1a2e]">New Channel</h3>
-                  <p className="text-[12px] text-[#9ca3af]">Create a new communication channel</p>
+                  <h3 className="text-sm font-normal text-[#1a1a2e]">New Channel</h3>
+                  <p className="text-xs text-[#9ca3af]">Create a new communication channel</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => { setShowNewChannel(false); resetModal(); }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -224,7 +224,7 @@ const Communications = () => {
 
                 {/* Channel Name */}
                 <div className="space-y-1.5">
-                  <label className="block text-[12px] font-normal text-[#6b7280]">Channel Name <span className="text-red-400">*</span></label>
+                  <label className="block text-xs font-normal text-[#6b7280]">Channel Name <span className="text-red-400">*</span></label>
                   <input
                     type="text"
                     required
@@ -232,40 +232,40 @@ const Communications = () => {
                     value={newChannelName}
                     onChange={(e) => setNewChannelName(e.target.value)}
                     placeholder="e.g. Site Updates"
-                    className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                    className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
                   />
                 </div>
 
                 {/* Description */}
                 <div className="space-y-1.5">
-                  <label className="block text-[12px] font-normal text-[#6b7280]">Description <span className="text-[#9ca3af]">(optional)</span></label>
+                  <label className="block text-xs font-normal text-[#6b7280]">Description <span className="text-[#9ca3af]">(optional)</span></label>
                   <textarea
                     value={newChannelDesc}
                     onChange={(e) => setNewChannelDesc(e.target.value)}
                     placeholder="What is this channel about?"
                     rows={3}
-                    className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all resize-none"
+                    className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all resize-none"
                   />
                 </div>
 
                 {/* Members */}
                 <div className="space-y-1.5">
-                  <label className="block text-[12px] font-normal text-[#6b7280]">Users</label>
+                  <label className="block text-xs font-normal text-[#6b7280]">Users</label>
 
                   <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
-                        <span className="text-[13px] text-[#9ca3af]">Add users…</span>
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
+                        <span className="text-xs text-[#9ca3af]">Add users…</span>
                         <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
                       <Command>
-                        <CommandInput placeholder="Search users…" className="text-[13px]" />
+                        <CommandInput placeholder="Search users…" className="text-xs" />
                         <CommandList>
-                          <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found</CommandEmpty>
+                          <CommandEmpty className="text-xs text-[#9ca3af] py-4 text-center">No users match this search</CommandEmpty>
                           <CommandGroup>
                             {availableMembers.map((m: any) => {
                               const uid = parseInt(m.user_id || m.user?.id);
@@ -281,12 +281,12 @@ const Communications = () => {
                                   }}
                                   className="cursor-pointer px-3 py-2.5">
                                   <div className="flex items-center gap-2.5 w-full">
-                                    <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                                       {(name).charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                      <p className="text-[13px] text-[#374151]">{name}</p>
-                                      <p className="text-[11px] text-[#9ca3af]">{email}</p>
+                                      <p className="text-xs text-[#374151]">{name}</p>
+                                      <p className="text-xs text-[#9ca3af]">{email}</p>
                                     </div>
                                   </div>
                                 </CommandItem>
@@ -303,12 +303,12 @@ const Communications = () => {
                     <div className="flex flex-wrap gap-2 pt-1">
                       {/* Creator — locked */}
                       {currentUser.id && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0edff] border border-[#d6d3ff] text-[12px] text-[#6c5ce7]">
-                          <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[9px] shrink-0">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0edff] border border-[#d6d3ff] text-xs text-[#6c5ce7]">
+                          <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                             {(currentUser.name || currentUser.email || "Y").charAt(0).toUpperCase()}
                           </div>
                           <span>{currentUser.name || currentUser.email || "You"}</span>
-                          <span className="text-[10px] opacity-60">(you)</span>
+                          <span className="text-xs opacity-60">(you)</span>
                         </div>
                       )}
                       {/* Selected members */}
@@ -316,8 +316,8 @@ const Communications = () => {
                         const uid = parseInt(m.user_id || m.user?.id);
                         const name: string = m.user?.name || m.name || m.user?.email || "Unknown";
                         return (
-                          <div key={uid} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f9fafb] border border-[#e2e5ea] text-[12px] text-[#374151]">
-                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[9px] shrink-0">
+                          <div key={uid} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border text-xs text-[#374151]">
+                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                               {name.charAt(0).toUpperCase()}
                             </div>
                             <span>{name}</span>
@@ -336,18 +336,18 @@ const Communications = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={() => { setShowNewChannel(false); resetModal(); }}
                   disabled={isCreating}
-                  className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  className="px-4 py-2 rounded-lg text-xs text-[#6b7280] hover:text-[#374151] hover:bg-muted transition-all">
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating || !newChannelName.trim()}
-                  className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
                   {isCreating ? (
                     <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…</>

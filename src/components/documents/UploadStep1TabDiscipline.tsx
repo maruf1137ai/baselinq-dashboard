@@ -87,7 +87,7 @@ export function UploadStep1TabDiscipline({
                   "px-4 py-3 rounded-lg border transition-colors text-center",
                   isActive
                     ? "bg-primary/5 border-primary/40"
-                    : "bg-white border-border hover:border-primary/30"
+                    : "bg-card border-border hover:border-primary/30"
                 )}
               >
                 <p className={cn(
@@ -135,7 +135,7 @@ export function UploadStep1TabDiscipline({
 
       {/* Contracts Info Note — neutral, no amber */}
       {selectedTab === 'contracts' && (
-        <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2">
+        <p className="text-xs text-muted-foreground bg-card border border-border rounded-lg px-3 py-2">
           <span className="text-foreground font-medium">Contracts:</span>{' '}
           you'll select from pre-defined folders in the next step. Discipline will be inferred from your folder selection.
         </p>

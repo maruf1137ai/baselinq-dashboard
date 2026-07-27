@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface OrgMember {
   id: number;
@@ -199,7 +200,7 @@ const OrgTeamTable = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <AwesomeLoader message="Loading organization team..." />
+        <AwesomeLoader message="Loading organization team" />
       </div>
     );
   }
@@ -226,20 +227,20 @@ const OrgTeamTable = () => {
       </div>
 
       {/* ── Members Table ── */}
-      <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-border">
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">User</th>
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Role</th>
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Status</th>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">User</th>
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">Role</th>
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">Status</th>
                 {isOrgOwner && <th className="px-6 py-4 text-right"></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {/* Current User Row */}
-              <tr className="hover:bg-slate-50/30 transition-colors">
+              <tr className="hover:bg-muted/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-normal">
@@ -247,17 +248,17 @@ const OrgTeamTable = () => {
                     </div>
                     <div>
                       <p className="text-sm font-normal text-foreground leading-none">{user?.name || "You"}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{user?.email}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-xs text-muted-foreground border border-border">
                     {user?.role?.name || (user?.account_type === 'organisation' ? 'Organization Owner' : 'User')}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-green-600">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                     Active (You)
                   </span>
@@ -267,25 +268,25 @@ const OrgTeamTable = () => {
 
               {/* Other Members */}
               {data?.members.map((member) => (
-                <tr key={member.id} className="hover:bg-slate-50/30 transition-colors">
+                <tr key={member.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-normal">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-slate-500 text-xs font-normal">
                         {(member.name || member.email)[0].toUpperCase()}
                       </div>
                       <div>
                         <p className="text-sm font-normal text-foreground leading-none">{member.name || member.email.split('@')[0]}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">{member.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{member.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-xs text-muted-foreground border border-border">
                       {member.role || "User"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-green-600">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                       Active
                     </span>
@@ -327,25 +328,25 @@ const OrgTeamTable = () => {
 
               {/* Pending Invitations */}
               {data?.pending_invitations.map((invite) => (
-                <tr key={invite.id} className="bg-slate-50/20 hover:bg-slate-50/40 transition-colors italic">
+                <tr key={invite.id} className="bg-muted/50 hover:bg-muted/50 transition-colors italic">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 opacity-70">
-                      <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 border-dashed flex items-center justify-center text-slate-400">
+                      <div className="w-8 h-8 rounded-full bg-muted/50 border border-border border-dashed flex items-center justify-center text-slate-400">
                         <Mail className="w-3.5 h-3.5" />
                       </div>
                       <div>
                         <p className="text-sm font-normal text-foreground leading-none">{invite.name || "Invited Peer"}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">{invite.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{invite.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 opacity-70">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-50 text-[11px] text-muted-foreground border border-border border-dashed">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/50 text-xs text-muted-foreground border border-border border-dashed">
                       {roles.find(r => r.code === invite.position)?.name || invite.position}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
                       <Clock className="w-3 h-3" />
                       Pending
                     </span>
@@ -359,7 +360,7 @@ const OrgTeamTable = () => {
                           setSelectedInvite(invite);
                           setShowCancelInviteDialog(true);
                         }}
-                        className="text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                        className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                       >
                         Cancel
                       </Button>
@@ -370,8 +371,13 @@ const OrgTeamTable = () => {
 
               {(!data?.members.length && !data?.pending_invitations.length) && (
                 <tr>
-                  <td colSpan={isOrgOwner ? 4 : 3} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                    No other users in this organization yet.
+                  <td colSpan={isOrgOwner ? 4 : 3}>
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="You're the only person in this organisation"
+                      description="Invite the quantity surveyors, contract administrators and project managers who need to act on this contract."
+                    />
                   </td>
                 </tr>
               )}
@@ -384,7 +390,7 @@ const OrgTeamTable = () => {
 
       {/* Invite Member Modal */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="max-w-md bg-card">
           <DialogHeader>
             <DialogTitle className="text-lg font-normal">Invite User</DialogTitle>
             <DialogDescription className="text-xs">
@@ -393,7 +399,7 @@ const OrgTeamTable = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-1.5">
-              <Label htmlFor="invite-name" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Contact Name</Label>
+              <Label htmlFor="invite-name" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Contact Name</Label>
               <Input
                 id="invite-name"
                 placeholder="Full name (optional)"
@@ -403,7 +409,7 @@ const OrgTeamTable = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-email" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Email Address *</Label>
+              <Label htmlFor="invite-email" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Email Address *</Label>
               <Input
                 id="invite-email"
                 type="email"
@@ -414,7 +420,7 @@ const OrgTeamTable = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-role" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Assigned Role *</Label>
+              <Label htmlFor="invite-role" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Assigned Role *</Label>
               <Select
                 value={inviteForm.position}
                 onValueChange={(val) => setInviteForm({ ...inviteForm, position: val })}
@@ -422,7 +428,7 @@ const OrgTeamTable = () => {
                 <SelectTrigger className="h-10 rounded-lg text-sm border-border">
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   {roles.map((role) => (
                     <SelectItem key={role.code} value={role.code}>
                       {role.name}
@@ -447,7 +453,7 @@ const OrgTeamTable = () => {
 
       {/* Edit Role Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="max-w-md bg-card">
           <DialogHeader>
             <DialogTitle className="text-lg font-normal">Change User Role</DialogTitle>
             <DialogDescription className="text-xs">
@@ -456,7 +462,7 @@ const OrgTeamTable = () => {
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Select New Role</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Select New Role</Label>
               <Select
                 value={editForm.role_code}
                 onValueChange={(val) => setEditForm({ ...editForm, role_code: val })}
@@ -464,7 +470,7 @@ const OrgTeamTable = () => {
                 <SelectTrigger className="h-10 rounded-lg text-sm border-border">
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   {roles.map((role) => (
                     <SelectItem key={role.code} value={role.code}>
                       {role.name}
@@ -489,7 +495,7 @@ const OrgTeamTable = () => {
 
       {/* Remove Member Alert */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-normal">Remove User</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
@@ -511,7 +517,7 @@ const OrgTeamTable = () => {
 
       {/* Cancel Invite Alert */}
       <AlertDialog open={showCancelInviteDialog} onOpenChange={setShowCancelInviteDialog}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-normal">Cancel Invitation</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">

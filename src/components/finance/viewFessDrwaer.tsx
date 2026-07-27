@@ -28,8 +28,8 @@ const SummaryRow: React.FC<{
   valueColor?: string;
 }> = ({ label, value, valueColor = "text-foreground" }) => (
   <div className="flex justify-between items-center py-2">
-    <span className="text-base text-muted-foreground">{label}</span>
-    <span className={`text-base ${valueColor}`}>{value}</span>
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <span className={`text-sm ${valueColor}`}>{value}</span>
   </div>
 );
 
@@ -59,7 +59,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -68,7 +68,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
         <div className="flex flex-col h-full">
           {/* Header */}
           <header className="flex justify-between items-center p-6 pb-0">
-            <h2 id="fees-summary-title" className="text-base text-foreground">
+            <h2 id="fees-summary-title" className="text-sm font-medium text-foreground">
               {project}
             </h2>
             <button
@@ -96,7 +96,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
               /> */}
               <section>
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm text-muted-foreground">Progress</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">Progress</h3>
                   <span className="text-sm font-medium text-gray-900">
                     {progress}%
                   </span>
@@ -108,22 +108,22 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
                       width: `${progress}%`,
                     }}></div>
                 </div>
-                {/* <p className="text-sm text-muted-foreground mt-2">
+                {/* <p className="text-sm text-muted-foreground mt-2 tabular-nums">
                 {formatCurrency(contingencyRemaining)} remaining of{" "}
                 {formatCurrency(contingencyTotal)}
               </p> */}
               </section>
               {/* {view_billing_ledger && (
-                <button className="mt-3 px-4 py-2 w-full border border-gray-300 rounded-lg text-sm text-foreground bg-[rgba(87,87,87,0.02)] hover:bg-gray-50 transition-all shadow-[0_0_0_1px_#CBD5E1]">
+                <button className="mt-3 px-4 py-2 w-full border border-border rounded-lg text-sm text-foreground bg-[rgba(87,87,87,0.02)] hover:bg-muted/50 transition-all shadow-[0_0_0_1px_#CBD5E1]">
                   View Billing Ledger
                 </button>
               )} */}
-              <div className="border-t border-gray-200 my-4"></div>
+              <div className="border-t border-border my-4"></div>
             </section>
 
             {/* Financial Summary Section */}
             <section>
-              <h3 className="text-base text-foreground mb-3">
+              <h3 className="text-sm font-medium text-foreground mb-3">
                 Financial Summary
               </h3>
               <div className="space-y-2">
@@ -137,7 +137,7 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
                   value={financial_summary.committed}
                 />
                 <SummaryRow label="Spent" value={financial_summary.spent} />
-                <div className="border-t border-gray-200 my-3"></div>
+                <div className="border-t border-border my-3"></div>
                 <SummaryRow
                   label="Total"
                   value={financial_summary.total}

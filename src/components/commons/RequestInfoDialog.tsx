@@ -183,7 +183,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[420px] bg-white p-0">
+      <DialogContent className="max-w-[420px] bg-card p-0">
         <DialogHeader className="py-[22px] px-6 border-b border-border">
           <DialogTitle className="text-lg text-foreground">Request Information</DialogTitle>
         </DialogHeader>
@@ -209,7 +209,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                           <Badge
                             key={member._id}
                             variant="secondary"
-                            className="mr-1 mb-1 bg-muted text-foreground hover:bg-[#E5E7EB]"
+                            className="mr-1 mb-1 bg-muted text-foreground hover:bg-muted"
                           >
                             {member.user?.name || member.name}
                             <button
@@ -240,11 +240,11 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandEmpty>No users match this search</CommandEmpty>
                       <CommandGroup>
                         {availableUsers.map((member: any) => {
                           const memberName = member.user?.name || member.name || member.user?.email || "";
@@ -272,7 +272,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                                   "h-5 w-5 rounded-full border-2 flex items-center justify-center",
                                   isSelected
                                     ? "border-[#6c5ce7] bg-[#6c5ce7]"
-                                    : "border-gray-300 bg-white"
+                                    : "border-border bg-card"
                                 )}>
                                   {isSelected && (
                                     <Check className="h-3 w-3 text-white" />

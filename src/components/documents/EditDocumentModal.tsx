@@ -182,7 +182,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden bg-white border border-border shadow-xl rounded-xl">
+      <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden bg-card border border-border shadow-xl rounded-xl">
         <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
@@ -268,7 +268,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
                 "h-10 border-border rounded-lg",
                 needsFolderReselection && "border-red-300 ring-1 ring-red-200"
               )}>
-                <SelectValue placeholder={folders.length === 0 ? 'No folders available' : 'Select a folder'} />
+                <SelectValue placeholder={folders.length === 0 ? 'No folders on this project yet' : 'Select a folder'} />
               </SelectTrigger>
               <SelectContent>
                 {folders.map((f) => (

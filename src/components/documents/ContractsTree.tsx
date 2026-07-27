@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /** Spring-load delay before an drag-hovered folder auto-expands (ms). */
 const SPRING_FOLDER_DELAY = 500;
@@ -94,7 +95,7 @@ function ContractDocumentRow({
         {...listeners}
         {...attributes}
         className={cn(
-          "flex items-center gap-3 py-2 pr-4 bg-white cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
+          "flex items-center gap-3 py-2 pr-4 bg-card cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
           idx > 0 && "border-t border-border/40",
           isDragging && "opacity-40",
         )}
@@ -118,7 +119,7 @@ function ContractDocumentRow({
           </span>
         </p>
         {doc.reference && (
-          <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
+          <span className="font-mono text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
             {doc.reference}
           </span>
         )}
@@ -166,7 +167,7 @@ function ContractsUnfiledRow({
         <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
         <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
-          <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+          <span className="font-mono text-xs text-muted-foreground shrink-0">
             {doc.reference}
           </span>
         )}
@@ -468,23 +469,16 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
   if (folders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <div className="text-center max-w-md">
-          <p className="text-sm font-medium text-foreground mb-2">
-            No contract folders available
-          </p>
-          <p className="text-xs text-muted-foreground">
-            You may not have permission to view contract folders, or they
-            haven't been created yet. Please contact your project
-            administrator if you believe you should have access.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={FolderIcon}
+        title="No contract folders yet"
+        description="Contract documents are filed here by folder. If you expect to see folders, your project administrator may not have granted you access to them."
+      />
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div>
         {folders.map((folder) => (
           <FolderNode
@@ -507,13 +501,13 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
       {/* Unfiled documents */}
       {(documents ?? []).some((d) => !d.folderId) && (
-        <div className="border-t-2 border-border bg-muted/10">
+        <div className="border-t border-border bg-muted/50">
           <div className="px-4 py-2.5 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-foreground">
                 Unfiled ({(documents ?? []).filter((d) => !d.folderId).length})
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Uploaded before folder structure was set up. Drag into a folder or re-upload to file it.
               </p>
             </div>

@@ -126,7 +126,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
       <div className="p-3">
         <div className="flex items-center justify-between gap-2">
           <button
-            className="w-full rounded-lg flex items-center justify-center h-10 bg-white border border-border text-foreground text-sm font-medium gap-2 hover:bg-muted"
+            className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-medium gap-2 hover:bg-muted"
             onClick={() => {
               // "+ New Chat" starts a fresh general project chat. The project
               // route (no sessionId) triggers backend init, which assigns a
@@ -147,7 +147,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
           <input
             type="text"
             placeholder="Search chats..."
-            className="w-full pl-9 h-10 bg-white border border-border rounded-lg text-sm placeholder:text-muted-foreground outline-none focus:border-border"
+            className="w-full pl-9 h-10 bg-card border border-border rounded-lg text-sm placeholder:text-muted-foreground outline-none focus:border-border"
           />
         </div>
       </div>
