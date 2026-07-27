@@ -21,6 +21,7 @@ import {
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarClock, Plus, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -91,30 +92,29 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-sm text-muted-foreground max-w-2xl">
+      {/* The explanation sits on a surface of its own rather than floating on
+          the page background — it is a standing caveat, not a caption. */}
+      <div className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
+        <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
           Contractual notice deadlines. Under JBCC, NEC and FIDIC certain notices are
           conditions precedent — served late, the claim can be lost regardless of merit.
           Baselinq tracks the dates; it does not serve notices or determine entitlement.
         </p>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Track deadline
+        <Button size="sm" className="shrink-0" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-1.5" /> Track deadline
         </Button>
       </div>
 
       {bars.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-14 gap-2 rounded-lg border border-dashed border-border">
-          <CalendarClock className="h-7 w-7 text-muted-foreground" />
-          <p className="text-sm text-foreground">No deadlines tracked</p>
-          <p className="text-xs text-muted-foreground max-w-sm text-center">
-            Add one when an event occurs that may lead to a claim — the clock runs
-            from the date the responsible party became aware.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarClock}
+          title="No deadlines tracked"
+          description="Add one when an event occurs that may lead to a claim — the clock runs from the date the responsible party became aware."
+        />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {bars.map(bar => (
-            <div key={bar.id} className="border border-border rounded-lg p-4">
+            <div key={bar.id} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

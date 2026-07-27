@@ -29,6 +29,8 @@ import { cn } from "@/lib/utils";
 import {
   buildFigures, getCaveat, getCalculation, getMilestoneBreakdown,
 } from "@/lib/riskFormat";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import TimeBarsTab from "@/components/risk/TimeBarsTab";
 import EvidenceTab from "@/components/risk/EvidenceTab";
 import InsurerTab from "@/components/risk/InsurerTab";
@@ -121,13 +123,13 @@ function SignalRow({
   return (
     <div
       className={cn(
-        "border border-border rounded-lg p-4 transition-colors",
+        "bg-card border border-border rounded-xl p-4 transition-colors",
         isAcknowledged && "opacity-60"
       )}
     >
       <div className="flex items-start gap-3">
         <div className={cn("mt-0.5 p-1.5 rounded-md border", SEVERITY_STYLES[signal.severity])}>
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-4 w-4" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -178,8 +180,10 @@ function SignalRow({
             )}
           </div>
 
+          {/* The detail panel is a recessed well, not a second bordered card:
+              a bordered box inside a bordered card double-lines the edge. */}
           {expanded && (
-            <div className="mt-3 rounded-lg bg-muted/30 border border-border overflow-hidden">
+            <div className="mt-3 rounded-xl bg-muted/50 overflow-hidden">
               {/* Figures — the numbers behind the finding, formatted for a
                   construction professional rather than dumped as raw keys. */}
               {figures.length > 0 && (
@@ -226,7 +230,7 @@ function SignalRow({
                   distinction must survive all the way to the screen. */}
               {caveat && (
                 <div className="flex gap-2.5 px-4 py-3 bg-amber-50/60 border-t border-amber-100">
-                  <Info className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+                  <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-medium text-amber-900">
                       {signal.is_contractual
@@ -238,7 +242,7 @@ function SignalRow({
                 </div>
               )}
 
-              <div className="px-4 py-2 border-t border-border bg-background/40">
+              <div className="px-4 py-2 border-t border-border">
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
                   Rule {signal.code}
                 </p>
@@ -315,8 +319,13 @@ export default function ProjectHealth() {
   if (!projectId) {
     return (
       <DashboardLayout>
-        <div className="text-sm text-muted-foreground">
-          Select a project to view its risk posture.
+        <div className="space-y-6">
+          <PageHeader title="Project Health" />
+          <EmptyState
+            icon={ShieldAlert}
+            title="No project selected"
+            description="Select a project to view its risk posture."
+          />
         </div>
       </DashboardLayout>
     );
@@ -330,20 +339,18 @@ export default function ProjectHealth() {
           right that no other screen has. */}
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-medium text-foreground">Project Health</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Live risk signals across programme, financial and contractual data.
-            </p>
-          </div>
-          {tab === "Risk signals" && (
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-              <RefreshCw className={cn("h-3.5 w-3.5 mr-2", refreshing && "animate-spin")} />
-              Refresh
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title="Project Health"
+          description="Live risk signals across programme, financial and contractual data."
+          actions={
+            tab === "Risk signals" ? (
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+                Refresh
+              </Button>
+            ) : undefined
+          }
+        />
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-border">
@@ -375,7 +382,7 @@ export default function ProjectHealth() {
         ) : (
           <>
             {/* Hero: one posture, one sentence */}
-            <div className="p-4 border border-border rounded-lg">
+            <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-start gap-4">
                 <div className={cn("p-2.5 rounded-lg border", SEVERITY_STYLES[state.tone])}>
                   <StateIcon className="h-5 w-5" />
@@ -413,34 +420,35 @@ export default function ProjectHealth() {
 
             {/* Signal feed */}
             {live.length > 0 && (
-              <div className="space-y-2">
-                <h2 className="text-sm font-medium text-foreground mb-3">Needs attention</h2>
-                {live.map(s => (
-                  <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
-                ))}
-              </div>
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium text-foreground">Needs attention</h2>
+                <div className="space-y-3">
+                  {live.map(s => (
+                    <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
+                  ))}
+                </div>
+              </section>
             )}
 
             {acknowledged.length > 0 && (
-              <div className="space-y-2">
-                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium text-muted-foreground">
                   Acknowledged ({acknowledged.length})
                 </h2>
-                {acknowledged.map(s => (
-                  <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
-                ))}
-              </div>
+                <div className="space-y-3">
+                  {acknowledged.map(s => (
+                    <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
+                  ))}
+                </div>
+              </section>
             )}
 
             {counts.total === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-lg border border-dashed border-border">
-                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-                <p className="text-sm text-foreground">No live risk signals</p>
-                <p className="text-xs text-muted-foreground max-w-sm text-center">
-                  Milestones, payment certificates and variation orders are all within
-                  their configured tolerances.
-                </p>
-              </div>
+              <EmptyState
+                icon={CheckCircle2}
+                title="No live risk signals"
+                description="Milestones, payment certificates and variation orders are all within their configured tolerances."
+              />
             )}
           </>
         ))}

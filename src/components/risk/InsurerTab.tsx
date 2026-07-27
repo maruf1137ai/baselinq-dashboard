@@ -20,6 +20,7 @@ import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { KeyRound, ShieldAlert, Plus, Copy } from "lucide-react";
 
 interface Token {
@@ -97,7 +98,7 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-6">
       {/* Consent — the primary control */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Insurer disclosure</p>
@@ -115,7 +116,7 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
 
         {!streamingOn && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-            <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">
               Disclosure is off. Nothing is being shared.
             </span>
@@ -123,24 +124,28 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
         )}
       </div>
 
-      {/* API keys */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
+      {/* API keys — one card, rows divided inside it. Bordering each row
+          inside a bordered card would double-line every edge. */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-border">
           <h3 className="text-sm font-medium text-foreground">Insurer API keys</h3>
           <Button size="sm" variant="outline" onClick={() => setIssueOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> Issue key
+            <Plus className="h-4 w-4 mr-1.5" /> Issue key
           </Button>
         </div>
 
         {tokens.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-2 rounded-lg border border-dashed border-border">
-            <KeyRound className="h-6 w-6 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">No keys issued</p>
-          </div>
+          <EmptyState
+            icon={KeyRound}
+            title="No keys issued"
+            description="Issue a key to give an insurer or broker read access — it discloses nothing until disclosure is switched on above."
+            variant="plain"
+            size="sm"
+          />
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border">
             {tokens.map(t => (
-              <div key={t.id} className="flex items-center justify-between border border-border rounded-lg p-3">
+              <div key={t.id} className="flex items-center justify-between gap-4 px-5 py-3">
                 <div>
                   <p className="text-sm text-foreground">{t.insurer_name}</p>
                   <p className="text-[11px] text-muted-foreground font-mono">
@@ -157,17 +162,25 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
       </div>
 
       {/* Disclosure log — the customer's answer to "what have they seen?" */}
-      <div>
-        <h3 className="text-sm font-medium text-foreground mb-1">Disclosure log</h3>
-        <p className="text-xs text-muted-foreground mb-3">
-          Every release to an insurer, through any channel.
-        </p>
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-medium text-foreground">Disclosure log</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Every release to an insurer, through any channel.
+          </p>
+        </div>
         {disclosures.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4">Nothing has been disclosed.</p>
+          <EmptyState
+            icon={ShieldAlert}
+            title="Nothing has been disclosed"
+            description="Releases to an insurer are recorded here as they happen."
+            variant="plain"
+            size="sm"
+          />
         ) : (
-          <div className="space-y-1.5">
+          <div className="divide-y divide-border">
             {disclosures.slice(0, 10).map(d => (
-              <div key={d.id} className="flex items-center justify-between text-xs border border-border rounded-md px-3 py-2">
+              <div key={d.id} className="flex items-center justify-between gap-4 text-xs px-5 py-2.5">
                 <span className="text-foreground">
                   {d.insurer_name || "Insurer"} · {d.channel}
                 </span>
@@ -198,7 +211,7 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
                   navigator.clipboard.writeText(newKey);
                   toast.success("Copied");
                 }}>
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-4 w-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FileArchive, ShieldCheck, ShieldX, Copy, Plus } from "lucide-react";
 
 interface Pack {
@@ -82,32 +83,29 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-sm text-muted-foreground max-w-2xl">
+      <div className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
+        <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
           A sealed snapshot of the variation orders, payment certificates, milestones,
           risk signals and notice deadlines as they stood at the moment of capture.
           Each item is hashed and the pack carries a SHA-256 manifest, so any later
           alteration is detectable by anyone who checks.
         </p>
-        <Button size="sm" onClick={compile} disabled={compiling}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
+        <Button size="sm" className="shrink-0" onClick={compile} disabled={compiling}>
+          <Plus className="h-4 w-4 mr-1.5" />
           {compiling ? "Compiling…" : "Compile pack"}
         </Button>
       </div>
 
       {packs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-14 gap-2 rounded-lg border border-dashed border-border">
-          <FileArchive className="h-7 w-7 text-muted-foreground" />
-          <p className="text-sm text-foreground">No evidence packs yet</p>
-          <p className="text-xs text-muted-foreground max-w-sm text-center">
-            Compile one when a claim is notified, so the supporting records are
-            captured as they stand today rather than reconstructed later.
-          </p>
-        </div>
+        <EmptyState
+          icon={FileArchive}
+          title="No evidence packs yet"
+          description="Compile one when a claim is notified, so the supporting records are captured as they stand today rather than reconstructed later."
+        />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {packs.map(pack => (
-            <div key={pack.id} className="border border-border rounded-lg p-4">
+            <div key={pack.id} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
