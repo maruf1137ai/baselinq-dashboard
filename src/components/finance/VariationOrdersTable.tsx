@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { MoreIcon } from "../icons/icons";
-import { Search, ChevronLeft, ChevronRight, Plus, Sparkles } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -215,7 +216,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {order.value > 100000 ? (
                       <span className="flex items-center gap-1 text-amber-600">
-                        <Sparkles className="h-4 w-4" />
+                        <AiMark />
                         <span className="text-xs">{order.value > 300000 ? '3 flags' : '1 flag'}</span>
                       </span>
                     ) : (

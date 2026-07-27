@@ -1,4 +1,5 @@
-import { FileText, TrendingUp, Shield, Clock, AlertTriangle, Zap } from "lucide-react";
+import { FileText, TrendingUp, Shield, Clock, AlertTriangle } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { StatusHeader, sectionClass } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
@@ -113,7 +114,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
         <div className={sectionClass(visibleSections, 5)}>
           <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />Potential Implications
+              <AiMark className="text-primary" />Potential Implications
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-red-50 rounded-lg">

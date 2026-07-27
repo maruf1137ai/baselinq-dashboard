@@ -27,7 +27,7 @@ import {
   ThumbsDown,
   RefreshCw,
 } from 'lucide-react';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -197,7 +197,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
         <SheetHeader className="px-6 py-4 border-b border-border bg-muted/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
-              <AiIcon size={20} className="text-primary" />
+              <AiMark size={20} className="text-primary" />
             </div>
             <div>
               <SheetTitle>Ask Regulations</SheetTitle>
@@ -248,7 +248,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-2 mb-4">
                         <div className="h-6 w-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <AiIcon size={14} className="text-primary" />
+                          <AiMark size={14} className="text-primary" />
                         </div>
                         <span className="text-xs text-gray-400 font-normal">Contract AI &bull; {msg.timestamp}</span>
                       </div>

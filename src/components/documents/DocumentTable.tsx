@@ -11,7 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
@@ -190,7 +190,7 @@ function DocumentRow({
       <span className="w-24 shrink-0">
         {doc.aiFlags > 0 ? (
           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-xs font-normal leading-5">
-            <AiIcon size={12} />
+            <AiMark size={12} />
             {doc.aiFlags}
           </span>
         ) : (

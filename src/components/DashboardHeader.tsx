@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, Check, X, LogOut, Trash2 } from "lucide-react";
+import { Bell, BellOff, Check, X, LogOut, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { EmptyState } from "@/components/ui/empty-state";
+import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { CreateDocumentDialog } from "./header/createDocument";
 import CreateRequestButton from "./header/CreateRequestButton";
 import AiButton from "./AiButton";
@@ -185,10 +194,17 @@ export function DashboardHeader() {
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDropdownOpen(true)}
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications, ${unreadCount} unread`
+                    : "Notifications"
+                }
                 className="relative h-10 w-10 flex justify-center items-center bg-card border border-border rounded-lg">
                 <Bell />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -198,60 +214,57 @@ export function DashboardHeader() {
         </div>
       </header>
 
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/20 z-[55]"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {/* Notification side panel.
+          Was a hand-rolled `fixed right-0` div with its own overlay and
+          translate-x transition: no role="dialog", no focus trap, and Escape
+          did nothing, so keyboard users tabbed straight out of an open panel
+          into the page behind it. Radix's Sheet gives all three for free and
+          puts the drawer on the app's shared surface and scrim. */}
+      <Sheet open={open} onOpenChange={handleDropdownOpen}>
+        <SheetContent side="right" size="sm" className="p-0 flex flex-col gap-0">
+          <SheetHeader className="px-6 py-5 pr-14 border-b border-border">
+            <div className="flex items-center justify-between gap-2">
+              <SheetTitle>Notifications</SheetTitle>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-primary h-8 px-2"
+                  onClick={handleMarkAllAsRead}>
+                  Mark all read
+                </Button>
+              )}
+            </div>
+            <SheetDescription className="sr-only">
+              Instructions, variations, certificates and notice deadlines that
+              need your attention.
+            </SheetDescription>
+          </SheetHeader>
 
-      {/* Notification side panel */}
-      <div
-        className={`fixed right-0 top-0 h-full w-[384px] bg-card shadow-xl z-[60] flex flex-col transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-          <h3 className="text-lg">Notifications</h3>
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
+          <ScrollArea className="flex-1">
+            {isLoading ? (
+              <AwesomeLoader compact message="Loading notifications" />
+            ) : notifications.length === 0 ? (
+              <EmptyState
+                variant="plain"
                 size="sm"
-                className="text-xs text-primary h-6 px-2"
-                onClick={handleMarkAllAsRead}>
-                Mark all read
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
-          {isLoading ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Loading...
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
-              No notifications
-            </div>
-          ) : (
-            notifications.map((item) => (
-              <NotificationItem
-                key={item._id}
-                item={item}
-                onNavigate={handleNotificationClick}
-                onDelete={deleteNotification}
+                icon={BellOff}
+                title="You're up to date"
+                description="New instructions, variations, certificates and notice deadlines will appear here as they are raised on your projects."
               />
-            ))
-          )}
-        </ScrollArea>
-      </div>
+            ) : (
+              notifications.map((item) => (
+                <NotificationItem
+                  key={item._id}
+                  item={item}
+                  onNavigate={handleNotificationClick}
+                  onDelete={deleteNotification}
+                />
+              ))
+            )}
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

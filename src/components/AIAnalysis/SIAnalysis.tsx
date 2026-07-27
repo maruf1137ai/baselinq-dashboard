@@ -1,4 +1,5 @@
-import { FileText, Shield, TrendingUp, CheckCircle2, Zap, Clock } from "lucide-react";
+import { FileText, Shield, TrendingUp, CheckCircle2, Clock } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { StatusHeader, sectionClass } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,7 +55,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
         <div className={sectionClass(visibleSections, 3)}>
           <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />Scope & Cost Assessment
+              <AiMark className="text-primary" />Scope & Cost Assessment
             </h4>
             <div className="space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg">

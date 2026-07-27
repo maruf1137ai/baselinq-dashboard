@@ -14,7 +14,7 @@ import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '
 import ReactMarkdown from 'react-markdown';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 
 interface ChatSource {
   clause_number: string;
@@ -365,7 +365,7 @@ const AiWorkSpace = () => {
                       ) : (
                         <div className="flex gap-3">
                           <div className="w-9 h-9 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
-                            <AiIcon size={16} className="text-[#6366f1]" />
+                            <AiMark size={16} className="text-[#6366f1]" />
                           </div>
                           <div className="flex-1">
                             <div className="prose prose-sm max-w-none text-justify">
@@ -530,7 +530,7 @@ const AiWorkSpace = () => {
                   {/* Greeting heading with inline logo */}
                   <h2 className="text-2xl font-normal tracking-tight text-center text-foreground mb-8 flex items-center justify-center gap-3 flex-wrap">
                     <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
-                      <AiIcon size={20} className="text-[#6366f1]" />
+                      <AiMark size={20} className="text-[#6366f1]" />
                     </div>
                     {firstName ? `What can I help with, ${firstName}?` : 'What can I help with?'}
                   </h2>

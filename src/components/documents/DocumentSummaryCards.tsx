@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, AlertCircle, Lock } from 'lucide-react';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from '@/lib/utils';
 import { mockDocuments } from '@/data/mockDocuments';
 
@@ -122,7 +122,7 @@ export const DocumentSummaryCards: React.FC = () => {
         value={String(totalFlags)}
         subtitle={`${highFlags} high · ${mediumFlags} medium`}
         badge={{ text: `${flaggedDocs.length} flagged`, variant: 'warning' }}
-        icon={<AiIcon size={16} className="text-primary" />}
+        icon={<AiMark size={16} className="text-primary" />}
       />
       <SummaryCard
         title="Overdue Obligations"

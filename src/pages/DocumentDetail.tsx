@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
 import { getCategoryForDoc, SUBCATEGORY_LABEL } from '@/lib/documentTaxonomy';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
@@ -379,7 +379,7 @@ const DocumentDetail = () => {
               className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
               onClick={() => setIsAskOpen(true)}
             >
-              <AiIcon size={16} className="mr-1.5" /> Ask AI
+              <AiMark size={16} className="mr-1.5" /> Ask AI
             </Button>
             {doc.userPermissions?.canDownload !== false && (
               <Button
@@ -646,7 +646,7 @@ const DocumentDetail = () => {
                         ? "bg-amber-50 text-amber-700"
                         : "bg-muted/40 text-muted-foreground"
                   )}>
-                    <AiIcon size={20} />
+                    <AiMark size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -702,7 +702,7 @@ const DocumentDetail = () => {
               <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <AiIcon size={16} />
+                  <AiMark size={16} />
                   AI findings
                   <span className="text-xs text-muted-foreground font-normal">({findings.length})</span>
                 </h3>
@@ -715,7 +715,7 @@ const DocumentDetail = () => {
                 >
                   {(isAnalysisRunning || doc.aiStatus === 'running')
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Running...</>
-                    : <><AiIcon size={16} /> Re-run analysis</>
+                    : <><AiMark size={16} /> Re-run analysis</>
                   }
                 </Button>
               </div>
@@ -734,7 +734,7 @@ const DocumentDetail = () => {
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
                 <EmptyState
                   size="sm"
-                  icon={AiIcon as unknown as LucideIcon}
+                  icon={AiMark as unknown as LucideIcon}
                   title="No AI findings yet"
                   description="Run an analysis to surface missing clauses, notice periods and compliance gaps in this document before they become disputes."
                   action={
@@ -744,7 +744,7 @@ const DocumentDetail = () => {
                       onClick={() => runAnalysis()}
                       disabled={isAnalysisRunning || doc.aiStatus === 'running'}
                     >
-                      <AiIcon size={16} />
+                      <AiMark size={16} />
                       <span className="ml-1.5">Run AI analysis</span>
                     </Button>
                   }

@@ -15,7 +15,7 @@ import {
   User,
   Loader2,
 } from 'lucide-react';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -134,7 +134,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                           <div className="flex items-center justify-between pt-2 border-t border-border">
                             <div className="flex items-center gap-3">
                               <p className="text-xs font-normal text-gray-400 normal-case flex items-center gap-1.5">
-                                <AiIcon size={12} className="text-primary" /> AI Analysis
+                                <AiMark size={12} className="text-primary" /> AI Analysis
                               </p>
                               {ver.aiFlags !== undefined && ver.aiFlags > 0 && (
                                 <Badge variant="outline" className="text-xs font-normal border-border bg-card">

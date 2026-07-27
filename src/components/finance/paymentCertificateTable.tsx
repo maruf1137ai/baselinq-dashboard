@@ -15,7 +15,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
-import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Plus, Sparkles } from "lucide-react";
+import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -243,7 +244,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {aiFlags[order.pcNumber] ? (
                       <span className="inline-flex items-center gap-1">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        <AiMark className="text-amber-500" />
                         <span className="text-xs text-amber-600">{aiFlags[order.pcNumber]} flags</span>
                       </span>
                     ) : (

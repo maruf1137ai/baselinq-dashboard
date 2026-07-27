@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, User, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal, FileText } from "lucide-react";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
@@ -224,7 +224,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                   ? "bg-card border border-border text-[#6c5ce7]"
                   : "bg-gradient-to-tr from-[#6c5ce7] to-[#a29bfe] text-white"
               )}>
-                {msg.role === 'assistant' ? <AiIcon size={16} /> : <User className="h-4 w-4" />}
+                {msg.role === 'assistant' ? <AiMark size={16} /> : <User className="h-4 w-4" />}
               </div>
             </div>
 
@@ -293,7 +293,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
         {isTyping && (
           <div className="flex gap-4 max-w-[90%] mr-auto animate-in fade-in duration-300">
             <div className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
-              <AiIcon size={16} />
+              <AiMark size={16} />
             </div>
             <div className="bg-muted p-4 rounded-xl rounded-tl-none border border-border flex flex-col items-center gap-2">
               <div className="ai-orb-loader !w-6 !h-6 translate-y-0.5">

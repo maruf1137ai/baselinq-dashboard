@@ -26,7 +26,7 @@ import {
   Folder as FolderIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { useS3Upload } from '@/hooks/useS3Upload';
 import { validateFile, postData } from '@/lib/Api';
 import useFetch from '@/hooks/useFetch';
@@ -541,7 +541,7 @@ export function UploadStep3FileMetadata({
             <div className="flex items-center justify-between rounded-lg bg-primary/5 px-4 py-2.5">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 bg-card rounded-xl shadow-sm border border-border flex items-center justify-center text-primary">
-                  <AiIcon size={16} />
+                  <AiMark size={16} />
                 </div>
                 <div>
                   <p className="text-sm font-normal text-foreground">Run AI Analysis</p>

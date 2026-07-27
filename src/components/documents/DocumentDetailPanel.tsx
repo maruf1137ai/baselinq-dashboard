@@ -17,7 +17,7 @@ import {
   User,
   Trash2
 } from 'lucide-react';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LinkDocumentModal } from './LinkDocumentModal';
@@ -80,7 +80,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                 <TabsList className="bg-transparent h-12 w-full justify-start gap-6 rounded-none p-0">
                   <TabsTrigger value="info" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Info</TabsTrigger>
                   <TabsTrigger value="ai" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal flex gap-1.5 grayscale data-[state=active]:grayscale-0">
-                    <AiIcon size={16} className="text-primary" /> AI Analysis
+                    <AiMark size={16} className="text-primary" /> AI Analysis
                   </TabsTrigger>
                   <TabsTrigger value="versions" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Versions</TabsTrigger>
                   <TabsTrigger value="links" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 text-sm font-normal">Links</TabsTrigger>
@@ -141,7 +141,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-normal text-gray-400 normal-case">Findings (4)</h4>
                     <Button variant="ghost" size="sm" className="h-8 text-xs text-primary font-normal hover:bg-primary/5">
-                      <AiIcon size={16} className="mr-1.5" /> Re-run Analysis
+                      <AiMark size={16} className="mr-1.5" /> Re-run Analysis
                     </Button>
                   </div>
 

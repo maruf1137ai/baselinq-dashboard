@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EmptyState } from '@/components/ui/empty-state';
-import { AlertCircle, AlertTriangle, ChevronDown, Filter, Link2, Plus, Sparkles, Search, Shield, Clock, FileText } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ChevronDown, Filter, Link2, Plus, Search, Shield, Clock, FileText } from 'lucide-react';
+import { AiMark } from '@/components/icons/AiMark';
 import React, { useState } from 'react';
 import { differenceInDays, parse } from 'date-fns';
 
@@ -159,7 +160,7 @@ const Compliance = () => {
             />
           </div>
           <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
-            <Sparkles className="mr-1.5" /> Analyse with AI
+            <AiMark className="mr-1.5" /> Analyse with AI
           </Button>
         </div>
 

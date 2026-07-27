@@ -11,7 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { Loader2 } from "lucide-react";
 
 const WILL_GENERATE = [
@@ -57,7 +57,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
       <DialogContent size="lg" className="p-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
-            <AiIcon size={20} className="text-primary" />
+            <AiMark size={20} className="text-primary" />
             Generate AI Meeting Notes
           </DialogTitle>
         </DialogHeader>
@@ -103,7 +103,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
                 </>
               ) : (
                 <>
-                  <AiIcon size={16} className="text-white mr-2" />
+                  <AiMark size={16} className="text-white mr-2" />
                   Generate Notes
                 </>
               )}

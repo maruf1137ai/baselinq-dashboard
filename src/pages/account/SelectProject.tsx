@@ -41,7 +41,7 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoles } from "@/hooks/useRoles";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -835,7 +835,7 @@ const SelectProject = () => {
               onClick={() => setShowModal(true)}
               className="h-10 px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
             >
-              <AiIcon size={16} className="text-white" />
+              <AiMark size={16} className="text-white" />
               Complete Profile
             </Button>
           </div>

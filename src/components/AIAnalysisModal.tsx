@@ -6,7 +6,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, MessageSquare, FileText } from "lucide-react";
+import { MessageSquare, FileText } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { VOAnalysis } from "./AIAnalysis/VOAnalysis";
 import { CPIAnalysis } from "./AIAnalysis/CPIAnalysis";
 import { DCAnalysis } from "./AIAnalysis/DCAnalysis";
@@ -91,7 +92,7 @@ export function AIAnalysisModal({
       <DialogContent size="xl" className="max-h-[85vh] overflow-y-auto font-sans">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
+            <AiMark size={20} className="text-primary" />
             AI Contract Analysis
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">

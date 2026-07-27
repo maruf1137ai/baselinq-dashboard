@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink, X } from "lucide-react";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -411,7 +411,7 @@ export default function MeetingDetails() {
           <div className="p-4 bg-card border border-border rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
-                <AiIcon size={16} className="text-primary" />
+                <AiMark size={16} className="text-primary" />
                 <h2 className="text-sm font-medium text-foreground">Linq AI Notes</h2>
               </div>
               {hasAiNotes && (
@@ -489,7 +489,7 @@ export default function MeetingDetails() {
                 onClick={() => setAiNotesOpen(true)}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
-                <AiIcon size={16} /> Paste transcript
+                <AiMark size={16} /> Paste transcript
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">

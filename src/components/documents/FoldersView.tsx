@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, FolderPlus } from 'lucide-react';
+import { AiMark } from '@/components/icons/AiMark';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/dateUtils';
 import { useFolders } from '@/hooks/useFolders';
@@ -230,7 +231,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
 
           {hasAiFlags && (
             <span className="text-primary shrink-0" title="Contains AI findings">
-              <Sparkles className="h-4 w-4" />
+              <AiMark />
             </span>
           )}
           {hasRecent && (

@@ -11,7 +11,6 @@ import {
   Clock,
   User,
   UserPlus,
-  Zap,
   Calendar,
   Circle,
   FileText,

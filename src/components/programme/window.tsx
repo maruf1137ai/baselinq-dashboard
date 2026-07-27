@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, Shield, Sparkles, TrendingDown } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Shield, TrendingDown } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import React, { useState } from "react";
 import Timeline from "./timeline";
 import Milestone from "./milestone";
@@ -90,7 +91,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       {/* AI Summary */}
       <div className="p-4 bg-card border border-border rounded-xl">
         <div className="flex items-center gap-1.5 mb-3">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <AiMark className="text-primary" />
           <h2 className="text-sm font-medium text-foreground">AI Programme Analysis</h2>
           {data && (
             <span className={`ml-auto inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${SEVERITY_BADGE[data.overall_severity]}`}>
@@ -182,7 +183,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       {/* Recommended Actions */}
       <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <AiMark className="text-primary" />
           Recommended Actions
         </h2>
         {isLoading ? (

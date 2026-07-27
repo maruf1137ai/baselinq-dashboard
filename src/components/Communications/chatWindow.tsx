@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users, Loader2 } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2 } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { toast } from "sonner";
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
@@ -910,7 +911,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                           {/* Avatar */}
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-primary/10' : 'bg-[#101828]'}`}>
                             {isAI ? (
-                              <Sparkles className="w-4 h-4 text-primary" />
+                              <AiMark className="text-primary" />
                             ) : (
                               <span className="text-white text-sm font-normal"> {senderInitial} </span>
                             )}

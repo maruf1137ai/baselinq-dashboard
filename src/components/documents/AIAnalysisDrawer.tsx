@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from '@/lib/utils';
 
 interface AIAnalysisDrawerProps {
@@ -50,7 +50,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
         <SheetHeader className="px-6 py-4 border-b border-border pr-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AiIcon size={16} className="text-primary" />
+              <AiMark size={16} className="text-primary" />
               <SheetTitle>AI Analysis</SheetTitle>
             </div>
             <Button
@@ -58,7 +58,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
               size="sm"
               className="h-8 text-xs text-primary font-normal hover:bg-muted gap-1.5"
             >
-              <AiIcon size={16} /> Re-run Analysis
+              <AiMark size={16} /> Re-run Analysis
             </Button>
           </div>
           <p className="text-xs text-muted-foreground font-normal">{document.reference} · {document.name}</p>

@@ -3,7 +3,7 @@ import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/hooks/useSignup";
 import { cn } from "@/lib/utils";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { fetchData } from "@/lib/Api";
 
 const INPUT_CLS =
@@ -105,7 +105,7 @@ const SignupPage = () => {
           {/* Info card */}
           <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <AiIcon size={16} className="text-[#6c5ce7]" />
+              <AiMark size={16} className="text-[#6c5ce7]" />
             </div>
             <p className="text-xs text-white/60 leading-snug">
               AI-powered contracts, compliance, and document management, all in one workspace.

@@ -86,36 +86,50 @@ export default function CreateRequestButton() {
       <div>
         <DropdownMenu open={btnsOpen} onOpenChange={setBtnsOpen}>
           <DropdownMenuTrigger asChild>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 text-base font-normal">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 font-normal">
               <Plus />
               Action
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent className="w-72 p-0 rounded-xl overflow-hidden">
-            {filteredBtns.map((item, index) => (
-              <DropdownMenuItem
-                key={index}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  handleClick(item.title);
-                }}
-                className="p-0 cursor-pointer"
-              >
-                <div
-                  className={`border border-border p-4 w-full hover:bg-[#E8F1FF4D] transition ${
-                    item.active ? "bg-[#E8F1FF4D]" : "bg-card"
-                  }`}
+            {/* One menu, not a stack of boxes: the content already has a
+                border, so items are separated by a single hairline rather
+                than each carrying its own frame. */}
+            <div className="divide-y divide-border">
+              {filteredBtns.map((item, index) => (
+                <DropdownMenuItem
+                  key={index}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    handleClick(item.title);
+                  }}
+                  className="p-0 cursor-pointer"
                 >
-                  <div className="flex items-start gap-3">
-                    {item.active && (
-                      <div className="h-2 w-2 bg-primary rounded-full mt-1.5" />
-                    )}
-                    <p className="text-sm text-foreground">{item.title}</p>
+                  <div
+                    className={`p-4 w-full transition hover:bg-muted ${
+                      item.active ? "bg-muted" : "bg-card"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {item.active && (
+                        <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
+                      )}
+                      {/* The description is the copy that answers "which one
+                          do I pick?" — it was authored for every item and
+                          never rendered, sending users to the help page for
+                          information the menu already held. */}
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground">{item.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 whitespace-normal leading-relaxed">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </DropdownMenuItem>
-            ))}
+                </DropdownMenuItem>
+              ))}
+            </div>
             {/* Help link — plain-English guide explaining what each
                 task type is for and who can act on it. Keeps the
                 "which one should I pick?" question one click away. */}

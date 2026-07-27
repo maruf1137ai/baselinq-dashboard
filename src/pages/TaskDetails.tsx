@@ -61,7 +61,6 @@ import {
   Italic,
   Underline,
   Link2,
-  Zap,
   UserPlus,
   Check,
   ChevronsUpDown,
@@ -113,6 +112,7 @@ import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper
 import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { AiMark } from "@/components/icons/AiMark";
 import { resolvePermissionCode } from "@/lib/roleUtils";
 
 // Role to approval permission mapping per document type
@@ -2531,9 +2531,9 @@ export default function TaskDetails() {
                                   <td className="px-3 py-2 text-sm text-right text-foreground font-normal">{formatVOCurrency(voVat)}</td>
                                   <td />
                                 </tr>
-                                <tr className="bg-[#1B1C1F]">
-                                  <td colSpan={4} className="px-3 py-2 text-xs font-normal text-white text-right">Total</td>
-                                  <td className="px-3 py-2 text-sm text-right text-white font-normal">{formatVOCurrency(voTotal)}</td>
+                                <tr className="bg-muted/50 border-t border-border">
+                                  <td colSpan={4} className="px-3 py-2 text-xs font-medium text-foreground text-right">Total</td>
+                                  <td className="px-3 py-2 text-sm text-right text-foreground font-medium">{formatVOCurrency(voTotal)}</td>
                                   <td />
                                 </tr>
                               </tfoot>
@@ -2602,9 +2602,9 @@ export default function TaskDetails() {
                               <span className="text-xs text-muted-foreground">VAT (15%)</span>
                               <span className="text-sm text-foreground">{formatVOCurrency(voVat)}</span>
                             </div>
-                            <div className="flex justify-between items-center px-4 py-2.5 bg-[#1B1C1F]">
-                              <span className="text-xs font-normal text-white">Total</span>
-                              <span className="text-sm font-normal text-white">{formatVOCurrency(voTotal)}</span>
+                            <div className="flex justify-between items-center px-4 py-2.5 bg-muted/50 border-t border-border">
+                              <span className="text-xs font-medium text-foreground">Total</span>
+                              <span className="text-sm font-medium text-foreground">{formatVOCurrency(voTotal)}</span>
                             </div>
                           </div>
 
@@ -3103,19 +3103,27 @@ export default function TaskDetails() {
                     )}
 
                     {/* Werner spec rev H — Analyze with AI uses purple
-                        border + light primary-tint bg (was solid black). */}
-                    <button
+                        border + light primary-tint bg (was solid black).
+
+                        This was a raw <button> with hand-rolled classes,
+                        rendering beside a real <Button> — two button systems
+                        touching each other. It is now the Button primitive, so
+                        it inherits the same height, radius, weight and focus
+                        ring as everything else. The icon dropped `animate-pulse`
+                        too: a pulsing mark on a resting control reads as a
+                        stalled spinner. */}
+                    <Button
+                      variant={showAiChat ? "default" : "outline"}
                       onClick={() => setShowAiChat(!showAiChat)}
                       disabled={isAnalyzeLoading}
                       className={cn(
-                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-normal disabled:opacity-50 disabled:cursor-not-allowed",
-                        showAiChat
-                          ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                          : "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10",
-                      )}>
-                      <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
+                        !showAiChat &&
+                          "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      )}
+                    >
+                      <AiMark />
                       {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
-                    </button>
+                    </Button>
 
                     {/* Werner spec rev H — additive task actions:
                         + Action (escalation), Sign & Issue, Risk pills.
@@ -3898,9 +3906,9 @@ export default function TaskDetails() {
                             </td>
                             <td className="px-4 py-2 text-right font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.tax?.amount ?? 0)}</td>
                           </tr>
-                          <tr className="bg-[#1B1C1F] text-white">
-                            <td colSpan={3} className="px-4 py-2 text-right opacity-70">Total Amount</td>
-                            <td className="px-4 py-2 text-right font-normal font-mono">{formatVOCurrency(selectedResponse.financials?.grandTotal ?? 0)}</td>
+                          <tr className="bg-muted/50 border-t border-border">
+                            <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">Total Amount</td>
+                            <td className="px-4 py-2 text-right font-medium font-mono text-foreground">{formatVOCurrency(selectedResponse.financials?.grandTotal ?? 0)}</td>
                           </tr>
                         </tfoot>
                       </table>
