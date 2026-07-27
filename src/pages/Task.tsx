@@ -6,7 +6,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Paperclip, Plus, Bell, Calendar, MessageSquare } from 'lucide-react';
+import { Paperclip, Plus, Bell, Calendar, MessageSquare, FolderOpen } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { HelpCircle } from 'lucide-react';
@@ -306,7 +307,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     && canApprove;
 
   // Card border + background per escalation level (pending review takes priority over warnings)
-  const cardBorder = needsSignOff ? 'border border-[#6c5ce7] bg-[#6c5ce7]/5 ring-1 ring-[#6c5ce7]/20' :
+  const cardBorder = needsSignOff ? 'border border-primary bg-primary/5 ring-1 ring-primary/20' :
     needsReview ? 'border border-amber-400 bg-amber-50/20' :
       isResolved ? 'border border-border' :
         escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
@@ -318,7 +319,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     <div ref={setNodeRef} style={style} {...attributes} {...(isLocked ? {} : listeners)} className="mb-3">
       <Card
         onClick={() => navigate(`/tasks/${task.id}`)}
-        className={`bg-sidebar rounded-xl shadow-none transition-shadow overflow-hidden
+        className={`bg-card rounded-xl shadow-none transition-shadow overflow-hidden
           ${cardBorder}
           ${canDrag ? 'cursor-move hover:shadow-md' : 'cursor-default hover:shadow-sm opacity-80'}`}
       >
@@ -337,10 +338,10 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             </div>
             {needsSignOff && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] font-medium text-[#6c5ce7] bg-[#6c5ce7]/10 border border-[#6c5ce7] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-xs font-medium text-primary bg-primary/10 border border-primary px-1.5 py-0.5 rounded-full flex items-center gap-1">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6c5ce7] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#6c5ce7]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
                   </span>
                   Awaiting Sign-off
                 </span>
@@ -348,7 +349,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             )}
             {!needsSignOff && needsReview && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-xs font-medium text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
@@ -381,7 +382,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               {task.discipline && (
-                <span className="text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
+                <span className="text-xs font-medium bg-muted px-1.5 py-0.5 rounded text-muted-foreground shrink-0">
                   {task.discipline}
                 </span>
               )}
@@ -391,7 +392,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   String(task.assignedBy?.userId) === String(currentUserId)
                 );
                 return visibleResponses.length > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] bg-[#6c5ce7]/10 text-[#6c5ce7] px-1.5 py-0.5 rounded shrink-0">
+                  <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded shrink-0">
                     <MessageSquare className="h-2.5 w-2.5" />
                     {visibleResponses.length}
                   </span>
@@ -417,7 +418,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                       ? 'text-amber-600'
                       : 'text-muted-foreground'
                   }`}>
-                  <Calendar className="h-3 w-3" />
+                  <Calendar className="h-4 w-4" />
                   {dueDisplay}
                 </span>
               ) : !isDefaultDue && isResolved && task.due_date ? (
@@ -487,21 +488,24 @@ function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
 
   return (
     <div className="flex-1 min-w-[320px] h-full">
-      <div className="border border-dashed border-[#0000001C] rounded-2xl p-5 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+      {/* A kanban column is a WELL: a recessed surface that the cards sit on
+          top of. It was a dashed outline with no fill, which is the visual
+          language of a drop target — so the column read as provisional and
+          its header appeared to float on the page background rather than
+          belong to anything. A filled, borderless surface gives the cards
+          something to sit on and makes the grouping obvious. */}
+      <div className="bg-muted/50 rounded-xl p-4 h-full flex flex-col">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-sm text-foreground">{title}</h2>
-            <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
-              {count}
-            </Badge>
+            <h2 className="text-sm font-medium text-foreground">{title}</h2>
+            <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
             {overdueCount > 0 && (
-              <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">
-                {overdueCount} breached
-              </span>
+              <Badge variant="danger">{overdueCount} breached</Badge>
             )}
           </div>
           {onAddClick && (
-            <button onClick={onAddClick} className="text-muted-foreground hover:text-gray-600">
+            <button
+              aria-label="Add task" onClick={onAddClick} className="text-muted-foreground hover:text-gray-600">
               <Plus className="h-4 w-4" />
             </button>
           )}
@@ -890,7 +894,7 @@ export default function Task() {
             <AwesomeLoader message="Fetching task board" />
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-120px)] bg-white flex flex-col overflow-hidden">
+          <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-normal tracking-tight text-foreground">Tasks</h1>
               <Link
@@ -931,12 +935,16 @@ export default function Task() {
           </div>
         )
       ) : (
-        <div className="p-8 text-center text-gray-500">Please select a project from the sidebar</div>
+        <EmptyState
+          icon={FolderOpen}
+          title="No project selected"
+          description="Choose a project from the sidebar to view its task board."
+        />
       )}
       <Dialog open={isSelectionOpen} onOpenChange={setIsSelectionOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white p-0 overflow-hidden rounded-xl">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle className="text-base font-medium">Select Request Type</DialogTitle>
+        <DialogContent size="sm" className="p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-border">
+            <DialogTitle>Select Request Type</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col">
             {filteredBtns.map((item, index) => (

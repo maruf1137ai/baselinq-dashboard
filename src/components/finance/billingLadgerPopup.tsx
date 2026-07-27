@@ -45,21 +45,21 @@ export function BillingLadgerDialog({ wFull }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="text-base text-[#3A6FF7] text-left">
+        <button className="text-sm text-[#3A6FF7] text-left">
           Billing Ledger (1% Success Fee)
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[682px] bg-white p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-lg text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             Request Information
           </DialogTitle>
         </DialogHeader>
 
         <div className="overflow-x-aut">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-muted/50">
               <tr>
                 <th
                   scope="col"
@@ -93,28 +93,28 @@ export function BillingLadgerDialog({ wFull }) {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-gray-200">
               {billingLadgerData.map((order, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-[#6c5ce7] hover:text-blue-800">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-blue-800">
                     {order.date}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.artefact}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.event}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-muted-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {order.net}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-muted-foreground">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {order.fee}
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap text-base text-muted-foreground">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {order.status}
                   </td> */}
-                  <td className="px-6 py-4 whitespace-nowrap text-base">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span
                       className={`font-normal ${
                         order.status === "Queued"
@@ -131,19 +131,19 @@ export function BillingLadgerDialog({ wFull }) {
             </tbody>
           </table>
 
-          <div className="border-t border-gray-200 mb-3"></div>
+          <div className="border-t border-border mb-3"></div>
           <div className="px-6 space-y-6 overflow-y-auto">
             {/* VO Summary Section */}
             <section>
               <div className="flex justify-between items-center">
-                <span className="text-base text-muted-foreground">Running Total</span>
-                <span className="text-base text-foreground">R 24,915</span>
+                <span className="text-sm text-muted-foreground">Running Total</span>
+                <span className="text-sm text-foreground">R 24,915</span>
               </div>
               <div className="flex justify-between items-center mt-2">
-                <span className="text-base text-muted-foreground">Cap</span>
-                <span className="text-base text-foreground">R 250,000</span>
+                <span className="text-sm text-muted-foreground">Cap</span>
+                <span className="text-sm text-foreground">R 250,000</span>
               </div>
-              {/* <div className="border-t border-gray-200 my-3"></div> */}
+              {/* <div className="border-t border-border my-3"></div> */}
             </section>
           </div>
           <footer className="p-6 pb-0">

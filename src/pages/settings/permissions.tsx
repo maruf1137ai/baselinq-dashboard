@@ -33,7 +33,8 @@ import {
 } from "@/components/ui/accordion";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Info, ShieldPlus } from "lucide-react";
 
 import useFetch from "@/hooks/useFetch";
 
@@ -136,10 +137,13 @@ export function PermissionsContent({ readOnly = false, projectId = null }: { rea
  * Standalone page — full header + content. Used by the sidebar "Roles & Permissions" route.
  */
 export default function PermissionsPage() {
+  // p-6 matches every other settings sub-page. Without it this page rendered
+  // flush against the settings sidebar, because settings.tsx passes
+  // padding="p-0" to the layout and each sub-page owns its own padding.
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-normal text-foreground">Roles & Permissions</h1>
+        <h2 className="text-2xl font-normal tracking-tight text-foreground">Roles &amp; Permissions</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Manage roles and what each role can do. Changes take effect immediately.
         </p>
@@ -266,21 +270,24 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Table */}
       {customRoles.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg py-16 flex flex-col items-center gap-3 text-center">
-          <p className="text-sm font-medium text-foreground">No custom roles yet</p>
-          <p className="text-xs text-muted-foreground max-w-sm">
-            {canManage
-              ? "Create a custom role to assign tailored permissions to users in your organisation."
-              : "No custom roles have been created for your organisation."}
-          </p>
-          {canManage && (
-            <Button variant="outline" size="sm" onClick={openCreate} className="mt-2">
-              + Create your first role
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={ShieldPlus}
+          title="No custom roles yet"
+          description={
+            canManage
+              ? "Custom roles let you control who can issue instructions, certify payment or approve variations."
+              : "Your organisation uses the standard roles only. An organisation owner can add custom ones."
+          }
+          action={
+            canManage ? (
+              <Button variant="outline" size="sm" onClick={openCreate}>
+                + Create your first role
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-white">
+        <div className="border border-border rounded-xl overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -324,7 +331,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!o) closeDialogs(); }}>
-        <DialogContent className="bg-white sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Create Custom Role</DialogTitle>
           </DialogHeader>
@@ -340,7 +347,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Edit dialog */}
       <Dialog open={!!editingRole} onOpenChange={(o) => { if (!o) closeDialogs(); }}>
-        <DialogContent className="bg-white sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
           </DialogHeader>
@@ -356,7 +363,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deletingRole} onOpenChange={(o) => { if (!o) setDeletingRole(null); }}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{deletingRole?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -682,7 +689,7 @@ function MatrixGrid({
     <div className="space-y-4 pb-24">
       {/* Warn that org-level saves will clear any project-level overrides for the same permissions */}
       {!readOnly && !projectId && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <span className="mt-0.5 shrink-0 text-amber-500">⚠</span>
           <span>
             Changes saved here apply to <strong>all projects</strong> as org-wide defaults.
@@ -694,7 +701,7 @@ function MatrixGrid({
       {/* Premium Floating Save Bar */}
       {!readOnly && dirtyRolesCount > 0 && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-6 px-6 py-3 bg-white/90 backdrop-blur-md border border-primary/20 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-full ring-1 ring-black/5">
+          <div className="flex items-center gap-6 px-6 py-3 bg-card/90 backdrop-blur-md border border-primary/20 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-full ring-1 ring-black/5">
             <div className="flex items-center gap-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -741,7 +748,7 @@ function MatrixGrid({
           <AccordionItem
             key={group}
             value={group}
-            className="border border-border rounded-lg bg-white overflow-hidden"
+            className="border border-border rounded-xl bg-card overflow-hidden"
           >
             <AccordionTrigger className="px-4 hover:no-underline hover:bg-muted/30">
               <div className="flex items-center gap-3">
@@ -754,9 +761,9 @@ function MatrixGrid({
             <AccordionContent className="p-0">
               <div className="overflow-auto border-t border-border">
                 <table className="text-sm w-full">
-                  <thead className="bg-gray-50/80 backdrop-blur-sm">
+                  <thead className="bg-muted/50 backdrop-blur-sm">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-gray-50 text-left font-normal text-muted-foreground text-xs px-4 py-2.5 min-w-[280px] border-r border-border">
+                      <th className="sticky left-0 z-20 bg-muted/50 text-left font-normal text-muted-foreground text-xs px-4 py-2.5 min-w-[280px] border-r border-border">
                         <span className="text-foreground font-medium">Permission</span>
                       </th>
                       {roles.map((r) => (
@@ -772,14 +779,14 @@ function MatrixGrid({
                   <tbody>
                     {perms.map((perm) => (
                         <tr key={perm.code} className="border-t border-border hover:bg-muted/20">
-                          <td className="sticky left-0 z-20 bg-white px-4 py-2 border-r border-border">
+                          <td className="sticky left-0 z-20 bg-card px-4 py-2 border-r border-border">
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm">{perm.label}</span>
                               {(perm.description || PERM_DESCRIPTIONS[perm.code]) && (
                                 <TooltipProvider delayDuration={100}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
+                                      <Info className="h-4 w-4 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
                                     </TooltipTrigger>
                                     <TooltipContent side="top" align="start" sideOffset={6} className="max-w-[280px] text-xs leading-relaxed z-[200]">
                                       {perm.description || PERM_DESCRIPTIONS[perm.code]}

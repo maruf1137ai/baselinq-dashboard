@@ -1,133 +1,101 @@
 import React from "react";
-import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * The app's loading primitive (~47 call sites).
+ *
+ * Design intent: Baselinq produces legally defensible contract records, so a
+ * loading state should read as a record being written, not as a consumer app
+ * booting up. The mark is three stacked rules drawing themselves left to
+ * right — a ledger line filling in. It carries the motion, so the label
+ * doesn't need a pulsing dot or a pill to look alive.
+ *
+ * The previous version was a 160px orbit ring with a magnifying-glass icon
+ * (which reads as *search*, not *load*), a neon dot glow, and a morphing
+ * 28-40px radius that fought the 6px radius token. It also reserved
+ * min-h-[400px] to announce a table fetch.
+ */
 
 interface AwesomeLoaderProps {
   message?: string;
+  /** Overlays the viewport. For route-level and blocking waits. */
   fullPage?: boolean;
+  /** Inline, for waits inside an existing panel. Equivalent to size="sm". */
   compact?: boolean;
+  size?: "sm" | "md" | "lg";
+  className?: string;
 }
 
+// Bar widths are fixed px rather than percentages so the mark keeps its
+// proportions regardless of what it's dropped into.
+const SIZES = {
+  sm: { bar: "h-[3px]", widths: [28, 19, 24], gap: "gap-1", text: "text-xs" },
+  md: { bar: "h-1", widths: [44, 29, 38], gap: "gap-1.5", text: "text-xs" },
+  lg: { bar: "h-1.5", widths: [64, 42, 55], gap: "gap-2", text: "text-sm" },
+} as const;
+
 export const AwesomeLoader: React.FC<AwesomeLoaderProps> = ({
-  message = "Analyzing Project Data",
+  message = "Loading",
   fullPage = false,
   compact = false,
+  size,
+  className,
 }) => {
-  const containerClasses = fullPage
-    ? "fixed inset-0 z-50 flex flex-col items-center justify-center bg-muted dark:bg-[#0B0C10]"
-    : compact
-    ? "flex flex-col items-center justify-center p-6 w-full bg-transparent relative overflow-hidden"
-    : "flex flex-col items-center justify-center p-12 w-full min-h-[400px] bg-transparent relative overflow-hidden";
+  const reduceMotion = useReducedMotion();
+  const scale = size ?? (fullPage ? "lg" : compact ? "sm" : "md");
+  const { bar, widths, gap, text } = SIZES[scale];
 
   return (
-    <div className={containerClasses}>
-      {/* AI Construction Atmosphere - Blueprint Grid */}
-      <div className="absolute inset-0 z-0 opacity-[0.03]"
-        style={{
-          backgroundImage: "linear-gradient(#6c5ce7 1px, transparent 1px), linear-gradient(90deg, #6c5ce7 1px, transparent 1px)",
-          backgroundSize: "32px 32px"
-        }}
-      />
-
-      <div className="relative z-10 flex flex-col items-center">
-        {/* Core Container: The "Squircy" Round Box */}
-        <div className={`relative flex items-center justify-center ${compact ? "h-20 w-20" : "h-40 w-40"}`}>
-
-          {/* Pulsing Outer Boundary */}
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center",
+        fullPage
+          ? "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+          : compact
+          ? "w-full py-6"
+          : "w-full py-16",
+        className
+      )}
+      role="status"
+      aria-live="polite"
+    >
+      <div className={cn("flex flex-col items-start", gap)}>
+        {widths.map((width, i) => (
           <motion.div
-            className="absolute inset-0 border border-primary/20 rounded-full"
-            animate={{
-              scale: [1, 1.05, 1],
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            key={i}
+            // origin-left so the rule draws outward from the margin, the way
+            // a line of a record is written, rather than growing from centre.
+            className={cn(
+              "origin-left rounded-full",
+              bar,
+              i === 0 ? "bg-primary" : "bg-border"
+            )}
+            style={{ width }}
+            initial={reduceMotion ? undefined : { scaleX: 0.25, opacity: 0.35 }}
+            animate={
+              reduceMotion
+                ? { opacity: 0.6 }
+                : { scaleX: [0.25, 1, 0.25], opacity: [0.35, 1, 0.35] }
+            }
+            transition={
+              reduceMotion
+                ? undefined
+                : {
+                    duration: 1.6,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.16,
+                  }
+            }
           />
-
-          {/* Main "Squery Round Box" */}
-          <motion.div
-            className={`relative bg-white dark:bg-gray-900 border-2 border-primary/40 rounded-full shadow-xl flex items-center justify-center overflow-hidden ${compact ? "h-12 w-12" : "h-24 w-24"}`}
-            animate={{
-              borderRadius: ["28px", "40px", "28px"],
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          >
-            {/* Interior Scanning Effect */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent"
-              animate={{
-                top: ["-100%", "100%"]
-              }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            />
-
-            {/* The Animating Search Icon */}
-            <motion.div
-              className="relative z-20 text-primary"
-              animate={{
-                x: compact ? [-8, 8, -8] : [-15, 15, -15],
-                y: compact ? [-5, 5, -5] : [-10, 10, -10],
-                rotate: [0, 10, -10, 0],
-                scale: [1, 1.1, 1]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <Search size={compact ? 16 : 32} strokeWidth={2.5} />
-            </motion.div>
-          </motion.div>
-
-          {/* Orbiting Tech Accents */}
-          {[0, 90, 180, 270].map((angle, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_#6c5ce7]"
-              animate={{
-                rotate: angle + 360,
-              }}
-              style={{
-                top: "50%",
-                left: "50%",
-                marginTop: "-0.75px",
-                marginLeft: "-0.75px",
-              }}
-              transition={{
-                duration: 6 + i,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-            >
-              <div
-                className="w-1.5 h-1.5 bg-primary rounded-full"
-                style={{ transform: `translate(${compact ? 35 : 70}px)` }}
-              />
-            </motion.div>
-          ))}
-        </div>
-
-        {/* AI Status Pill with Integrated Message */}
-        <div className={`flex flex-col items-center ${compact ? "mt-5" : "mt-12"}`}>
-          <motion.div
-            className={`inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 shadow-sm ${compact ? "px-3 py-1.5" : "px-5 py-2"}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            {/* Heartbeat / Activity Pulse */}
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-
-            <span className={`font-normal text-primary uppercase tracking-[0.15em] whitespace-nowrap ${compact ? "text-[10px]" : "text-xs"}`}>
-              {message}
-            </span>
-          </motion.div>
-
-        </div>
+        ))}
       </div>
+
+      {message && (
+        <span className={cn("mt-4 text-muted-foreground", text)}>{message}</span>
+      )}
     </div>
   );
 };

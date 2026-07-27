@@ -14,7 +14,7 @@ import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '
 import ReactMarkdown from 'react-markdown';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 
 interface ChatSource {
   clause_number: string;
@@ -315,6 +315,7 @@ const AiWorkSpace = () => {
       <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
       <span className="max-w-[180px] truncate">{pendingAttachment.file_name}</span>
       <button
+        aria-label="Remove attachment"
         onClick={() => setPendingAttachment(null)}
         className="ml-1 text-muted-foreground hover:text-foreground"
         title="Remove attachment"
@@ -346,7 +347,7 @@ const AiWorkSpace = () => {
                     <div key={message.id} className="mb-6">
                       {message.role === 'user' ? (
                         <div className="flex justify-end">
-                          <div className="max-w-[85%] text-sm rounded-lg bg-sidebar px-4 py-3 space-y-2">
+                          <div className="max-w-[85%] text-sm rounded-lg bg-muted/50 px-4 py-3 space-y-2">
                             {message.attachment && (
                               <div className="flex items-center gap-2.5 p-2 rounded-md bg-red-50 border border-red-100">
                                 <div className="w-8 h-8 rounded bg-red-500 flex items-center justify-center shrink-0">
@@ -354,7 +355,7 @@ const AiWorkSpace = () => {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-xs font-medium text-foreground truncate">{message.attachment.file_name}</p>
-                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">PDF</p>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">PDF</p>
                                 </div>
                               </div>
                             )}
@@ -364,7 +365,7 @@ const AiWorkSpace = () => {
                       ) : (
                         <div className="flex gap-3">
                           <div className="w-9 h-9 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
-                            <AiIcon size={16} className="text-[#6366f1]" />
+                            <AiMark size={16} className="text-[#6366f1]" />
                           </div>
                           <div className="flex-1">
                             <div className="prose prose-sm max-w-none text-justify">
@@ -440,22 +441,22 @@ const AiWorkSpace = () => {
                                     <div key={ci} className="relative group">
                                       <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
                                         {cite.type === 'clause' ? (
-                                          <FileText className="h-3 w-3 text-muted-foreground" />
+                                          <FileText className="h-4 w-4 text-muted-foreground" />
                                         ) : (
-                                          <Globe className="h-3 w-3 text-muted-foreground" />
+                                          <Globe className="h-4 w-4 text-muted-foreground" />
                                         )}
                                         <span className="text-xs text-muted-foreground font-medium">{cite.label}</span>
                                       </button>
                                       {/* Hover popover */}
                                       <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
                                         {cite.type === 'clause' && cite.docName && (
-                                          <p className="text-[10px] font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
+                                          <p className="text-xs font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
                                         )}
                                         <div className="flex items-center gap-1.5 mb-1">
                                           {cite.type === 'clause' ? (
-                                            <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <FileText className="h-4 w-4 text-primary shrink-0" />
                                           ) : (
-                                            <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <Globe className="h-4 w-4 text-primary shrink-0" />
                                           )}
                                           <p className="text-xs font-normal text-foreground truncate">{cite.detail}</p>
                                         </div>
@@ -486,7 +487,7 @@ const AiWorkSpace = () => {
                   {attachmentChip && (
                     <div className="flex flex-wrap gap-1.5 mb-2 px-1">{attachmentChip}</div>
                   )}
-                  <div className="relative flex items-end gap-2 rounded-lg border border-border bg-[#F9F9F9] px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
+                  <div className="relative flex items-end gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
                     {clipButton}
                     <Textarea
                       ref={textareaRef}
@@ -500,7 +501,7 @@ const AiWorkSpace = () => {
                     <Button
                       onClick={handleSend}
                       size="icon"
-                      className="h-8 w-8 disabled:bg-[#E0E0E0] shrink-0 rounded-full"
+                      className="h-8 w-8 disabled:bg-muted shrink-0 rounded-full"
                       disabled={!input.trim() || isTyping}
                     >
                       <ArrowUp />
@@ -512,14 +513,14 @@ const AiWorkSpace = () => {
           )}
           {/* New chat interface (no task context) */}
           {!hasMessages && (
-            <div className="h-full w-full flex flex-col bg-gradient-to-b from-white via-white to-[#F4F4FF]">
+            <div className="h-full w-full flex flex-col">
               <div className="flex-1 flex items-center justify-center">
                 <div className="w-full max-w-[680px] mx-auto px-4">
 
                   {/* Brand badge */}
                   {/* <div className="flex justify-center mb-8">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1A1A] text-white text-xs font-medium">
-                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                    <div className="h-4 w-4 flex items-center justify-center shrink-0">
                       <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
                     </div>
                     <span>Linq AI</span>
@@ -527,15 +528,15 @@ const AiWorkSpace = () => {
                 </div> */}
 
                   {/* Greeting heading with inline logo */}
-                  <h2 className="text-2xl sm:text-2xl font-normal tracking-tight text-center text-foreground mb-8 flex items-center justify-center gap-3 flex-wrap">
+                  <h2 className="text-2xl font-normal tracking-tight text-center text-foreground mb-8 flex items-center justify-center gap-3 flex-wrap">
                     <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
-                      <AiIcon size={18} className="text-[#6366f1]" />
+                      <AiMark size={20} className="text-[#6366f1]" />
                     </div>
                     {firstName ? `What can I help with, ${firstName}?` : 'What can I help with?'}
                   </h2>
 
                   {/* Input with bottom toolbar */}
-                  <div className="rounded-2xl bg-white border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#6c5ce7]/30 focus-within:border-[#6c5ce7] transition-all">
+                  <div className="rounded-xl bg-card border border-border shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-[#6c5ce7]/30 focus-within:border-[#6c5ce7] transition-all">
                     {attachmentChip && (
                       <div className="flex flex-wrap gap-1.5 px-4 pt-3">{attachmentChip}</div>
                     )}
@@ -555,7 +556,7 @@ const AiWorkSpace = () => {
                         <Button
                           onClick={handleSend}
                           size="icon"
-                          className="h-8 w-8 disabled:bg-[#E0E0E0] shrink-0 rounded-full"
+                          className="h-8 w-8 disabled:bg-muted shrink-0 rounded-full"
                           disabled={!input.trim() || isTyping}
                         >
                           <ArrowUp className="h-4 w-4" />
@@ -577,7 +578,7 @@ const AiWorkSpace = () => {
                       <button
                         key={prompt}
                         onClick={() => { setInput(prompt); textareaRef.current?.focus(); }}
-                        className="text-xs text-muted-foreground bg-white hover:bg-primary hover:text-white px-3 py-1.5 rounded-full border border-border hover:border-primary transition-all duration-200 active:scale-95"
+                        className="text-xs text-muted-foreground bg-card hover:bg-primary hover:text-white px-3 py-1.5 rounded-full border border-border hover:border-primary transition-all duration-200 active:scale-95"
                       >
                         {prompt}
                       </button>

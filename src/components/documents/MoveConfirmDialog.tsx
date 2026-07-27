@@ -149,14 +149,14 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
 
   return (
     <Dialog open onOpenChange={(open) => !open && !isBusy && onCancel()}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-white border border-border shadow-xl rounded-xl">
-        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
+      <DialogContent className="p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
               <FolderInput className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-medium text-foreground">
+              <DialogTitle>
                 {verb} document
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">{doc.name}</p>
@@ -166,18 +166,18 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
 
         <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
           {/* From → To summary (always shown) */}
-          <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm space-y-1.5">
+          <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1.5">
             <div className="flex items-start gap-2">
-              <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground pt-0.5">From</span>
+              <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground pt-0.5">From</span>
               <span className="break-all text-foreground leading-snug" title={pending.sourcePath}>
                 {pending.sourcePath}
               </span>
             </div>
             <div className="flex items-center gap-2 text-primary pl-0.5">
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </div>
             <div className="flex items-start gap-2">
-              <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground pt-0.5">To</span>
+              <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground pt-0.5">To</span>
               <span className="break-all font-medium text-foreground leading-snug" title={pending.destPath}>
                 {pending.destPath}
               </span>
@@ -282,7 +282,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
           )}
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t border-border bg-muted/30 flex gap-2 shrink-0">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 shrink-0">
           {crossCategory && step === 2 && !copyBlocked ? (
             <Button variant="outline" onClick={() => setStep(1)} disabled={isBusy}
               className="h-8 text-xs rounded-lg border-border text-foreground">
@@ -297,7 +297,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
           <Button onClick={handlePrimary} disabled={isBusy || copyBlocked}
             className="h-8 text-xs rounded-lg">
             {isBusy
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Working…</>
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Working…</>
               : primaryLabel}
           </Button>
         </DialogFooter>

@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, Shield, Sparkles, TrendingDown } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Shield, TrendingDown } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import React, { useState } from "react";
 import Timeline from "./timeline";
 import Milestone from "./milestone";
@@ -88,9 +89,9 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
   return (
     <div className="space-y-6">
       {/* AI Summary */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <div className="flex items-center gap-1.5 mb-3">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <AiMark className="text-primary" />
           <h2 className="text-sm font-medium text-foreground">AI Programme Analysis</h2>
           {data && (
             <span className={`ml-auto inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${SEVERITY_BADGE[data.overall_severity]}`}>
@@ -114,7 +115,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Delay Risks */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <TrendingDown className="h-4 w-4 text-red-500" />
           Delay Risks
@@ -136,7 +137,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Financial Impact */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           Financial Impact
@@ -158,7 +159,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Compliance Gates */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
           <Shield className="h-4 w-4 text-primary" />
           Compliance Gates
@@ -180,9 +181,9 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Recommended Actions */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <AiMark className="text-primary" />
           Recommended Actions
         </h2>
         {isLoading ? (
@@ -191,7 +192,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
           <ol className="space-y-2">
             {data.recommendations.map((rec, i) => (
               <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium mt-0.5">
+                <span className="shrink-0 h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium mt-0.5">
                   {i + 1}
                 </span>
                 {rec}

@@ -26,7 +26,7 @@ export const StatusHeader = ({
   index?: number
 }) => (
   <div className={sectionClass(visibleSections, index)}>
-    <div className={`flex items-center justify-between p-4 rounded-lg border ${status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE"
+    <div className={`flex items-center justify-between p-4 rounded-xl border ${status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE"
         ? "bg-green-50 border-green-200"
         : status === "AT_RISK" || status === "REVIEW_REQUIRED" || status === "WARNING" || status === "PARTIALLY_ENTITLED" || status === "PENDING"
           ? "bg-amber-50 border-amber-200"
@@ -40,11 +40,11 @@ export const StatusHeader = ({
               : "bg-red_light/50"
           }`}>
           {status === "COMPLIANT" || status === "SUCCESS" || status === "CLEAR" || status === "ROUTINE" ? (
-            <CheckCircle2 className="h-6 w-6 text-green_dark" />
+            <CheckCircle2 className="h-5 w-5 text-green_dark" />
           ) : status === "AT_RISK" || status === "REVIEW_REQUIRED" || status === "WARNING" || status === "PARTIALLY_ENTITLED" || status === "PENDING" ? (
-            <AlertTriangle className="h-6 w-6 text-warning" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
           ) : (
-            <XCircle className="h-6 w-6 text-destructive" />
+            <XCircle className="h-5 w-5 text-destructive" />
           )}
         </div>
         <div>
@@ -116,7 +116,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
             </h4>
             <div className="space-y-3">
               {data.risk_flags.map((flag: any, i: number) => (
-                <div key={i} className="p-4 bg-white rounded-xl border border-red-100">
+                <div key={i} className="p-4 bg-card rounded-xl">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">{flag.title || flag}</span>
                     {flag.severity && (

@@ -46,17 +46,17 @@ const AiRouting = () => {
       <div className="flex items-center gap-2">
         <input
           type="text"
-          className="h-10 px-4 text-sm text-foreground border border-border bg-white rounded-lg w-full placeholder:text-muted-foreground"
+          className="h-10 px-4 text-sm text-foreground border border-border bg-card rounded-lg w-full placeholder:text-muted-foreground"
           placeholder="Search rules..."
         />
         <AiRoutingBuilderDrawer />
       </div>
 
       {data.map(({ id, title, badge, IF, then }) => (
-        <div key={id} className="border border-border rounded-lg bg-white overflow-hidden">
+        <div key={id} className="border border-border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-foreground">{title}</span>
               <StatusBadge status={badge} />
             </div>

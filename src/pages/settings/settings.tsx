@@ -7,10 +7,10 @@ const Settings = () => {
   return (
     <DashboardLayout padding="p-0" overflow="overflow-hidden">
       <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden">
-        <div className="flex-shrink-0 border-r border-border bg-white h-full overflow-y-auto">
+        <div className="flex-shrink-0 border-r border-border bg-card h-full overflow-y-auto">
           <Sidebar />
         </div>
-        <div className="flex-1 bg-muted overflow-y-auto">
+        <div className="flex-1 bg-background overflow-y-auto">
           <Outlet />
         </div>
       </div>

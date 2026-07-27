@@ -11,7 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { Loader2 } from "lucide-react";
 
 const WILL_GENERATE = [
@@ -54,17 +54,17 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[650px] bg-white p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-base text-foreground flex items-center gap-2">
-            <AiIcon size={18} className="text-primary" />
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle className="flex items-center gap-2">
+            <AiMark size={20} className="text-primary" />
             Generate AI Meeting Notes
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 px-6 pb-6 pt-4">
           {/* What AI will generate */}
-          <div className="bg-sidebar border border-border rounded-xl p-4">
+          <div className="bg-muted/50 border border-border rounded-xl p-4">
             <p className="text-sm text-foreground mb-2">AI will generate:</p>
             {WILL_GENERATE.map((item, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
                 </>
               ) : (
                 <>
-                  <AiIcon size={16} className="text-white mr-2" />
+                  <AiMark size={16} className="text-white mr-2" />
                   Generate Notes
                 </>
               )}

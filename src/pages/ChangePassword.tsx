@@ -47,14 +47,14 @@ const ChangePasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-4">
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
             <ShieldCheck className="w-7 h-7 text-[#6c5ce7]" />
           </div>
         </div>
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="text-center text-2xl font-normal tracking-tight text-gray-900">
           Set a new password
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
@@ -63,10 +63,10 @@ const ChangePasswordPage = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-card border border-border rounded-xl py-8 px-4 sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-xl bg-red-50 px-4 py-3">
                 <p className="text-sm font-medium text-red-800">{error}</p>
               </div>
             )}
@@ -83,14 +83,14 @@ const ChangePasswordPage = () => {
                   required
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
+                  className="appearance-none block w-full px-3 py-2 border border-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowOld(!showOld)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showOld ? "Hide password" : "Show password"}>
-                  {showOld ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showOld ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>
@@ -107,14 +107,14 @@ const ChangePasswordPage = () => {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
+                  className="appearance-none block w-full px-3 py-2 border border-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showNew ? "Hide password" : "Show password"}>
-                  {showNew ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showNew ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>
@@ -131,14 +131,14 @@ const ChangePasswordPage = () => {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
+                  className="appearance-none block w-full px-3 py-2 border border-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-[#6c5ce7] focus:border-[#6c5ce7] sm:text-sm pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showConfirm ? "Hide password" : "Show password"}>
-                  {showConfirm ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showConfirm ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>
@@ -146,7 +146,7 @@ const ChangePasswordPage = () => {
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#6c5ce7] hover:bg-[#6c5ce7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6c5ce7] disabled:opacity-50">
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-[#6c5ce7] hover:bg-[#6c5ce7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6c5ce7] disabled:opacity-50">
               {mutation.isPending ? "Saving..." : "Set new password"}
             </button>
           </form>

@@ -40,7 +40,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
       )}
 
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="p-6 bg-sidebar rounded-xl">
+        <div className="p-6 bg-muted/50 rounded-xl">
           <h4 className="text-base text-foreground mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />Summary
           </h4>
@@ -55,7 +55,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
           {weather?.today && (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
-                <Cloud className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                <Cloud className="h-4 w-4 text-blue-500 flex-shrink-0" />
                 <span className="text-xs font-medium text-blue-700">Site Weather</span>
               </div>
               <p className="text-xs text-blue-600">
@@ -77,7 +77,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
       {/* Required items analysis — materials/labour needed to execute the VO */}
       {requiredItems.length > 0 && (
         <div className={sectionClass(visibleSections, 2)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Package className="h-4 w-4 text-primary" />Required Items &amp; SA Market Costs
             </h4>
@@ -105,7 +105,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">{item.unit || "—"}</td>
                       <td className="py-3 pl-4">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.source?.includes("Stats SA") ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.source?.includes("Stats SA") ? "bg-green-50 text-green-700" : "bg-muted text-gray-600"}`}>
                           {item.source || "—"}
                         </span>
                       </td>
@@ -120,13 +120,13 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.procedural_compliance && (
         <div className={sectionClass(visibleSections, 3)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />Procedural Compliance
             </h4>
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(data.procedural_compliance).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground normal-case">
                       {key.replace(/_/g, " ")}
@@ -151,13 +151,13 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.valuation_assessment && (
         <div className={sectionClass(visibleSections, 4)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Scale className="h-4 w-4 text-primary" />Valuation Assessment
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-sidebar rounded-lg">
+                <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Applicable Method</p>
                   <p className="text-sm font-medium">{data.valuation_assessment.applicable_method?.method}</p>
                   {data.valuation_assessment.applicable_method?.clause_reference && (
@@ -165,7 +165,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   )}
                   <p className="text-xs text-gray-500 mt-1">{data.valuation_assessment.applicable_method?.finding}</p>
                 </div>
-                <div className="p-4 bg-sidebar rounded-lg">
+                <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Rate Analysis</p>
                   <Badge className={`${data.valuation_assessment.rate_analysis?.rates_compliant ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {data.valuation_assessment.rate_analysis?.rates_compliant ? "COMPLIANT" : "NON-COMPLIANT"}
@@ -176,7 +176,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
               <div className="grid grid-cols-2 gap-4">
                 {data.valuation_assessment.new_rates_permitted && (
-                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                  <div className="p-4 bg-indigo-50 rounded-lg">
                     <p className="text-xs font-medium text-indigo-700 normal-case mb-2">New Rates Permitted</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.new_rates_permitted.permitted ? "YES" : "NO"}</p>
                     {data.valuation_assessment.new_rates_permitted.clause_reference && (
@@ -186,7 +186,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </div>
                 )}
                 {data.valuation_assessment.threshold_triggered && (
-                  <div className={`p-4 rounded-lg border ${data.valuation_assessment.threshold_triggered.triggered ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100"}`}>
+                  <div className={`p-4 rounded-lg ${data.valuation_assessment.threshold_triggered.triggered ? "bg-amber-50" : "bg-muted/50"}`}>
                     <p className="text-xs font-medium normal-case mb-2">Threshold Triggers</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.threshold_triggered.triggered ? "TRIGGERED" : "NONE"}</p>
                     {data.valuation_assessment.threshold_triggered.threshold_details && (
@@ -202,23 +202,23 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
       {data.time_impact && (
         <div className={sectionClass(visibleSections, 5)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />Time & Schedule Impact
             </h4>
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Critical Path</p>
                 <Badge variant="outline" className={`${data.time_impact.critical_path_affected ? 'text-destructive border-destructive/30' : 'text-green_dark border-green-200'}`}>
                   {data.time_impact.critical_path_affected ? 'AFFECTED' : 'CLEAR'}
                 </Badge>
               </div>
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Days Claimed</p>
                 <p className="text-lg font-medium">{data.time_impact.days_claimed} Days</p>
                 <p className="text-xs text-gray-500">{data.time_impact.days_assessment}</p>
               </div>
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Notice Compliance</p>
                 <Badge variant="outline" className={`${data.time_impact.notice_requirement?.compliant ? 'text-green_dark' : 'text-warning'}`}>
                   {data.time_impact.notice_requirement?.compliant ? 'COMPLIANT' : 'AT RISK'}
@@ -227,7 +227,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </div>
 
             {data.time_impact.eot_entitlement && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                 <p className="text-xs font-medium text-blue-700 normal-case mb-2">EOT Entitlement</p>
                 <p className="text-sm font-medium italic">"{data.time_impact.eot_entitlement.clause_text || data.time_impact.eot_entitlement}"</p>
                 {data.time_impact.eot_entitlement.clause_reference && (

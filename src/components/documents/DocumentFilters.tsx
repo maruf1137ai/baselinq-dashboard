@@ -20,8 +20,8 @@ export const DocumentFilters: React.FC = () => {
         {/* Document Type Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-white rounded-lg">
-              Document Type <ChevronDown className="h-3 w-3 opacity-50" />
+            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-card rounded-lg">
+              Document Type <ChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -39,8 +39,8 @@ export const DocumentFilters: React.FC = () => {
         {/* Discipline Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-white rounded-lg">
-              Discipline <ChevronDown className="h-3 w-3 opacity-50" />
+            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-card rounded-lg">
+              Discipline <ChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -58,8 +58,8 @@ export const DocumentFilters: React.FC = () => {
         {/* AI Status Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-white rounded-lg">
-              AI Status <ChevronDown className="h-3 w-3 opacity-50" />
+            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-card rounded-lg">
+              AI Status <ChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -75,8 +75,8 @@ export const DocumentFilters: React.FC = () => {
         {/* Status Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-white rounded-lg">
-              Status <ChevronDown className="h-3 w-3 opacity-50" />
+            <Button variant="outline" className="h-9 gap-1 text-xs font-normal border-border bg-card rounded-lg">
+              Status <ChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -95,7 +95,7 @@ export const DocumentFilters: React.FC = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-1 text-xs font-normal">
-              Sort by: <span className="font-normal text-black">Recently Updated</span> <ChevronDown className="h-3 w-3 opacity-50" />
+              Sort by: <span className="font-normal text-black">Recently Updated</span> <ChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -112,7 +112,7 @@ export const DocumentFilters: React.FC = () => {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search documents..."
-          className="pl-10 py-[9px] border-border rounded-xl bg-white text-sm h-[40px] focus:ring-1 focus:ring-primary/20 transition-all shadow-sm"
+          className="pl-10 py-[9px] border-border rounded-xl bg-card text-sm h-[40px] focus:ring-1 focus:ring-primary/20 transition-all shadow-sm"
         />
       </div>
     </div>

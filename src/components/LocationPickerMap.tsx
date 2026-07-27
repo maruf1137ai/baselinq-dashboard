@@ -223,9 +223,9 @@ export function LocationPickerMap({
       {/* Search input */}
       {!readOnly && (
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none z-10" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none z-10" />
           <input
-            className="w-full h-12 pl-10 pr-10 rounded-[10px] text-sm outline-none transition-all bg-[#f5f6f8] border border-[#e2e5ea] text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
+            className="w-full h-12 pl-10 pr-10 rounded-lg text-sm outline-none transition-all bg-muted/50 border border-border text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
             placeholder="Search address or city…"
             value={query}
             onChange={handleInputChange}
@@ -234,30 +234,31 @@ export function LocationPickerMap({
             autoComplete="off"
           />
           {(isSearching || isReverseGeocoding) ? (
-            <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] animate-spin" />
+            <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] animate-spin" />
           ) : pin ? (
             <button
+              aria-label="Clear location"
               type="button"
               onClick={handleClear}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-red-500 transition-colors"
               title="Clear location"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           ) : null}
 
           {/* Autocomplete dropdown — z-[1001] to sit above Leaflet tile/control panes */}
           {showDropdown && suggestions.length > 0 && (
-            <div className="absolute z-[1001] left-0 right-0 top-[calc(100%+4px)] bg-white border border-[#e2e5ea] rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute z-[1001] left-0 right-0 top-[calc(100%+4px)] bg-card border border-border rounded-xl shadow-lg overflow-hidden">
               {suggestions.map((s) => (
                 <button
                   key={s.place_id}
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
-                  className="w-full flex items-start gap-2.5 px-4 py-3 text-left hover:bg-[#f5f6f8] transition-colors border-b border-[#f0f0f0] last:border-0"
+                  className="w-full flex items-start gap-2.5 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-0"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#9ca3af] mt-0.5 shrink-0" />
-                  <span className="text-[13px] text-[#374151] leading-snug line-clamp-2">{s.display_name}</span>
+                  <MapPin className="h-4 w-4 text-[#9ca3af] mt-0.5 shrink-0" />
+                  <span className="text-xs text-[#374151] leading-snug line-clamp-2">{s.display_name}</span>
                 </button>
               ))}
             </div>
@@ -267,8 +268,8 @@ export function LocationPickerMap({
 
       {/* Read-only address display */}
       {readOnly && location && (
-        <div className="flex items-center gap-2 px-3.5 h-10 bg-slate-50/50 rounded-lg border border-border text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4 shrink-0 text-primary" />
+        <div className="flex items-center gap-2 px-3.5 h-10 bg-muted/50 rounded-lg border border-border text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 shrink-0 text-primary" />
           <span className="truncate">{location}</span>
         </div>
       )}
@@ -276,7 +277,7 @@ export function LocationPickerMap({
       {/* Map — isolation:isolate keeps Leaflet's internal z-indexes (200-700) scoped here */}
       <div
         className={cn(
-          "rounded-xl overflow-hidden border border-[#e2e5ea]",
+          "rounded-xl overflow-hidden border border-border",
           readOnly && "pointer-events-none opacity-90"
         )}
         style={{ height: mapHeight, isolation: "isolate" }}
@@ -311,7 +312,7 @@ export function LocationPickerMap({
 
       {/* Helper / coords line */}
       {!readOnly && (
-        <p className="text-[11px] text-[#9ca3af]">
+        <p className="text-xs text-[#9ca3af]">
           {pin
             ? `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} — drag the pin or click the map to adjust`
             : "Search for an address above, or click the map to drop a pin"}

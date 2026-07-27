@@ -106,9 +106,9 @@ export function IssueRegisterModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] p-0 gap-0 bg-white dark:bg-zinc-900 z-[60] shadow-xl border">
-        <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle className="text-xl">Issue Register</DialogTitle>
+      <DialogContent size="full" className="max-h-[90vh] p-0 gap-0 z-[60]">
+        <DialogHeader className="px-6 py-4">
+          <DialogTitle>Issue Register</DialogTitle>
           <DialogDescription>
             Document register for <span className="font-medium text-foreground">{folderName}</span>
           </DialogDescription>
@@ -118,7 +118,7 @@ export function IssueRegisterModal({
           <IssueRegisterTable folderId={folderId} projectId={projectId} />
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t bg-muted/20">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

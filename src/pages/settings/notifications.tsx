@@ -107,7 +107,7 @@ const Notifications = () => {
       <UpcomingFeature title="Notifications" />
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
-      <div className="border border-border rounded-lg overflow-hidden bg-white">
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-muted/50">

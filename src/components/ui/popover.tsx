@@ -17,7 +17,13 @@ const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        // rounded-xl / border-border / shadow-lg, the same chrome DialogContent
+        // and DropdownMenuContent declare. A popover opened from inside a
+        // dialog was arriving at rounded-md with a lighter shadow, so the two
+        // surfaces visibly disagreed. ~8 call sites were re-declaring
+        // "bg-card border border-border shadow-lg rounded-xl" to patch this by
+        // hand; those are now redundant and have been removed.
+        "z-50 w-72 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className,
       )}
       {...props}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, User, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal, FileText } from "lucide-react";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
@@ -160,18 +160,18 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-[700px] bg-[#fcfdff] rounded-[24px] overflow-hidden border border-[#eef0f2] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] relative">
+    <div className="flex flex-col h-[700px] bg-muted/50 rounded-xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] relative">
       {/* Premium Header */}
-      <div className="px-6 py-4 bg-white/80 backdrop-blur-md border-b border-[#f0f1f3] flex items-center justify-between z-10">
+      <div className="px-6 py-4 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center shadow-lg p-1">
               <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain scale-110" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#00b894] border-2 border-white rounded-full" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#00b894] border-2 border-white rounded-full" />
           </div>
           <div className="flex flex-col">
-            <h3 className="text-[15px] font-medium text-[#1a1a2e] leading-tight flex items-center gap-1.5">
+            <h3 className="text-sm font-medium text-[#1a1a2e] leading-tight flex items-center gap-1.5">
               Linq Contract
             </h3>
           </div>
@@ -190,8 +190,8 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
           //     </div>
           //   </div>
           //   <div className="max-w-[280px]">
-          //     <p className="text-[15px] font-medium text-[#1a1a2e]">Initializing Briefing...</p>
-          //     <p className="text-[12px] text-[#94a3b8] mt-1 leading-relaxed font-normal">
+          //     <p className="text-sm font-medium text-[#1a1a2e]">Initializing Briefing...</p>
+          //     <p className="text-xs text-[#94a3b8] mt-1 leading-relaxed font-normal">
           //       Analyzing {taskType} documentation and synchronizing with standard contract protocols via RAG.
           //     </p>
           //   </div>
@@ -219,12 +219,12 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
               msg.role === 'user' ? "ml-3" : "mr-3"
             )}>
               <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-medium shadow-sm",
+                "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium shadow-sm",
                 msg.role === 'assistant'
-                  ? "bg-white border border-[#e2e8f0] text-[#6c5ce7]"
+                  ? "bg-card border border-border text-[#6c5ce7]"
                   : "bg-gradient-to-tr from-[#6c5ce7] to-[#a29bfe] text-white"
               )}>
-                {msg.role === 'assistant' ? <AiIcon size={16} /> : <User className="h-4 w-4" />}
+                {msg.role === 'assistant' ? <AiMark size={16} /> : <User className="h-4 w-4" />}
               </div>
             </div>
 
@@ -234,9 +234,9 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
             )}>
               {/* Bubble */}
               <div className={cn(
-                "px-5 py-4 rounded-[20px] shadow-sm text-[14px] leading-[1.7]",
+                "px-5 py-4 rounded-xl shadow-sm text-sm leading-[1.7]",
                 msg.role === 'assistant'
-                  ? "bg-white border border-[#f0f1f3] text-[#2d3748] rounded-tl-none font-medium"
+                  ? "bg-card border border-border text-[#2d3748] rounded-tl-none font-medium"
                   : "bg-[#6c5ce7] text-white rounded-tr-none font-medium"
               )}>
                 {msg.role === 'assistant' ? (
@@ -244,10 +244,10 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                     components={{
                       p: ({ children }) => <p className="mb-3 last:mb-0 font-normal">{children}</p>,
                       strong: ({ children }) => <strong className="font-medium text-[#1a1a2e]">{children}</strong>,
-                      ul: ({ children }) => <ul className="list-disc list-inside space-y-2 my-3 p-3 bg-[#f8f9fc] rounded-xl border border-[#edf2f7] font-normal">{children}</ul>,
+                      ul: ({ children }) => <ul className="list-disc list-inside space-y-2 my-3 p-3 bg-muted/50 rounded-xl font-normal">{children}</ul>,
                       li: ({ children }) => <li className="pl-1 font-normal">{children}</li>,
                       h1: ({ children }) => <h1 className="text-base font-medium mb-3 text-[#1a1a2e] border-b pb-1">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-[15px] font-medium mb-2 text-[#1a1a2e]">{children}</h2>,
+                      h2: ({ children }) => <h2 className="text-sm font-medium mb-2 text-[#1a1a2e]">{children}</h2>,
                       h3: ({ children }) => <h3 className="text-sm font-medium mb-1.5 text-[#4a5568] uppercase tracking-wide">{children}</h3>,
                     }}
                   >
@@ -264,18 +264,18 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                   {msg.sources.map((source, si) => (
                     <div key={si} className="relative group">
                       <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                        <FileText className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[11px] text-muted-foreground font-medium">Clause {source.clause_number}</span>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground font-medium">Clause {source.clause_number}</span>
                       </button>
                       <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
                         {source.document_name && (
-                          <p className="text-[10px] font-medium text-primary/70 mb-1 truncate">{source.document_name}</p>
+                          <p className="text-xs font-medium text-primary/70 mb-1 truncate">{source.document_name}</p>
                         )}
                         <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
                           <p className="text-xs font-normal text-foreground truncate">{source.clause_title}, Page {source.page_number}</p>
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">{source.excerpt}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{source.excerpt}</p>
                       </div>
                     </div>
                   ))}
@@ -283,7 +283,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
               )}
 
               {/* Timestamp */}
-              <span className="text-[10px] font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
+              <span className="text-xs font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
                 {formatTime(msg.timestamp)}
               </span>
             </div>
@@ -292,22 +292,22 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
 
         {isTyping && (
           <div className="flex gap-4 max-w-[90%] mr-auto animate-in fade-in duration-300">
-            <div className="h-8 w-8 rounded-full bg-white border border-[#E7E9EB] flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
-              <AiIcon size={16} />
+            <div className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
+              <AiMark size={16} />
             </div>
-            <div className="bg-[#F3F4F6] p-4 rounded-[16px] rounded-tl-none border border-[#E5E7EB] flex flex-col items-center gap-2">
+            <div className="bg-muted p-4 rounded-xl rounded-tl-none border border-border flex flex-col items-center gap-2">
               <div className="ai-orb-loader !w-6 !h-6 translate-y-0.5">
                 <div className="ai-orb-wave" />
                 <div className="ai-orb-wave" />
                 <div className="ai-orb-wave" />
               </div>
-              <span className="text-[10px] text-primary/60 font-medium animate-pulse">Analyzing context...</span>
+              <span className="text-xs text-primary/60 font-medium animate-pulse">Analyzing context...</span>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mx-auto flex items-center gap-3 p-4 bg-red-50/50 border border-red-100 rounded-[16px] text-red-600 text-[13px] font-medium animate-in shake duration-500">
+          <div className="mx-auto flex items-center gap-3 p-4 bg-red-50/50 border border-red-100 rounded-xl text-red-600 text-xs font-medium animate-in shake duration-500">
             <AlertCircle className="h-5 w-5 shrink-0" />
             {error}
           </div>
@@ -316,16 +316,16 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       </div>
 
       {/* Premium Input Area */}
-      <div className="p-6 bg-white border-t border-[#f0f1f3]">
+      <div className="p-6 bg-card border-t border-border">
         <div className="max-w-[100%] mx-auto space-y-5">
           {messages.length < 3 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
-              <span className="text-[10px] font-medium text-[#94a3b8] uppercase tracking-[0.2em] mr-2 shrink-0">Prompts:</span>
+              <span className="text-xs font-medium text-[#94a3b8] uppercase tracking-[0.2em] mr-2 shrink-0">Prompts:</span>
               {suggestions.map((suggest) => (
                 <button
                   key={suggest}
                   onClick={() => handleSend(suggest)}
-                  className="whitespace-nowrap text-[11px] font-medium text-[#4b5563] bg-white hover:bg-[#6c5ce7] hover:text-white px-4 py-2 rounded-full border border-[#e2e8f0] hover:border-[#6c5ce7] transition-all duration-300 shadow-sm active:scale-95"
+                  className="whitespace-nowrap text-xs font-medium text-[#4b5563] bg-card hover:bg-[#6c5ce7] hover:text-white px-4 py-2 rounded-full border border-border hover:border-[#6c5ce7] transition-all duration-300 shadow-sm active:scale-95"
                 >
                   {suggest}
                 </button>
@@ -334,7 +334,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
           )}
 
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#6c5ce7]/5 to-[#a29bfe]/5 rounded-[20px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#6c5ce7]/5 to-[#a29bfe]/5 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
             <div className="relative flex items-center">
               <textarea
                 value={input}
@@ -351,19 +351,20 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                 }}
                 placeholder="Examine compliance, risks, or schedule impacts..."
                 rows={1}
-                className="w-full bg-[#f8f9fa] border-2 border-[#eef0f2] rounded-[20px] pl-6 pr-14 py-4 text-[14px] font-medium text-[#1a1a2e] focus:outline-none focus:bg-white focus:border-[#6c5ce7] transition-all duration-300 placeholder:text-[#94a3b8] placeholder:font-normal resize-none overflow-hidden leading-relaxed"
+                className="w-full bg-muted/50 border-2 border-border rounded-lg pl-6 pr-14 py-4 text-sm font-medium text-[#1a1a2e] focus:outline-none focus:bg-card focus:border-[#6c5ce7] transition-all duration-300 placeholder:text-[#94a3b8] placeholder:font-normal resize-none overflow-hidden leading-relaxed"
               />
               <button
+                aria-label="Send message"
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isTyping}
                 className={cn(
                   "absolute right-2.5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300",
                   input.trim() && !isTyping
                     ? "bg-[#6c5ce7] text-white hover:bg-[#5a4ccb] hover:scale-105 shadow-lg shadow-purple-200"
-                    : "bg-[#f1f2f4] text-[#cbd5e0] cursor-not-allowed"
+                    : "bg-muted text-[#cbd5e0] cursor-not-allowed"
                 )}
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </button>
             </div>
           </div>

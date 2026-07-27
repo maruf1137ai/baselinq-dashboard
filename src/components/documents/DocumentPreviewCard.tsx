@@ -92,10 +92,10 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
   // before the file-extension branches because these docs have no `url`.
   if (certUrl) {
     return (
-      <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
           <div className="flex items-center gap-2 min-w-0">
-            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm text-foreground truncate">{fileName}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -105,7 +105,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
               onClick={() => window.open(certUrl, '_blank')}
               className="h-7 text-xs text-muted-foreground hover:text-foreground"
             >
-              <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open certificate
+              <ExternalLink className="mr-1.5" /> Open certificate
             </Button>
           </div>
         </div>
@@ -136,13 +136,13 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Header strip — file name + size + quick actions. Size moved here
           so the right-rail metadata cards don't carry it as a separate row
           (kept all file-level info next to the file itself). */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-sm text-foreground truncate">{fileName}</span>
           {formatBytes(fileSize) && (
             <span className="text-xs text-muted-foreground shrink-0 ml-1">
@@ -159,7 +159,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
                 onClick={handleOpen}
                 className="h-7 text-xs text-muted-foreground hover:text-foreground"
               >
-                <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> Full view
+                <Maximize2 className="mr-1.5" /> Full view
               </Button>
               <Button
                 variant="ghost"
@@ -167,7 +167,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
                 onClick={handleDownload}
                 className="h-7 text-xs text-muted-foreground hover:text-foreground"
               >
-                <Download className="w-3.5 h-3.5 mr-1.5" /> Download
+                <Download className="mr-1.5" /> Download
               </Button>
             </>
           )}
@@ -191,7 +191,7 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
         )}
         {url && isPdf && pdfLoading && (
           <div className="flex items-center justify-center min-h-[420px]">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
         {url && isPdf && pdfError && (

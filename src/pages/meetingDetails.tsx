@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, ChevronDown, Calendar, MapPin, Users, FileText, Loader2, ExternalLink, X } from "lucide-react";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,6 +11,7 @@ import { usePatch } from "@/hooks/usePatch";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
 
@@ -295,7 +296,7 @@ export default function MeetingDetails() {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <AwesomeLoader message="Loading Meeting" />
+        <AwesomeLoader message="Loading meeting" />
       </DashboardLayout>
     );
   }
@@ -303,10 +304,14 @@ export default function MeetingDetails() {
   if (isError || !meeting) {
     return (
       <DashboardLayout>
-        <div className="text-center py-20 text-sm text-muted-foreground">
-          Meeting not found.{" "}
-          <Link to="/meetings" className="text-primary underline">Back to meetings</Link>
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title="Meeting not found"
+          description="This meeting may have been removed or you may not have access to it."
+          action={
+            <Link to="/meetings" className="text-sm text-primary underline">Back to meetings</Link>
+          }
+        />
       </DashboardLayout>
     );
   }
@@ -324,7 +329,7 @@ export default function MeetingDetails() {
           to="/meetings"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Meetings
         </Link>
 
@@ -348,7 +353,7 @@ export default function MeetingDetails() {
                     })}
                     className="gap-1.5 bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
                   >
-                    <Check className="h-3.5 w-3.5" /> Accept
+                    <Check className="h-4 w-4" /> Accept
                   </Button>
                   <Button
                     variant="outline"
@@ -360,7 +365,7 @@ export default function MeetingDetails() {
                     })}
                     className="gap-1.5 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
                   >
-                    <X className="h-3.5 w-3.5" /> Decline
+                    <X className="h-4 w-4" /> Decline
                   </Button>
                 </div>
               ) : canUpdateMeeting ? (
@@ -377,16 +382,16 @@ export default function MeetingDetails() {
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
+              <Calendar className="h-4 w-4" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
             </span>
             {meeting.location && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" /> {meeting.location}
+                <MapPin className="h-4 w-4" /> {meeting.location}
               </span>
             )}
             {meeting.participants.length > 0 && (
               <span className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" /> {meeting.participants.length} participants
+                <Users className="h-4 w-4" /> {meeting.participants.length} participants
               </span>
             )}
             {meeting.meeting_link && !isTerminal && (
@@ -395,7 +400,7 @@ export default function MeetingDetails() {
                 disabled={startingBot}
                 className="flex items-center gap-1 text-primary hover:underline disabled:opacity-60"
               >
-                <ExternalLink className="h-3.5 w-3.5" /> Join Meeting
+                <ExternalLink className="h-4 w-4" /> Join Meeting
               </button>
             )}
           </div>
@@ -403,14 +408,14 @@ export default function MeetingDetails() {
 
         {/* Linq AI Notes — primary flow when a meeting link was provided */}
         {isPast && (
-          <div className="p-4 border border-border rounded-lg">
+          <div className="p-4 bg-card border border-border rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
-                <AiIcon size={16} className="text-primary" />
+                <AiMark size={16} className="text-primary" />
                 <h2 className="text-sm font-medium text-foreground">Linq AI Notes</h2>
               </div>
               {hasAiNotes && (
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Captured by Linq AI from meeting recording
                 </span>
               )}
@@ -475,7 +480,7 @@ export default function MeetingDetails() {
 
         {/* Manual Transcript — secondary backup only. Hidden when Linq AI notes exist. */}
         {isPast && !hasAiNotes && meeting.artefact_status !== "processing" && (
-          <div className="p-4 border border-dashed border-border rounded-lg bg-muted/20">
+          <div className="p-4 rounded-xl bg-muted/50">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Manual Transcript (Backup)
@@ -484,7 +489,7 @@ export default function MeetingDetails() {
                 onClick={() => setAiNotesOpen(true)}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
-                <AiIcon size={12} /> Paste transcript
+                <AiMark size={16} /> Paste transcript
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -495,7 +500,7 @@ export default function MeetingDetails() {
 
         {/* Key Decisions */}
         {isCompleted && meeting.decisions.length > 0 && (
-          <div className="p-4 border border-border rounded-lg">
+          <div className="p-4 bg-card border border-border rounded-xl">
             <h2 className="text-sm font-medium text-foreground mb-3">Key Decisions</h2>
             <div className="space-y-2">
               {meeting.decisions.map((d) => (
@@ -513,9 +518,9 @@ export default function MeetingDetails() {
 
         {/* Action Items */}
         {isCompleted && meeting.action_items.length > 0 && (
-          <div className="p-4 border border-border rounded-lg">
+          <div className="p-4 bg-card border border-border rounded-xl">
             <h2 className="text-sm font-medium text-foreground mb-3">Action Items</h2>
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="bg-muted/50">
@@ -551,7 +556,7 @@ export default function MeetingDetails() {
                           <div className="flex items-center gap-2">
                             {item.text}
                             {isCreating && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
                                 <Loader2 className="h-3 w-3 animate-spin" /> Creating task…
                               </span>
                             )}
@@ -560,7 +565,7 @@ export default function MeetingDetails() {
                         <td className="px-4 py-3">
                           {taskTypeForChip && (
                             <span
-                              className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full border ${TYPE_CHIP_CLASS}`}
+                              className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border ${TYPE_CHIP_CLASS}`}
                               title={item.linked_task_type ? `Task created as ${taskTypeForChip}` : `Will be created as ${taskTypeForChip}`}
                             >
                               {taskTypeForChip}
@@ -665,13 +670,13 @@ export default function MeetingDetails() {
 
         {/* Participants */}
         {meeting.participants.length > 0 && (
-          <div className="p-4 border border-border rounded-lg">
+          <div className="p-4 bg-card border border-border rounded-xl">
             <h2 className="text-sm font-medium text-foreground mb-3">Participants</h2>
             <div className="flex flex-wrap gap-2">
               {meeting.participants.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg">
                   <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-[10px] text-primary font-medium">
+                    <span className="text-xs text-primary font-medium">
                       {p.name.split(" ").map((n) => n[0]).join("")}
                     </span>
                   </div>
@@ -687,7 +692,7 @@ export default function MeetingDetails() {
 
         {/* Transcript */}
         {isCompleted && meeting.transcript.length > 0 && (
-          <div className="p-4 border border-border rounded-lg">
+          <div className="p-4 bg-card border border-border rounded-xl">
             <button
               onClick={() => setShowTranscript(!showTranscript)}
               className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -697,7 +702,7 @@ export default function MeetingDetails() {
               Transcript
             </button>
             {showTranscript && (
-              <div className="mt-3 border border-border rounded-lg p-4 space-y-3">
+              <div className="mt-3 bg-muted/50 rounded-lg p-4 space-y-3">
                 {meeting.transcript.map((segment) => (
                   <div key={segment.id} className="flex gap-3">
                     <span className="text-xs text-muted-foreground w-10 shrink-0 pt-0.5">{segment.time}</span>
@@ -714,7 +719,7 @@ export default function MeetingDetails() {
 
         {/* Pending outcome — no_show */}
         {meeting.status === "no_show" && !outcomeDismissed && canUpdateMeeting && (
-          <div className="p-6 border border-amber-200 bg-amber-50 rounded-lg">
+          <div className="p-6 border border-amber-200 bg-amber-50 rounded-xl">
             <p className="text-sm font-medium text-amber-800 mb-1">Awaiting outcome</p>
             <p className="text-sm text-amber-700 mb-4">The scheduled time has passed. What happened with this meeting?</p>
             <div className="flex flex-wrap gap-2">
@@ -747,16 +752,18 @@ export default function MeetingDetails() {
 
         {/* Confirmed no-show message */}
         {meeting.status === "no_show" && outcomeDismissed && (
-          <div className="p-4 border border-border rounded-lg bg-muted/30 text-sm text-muted-foreground">
+          <div className="p-4 rounded-xl bg-muted/50 text-sm text-muted-foreground">
             This meeting was confirmed as a no-show. No recording or notes are available.
           </div>
         )}
 
         {/* Upcoming meeting placeholder */}
         {!isPast && meeting.status !== "no_show" && (
-          <div className="p-8 border border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
-            Meeting details will appear here once the meeting is completed and AI notes are generated.
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No meeting details yet"
+            description="Meeting details will appear here once the meeting is completed and AI notes are generated."
+          />
         )}
       </div>
       {meeting && (

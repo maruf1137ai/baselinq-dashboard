@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface OrgMember {
   id: number;
@@ -199,7 +200,7 @@ const OrgTeamTable = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <AwesomeLoader message="Loading organization team..." />
+        <AwesomeLoader message="Loading organization team" />
       </div>
     );
   }
@@ -217,29 +218,29 @@ const OrgTeamTable = () => {
         {isOrgOwner && (
           <Button
             onClick={() => setShowInviteModal(true)}
-            className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2 rounded-lg"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             Invite User
           </Button>
         )}
       </div>
 
       {/* ── Members Table ── */}
-      <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-border">
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">User</th>
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Role</th>
-                <th className="px-6 py-4 text-[11px] font-normal text-muted-foreground uppercase tracking-widest">Status</th>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">User</th>
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">Role</th>
+                <th className="px-6 py-4 text-xs font-normal text-muted-foreground uppercase tracking-widest">Status</th>
                 {isOrgOwner && <th className="px-6 py-4 text-right"></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {/* Current User Row */}
-              <tr className="hover:bg-slate-50/30 transition-colors">
+              <tr className="hover:bg-muted/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-normal">
@@ -247,17 +248,17 @@ const OrgTeamTable = () => {
                     </div>
                     <div>
                       <p className="text-sm font-normal text-foreground leading-none">{user?.name || "You"}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{user?.email}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-xs text-muted-foreground border border-border">
                     {user?.role?.name || (user?.account_type === 'organisation' ? 'Organization Owner' : 'User')}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-green-600">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                     Active (You)
                   </span>
@@ -267,25 +268,25 @@ const OrgTeamTable = () => {
 
               {/* Other Members */}
               {data?.members.map((member) => (
-                <tr key={member.id} className="hover:bg-slate-50/30 transition-colors">
+                <tr key={member.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-normal">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-slate-500 text-xs font-normal">
                         {(member.name || member.email)[0].toUpperCase()}
                       </div>
                       <div>
                         <p className="text-sm font-normal text-foreground leading-none">{member.name || member.email.split('@')[0]}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">{member.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{member.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-[11px] text-muted-foreground border border-border">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted text-xs text-muted-foreground border border-border">
                       {member.role || "User"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-green-600">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                       Active
                     </span>
@@ -295,7 +296,7 @@ const OrgTeamTable = () => {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
@@ -304,7 +305,7 @@ const OrgTeamTable = () => {
                             setEditForm({ role_code: member.role_code || "" });
                             setShowEditModal(true);
                           }}>
-                            <Shield className="w-3.5 h-3.5 mr-2" />
+                            <Shield className="h-4 w-4 mr-2" />
                             Change Role
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -315,7 +316,7 @@ const OrgTeamTable = () => {
                             }}
                             className="text-red-600 focus:bg-red-50 focus:text-red-700"
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-2" />
                             Remove
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -327,26 +328,26 @@ const OrgTeamTable = () => {
 
               {/* Pending Invitations */}
               {data?.pending_invitations.map((invite) => (
-                <tr key={invite.id} className="bg-slate-50/20 hover:bg-slate-50/40 transition-colors italic">
+                <tr key={invite.id} className="bg-muted/50 hover:bg-muted/50 transition-colors italic">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 opacity-70">
-                      <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 border-dashed flex items-center justify-center text-slate-400">
-                        <Mail className="w-3.5 h-3.5" />
+                      <div className="w-8 h-8 rounded-full bg-muted/50 border border-border border-dashed flex items-center justify-center text-slate-400">
+                        <Mail className="h-4 w-4" />
                       </div>
                       <div>
                         <p className="text-sm font-normal text-foreground leading-none">{invite.name || "Invited Peer"}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">{invite.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{invite.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 opacity-70">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-50 text-[11px] text-muted-foreground border border-border border-dashed">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/50 text-xs text-muted-foreground border border-border border-dashed">
                       {roles.find(r => r.code === invite.position)?.name || invite.position}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
-                      <Clock className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
+                      <Clock className="h-3 w-3" />
                       Pending
                     </span>
                   </td>
@@ -359,7 +360,7 @@ const OrgTeamTable = () => {
                           setSelectedInvite(invite);
                           setShowCancelInviteDialog(true);
                         }}
-                        className="text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                        className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                       >
                         Cancel
                       </Button>
@@ -370,8 +371,13 @@ const OrgTeamTable = () => {
 
               {(!data?.members.length && !data?.pending_invitations.length) && (
                 <tr>
-                  <td colSpan={isOrgOwner ? 4 : 3} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                    No other users in this organization yet.
+                  <td colSpan={isOrgOwner ? 4 : 3}>
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="You're the only person in this organisation"
+                      description="Invite the quantity surveyors, contract administrators and project managers who need to act on this contract."
+                    />
                   </td>
                 </tr>
               )}
@@ -384,16 +390,16 @@ const OrgTeamTable = () => {
 
       {/* Invite Member Modal */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Invite User</DialogTitle>
+            <DialogTitle>Invite User</DialogTitle>
             <DialogDescription className="text-xs">
               Send an invitation to join your organization on Baselinq.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-1.5">
-              <Label htmlFor="invite-name" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Contact Name</Label>
+              <Label htmlFor="invite-name" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Contact Name</Label>
               <Input
                 id="invite-name"
                 placeholder="Full name (optional)"
@@ -403,7 +409,7 @@ const OrgTeamTable = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-email" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Email Address *</Label>
+              <Label htmlFor="invite-email" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Email Address *</Label>
               <Input
                 id="invite-email"
                 type="email"
@@ -414,7 +420,7 @@ const OrgTeamTable = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-role" className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Assigned Role *</Label>
+              <Label htmlFor="invite-role" className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Assigned Role *</Label>
               <Select
                 value={inviteForm.position}
                 onValueChange={(val) => setInviteForm({ ...inviteForm, position: val })}
@@ -422,7 +428,7 @@ const OrgTeamTable = () => {
                 <SelectTrigger className="h-10 rounded-lg text-sm border-border">
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   {roles.map((role) => (
                     <SelectItem key={role.code} value={role.code}>
                       {role.name}
@@ -432,12 +438,12 @@ const OrgTeamTable = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setShowInviteModal(false)} className="rounded-lg h-10 px-6">Cancel</Button>
             <Button
               onClick={handleInvite}
               disabled={isSubmitting || !inviteForm.email || !inviteForm.position}
-              className="bg-primary text-white hover:bg-primary/90 rounded-lg h-10 px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 px-6"
             >
               {isSubmitting ? "Sending..." : "Send Invitation"}
             </Button>
@@ -447,16 +453,16 @@ const OrgTeamTable = () => {
 
       {/* Edit Role Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Change User Role</DialogTitle>
+            <DialogTitle>Change User Role</DialogTitle>
             <DialogDescription className="text-xs">
               Update {selectedMember?.name || selectedMember?.email}'s role in the organization.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground ml-0.5">Select New Role</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground ml-0.5">Select New Role</Label>
               <Select
                 value={editForm.role_code}
                 onValueChange={(val) => setEditForm({ ...editForm, role_code: val })}
@@ -464,7 +470,7 @@ const OrgTeamTable = () => {
                 <SelectTrigger className="h-10 rounded-lg text-sm border-border">
                   <SelectValue placeholder="Select a role..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectContent className="bg-card">
                   {roles.map((role) => (
                     <SelectItem key={role.code} value={role.code}>
                       {role.name}
@@ -474,12 +480,12 @@ const OrgTeamTable = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setShowEditModal(false)} className="rounded-lg h-10 px-6">Cancel</Button>
             <Button
               onClick={handleUpdateRole}
               disabled={isSubmitting}
-              className="bg-primary text-white hover:bg-primary/90 rounded-lg h-10 px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 px-6"
             >
               {isSubmitting ? "Updating..." : "Save Changes"}
             </Button>
@@ -489,9 +495,9 @@ const OrgTeamTable = () => {
 
       {/* Remove Member Alert */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Remove User</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to remove {selectedMember?.name || selectedMember?.email} from this organization? They will lose access to all associated projects.
             </AlertDialogDescription>
@@ -511,9 +517,9 @@ const OrgTeamTable = () => {
 
       {/* Cancel Invite Alert */}
       <AlertDialog open={showCancelInviteDialog} onOpenChange={setShowCancelInviteDialog}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Cancel Invitation</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to cancel the invitation sent to {selectedInvite?.email}?
             </AlertDialogDescription>

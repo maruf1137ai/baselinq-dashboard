@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, Sparkles, CheckCircle2, Users, Loader2 } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2 } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { toast } from "sonner";
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
@@ -638,7 +639,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   return (
     <>
       <div className="h-full flex flex-col">
-        <div className="nav py-3 px-6 border-b border-r border-[#DEDEDE] flex flex-col gap-3 flex-shrink-0">
+        <div className="nav py-3 px-6 border-b border-r border-border flex flex-col gap-3 flex-shrink-0">
           {/* Breadcrumb & Header */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
@@ -663,19 +664,19 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
           {/* Document Context Card */}
           {showContext && contextData && (
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
+            <div className="bg-muted/50 border border-border rounded-lg p-3 animate-in slide-in-from-top-2 duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-sm font-normal text-gray-900 line-clamp-1 mr-2" title={contextData.title}>
                   {contextData.title}
                 </h3>
                 <div className="flex gap-2 shrink-0">
                   {contextData.status && (
-                    <Badge variant="outline" className="bg-white text-gray-700 border-gray-200 text-[10px] h-5">
+                    <Badge variant="outline" className="bg-card text-gray-700 border-border text-xs h-5">
                       {contextData.status}
                     </Badge>
                   )}
                   {(contextData as any).priority && (
-                    <Badge variant="outline" className={`text-[10px] h-5 ${(contextData as any).priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                    <Badge variant="outline" className={`text-xs h-5 ${(contextData as any).priority === 'High' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-muted/50 text-gray-700 border-border'
                       }`}>
                       {(contextData as any).priority}
                     </Badge>
@@ -688,7 +689,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                   <div className="flex items-start gap-2">
                     <Calendar className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-[10px] text-gray-500 font-normal">Due Date</p>
+                      <p className="text-xs text-gray-500 font-normal">Due Date</p>
                       <p className="text-xs text-gray-900">{formatDate((contextData as any).dueDate)}</p>
                     </div>
                   </div>
@@ -698,7 +699,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                   <div className="flex items-start gap-2">
                     <DollarSign className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-[10px] text-gray-500 font-normal">Cost Impact</p>
+                      <p className="text-xs text-gray-500 font-normal">Cost Impact</p>
                       <p className="text-xs text-gray-900 font-normal">{(contextData as any).cost}</p>
                     </div>
                   </div>
@@ -708,7 +709,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                   <div key={i} className={`flex items-start gap-2 ${detail.fullWidth ? 'col-span-2' : ''}`}>
                     <div className="w-3.5 shrink-0" /> {/* Spacer for alignment */}
                     <div>
-                      <p className="text-[10px] text-gray-500 font-normal">{detail.label}</p>
+                      <p className="text-xs text-gray-500 font-normal">{detail.label}</p>
                       <p className="text-xs text-gray-900 line-clamp-1" title={detail.value}>{detail.value}</p>
                     </div>
                   </div>
@@ -724,8 +725,8 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                 <CheckCircle2 className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-[12px] font-normal text-primary leading-none">Task Completed</p>
-                <p className="text-[11px] text-primary/70 mt-0.5">This task has been marked as complete.</p>
+                <p className="text-xs font-normal text-primary leading-none">Task Completed</p>
+                <p className="text-xs text-primary/70 mt-0.5">This task has been marked as complete.</p>
               </div>
             </div>
           )}
@@ -737,7 +738,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
           )}
         </div>
 
-        <div className="bg-white border-r border-[#DEDEDE] flex-1 relative overflow-hidden">
+        <div className="bg-card border-r border-border flex-1 relative overflow-hidden">
           <div ref={scrollContainerRef} className="relative w-full px-5 h-full overflow-y-auto ">
             <div className="relative size-full">
               {/* Chat Messages */}
@@ -746,7 +747,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                 data-name="chat">
                 {/* Channel welcome banner */}
                 <div className="flex flex-col items-center justify-center w-full py-8 self-center">
-                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
                     <MessageSquare className="h-7 w-7 text-gray-400" />
                   </div>
                   <p className="text-sm font-normal text-[#101828] text-center">
@@ -768,7 +769,10 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                 {!isLoadingMessages && messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center w-full text-[#9CA3AF] gap-2 self-center" style={{ minHeight: "calc(100% - 200px)" }}>
                     <MessageSquare className="h-8 w-8 stroke-[1.5]" />
-                    <p className="text-xs">No messages yet, start the conversation below</p>
+                    <p className="text-xs">No messages yet</p>
+                    <p className="text-xs max-w-xs text-center leading-relaxed">
+                      Correspondence sent here is timestamped and kept against this record as part of its audit trail.
+                    </p>
                   </div>
                 )}
                 {messages.map((msg) => {
@@ -817,11 +821,11 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                           <div className="mx-auto max-w-sm rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm">
                             <div className="flex items-center gap-2 bg-primary px-4 py-2">
                               <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
-                              <span className="text-[11px] font-normal text-white uppercase tracking-wider">{bannerLabel}</span>
+                              <span className="text-xs font-normal text-white uppercase tracking-wider">{bannerLabel}</span>
                             </div>
                             <div className="px-4 py-3 text-center">
-                              <p className="text-[12px] text-foreground leading-relaxed">{cleanContent}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1.5">{msg.timestamp}</p>
+                              <p className="text-xs text-foreground leading-relaxed">{cleanContent}</p>
+                              <p className="text-xs text-muted-foreground mt-1.5">{msg.timestamp}</p>
                             </div>
                           </div>
                         </div>
@@ -830,12 +834,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                     // Regular status changes render as a centered pill with dividers
                     return (
                       <div key={msg.id} className="flex items-center gap-3 w-full justify-center py-1.5 self-center px-2">
-                        <div className="h-px flex-1 bg-[#EBEBEB]" />
-                        <div className="flex items-center gap-1.5 bg-[#F7F7F8] border border-[#EBEBEB] rounded-full px-3 py-1 shrink-0">
+                        <div className="h-px flex-1 bg-muted" />
+                        <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-full px-3 py-1 shrink-0">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
-                          <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">{cleanContent}</span>
+                          <span className="text-xs text-[#9CA3AF] whitespace-nowrap">{cleanContent}</span>
                         </div>
-                        <div className="h-px flex-1 bg-[#EBEBEB]" />
+                        <div className="h-px flex-1 bg-muted" />
                       </div>
                     );
                   }
@@ -851,7 +855,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                       className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
                       {isCurrentUser ? (
                         // Current User Message (right side)
-                        <div className={`relative rounded-[10px] bg-[#F3F2F0] py-2.5 px-4 ${msg.pending ? "opacity-70" : ""}`}>
+                        <div className={`relative rounded-lg bg-muted/50 py-2.5 px-4 ${msg.pending ? "opacity-70" : ""}`}>
                           <div className="relative text-[#101828] text-base">
                             <p className="leading-[26px] whitespace-pre-wrap">
                               {msg.content}
@@ -875,7 +879,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                                     key={index}
                                     type="button"
                                     onClick={() => setPreviewFile(file)}
-                                    className="rounded-lg overflow-hidden border border-[#e2e5ea] hover:opacity-90 transition-opacity">
+                                    className="rounded-lg overflow-hidden border border-border hover:opacity-90 transition-opacity">
                                     <img src={file.url} alt={file.name} className="max-w-[140px] max-h-[100px] object-cover block" />
                                   </button>
                                 );
@@ -884,9 +888,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                                     key={index}
                                     type="button"
                                     onClick={() => setPreviewFile(file)}
-                                    className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors">
+                                    className="bg-card inline-flex items-center gap-1 rounded-md py-2 px-3 hover:bg-muted/50 transition-colors">
                                     <FileIcon type={file.type} />
-                                    <div className="text-[#364153] text-[14px]">
+                                    <div className="text-[#364153] text-sm">
                                       <p className="leading-[20px]">{file.name}</p>
                                     </div>
                                   </button>
@@ -895,7 +899,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                             </div>
                           )}
                           {msg.pending && (
-                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-gray-400">
+                            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-400">
                               <Loader2 className="w-3 h-3 animate-spin" />
                               Sending…
                             </div>
@@ -907,7 +911,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                           {/* Avatar */}
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-primary/10' : 'bg-[#101828]'}`}>
                             {isAI ? (
-                              <Sparkles className="w-4 h-4 text-primary" />
+                              <AiMark className="text-primary" />
                             ) : (
                               <span className="text-white text-sm font-normal"> {senderInitial} </span>
                             )}
@@ -916,7 +920,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                             {/* Sender Name */}
                             <p className="text-muted-foreground text-xs mb-1 capitalize flex items-center gap-1.5">
                               {msg.sender_name}
-                              {isAI && <span className="text-primary text-[10px] font-normal">AI</span>}
+                              {isAI && <span className="text-primary text-xs font-normal">AI</span>}
                             </p>
                             {/* Message Box */}
                             <div className={`relative rounded-xl py-2.5 px-4 ${isAI ? 'bg-primary/5 border-l-2 border-primary/30' : 'bg-sidebar'}`}>
@@ -943,7 +947,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                                         key={index}
                                         type="button"
                                         onClick={() => setPreviewFile(file)}
-                                        className="rounded-lg overflow-hidden border border-[#e2e5ea] hover:opacity-90 transition-opacity">
+                                        className="rounded-lg overflow-hidden border border-border hover:opacity-90 transition-opacity">
                                         <img src={file.url} alt={file.name} className="max-w-[140px] max-h-[100px] object-cover block" />
                                       </button>
                                     );
@@ -952,9 +956,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                                         key={index}
                                         type="button"
                                         onClick={() => setPreviewFile(file)}
-                                        className="bg-white inline-flex items-center gap-1 rounded-[4px] py-2 px-3 hover:bg-gray-50 transition-colors border border-[#e2e5ea]">
+                                        className="bg-card inline-flex items-center gap-1 rounded-md py-2 px-3 hover:bg-muted/50 transition-colors border border-border">
                                         <FileIcon type={file.type} />
-                                        <div className="text-[#364153] text-[14px]">
+                                        <div className="text-[#364153] text-sm">
                                           <p className="leading-[20px]">{file.name}</p>
                                         </div>
                                       </button>
@@ -976,7 +980,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                     <div
                       className="relative rounded-[20.444px] shrink-0 size-[35.778px]"
                       data-name="app-icons">
-                      <div className="box-border content-stretch flex flex-col gap-[10.222px] items-center justify-center overflow-clip p-[10.222px] relative rounded-[inherit] size-[35.778px] border-[#e0e0e0] border-[1.278px]">
+                      <div className="box-border content-stretch flex flex-col gap-[10.222px] items-center justify-center overflow-clip p-[10.222px] relative rounded-[inherit] size-[35.778px] border-border border-[1.278px]">
                         <div className="h-[14.842px] relative shrink-0 w-[14.374px]">
                           <svg
                             className="block size-full"
@@ -999,7 +1003,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-1 bg-[#F3F2F0] rounded-[10px] py-3 px-4">
+                    <div className="flex items-center space-x-1 bg-muted/50 rounded-xl py-3 px-4">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                         <div
@@ -1020,16 +1024,16 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
         </div>
 
         {/* Search - Input Area */}
-        <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-white border-t border-r border-[#DEDEDE]">
+        <div className="w-full flex flex-col gap-2 px-5 py-2.5 flex-shrink-0 bg-card border-t border-r border-border">
           {/* Attached Files Preview */}
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap mb-2">
               {attachedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="bg-white inline-flex items-center gap-1 rounded-[4px] py-1 px-2 border border-[#DEDEDE]">
+                  className="bg-card inline-flex items-center gap-1 rounded-md py-1 px-2 border border-border">
                   <FileIcon type={file.type} />
-                  <div className="text-[#364153] text-[12px]">
+                  <div className="text-[#364153] text-xs">
                     <p className="leading-[16px]">{file.name}</p>
                   </div>
                   <button
@@ -1044,7 +1048,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
           {/* @mention dropdown */}
           {showMentions && filteredMembers.length > 0 && (
-            <div className="mb-2 bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            <div className="mb-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
               {filteredMembers.map((member, idx) => {
                 const name = member.name || member.user?.name || "User";
                 const rawRole = member.role || member.user?.role || "";
@@ -1061,9 +1065,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground truncate">{name}</p>
-                      {role && <p className="text-[10px] text-muted-foreground truncate">{role}</p>}
+                      {role && <p className="text-xs text-muted-foreground truncate">{role}</p>}
                     </div>
-                    <span className="text-[10px] text-primary font-normal">@mention</span>
+                    <span className="text-xs text-primary font-normal">@mention</span>
                   </button>
                 );
               })}
@@ -1071,7 +1075,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
           )}
 
           {/* Input bar */}
-          <div className="flex items-center gap-4 bg-[#f9f9f9] px-4 py-2 rounded-full w-full box-border">
+          <div className="flex items-center gap-4 bg-muted/50 px-4 py-2 rounded-full w-full box-border">
             {/* Hidden file input */}
             <input
               type="file"
@@ -1083,10 +1087,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
             {/* Attachment Icon */}
             <button
+              type="button"
+              aria-label="Attach a file"
               onClick={triggerFileInput}
-              className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
+              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               <svg
-                className="w-6 h-6"
+                className="h-4 w-4"
                 viewBox="0 0 16 22"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -1101,13 +1107,17 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
             {/* Voice Icon */}
             <button
+              type="button"
+              aria-label={isRecording ? "Pause recording" : "Record a voice message"}
               onClick={handleVoiceRecord}
-              className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
+              className={`shrink-0 h-8 w-8 flex items-center justify-center rounded-full transition-colors ${isRecording
+                ? "text-destructive hover:bg-destructive/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}>
               {isRecording && !isPaused ? (
-                <Pause className="w-6 h-6" />
+                <Pause className="h-4 w-4" />
               ) : (
-                <Mic className="w-6 h-6" />
+                <Mic className="h-4 w-4" />
               )}
             </button>
 
@@ -1116,7 +1126,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
               {isRecording && (
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full bg-red-500 shrink-0 ${!isPaused && "animate-pulse"}`} />
-                  <span className="text-[#676767] text-[13px]">
+                  <span className="text-[#676767] text-xs">
                     {isPaused ? "Recording Paused" : "Recording..."}
                   </span>
                   <button
@@ -1136,7 +1146,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                     ? "Add a caption (optional)…"
                     : "Type a message… (use @ to mention)"
                 }
-                className="flex-grow bg-transparent outline-none text-[16px] text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-grow bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground resize-none leading-normal max-h-[120px] overflow-y-auto disabled:opacity-60 disabled:cursor-not-allowed"
                 rows={1}
                 value={message}
                 disabled={isTaskCompleted}
@@ -1153,14 +1163,15 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
             <button
               onClick={handleSend}
               disabled={isTaskCompleted || (message.trim() === "" && attachedFiles.length === 0 && !isRecording) || isUploading}
-              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
-                ? "bg-[#101828] cursor-pointer"
-                : "bg-[#e0e0e0] cursor-not-allowed"
+              aria-label="Send message"
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}>
               {isUploading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Send className="w-4 h-4 text-white" />
+                <Send className="h-4 w-4" />
               )}
             </button>
           </div>

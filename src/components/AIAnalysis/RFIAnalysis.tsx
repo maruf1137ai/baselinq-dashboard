@@ -65,12 +65,12 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
 
   return (
     <div
-      className="border rounded-[12px] overflow-hidden transition-all duration-200 border-[#e9ecef]"
+      className="border rounded-xl overflow-hidden transition-all duration-200 border-border"
       style={{ borderLeftWidth: "4px", borderLeftColor: isGreen ? "#00b894" : item.status?.toUpperCase() === "PENDING" ? "#fdcb6e" : "#d63031" }}
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#f8f9fa] transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
       >
         {isGreen ? (
           <CheckCircle2 className="h-4 w-4 text-[#00b894] shrink-0" />
@@ -80,22 +80,22 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
           <AlertTriangle className="h-4 w-4 text-[#d63031] shrink-0" />
         )}
 
-        <span className="text-[11px] font-normal uppercase tracking-[0.05em] text-[#1a1a1a] flex-1">
+        <span className="text-xs font-normal uppercase tracking-[0.05em] text-[#1a1a1a] flex-1">
           {label}
         </span>
 
-        <span className={cn("text-[11px] font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", sc.text, sc.border)}>
+        <span className={cn("text-xs font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", sc.text, sc.border)}>
           {item.status}
         </span>
 
         {item.clause_reference && (
-          <span className="text-[10px] text-[#9CA3AF] ml-1">Cl. {item.clause_reference}</span>
+          <span className="text-xs text-[#9CA3AF] ml-1">Cl. {item.clause_reference}</span>
         )}
 
         {open ? (
-          <ChevronDown className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0" />
+          <ChevronDown className="h-4 w-4 text-[#9CA3AF] shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0" />
+          <ChevronRight className="h-4 w-4 text-[#9CA3AF] shrink-0" />
         )}
       </button>
 
@@ -103,20 +103,20 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
         "overflow-hidden transition-all duration-200",
         open ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
       )}>
-        <div className="px-4 pb-3 pt-0 space-y-1.5 border-t border-[#f0f0f0]">
+        <div className="px-4 pb-3 pt-0 space-y-1.5 border-t border-border">
           <p className="text-sm text-[#4B5563] leading-relaxed pt-2.5">{item.finding}</p>
           {item.clause_reference && (
-            <p className="text-[11px] text-[#9CA3AF]">
+            <p className="text-xs text-[#9CA3AF]">
               Ref: Clause {item.clause_reference} {item.page_number ? `(Page ${item.page_number})` : ""}
             </p>
           )}
           {item.response_deadline && (
-            <p className="text-[11px] font-medium text-[#d63031]">
+            <p className="text-xs font-medium text-[#d63031]">
               Deadline: {formatDate(item.response_deadline)}
             </p>
           )}
           {item.authorized_party && (
-            <p className="text-[11px] text-[#6c5ce7] font-medium">
+            <p className="text-xs text-[#6c5ce7] font-medium">
               Responsible: {item.authorized_party}
             </p>
           )}
@@ -131,25 +131,25 @@ function ImpactIndicator({ label, item, icon: Icon, defaultOpen }: { label: stri
   const [open, setOpen] = useState(defaultOpen);
   const isLikely = item.likely === true;
   const color = isLikely ? "text-[#d63031]" : "text-[#00b894]";
-  const bgColor = isLikely ? "bg-[#d63031]/5" : "bg-[#f8f9fa]";
+  const bgColor = isLikely ? "bg-[#d63031]/5" : "bg-muted/50";
 
   return (
     <button
       onClick={() => setOpen(!open)}
-      className={cn("flex flex-col items-center text-center p-3 rounded-[12px] border border-[#e9ecef] transition-all duration-200 hover:border-[#dee2e6] cursor-pointer w-full", bgColor)}
+      className={cn("flex flex-col items-center text-center p-3 rounded-xl border border-border transition-all duration-200 hover:border-border cursor-pointer w-full", bgColor)}
     >
       <Icon className={cn("h-4 w-4 mb-1.5", color)} />
-      <span className="text-[10px] text-[#6B7280] normal-case font-medium">{label}</span>
-      <span className={cn("text-[12px] font-normal mt-0.5", color)}>
+      <span className="text-xs text-[#6B7280] normal-case font-medium">{label}</span>
+      <span className={cn("text-xs font-normal mt-0.5", color)}>
         {isLikely ? "LIKELY" : "UNLIKELY"}
       </span>
       {item.severity && (
-        <span className="text-[9px] mt-1 border rounded-full px-2 py-0.5 border-[#e9ecef] text-[#6B7280]">
+        <span className="text-xs mt-1 border rounded-full px-2 py-0.5 border-border text-[#6B7280]">
           {item.severity} SEVERITY
         </span>
       )}
       {open && (item.assessment || item.consequences) && (
-        <p className="text-[11px] text-[#6B7280] mt-2 leading-relaxed text-left w-full">
+        <p className="text-xs text-[#6B7280] mt-2 leading-relaxed text-left w-full">
           {item.assessment || item.consequences}
         </p>
       )}
@@ -193,7 +193,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
     <div className="space-y-0">
       {/* ─── Verdict Banner ─── */}
       <div className={sectionClass(visibleSections, 0)}>
-        <div className={cn("flex items-center justify-between p-4 rounded-t-[12px] border", risk.bg, risk.border)}>
+        <div className={cn("flex items-center justify-between p-4 rounded-t-xl border", risk.bg, risk.border)}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className={cn("p-2 rounded-full shrink-0", risk.bg)}>
               {data.risk_level?.toUpperCase() === "LOW" ? (
@@ -206,14 +206,14 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={cn("text-[11px] font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", risk.text, risk.border)}>
+                <span className={cn("text-xs font-normal uppercase tracking-[0.05em] border rounded-full px-2.5 py-0.5", risk.text, risk.border)}>
                   {risk.label}
                 </span>
-                <span className="text-[11px] font-normal uppercase tracking-[0.05em] text-[#6B7280]">
+                <span className="text-xs font-normal uppercase tracking-[0.05em] text-[#6B7280]">
                   {data.overall_assessment?.replace(/_/g, " ") || "ROUTINE"}
                 </span>
                 {data.rfi_id && (
-                  <span className="text-[11px] text-[#9CA3AF]">{data.rfi_id}</span>
+                  <span className="text-xs text-[#9CA3AF]">{data.rfi_id}</span>
                 )}
               </div>
               <p className="text-sm text-[#4B5563] mt-1 leading-relaxed line-clamp-2">{data.summary}</p>
@@ -222,7 +222,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
 
           {deadlineInfo && (
             <div className="text-right shrink-0 ml-4">
-              <p className={cn("text-[12px] font-medium whitespace-nowrap", deadlineInfo.color)}>
+              <p className={cn("text-xs font-medium whitespace-nowrap", deadlineInfo.color)}>
                 {deadlineInfo.urgent && <Clock className="inline h-3 w-3 mr-1 -mt-0.5" />}
                 {deadlineInfo.text}
               </p>
@@ -233,16 +233,16 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
 
       {/* ─── Tabs ─── */}
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="flex border border-t-0 border-[#e9ecef] rounded-b-[12px] bg-white overflow-hidden">
+        <div className="flex border border-t-0 border-border rounded-b-xl bg-card overflow-hidden">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex-1 py-2.5 text-[12px] font-medium tracking-wide transition-colors",
+                "flex-1 py-2.5 text-xs font-medium tracking-wide transition-colors",
                 activeTab === tab.id
-                  ? "text-[#6c5ce7] border-b-2 border-[#6c5ce7] bg-[#f8f9fa]"
-                  : "text-[#6B7280] hover:text-[#4B5563] hover:bg-[#f8f9fa]"
+                  ? "text-[#6c5ce7] border-b-2 border-[#6c5ce7] bg-muted/50"
+                  : "text-[#6B7280] hover:text-[#4B5563] hover:bg-muted/50"
               )}
             >
               {tab.label}
@@ -257,27 +257,27 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
           {/* Needs Attention */}
           <div className={sectionClass(visibleSections, 2)}>
             {attentionItems.length > 0 ? (
-              <div className="rounded-[12px] border border-[#fdcb6e]/40 bg-[#fdcb6e]/5 p-4">
+              <div className="rounded-xl border border-[#fdcb6e]/40 bg-[#fdcb6e]/5 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="h-4 w-4 text-[#e17055]" />
-                  <span className="text-[13px] font-medium text-[#1a1a1a]">Requires Attention</span>
-                  <span className="text-[10px] bg-[#e17055] text-white rounded-full px-2 py-0.5 font-medium">{attentionItems.length}</span>
+                  <span className="text-xs font-medium text-[#1a1a1a]">Requires Attention</span>
+                  <span className="text-xs bg-[#e17055] text-white rounded-full px-2 py-0.5 font-medium">{attentionItems.length}</span>
                 </div>
                 <div className="space-y-2">
                   {attentionItems.map(([key, value]: any) => {
                     const sc = statusColor(value.status);
                     const dl = value.response_deadline ? getDeadlineInfo(value.response_deadline) : null;
                     return (
-                      <div key={key} className="flex items-center gap-3 p-2.5 rounded-[8px] bg-white" style={{ borderLeft: `4px solid ${value.status?.toUpperCase() === "PENDING" ? "#fdcb6e" : "#d63031"}` }}>
-                        <Clock className={cn("h-3.5 w-3.5 shrink-0", sc.text)} />
-                        <span className="text-[12px] text-[#1a1a1a] font-medium flex-1">
+                      <div key={key} className="flex items-center gap-3 p-2.5 rounded-lg bg-card" style={{ borderLeft: `4px solid ${value.status?.toUpperCase() === "PENDING" ? "#fdcb6e" : "#d63031"}` }}>
+                        <Clock className={cn("h-4 w-4 shrink-0", sc.text)} />
+                        <span className="text-xs text-[#1a1a1a] font-medium flex-1">
                           {key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
-                        <span className={cn("text-[10px] font-normal uppercase tracking-[0.05em] border rounded-full px-2 py-0.5", sc.text, sc.border)}>
+                        <span className={cn("text-xs font-normal uppercase tracking-[0.05em] border rounded-full px-2 py-0.5", sc.text, sc.border)}>
                           {value.status}
                         </span>
                         {dl && (
-                          <span className={cn("text-[10px] font-medium", dl.color)}>
+                          <span className={cn("text-xs font-medium", dl.color)}>
                             {dl.text}
                           </span>
                         )}
@@ -287,9 +287,9 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 p-3 rounded-[12px] bg-[#00b894]/5 border border-[#00b894]/20">
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-[#00b894]/5 border border-[#00b894]/20">
                 <CheckCircle2 className="h-4 w-4 text-[#00b894]" />
-                <span className="text-[13px] font-medium text-[#00b894]">All compliance checks passed</span>
+                <span className="text-xs font-medium text-[#00b894]">All compliance checks passed</span>
               </div>
             )}
           </div>
@@ -303,12 +303,12 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                 { label: "URGENCY", value: data.rfi_categorization?.urgency_level || "—", icon: AlertCircle },
                 { label: "RESPONSIBLE PARTY", value: data.contract_compliance?.authority_to_respond?.authorized_party || "—", icon: FileText },
               ].map((card) => (
-                <div key={card.label} className="p-3 rounded-[12px] bg-[#f8f9fa] border border-[#e9ecef]">
+                <div key={card.label} className="p-3 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <card.icon className="h-3 w-3 text-[#9CA3AF]" />
-                    <span className="text-[10px] font-normal normal-case text-[#9CA3AF]">{card.label}</span>
+                    <card.icon className="h-4 w-4 text-[#9CA3AF]" />
+                    <span className="text-xs font-normal normal-case text-[#9CA3AF]">{card.label}</span>
                   </div>
-                  <p className="text-[13px] font-medium text-[#1a1a1a]">{card.value}</p>
+                  <p className="text-xs font-medium text-[#1a1a1a]">{card.value}</p>
                 </div>
               ))}
             </div>
@@ -317,15 +317,15 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
           {/* Quick Actions */}
           <div className={sectionClass(visibleSections, 4)}>
             <div className="flex gap-2 pt-2">
-              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-[10px] bg-[#6c5ce7] text-white text-[13px] font-medium hover:bg-[#5f4dd0] transition-colors">
+              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#6c5ce7] text-white text-xs font-medium hover:bg-[#5f4dd0] transition-colors">
                 <Pencil className="h-3.5 w-3.5" />
                 Draft Response
               </button>
-              <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-[10px] border border-[#e9ecef] text-[#4B5563] text-[13px] font-medium hover:bg-[#f8f9fa] transition-colors">
+              <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border text-[#4B5563] text-xs font-medium hover:bg-muted/50 transition-colors">
                 <ExternalLink className="h-3.5 w-3.5" />
                 View Document
               </button>
-              <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-[10px] border border-[#e9ecef] text-[#4B5563] text-[13px] font-medium hover:bg-[#f8f9fa] transition-colors">
+              <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border text-[#4B5563] text-xs font-medium hover:bg-muted/50 transition-colors">
                 <Download className="h-3.5 w-3.5" />
                 Export
               </button>
@@ -339,8 +339,8 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
         <div className="space-y-4 pt-4">
           {/* Scorecard */}
           <div className={sectionClass(visibleSections, 2)}>
-            <div className="flex items-center justify-between p-3 rounded-[12px] bg-[#f8f9fa] border border-[#e9ecef]">
-              <span className="text-[12px] text-[#4B5563]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+              <span className="text-xs text-[#4B5563]">
                 <span className="font-medium text-[#1a1a1a]">{complianceCount} checks:</span>{" "}
                 {compliantCount > 0 && <span className="text-[#00b894]">{compliantCount} Compliant</span>}
                 {clearCount > 0 && <>{compliantCount > 0 && ", "}<span className="text-[#0984e3]">{clearCount} Clear</span></>}
@@ -405,17 +405,17 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
           {/* Recommendations */}
           {(employerRecs.length > 0 || contractorRecs.length > 0) && (
             <div className={sectionClass(visibleSections, 3)}>
-              <h4 className="text-[13px] font-medium text-[#1a1a1a] mb-3 flex items-center gap-2">
+              <h4 className="text-xs font-medium text-[#1a1a1a] mb-3 flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-[#6c5ce7]" />
                 Recommendations
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 {employerRecs.length > 0 && (
-                  <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-normal normal-case text-[#6c5ce7] mb-2">For Employer</p>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-xs font-normal normal-case text-[#6c5ce7] mb-2">For Employer</p>
                     <ul className="space-y-2">
                       {employerRecs.map((rec: string, i: number) => (
-                        <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">
+                        <li key={i} className="text-xs text-[#4B5563] flex items-start gap-2 leading-relaxed">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#6c5ce7] mt-1.5 shrink-0" />
                           {rec}
                         </li>
@@ -424,11 +424,11 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                   </div>
                 )}
                 {contractorRecs.length > 0 && (
-                  <div className="p-4 rounded-[12px] border border-[#e9ecef] bg-[#f8f9fa]">
-                    <p className="text-[10px] font-normal normal-case text-[#9CA3AF] mb-2">For Contractor</p>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-xs font-normal normal-case text-[#9CA3AF] mb-2">For Contractor</p>
                     <ul className="space-y-2">
                       {contractorRecs.map((rec: string, i: number) => (
-                        <li key={i} className="text-[12px] text-[#4B5563] flex items-start gap-2 leading-relaxed">
+                        <li key={i} className="text-xs text-[#4B5563] flex items-start gap-2 leading-relaxed">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#9CA3AF] mt-1.5 shrink-0" />
                           {rec}
                         </li>
@@ -443,18 +443,18 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
           {/* Linked References */}
           {data.contract_citations && data.contract_citations.length > 0 && (
             <div className={sectionClass(visibleSections, 4)}>
-              <h4 className="text-[13px] font-medium text-[#1a1a1a] mb-3 flex items-center gap-2">
+              <h4 className="text-xs font-medium text-[#1a1a1a] mb-3 flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-[#0984e3]" />
                 Linked References
               </h4>
               <div className="space-y-1.5">
                 {data.contract_citations.map((cite: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-[8px] border border-[#e9ecef] hover:bg-[#f8f9fa] transition-colors">
-                    <FileText className="h-3.5 w-3.5 text-[#0984e3] shrink-0" />
-                    <span className="text-[12px] text-[#1a1a1a] font-medium">
+                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <FileText className="h-4 w-4 text-[#0984e3] shrink-0" />
+                    <span className="text-xs text-[#1a1a1a] font-medium">
                       Clause {cite.clause_number}, {cite.clause_title}
                     </span>
-                    <span className="text-[10px] text-[#9CA3AF]">Page {cite.page_number}</span>
+                    <span className="text-xs text-[#9CA3AF]">Page {cite.page_number}</span>
                   </div>
                 ))}
               </div>
@@ -464,27 +464,27 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
           {/* Risk Flags */}
           {data.risk_flags && data.risk_flags.length > 0 && (
             <div className={sectionClass(visibleSections, 5)}>
-              <h4 className="text-[13px] font-medium text-[#d63031] mb-3 flex items-center gap-2">
+              <h4 className="text-xs font-medium text-[#d63031] mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Risk Flags
               </h4>
               <div className="space-y-2">
                 {data.risk_flags.map((flag: any, i: number) => (
-                  <div key={i} className="p-3 rounded-[12px] border border-[#d63031]/20 bg-[#d63031]/5">
+                  <div key={i} className="p-3 rounded-xl border border-[#d63031]/20 bg-[#d63031]/5">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[12px] font-medium text-[#1a1a1a]">{flag.title || flag}</span>
+                      <span className="text-xs font-medium text-[#1a1a1a]">{flag.title || flag}</span>
                       {flag.severity && (
                         <span className={cn(
-                          "text-[10px] font-normal uppercase border rounded-full px-2 py-0.5",
+                          "text-xs font-normal uppercase border rounded-full px-2 py-0.5",
                           flag.severity === "HIGH" ? "text-[#d63031] border-[#d63031]" : "text-[#e17055] border-[#e17055]"
                         )}>
                           {flag.severity}
                         </span>
                       )}
                     </div>
-                    {flag.description && <p className="text-[11px] text-[#6B7280]">{flag.description}</p>}
+                    {flag.description && <p className="text-xs text-[#6B7280]">{flag.description}</p>}
                     {flag.recommended_action && (
-                      <p className="text-[11px] text-[#6c5ce7] font-medium mt-1">Action: {flag.recommended_action}</p>
+                      <p className="text-xs text-[#6c5ce7] font-medium mt-1">Action: {flag.recommended_action}</p>
                     )}
                   </div>
                 ))}

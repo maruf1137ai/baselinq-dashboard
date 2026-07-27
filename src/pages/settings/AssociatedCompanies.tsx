@@ -44,10 +44,10 @@ import useFetch from "@/hooks/useFetch";
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const INPUT_CLS =
-  "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
+  "h-10 border border-border bg-card focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
 
 const SELECT_CLS =
-  "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
+  "h-10 w-full px-3 border border-border bg-card rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all";
 
 interface AppointedInviteEntry {
   id: string;
@@ -289,7 +289,7 @@ const AssociatedCompanies = () => {
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-200px)] flex items-center justify-center">
-        <AwesomeLoader message="Fetching Associated Companies..." />
+        <AwesomeLoader message="Fetching associated companies" />
       </div>
     );
   }
@@ -301,33 +301,32 @@ const AssociatedCompanies = () => {
     .sort((a, b) => (a.company_name || "").localeCompare(b.company_name || ""));
 
   return (
-    <div className="w-full bg-slate-50/30">
-      <div className="max-w-5xl mx-auto p-8 pb-20">
+    <div className="w-full">
+      <div className="max-w-5xl mx-auto p-6 pb-20">
 
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
-              <Building2 className="w-3 h-3" />
-              Project Settings
-            </div>
-            <h1 className="text-3xl font-normal text-foreground tracking-tight">Associated Companies</h1>
+            <h2 className="text-2xl font-normal tracking-tight text-foreground">Associated Companies</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Appoint professional firms to this project and track their insurance.
+            </p>
           </div>
           {!canManageAssociatedCompanies && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
-              <Lock className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+              <Lock className="h-3.5 w-3.5" />
               <span>Read-only access</span>
             </div>
           )}
         </div>
 
         {/* ── Single Card ── */}
-        <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden">
 
           {/* Header */}
-          <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-slate-50/50">
-            <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
-              <Building2 className="w-5 h-5" />
+          <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-muted/50">
+            <div className="w-10 h-10 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+              <Building2 className="h-5 w-5" />
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground tracking-tight">Associated Companies</h3>
@@ -352,24 +351,24 @@ const AssociatedCompanies = () => {
                     const isNumericId = typeof comp.id === "number" || /^\d+$/.test(String(comp.id));
 
                     return (
-                      <div key={comp.id} className="rounded-lg border border-border bg-slate-50/30 hover:bg-white hover:shadow-sm transition-all">
+                      <div key={comp.id} className="rounded-lg bg-muted/50 hover:bg-muted transition-all overflow-hidden">
                         {/* Top row: company info + actions */}
                         <div className="flex items-center justify-between p-4">
                           <div className="flex gap-3 items-center">
-                            <div className="w-9 h-9 rounded-lg bg-white border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
-                              <Building2 className="w-4 h-4" />
+                            <div className="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
+                              <Building2 className="h-4 w-4" />
                             </div>
                             <div>
                               <p className="text-sm font-normal text-foreground">{comp.company_name}</p>
-                              <p className="text-[11px] text-muted-foreground uppercase tracking-tighter mt-0.5">{comp.role || "Partner"}</p>
+                              <p className="text-xs text-muted-foreground uppercase tracking-tighter mt-0.5">{comp.role || "Partner"}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full border",
+                              "text-xs px-2 py-0.5 rounded-full border",
                               comp.status === "Joined"
-                                ? "bg-slate-100 text-foreground border-border"
-                                : "bg-slate-50 text-muted-foreground border-border"
+                                ? "bg-muted text-foreground border-border"
+                                : "bg-muted/50 text-muted-foreground border-border"
                             )}>
                               {comp.status}
                             </span>
@@ -378,12 +377,12 @@ const AssociatedCompanies = () => {
                             {isNumericId && (
                               <button
                                 onClick={() => toggleExpand(comp.id)}
-                                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-slate-100"
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-muted"
                                 title={isExpanded ? "Hide members" : "Show members"}
                               >
-                                <User className="w-3.5 h-3.5" />
+                                <User className="h-3.5 w-3.5" />
                                 <span>{members.length}</span>
-                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                               </button>
                             )}
 
@@ -397,7 +396,7 @@ const AssociatedCompanies = () => {
                                 className="text-muted-foreground hover:text-primary transition-colors p-1 rounded-lg hover:bg-primary/10"
                                 title="Edit company"
                               >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <Pencil className="h-4 w-4" />
                               </button>
                             )}
 
@@ -408,25 +407,26 @@ const AssociatedCompanies = () => {
                                   <button
                                     onClick={() => handleRemoveCompany(comp.id)}
                                     disabled={removeLoading}
-                                    className="text-[11px] px-2 py-1 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors flex items-center gap-1"
+                                    className="text-xs px-2 py-1 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors flex items-center gap-1"
                                   >
-                                    {removeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                    {removeLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                     Confirm
                                   </button>
                                   <button
                                     onClick={() => setRemoveConfirmId(null)}
-                                    className="text-[11px] px-2 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+                                    className="text-xs px-2 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
                                   >
                                     Cancel
                                   </button>
                                 </div>
                               ) : (
                                 <button
+                                  aria-label="Remove company"
                                   onClick={() => setRemoveConfirmId(comp.id)}
                                   className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10"
                                   title="Remove company"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
                               )
                             )}
@@ -435,11 +435,11 @@ const AssociatedCompanies = () => {
 
                         {/* Inline company edit form */}
                         {editingCompanyId === comp.id && (
-                          <div className="border-t border-border bg-slate-50/60 px-4 py-4 space-y-3">
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Edit Company</p>
+                          <div className="border-t border-border bg-muted/50 px-4 py-4 space-y-3">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Edit Company</p>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                               <div>
-                                <label className="block text-[11px] text-muted-foreground mb-1">Company Name</label>
+                                <label className="block text-xs text-muted-foreground mb-1">Company Name</label>
                                 <Input
                                   className="h-8 text-xs"
                                   value={editCompanyForm.name}
@@ -447,9 +447,9 @@ const AssociatedCompanies = () => {
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] text-muted-foreground mb-1">Company Type</label>
+                                <label className="block text-xs text-muted-foreground mb-1">Company Type</label>
                                 <select
-                                  className="h-8 w-full px-2 border border-border rounded-lg text-xs bg-white focus:outline-none focus:border-primary"
+                                  className="h-8 w-full px-2 border border-border rounded-lg text-xs bg-card focus:outline-none focus:border-primary"
                                   value={editCompanyForm.company_type}
                                   onChange={e => setEditCompanyForm(f => ({ ...f, company_type: e.target.value }))}
                                 >
@@ -458,7 +458,7 @@ const AssociatedCompanies = () => {
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-[11px] text-muted-foreground mb-1">Role on Project</label>
+                                <label className="block text-xs text-muted-foreground mb-1">Role on Project</label>
                                 <Input
                                   className="h-8 text-xs"
                                   placeholder="e.g. Architect, QS"
@@ -479,7 +479,7 @@ const AssociatedCompanies = () => {
                                 disabled={isSavingCompany || !editCompanyForm.name.trim()}
                                 className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
                               >
-                                {isSavingCompany ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                {isSavingCompany ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                                 Save
                               </button>
                             </div>
@@ -489,21 +489,21 @@ const AssociatedCompanies = () => {
                         {/* Members panel */}
                         {isExpanded && (() => {
                           return (
-                            <div className="border-t border-border bg-white px-4 pb-4 pt-3 space-y-2">
-                              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Users</p>
+                            <div className="border-t border-border bg-card px-4 pb-4 pt-3 space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-2">Users</p>
                               {members.length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-2">No users yet</p>
+                                <p className="text-xs text-muted-foreground py-2">No users from this company have been added to the project yet</p>
                               ) : (
                                 members.map((m: any) => (
-                                  <div key={m.id} className="rounded-lg bg-slate-50 border border-border overflow-hidden">
+                                  <div key={m.id} className="rounded-lg bg-muted/50 overflow-hidden">
                                     <div className="flex items-center justify-between py-2 px-3">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-medium shrink-0">
+                                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-medium shrink-0">
                                           {(m.name || m.email || "?")[0].toUpperCase()}
                                         </div>
                                         <div>
                                           <p className="text-xs font-normal text-foreground">{m.name || m.email}</p>
-                                          <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                                          <p className="text-xs text-muted-foreground">{m.email}</p>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-2">
@@ -512,7 +512,7 @@ const AssociatedCompanies = () => {
                                           <div className="flex items-center gap-1.5">
                                             <input
                                               autoFocus
-                                              className="h-6 px-2 text-[11px] rounded border border-border bg-white focus:outline-none focus:border-primary w-28"
+                                              className="h-6 px-2 text-xs rounded border border-border bg-card focus:outline-none focus:border-primary w-28"
                                               value={editingMemberRole}
                                               onChange={(e) => setEditingMemberRole(e.target.value)}
                                               onKeyDown={(e) => { if (e.key === "Enter") handleUpdateMemberRole(m.team_member_id); if (e.key === "Escape") { setEditingMember(null); setEditingMemberRole(""); }}}
@@ -520,17 +520,17 @@ const AssociatedCompanies = () => {
                                             <button
                                               disabled={isUpdatingRole || !editingMemberRole.trim()}
                                               onClick={() => handleUpdateMemberRole(m.team_member_id)}
-                                              className="text-[10px] px-2 py-0.5 rounded bg-primary text-white disabled:opacity-50"
+                                              className="text-xs px-2 py-0.5 rounded bg-primary text-white disabled:opacity-50"
                                             >
-                                              {isUpdatingRole ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                                              {isUpdatingRole ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                                             </button>
-                                            <button onClick={() => { setEditingMember(null); setEditingMemberRole(""); }} className="text-[10px] text-muted-foreground hover:text-foreground">
-                                              <X className="w-3 h-3" />
+                                            <button onClick={() => { setEditingMember(null); setEditingMemberRole(""); }} className="text-xs text-muted-foreground hover:text-foreground">
+                                              <X className="h-4 w-4" />
                                             </button>
                                           </div>
                                         ) : (
                                           <span
-                                            className={cn("text-[10px] text-muted-foreground", canEditCompanyMember && m.team_member_id && "cursor-pointer hover:text-primary hover:underline")}
+                                            className={cn("text-xs text-muted-foreground", canEditCompanyMember && m.team_member_id && "cursor-pointer hover:text-primary hover:underline")}
                                             title={canEditCompanyMember && m.team_member_id ? "Click to edit role" : undefined}
                                             onClick={() => {
                                               if (canEditCompanyMember && m.team_member_id) {
@@ -544,7 +544,7 @@ const AssociatedCompanies = () => {
                                         )}
                                         {m.status && (
                                           <span className={cn(
-                                            "text-[9px] px-1.5 py-0.5 rounded-full",
+                                            "text-xs px-1.5 py-0.5 rounded-full",
                                             m.status === "Invited" ? "bg-amber-100 text-amber-700" :
                                             m.status === "Expired" ? "bg-red-100 text-red-700" :
                                             "bg-green-100 text-green-700"
@@ -559,22 +559,23 @@ const AssociatedCompanies = () => {
                                               <button
                                                 disabled={isRemovingMember}
                                                 onClick={() => handleRemoveMember(m.team_member_id)}
-                                                className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
+                                                className="text-xs px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
                                               >
-                                                {isRemovingMember ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                {isRemovingMember ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                                 Confirm
                                               </button>
-                                              <button onClick={() => setRemovingMemberId(null)} className="text-[10px] text-muted-foreground hover:text-foreground px-1">
+                                              <button onClick={() => setRemovingMemberId(null)} className="text-xs text-muted-foreground hover:text-foreground px-1">
                                                 Cancel
                                               </button>
                                             </div>
                                           ) : (
                                             <button
+                                              aria-label="Remove member"
                                               onClick={() => setRemovingMemberId(m.team_member_id)}
                                               className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
                                               title="Remove member"
                                             >
-                                              <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="h-4 w-4" />
                                             </button>
                                           )
                                         )}
@@ -585,22 +586,23 @@ const AssociatedCompanies = () => {
                                               <button
                                                 disabled={isRevokingInvite}
                                                 onClick={() => handleRevokeInvite(comp.id, m.invitation_id)}
-                                                className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
+                                                className="text-xs px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
                                               >
-                                                {isRevokingInvite ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                {isRevokingInvite ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                                 Confirm
                                               </button>
-                                              <button onClick={() => setRevokingInviteId(null)} className="text-[10px] text-muted-foreground hover:text-foreground px-1">
+                                              <button onClick={() => setRevokingInviteId(null)} className="text-xs text-muted-foreground hover:text-foreground px-1">
                                                 Cancel
                                               </button>
                                             </div>
                                           ) : (
                                             <button
+                                              aria-label="Revoke invitation"
                                               onClick={() => setRevokingInviteId(m.invitation_id)}
                                               className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
                                               title="Revoke invitation"
                                             >
-                                              <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="h-4 w-4" />
                                             </button>
                                           )
                                         )}
@@ -613,10 +615,10 @@ const AssociatedCompanies = () => {
                               {/* Inline invite form */}
                               {canAddCompanyMember && invitingForCompany === comp.id ? (
                                 <div className="mt-3 pt-3 border-t border-border space-y-3">
-                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Invite User</p>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Invite User</p>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
-                                      <label className="text-[11px] text-muted-foreground">Full Name</label>
+                                      <label className="text-xs text-muted-foreground">Full Name</label>
                                       <Input
                                         value={memberInviteForm.name}
                                         onChange={(e) => setMemberInviteForm((p) => ({ ...p, name: e.target.value }))}
@@ -625,7 +627,7 @@ const AssociatedCompanies = () => {
                                       />
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                      <label className="text-[11px] text-muted-foreground">Email Address <span className="text-red-400">*</span></label>
+                                      <label className="text-xs text-muted-foreground">Email Address <span className="text-red-400">*</span></label>
                                       <Input
                                         type="email"
                                         value={memberInviteForm.email}
@@ -635,7 +637,7 @@ const AssociatedCompanies = () => {
                                       />
                                     </div>
                                     <div className="flex flex-col gap-1 md:col-span-2">
-                                      <label className="text-[11px] text-muted-foreground">Role <span className="text-red-400">*</span></label>
+                                      <label className="text-xs text-muted-foreground">Role <span className="text-red-400">*</span></label>
                                       <select
                                         className={SELECT_CLS}
                                         value={memberInviteForm.position}
@@ -652,7 +654,7 @@ const AssociatedCompanies = () => {
                                     <button
                                       type="button"
                                       onClick={() => { setInvitingForCompany(null); setMemberInviteForm({ name: "", email: "", position: "" }); }}
-                                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-all"
+                                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                                     >
                                       Cancel
                                     </button>
@@ -663,7 +665,7 @@ const AssociatedCompanies = () => {
                                       className="px-4 py-1.5 text-xs text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                       style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}
                                     >
-                                      {isMemberInviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                      {isMemberInviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-4 w-4" />}
                                       Send Invitation
                                     </button>
                                   </div>
@@ -674,7 +676,7 @@ const AssociatedCompanies = () => {
                                   onClick={() => { setInvitingForCompany(comp.id); setMemberInviteForm({ name: "", email: "", position: "" }); }}
                                   className="mt-2 w-full py-2 border border-dashed border-border rounded-lg flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
+                                  <Plus className="h-4 w-4" />
                                   Invite User
                                 </button>
                               )}
@@ -684,7 +686,7 @@ const AssociatedCompanies = () => {
 
                         {/* Insurance Certificate Card — only shown when insurance exists */}
                         {hasInsurance && <div className={cn(
-                          "mx-4 mb-4 rounded-xl border overflow-hidden",
+                          "mx-4 mb-4 rounded-lg border overflow-hidden",
                           hasInsurance && !isExpired
                             ? "border-green-200"
                             : hasInsurance && isExpired
@@ -702,12 +704,12 @@ const AssociatedCompanies = () => {
                           )}>
                             <div className="flex items-center gap-2 text-white">
                               {hasInsurance && !isExpired
-                                ? <ShieldCheck className="w-3.5 h-3.5" />
+                                ? <ShieldCheck className="h-4 w-4" />
                                 : hasInsurance && isExpired
-                                  ? <ShieldAlert className="w-3.5 h-3.5" />
-                                  : <FileText className="w-3.5 h-3.5" />
+                                  ? <ShieldAlert className="h-4 w-4" />
+                                  : <FileText className="h-4 w-4" />
                               }
-                              <span className="text-[10px] font-medium uppercase tracking-widest">
+                              <span className="text-xs font-medium uppercase tracking-widest">
                                 {hasInsurance && !isExpired
                                   ? "Certificate of Insurance"
                                   : hasInsurance && isExpired
@@ -716,7 +718,7 @@ const AssociatedCompanies = () => {
                               </span>
                             </div>
                             <span className={cn(
-                              "text-[9px] font-medium px-2 py-0.5 rounded-full",
+                              "text-xs font-medium px-2 py-0.5 rounded-full",
                               hasInsurance && !isExpired
                                 ? "bg-green-500 text-white"
                                 : hasInsurance && isExpired
@@ -734,7 +736,7 @@ const AssociatedCompanies = () => {
                               ? "bg-green-50"
                               : hasInsurance && isExpired
                                 ? "bg-amber-50"
-                                : "bg-slate-50"
+                                : "bg-muted/50"
                           )}>
                             <div className="flex items-center gap-3">
                               <div className={cn(
@@ -743,9 +745,9 @@ const AssociatedCompanies = () => {
                                   ? "bg-green-100 text-green-600"
                                   : hasInsurance && isExpired
                                     ? "bg-amber-100 text-amber-600"
-                                    : "bg-slate-100 text-slate-400"
+                                    : "bg-muted text-slate-400"
                               )}>
-                                <FileText className="w-4 h-4" />
+                                <FileText className="h-4 w-4" />
                               </div>
                               <div>
                                 <p className="text-xs font-normal text-foreground leading-snug">
@@ -753,14 +755,14 @@ const AssociatedCompanies = () => {
                                 </p>
                                 {comp.insurance_expiry ? (
                                   <p className={cn(
-                                    "text-[10px] mt-0.5",
+                                    "text-xs mt-0.5",
                                     isExpired ? "text-amber-600" : "text-muted-foreground"
                                   )}>
                                     {isExpired ? "Expired" : "Expires"}{" "}
                                     {formatDate(comp.insurance_expiry, "long")}
                                   </p>
                                 ) : (
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">No expiry date recorded</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">No expiry date recorded</p>
                                 )}
                               </div>
                             </div>
@@ -770,14 +772,14 @@ const AssociatedCompanies = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={cn(
-                                  "flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border transition-all shrink-0 ml-3",
+                                  "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all shrink-0 ml-3",
                                   hasInsurance && !isExpired
-                                    ? "bg-white border-green-200 text-green-700 hover:bg-green-100"
-                                    : "bg-white border-amber-200 text-amber-700 hover:bg-amber-100"
+                                    ? "bg-card border-green-200 text-green-700 hover:bg-green-100"
+                                    : "bg-card border-amber-200 text-amber-700 hover:bg-amber-100"
                                 )}
                                 title="Download insurance certificate"
                               >
-                                <Download className="w-3 h-3" />
+                                <Download className="h-3 w-3" />
                               </a>
                             )}
                           </div>
@@ -792,19 +794,20 @@ const AssociatedCompanies = () => {
 
             {/* Invite forms — only shown to users who can manage team */}
             {canManageAssociatedCompanies && appointedInvites.map((entry) => (
-              <div key={entry.id} className="border border-border rounded-xl p-4 space-y-4 bg-slate-50/50">
+              <div key={entry.id} className="rounded-lg p-4 space-y-4 bg-muted/50">
                 <div className="flex items-center justify-end">
                   <button
+                    aria-label="Remove invitation"
                     type="button"
                     onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
                     className="text-muted-foreground hover:text-destructive transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                   <div className="md:col-span-2 flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Name</label>
+                    <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">Company Name</label>
                     <Input
                       value={entry.company_name}
                       onChange={(e) => updateInvite(entry.id, { company_name: e.target.value })}
@@ -814,7 +817,7 @@ const AssociatedCompanies = () => {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
+                    <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">Company Type</label>
                     <select
                       value={entry.company_type}
                       onChange={(e) => updateInvite(entry.id, { company_type: e.target.value })}
@@ -827,7 +830,7 @@ const AssociatedCompanies = () => {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Contact Person Name</label>
+                    <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">Contact Person Name</label>
                     <Input
                       value={entry.contact_name}
                       onChange={(e) => updateInvite(entry.id, { contact_name: e.target.value })}
@@ -836,7 +839,7 @@ const AssociatedCompanies = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">Email Address</label>
+                    <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">Email Address</label>
                     <Input
                       type="email"
                       value={entry.email}
@@ -855,9 +858,9 @@ const AssociatedCompanies = () => {
                 <Button
                   onClick={handleSave}
                   disabled={isSendingInvites}
-                  className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm transition-all flex items-center gap-2"
+                  className="h-10 px-6 rounded-lg bg-primary text-white hover:bg-primary/90 shadow-sm transition-all flex items-center gap-2"
                 >
-                  {isSendingInvites ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSendingInvites ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   <span className="font-normal">{isSendingInvites ? "Inviting..." : "Send Invitations"}</span>
                 </Button>
               </div>
@@ -873,9 +876,9 @@ const AssociatedCompanies = () => {
                     { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "", insurance_file: null, insurance_expiry: "" },
                   ])
                 }
-                className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+                className="w-full py-4 border border-dashed border-border rounded-lg flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
               </button>
             )}

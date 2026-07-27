@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { AlertCircle, AlertTriangle, ChevronDown, Filter, Link2, Plus, Sparkles, Search, Shield, Clock, FileText } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { AlertCircle, AlertTriangle, ChevronDown, Filter, Link2, Plus, Search, Shield, Clock, FileText } from 'lucide-react';
+import { AiMark } from '@/components/icons/AiMark';
 import React, { useState } from 'react';
 import { differenceInDays, parse } from 'date-fns';
 
@@ -111,11 +113,11 @@ const Compliance = () => {
           <h1 className="text-2xl font-normal text-foreground tracking-tight">Compliance</h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground" onClick={() => setIsRiskDrawerOpen(true)}>
-              <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
+              <AlertTriangle className="mr-1.5" />
               Risk Overview
             </Button>
-            <Button className="h-8 text-xs rounded-lg bg-primary text-white" onClick={() => setIsGenerateNoticeModalOpen(true)}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
+            <Button className="h-8 text-xs rounded-lg bg-primary text-primary-foreground" onClick={() => setIsGenerateNoticeModalOpen(true)}>
+              <Plus className="mr-1.5" />
               Add Item
             </Button>
           </div>
@@ -154,16 +156,36 @@ const Compliance = () => {
               placeholder="Search compliance items..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="h-10 pl-10 bg-white border-border rounded-lg text-sm placeholder:text-muted-foreground"
+              className="h-10 pl-10 bg-card border-border rounded-lg text-sm placeholder:text-muted-foreground"
             />
           </div>
           <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Analyse with AI
+            <AiMark className="mr-1.5" /> Analyse with AI
           </Button>
         </div>
 
         {/* Compliance Items List */}
         <div className="space-y-3">
+          {filteredItems.length === 0 && (
+            searchTerm ? (
+              <EmptyState
+                icon={Search}
+                title="No obligations match this search"
+                description={`Nothing matches “${searchTerm}”. Try the clause reference or the obligation number instead.`}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setSearchTerm('')}>
+                    Clear search
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={Shield}
+                title="No contractual obligations tracked yet"
+                description="Obligations appear here with the clause that creates them and the date they fall due. Missing one can forfeit a claim or hold up a payment certificate."
+              />
+            )
+          )}
           {filteredItems.map((item) => {
             const status = statusConfig[item.status];
             const risk = riskConfig[item.risk];
@@ -175,10 +197,10 @@ const Compliance = () => {
             const isCriticallyOverdue = daysOverdue > 90;
 
             return (
-              <div key={item.id} className={`border rounded-lg p-4 transition-colors ${
-                isCriticallyOverdue 
-                  ? 'border-red-300 bg-red-50/50 hover:bg-red-50' 
-                  : 'border-border hover:bg-muted/30'
+              <div key={item.id} className={`border rounded-xl p-4 transition-colors ${
+                isCriticallyOverdue
+                  ? 'border-red-300 bg-red-50/50 hover:bg-red-50'
+                  : 'border-border bg-card hover:bg-muted/30'
               }`}>
                 {/* Row 1: Title + badges + due date */}
                 <div className="flex items-center justify-between mb-2">
@@ -248,10 +270,10 @@ const Compliance = () => {
 
       {/* Risk Overview Drawer */}
       <Sheet open={isRiskDrawerOpen} onOpenChange={setIsRiskDrawerOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-[400px] p-0 flex flex-col bg-white">
+        <SheetContent side="right" size="sm" className="p-0 flex flex-col">
           <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-foreground">
-              <AlertTriangle className="w-4 h-4" />
+            <SheetTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
               Risk Overview
             </SheetTitle>
           </SheetHeader>

@@ -198,17 +198,23 @@ export function DashboardSidebar() {
     <>
       <Sidebar className="border-r border-border bg-sidebar">
         <SidebarContent className="flex flex-col h-full">
-          <div className="p-4">
+          {/* Fixed h-16 with a bottom border, exactly matching
+              DashboardHeader's "h-16 border-b border-border". The two now
+              form one continuous horizontal rule across the whole app.
+              Previously this block was p-4 around a p-3 card around an h-9
+              logo — 92px total — so the project name hung ~28px below the
+              header's line and the sidebar looked misaligned. */}
+          <div className="h-16 shrink-0 flex items-center px-3 border-b border-border">
             {location.pathname.startsWith("/account") ? (
               <div
-                className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 cursor-pointer hover:bg-white transition-colors group"
+                className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 cursor-pointer hover:bg-card transition-colors group"
                 onClick={() => navigate("/account")}
               >
-                <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
+                <div className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
                   <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <h1 className="text-sm font-regular text-foreground aeonik truncate">
+                  <h1 className="text-sm font-normal text-foreground aeonik truncate">
                     baselinq
                   </h1>
                 </div>
@@ -216,22 +222,22 @@ export function DashboardSidebar() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="p-3 border border-border rounded-2xl flex items-center gap-3 bg-white/50 hover:bg-white transition-colors cursor-pointer outline-none">
+                  <div className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 hover:bg-card transition-colors cursor-pointer outline-none">
                     <div
-                      className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-border/10 hover:scale-105 transition-transform"
+                      className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 hover:scale-105 transition-transform"
                       onClick={(e) => { e.stopPropagation(); navigate("/"); }}
                     >
                       <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-1 text-left">
-                      <h1 className="text-sm font-regular text-foreground aeonik truncate flex-1">
+                      <h1 className="text-sm font-normal text-foreground aeonik truncate flex-1">
                         {isLoading ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                         ) : (
                           selectedProject?.name || ""
                         )}
                       </h1>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                     </div>
                   </div>
                 </DropdownMenuTrigger>
@@ -254,7 +260,7 @@ export function DashboardSidebar() {
                           onClick={() => handleProjectSelect(project)}
                           className="cursor-pointer flex items-center gap-2"
                         >
-                          {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                          {isSelected && <Check className="h-4 w-4 shrink-0" />}
                           <span className={isSelected ? "font-medium" : "pl-[18px]"}>{project.name}</span>
                         </DropdownMenuItem>
                       );
@@ -265,19 +271,19 @@ export function DashboardSidebar() {
             )}
           </div>
 
-          <div className="flex-1 overflow-auto px-2">
+          <div className="flex-1 overflow-auto px-3 pt-3">
             {location.pathname.startsWith("/account") ? (
               // ── Account nav ──
               <SidebarGroup>
-                <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 normal-case py-2">
+                <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2 normal-case h-auto pb-1.5 pt-0">
                   Account
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {[
-                      { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" />, show: true },
-                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" />, show: true },
-                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" />, show: user?.account_type === "organisation" },
+                      { title: "Projects", url: "/account", icon: <FolderOpen className="h-4 w-4" />, show: true },
+                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="h-4 w-4" />, show: true },
+                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="h-4 w-4" />, show: user?.account_type === "organisation" },
                     ].filter(item => item.show).map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
@@ -285,7 +291,9 @@ export function DashboardSidebar() {
                           <SidebarMenuButton
                             asChild
                             isActive={isActive}
-                            className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                            className={isActive
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                             <NavLink to={item.url} className="flex items-center gap-3">
                               {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
                               {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
@@ -301,7 +309,7 @@ export function DashboardSidebar() {
               // ── Normal nav (project selected) ──
               <>
                 <SidebarGroup>
-                  <SidebarGroupLabel className="text-xs text-muted-foreground/50 px-0 normal-case py-2">
+                  <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2 normal-case h-auto pb-1.5 pt-0">
                     Main Menu
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -320,12 +328,14 @@ export function DashboardSidebar() {
                             <SidebarMenuButton
                               asChild
                               isActive={isActive}
-                              className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                              className={isActive
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
                                 <span className="relative shrink-0">
                                   {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
                                   {!open && badge > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium leading-none">
+                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium leading-none">
                                       {badge > 99 ? "99+" : badge}
                                     </span>
                                   )}
@@ -358,7 +368,9 @@ export function DashboardSidebar() {
                             <SidebarMenuButton
                               asChild
                               isActive={isActive}
-                              className={isActive ? "!bg-white px-[16px] py-[11px] border border-border rounded-lg" : "border border-transparent px-[16px] py-[11px]"}>
+                              className={isActive
+                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                              : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
                                 {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
                                 {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
@@ -400,7 +412,7 @@ export function DashboardSidebar() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-gray-100 outline-none">
+                    <button className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted outline-none">
                       <svg
                         className="h-4 w-4"
                         fill="none"

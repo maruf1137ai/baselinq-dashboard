@@ -182,14 +182,14 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden bg-white border border-border shadow-xl rounded-xl">
-        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
+      <DialogContent className="p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
               <Pencil className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-medium text-foreground">Edit Document</DialogTitle>
+              <DialogTitle>Edit Document</DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">{doc.reference}</p>
             </div>
           </div>
@@ -268,13 +268,13 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
                 "h-10 border-border rounded-lg",
                 needsFolderReselection && "border-red-300 ring-1 ring-red-200"
               )}>
-                <SelectValue placeholder={folders.length === 0 ? 'No folders available' : 'Select a folder'} />
+                <SelectValue placeholder={folders.length === 0 ? 'No folders on this project yet' : 'Select a folder'} />
               </SelectTrigger>
               <SelectContent>
                 {folders.map((f) => (
                   <SelectItem key={f._id} value={f._id}>
                     <span className="flex items-center gap-2">
-                      <FolderIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                      <FolderIcon className="h-4 w-4 text-muted-foreground" />
                       {f.name.replace(/_/g, ' ')}
                     </span>
                   </SelectItem>
@@ -283,7 +283,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
             </Select>
             {folderChanged && (
               <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-700">
-                <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />
+                <AlertCircle className="h-3.5 w-3.5 mt-px shrink-0" />
                 You changed the category — please pick a folder for the new category.
               </p>
             )}
@@ -327,7 +327,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t border-border bg-muted/30 flex gap-2 shrink-0">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 shrink-0">
           <Button
             variant="outline"
             onClick={onClose}
@@ -339,7 +339,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
           <Button
             onClick={handleSubmit}
             disabled={isPending || needsFolderReselection}
-            className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+            className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
           >
             {isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</> : 'Save Changes'}
           </Button>

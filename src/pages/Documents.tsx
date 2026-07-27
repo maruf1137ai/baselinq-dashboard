@@ -293,11 +293,11 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="bg-white border border-border rounded-lg h-8 pl-9 pr-3 w-[260px] text-xs focus:ring-1 focus:ring-primary/20 transition-all outline-none"
+                className="bg-card border border-border rounded-lg h-8 pl-9 pr-3 w-[260px] text-xs focus:ring-1 focus:ring-primary/20 transition-all outline-none"
                 placeholder="Search by name, ref, or type"
               />
             </div>
@@ -310,10 +310,10 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
             </Button>
             {canUploadAny && canUploadDocument && (
               <Button
-                className="h-8 text-xs rounded-lg bg-primary text-white"
+                className="h-8 text-xs rounded-lg bg-primary text-primary-foreground"
                 onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                <Plus className="h-4 w-4 mr-1.5" />
                 Upload
               </Button>
             )}
@@ -344,7 +344,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                 className="flex-1"
               >
                 <div className="flex justify-between items-center">
-                  <TabsList className="bg-white border border-border h-10">
+                  <TabsList className="bg-card border border-border h-10">
                     {TAB_VALUES.map((tabVal) => (
                       <DroppableTabTrigger key={tabVal} value={tabVal} count={categoryCounts[tabVal]}>
                         {tabVal}
@@ -358,10 +358,10 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                       onClick={() => setShowSortMenu(v => !v)}
                       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal whitespace-nowrap"
                     >
-                      {currentSortLabel} <ChevronDown className="w-4 h-4" />
+                      {currentSortLabel} <ChevronDown className="h-4 w-4" />
                     </button>
                     {showSortMenu && (
-                      <div className="absolute right-0 top-8 bg-white border border-border rounded-xl shadow-lg z-10 py-1 w-48">
+                      <div className="absolute right-0 top-8 bg-card border border-border rounded-xl shadow-lg z-10 py-1 w-48">
                         {SORT_OPTIONS.map(opt => (
                           <button
                             key={opt.value}
@@ -450,11 +450,11 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
       />
 
       <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-medium text-[#1A1A1A]">{docToDelete?.name}</span>. This action cannot be undone.
+              This will permanently delete <span className="font-medium text-foreground">{docToDelete?.name}</span>. This action cannot be undone.
               {(docToDelete?.linkedCount ?? 0) > 0 && (
                 <span className="mt-2 block text-amber-700">
                   This document is linked to {docToDelete?.linkedCount} task{(docToDelete?.linkedCount ?? 0) !== 1 ? 's' : ''}/item{(docToDelete?.linkedCount ?? 0) !== 1 ? 's' : ''}. Deleting it will remove those links.
@@ -469,7 +469,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
               disabled={isDeletingDoc}
               onClick={() => { if (docToDelete) handleDeleteDoc(docToDelete._id); }}
             >
-              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+              {isDeletingDoc ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

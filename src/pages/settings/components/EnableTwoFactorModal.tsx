@@ -12,9 +12,9 @@ interface EnableTwoFactorModalProps {
 const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden bg-white">
+      <DialogContent className="p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border">
-          <DialogTitle className="text-sm font-normal text-foreground">Enable Two-Factor Authentication</DialogTitle>
+          <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-6">
@@ -40,15 +40,15 @@ const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps)
             />
           </div>
 
-          <div className="bg-sidebar rounded-lg p-4 flex gap-3">
-            <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="bg-muted/50 rounded-lg p-4 flex gap-3">
+            <Lightbulb className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-sm text-foreground">
               Keep your backup codes in a safe place. You'll need them if you lose access to your authenticator app.
             </p>
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-border sm:justify-between gap-3">
+        <DialogFooter className="px-6 py-4 border-t border-border sm:justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
             Cancel
           </Button>

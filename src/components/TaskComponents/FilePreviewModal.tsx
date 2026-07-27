@@ -175,7 +175,7 @@ const PreviewSurface: React.FC<{
 
   if (isVideo) {
     return (
-      <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4 h-full">
+      <div className="flex items-center justify-center bg-muted/50 rounded-lg p-4 h-full">
         <video controls className="max-w-full max-h-[70vh]" src={url}>
           Your browser does not support the video tag.
         </video>
@@ -185,7 +185,7 @@ const PreviewSurface: React.FC<{
 
   if (isXlsx) {
     return (
-      <div className="w-full h-[70vh] bg-white rounded-lg overflow-auto border border-gray-200">
+      <div className="w-full h-[70vh] bg-card rounded-lg overflow-auto border border-border">
         <XlsxPreview url={url} className="h-full" />
       </div>
     );
@@ -193,7 +193,7 @@ const PreviewSurface: React.FC<{
 
   if (isImage) {
     return (
-      <div className="relative w-full h-[70vh] bg-gray-50 rounded-lg overflow-auto border border-gray-200 flex items-center justify-center">
+      <div className="relative w-full h-[70vh] bg-muted/50 rounded-lg overflow-auto border border-border flex items-center justify-center">
         {imgStatus === "loading" && (
           <div className="absolute inset-0">
             <Spinner />
@@ -220,7 +220,7 @@ const PreviewSurface: React.FC<{
 
   if (isPdf) {
     return (
-      <div className="w-full h-[70vh] bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+      <div className="w-full h-[70vh] bg-muted/50 rounded-lg overflow-hidden border border-border">
         {pdfStatus === "loading" && <Spinner />}
         {pdfStatus === "error" && (
           <PreviewFallback
@@ -240,7 +240,7 @@ const PreviewSurface: React.FC<{
   // after a timeout we show a NON-destructive escape banner (rather than hiding
   // a doc that did load) with Open / Download actions.
   return (
-    <div className="relative w-full h-[70vh] bg-gray-50 rounded-lg overflow-auto border border-gray-200">
+    <div className="relative w-full h-[70vh] bg-muted/50 rounded-lg overflow-auto border border-border">
       <DocViewer
         documents={docs}
         pluginRenderers={DocViewerRenderers}
@@ -249,7 +249,7 @@ const PreviewSurface: React.FC<{
         style={{ height: "100%" }}
       />
       {docTimedOut && (
-        <div className="absolute bottom-0 inset-x-0 bg-white/95 border-t border-gray-200 px-4 py-2 flex items-center justify-between gap-3">
+        <div className="absolute bottom-0 inset-x-0 bg-card/95 border-t border-border px-4 py-2 flex items-center justify-between gap-3">
           <span className="text-xs text-gray-500">Not loading? Open or download it directly.</span>
           <div className="flex gap-2 shrink-0">
             <Button
@@ -257,10 +257,10 @@ const PreviewSurface: React.FC<{
               size="sm"
               onClick={() => window.open(downloadUrl, "_blank", "noopener")}
             >
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+              <ExternalLink className="mr-1" /> Open
             </Button>
             <Button size="sm" onClick={onDownload}>
-              <Download className="h-3.5 w-3.5 mr-1" /> Download
+              <Download className="mr-1" /> Download
             </Button>
           </div>
         </div>
@@ -307,38 +307,41 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden bg-white p-0 gap-0 border-none [&>button]:hidden">
-        <DialogHeader className="p-4 bg-[#101828] text-white">
+      <DialogContent size="xl" hideClose className="max-h-[90vh] overflow-hidden p-0 gap-0">
+        <DialogHeader className="px-6 py-4 bg-foreground text-background">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-medium truncate pr-4 text-white">
+            <DialogTitle className="truncate pr-4">
               {file.name}
             </DialogTitle>
             <div className="flex flex-shrink-0">
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-white hover:bg-white/10 hover:text-white"
+                aria-label="Open file in a new tab"
+                className="text-background hover:bg-background/10 hover:text-background"
                 onClick={() => window.open(viewUrl, "_blank", "noopener")}>
                 <ExternalLink className="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-white hover:bg-white/10 hover:text-white"
+                aria-label="Download file"
+                className="text-background hover:bg-background/10 hover:text-background"
                 onClick={handleDownload}>
                 <Download className="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-white hover:bg-white/10 hover:text-white ml-2"
+                aria-label="Close"
+                className="text-background hover:bg-background/10 hover:text-background ml-2"
                 onClick={() => onOpenChange(false)}>
-                <X className="h-5 w-5" />
+                <X />
               </Button>
             </div>
           </div>
         </DialogHeader>
-        <div className="p-4 bg-gray-50">
+        <div className="p-4 bg-muted/50">
           <PreviewSurface
             key={viewUrl}
             url={viewUrl}
