@@ -315,7 +315,7 @@ export default function ProjectHealth() {
   if (!projectId) {
     return (
       <DashboardLayout>
-        <div className="p-6 text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           Select a project to view its risk posture.
         </div>
       </DashboardLayout>
@@ -324,7 +324,11 @@ export default function ProjectHealth() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-5xl">
+      {/* No padding or max-width here: DashboardLayout already applies p-6,
+          and every other page runs full width with a plain space-y-6 wrapper.
+          Adding either double-pads the page and leaves a dead gutter on the
+          right that no other screen has. */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
