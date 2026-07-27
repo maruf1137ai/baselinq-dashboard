@@ -193,7 +193,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         {isAlreadyLinked ? (
-                          <CheckCircle2 className="h-5 w-5 text-gray-400" />
+                          <CheckCircle2 className="h-4 w-4 text-gray-400" />
                         ) : (
                           <Checkbox
                             checked={isSelected}

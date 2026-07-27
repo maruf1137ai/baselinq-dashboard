@@ -301,6 +301,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
                 />
               </div>
               <button
+                aria-label="Remove line item"
                 type="button"
                 className="mt-7 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                 onClick={() => removeItem(index)}

@@ -786,7 +786,7 @@ function MatrixGrid({
                                 <TooltipProvider delayDuration={100}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
+                                      <Info className="h-4 w-4 text-muted-foreground/50 hover:text-muted-foreground shrink-0 cursor-help transition-colors" />
                                     </TooltipTrigger>
                                     <TooltipContent side="top" align="start" sideOffset={6} className="max-w-[280px] text-xs leading-relaxed z-[200]">
                                       {perm.description || PERM_DESCRIPTIONS[perm.code]}

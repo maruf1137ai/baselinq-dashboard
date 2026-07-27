@@ -146,7 +146,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
       <div className="flex flex-col items-end gap-2 shrink-0">
         {isResponded ? (
           <Badge className="bg-green-50 text-green-700 py-1.5 px-3 hover:bg-green-50 border-green-200 text-xs">
-            <CheckCircle className="w-3 h-3 mr-1" />
+            <CheckCircle className="h-3 w-3 mr-1" />
             Resolved
           </Badge>
         ) : (
@@ -210,7 +210,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
             className="w-full bg-transparent text-black border border-border hover:bg-transparent"
             onClick={() => setOpen(true)}
           >
-            <Reply className="w-3.5 h-3.5 mr-2" />
+            <Reply className="mr-2" />
             Respond
           </Button>
         )}

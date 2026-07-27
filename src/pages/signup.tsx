@@ -227,11 +227,12 @@ const SignupPage = () => {
                       className={cn(INPUT_CLS, "pr-10")}
                     />
                     <button
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
@@ -248,11 +249,12 @@ const SignupPage = () => {
                       className={cn(INPUT_CLS, "pr-10")}
                     />
                     <button
+                      aria-label={showPasswordConfirm ? "Hide password" : "Show password"}
                       type="button"
                       onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                       className="absolute inset-y-0 right-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                      {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
@@ -264,7 +266,7 @@ const SignupPage = () => {
                 className="mt-2 w-full py-3.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {signupMutation.isPending ? "Creating account..." : "Create Account"}
-                {!signupMutation.isPending && <ArrowRight className="w-4 h-4" />}
+                {!signupMutation.isPending && <ArrowRight className="h-4 w-4" />}
               </button>
             </form>
 

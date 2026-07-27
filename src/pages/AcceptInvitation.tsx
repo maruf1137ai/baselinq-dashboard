@@ -334,7 +334,7 @@ export default function AcceptInvitation() {
                         active ? "bg-white/15 text-white border border-white/25" :
                           "bg-white/5 text-white/30 border border-white/10"
                     )}>
-                      {done ? <Check className="w-4 h-4" /> : s.id}
+                      {done ? <Check className="h-4 w-4" /> : s.id}
                     </div>
                     <div className="min-w-0">
                       <p className={cn(
@@ -444,9 +444,10 @@ export default function AcceptInvitation() {
                       <input type={showPassword ? "text" : "password"} required value={password}
                         onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters"
                         className={cn(INPUT_CLS, "pr-10")} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      <button
+                        aria-label={showPassword ? "Hide password" : "Show password"} type="button" onClick={() => setShowPassword(!showPassword)}
                         className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </Field>
@@ -456,9 +457,10 @@ export default function AcceptInvitation() {
                       <input type={showPasswordConfirm ? "text" : "password"} required value={passwordConfirm}
                         onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="Repeat your password"
                         className={cn(INPUT_CLS, "pr-10")} />
-                      <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                      <button
+                        aria-label={showPasswordConfirm ? "Hide password" : "Show password"} type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                         className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
-                        {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </Field>

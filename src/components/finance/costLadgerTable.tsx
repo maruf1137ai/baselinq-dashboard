@@ -45,8 +45,9 @@ const ActionsCell = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
-            <MoreHorizontal className="w-5 h-5" />
+          <button
+            aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+            <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
@@ -145,7 +146,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
       {/* Search */}
       <div className="px-4 pt-4 pb-2">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={search}
@@ -232,10 +233,11 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
         </p>
         <div className="flex items-center gap-1">
           <button
+            aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
             className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
@@ -259,10 +261,11 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
               )
             )}
           <button
+            aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
             className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

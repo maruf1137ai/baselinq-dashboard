@@ -101,7 +101,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
-          <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
+          <PlusIcon className="mr-1.5" />
           Schedule Meeting
         </Button>
       </DialogTrigger>
@@ -216,7 +216,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                                   <span className="text-xs text-primary/60 ml-0.5">You</span>
                                 ) : (
                                   <X
-                                    className="w-3 h-3 cursor-pointer hover:text-primary/70"
+                                    className="h-3 w-3 cursor-pointer hover:text-primary/70"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedAttendees((prev) =>

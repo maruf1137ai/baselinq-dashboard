@@ -482,7 +482,7 @@ const Index = () => {
                   className="h-8 px-4 bg-primary text-primary-foreground text-xs rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
                 >
                   Complete Setup
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight />
                 </Button>
               )}
             </div>
@@ -492,13 +492,13 @@ const Index = () => {
               <div className="grid grid-cols-1 gap-3">
                 {projectStats.missing.map((item) => {
                   const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
-                    "Scope of Work": { icon: <FileText className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Describe the full construction scope." },
-                    "Client Details": { icon: <Shield className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
-                    "Budget Allocation": { icon: <ClipboardList className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the total project budget." },
-                    "Project Documents": { icon: <CloudUpload className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
-                    "Location": { icon: <MapPin className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Add the project site address or location." },
-                    "Project Timeline": { icon: <CalendarIcon className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the project start and end dates." },
-                    "Associated Company": { icon: <Building2 className="w-4 h-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
+                    "Scope of Work": { icon: <FileText className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Describe the full construction scope." },
+                    "Client Details": { icon: <Shield className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
+                    "Budget Allocation": { icon: <ClipboardList className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the total project budget." },
+                    "Project Documents": { icon: <CloudUpload className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
+                    "Location": { icon: <MapPin className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Add the project site address or location." },
+                    "Project Timeline": { icon: <CalendarIcon className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the project start and end dates." },
+                    "Associated Company": { icon: <Building2 className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
                   };
                   const cfg = cardConfig[item];
                   if (!cfg) return null;
@@ -516,7 +516,7 @@ const Index = () => {
                           <p className="text-xs font-normal text-[#111827]">{item}</p>
                           <p className="text-xs text-[#9ca3af] mt-0.5">{cfg.description}</p>
                         </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                        <ArrowRight className="h-4 w-4 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
                       </div>
                     </button>
                   ) : (
@@ -557,13 +557,14 @@ const Index = () => {
                           className="h-8 px-4 bg-slate-200 text-slate-700 hover:bg-primary hover:text-white text-xs rounded-lg transition-all font-normal flex items-center gap-2"
                         >
                           Finish
-                          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          <ArrowRight className="group-hover:translate-x-0.5 transition-transform" />
                         </Button>
                         <button
+                          aria-label="Dismiss draft"
                           onClick={() => dismissDraft(id)}
                           className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -590,7 +591,7 @@ const Index = () => {
               onClick={() => navigate("/create-project")}
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground text-sm font-normal rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Create your first project
             </button>
           </div>
@@ -859,7 +860,7 @@ const Index = () => {
                             : ""}
                         </p>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                     </button>
                   );
                 })}
@@ -958,7 +959,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-primary" />
+                      <FileText className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Scope of Work</p>
@@ -981,7 +982,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
-                      <Shield className="w-4 h-4 text-primary" />
+                      <Shield className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Client Details</p>
@@ -1067,7 +1068,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center shrink-0">
-                      <ClipboardList className="w-4 h-4 text-[#16a34a]" />
+                      <ClipboardList className="h-4 w-4 text-[#16a34a]" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Budget Allocation</p>
@@ -1101,7 +1102,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0f9ff] flex items-center justify-center shrink-0">
-                      <MapPin className="w-4 h-4 text-[#0284c7]" />
+                      <MapPin className="h-4 w-4 text-[#0284c7]" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Location</p>
@@ -1127,7 +1128,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fdf4ff] flex items-center justify-center shrink-0">
-                      <CalendarIcon className="w-4 h-4 text-[#9333ea]" />
+                      <CalendarIcon className="h-4 w-4 text-[#9333ea]" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Project Timeline</p>
@@ -1144,7 +1145,7 @@ const Index = () => {
                               <span className={quickForm.start_date ? "text-[#111827]" : "text-gray-400"}>
                                 {quickForm.start_date ? format(new Date(quickForm.start_date), "dd MMM yyyy") : "Pick a date"}
                               </span>
-                              <CalendarIcon className="w-4 h-4 text-[#9ca3af] shrink-0" />
+                              <CalendarIcon className="h-4 w-4 text-[#9ca3af] shrink-0" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -1165,7 +1166,7 @@ const Index = () => {
                               <span className={quickForm.end_date ? "text-[#111827]" : "text-gray-400"}>
                                 {quickForm.end_date ? format(new Date(quickForm.end_date), "dd MMM yyyy") : "Pick a date"}
                               </span>
-                              <CalendarIcon className="w-4 h-4 text-[#9ca3af] shrink-0" />
+                              <CalendarIcon className="h-4 w-4 text-[#9ca3af] shrink-0" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -1189,7 +1190,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fefce8] flex items-center justify-center shrink-0">
-                      <Building2 className="w-4 h-4 text-[#ca8a04]" />
+                      <Building2 className="h-4 w-4 text-[#ca8a04]" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">
@@ -1215,7 +1216,7 @@ const Index = () => {
                             .map((comp) => (
                               <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
                                 <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-normal text-[#111827] truncate">{comp.company_name}</p>
@@ -1231,11 +1232,12 @@ const Index = () => {
                         <div key={entry.id} className="rounded-xl p-4 space-y-3 bg-muted/50">
                           <div className="flex justify-end">
                             <button
+                              aria-label="Remove invitation"
                               type="button"
                               onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
                               className="text-muted-foreground hover:text-red-500 transition-colors"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="h-4 w-4" />
                             </button>
                           </div>
                           <div>
@@ -1258,7 +1260,7 @@ const Index = () => {
                                 <option value="">Select type...</option>
                                 {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                               </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
@@ -1289,7 +1291,7 @@ const Index = () => {
                         onClick={() => setAppointedInvites((prev) => [...prev, { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" }])}
                         className="w-full py-3.5 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="h-4 w-4" />
                         {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
                       </button>
                     </div>
@@ -1318,7 +1320,7 @@ const Index = () => {
                             <option value="">Select type...</option>
                             {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -1352,7 +1354,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
-                      <CloudUpload className="w-4 h-4 text-[#ea580c]" />
+                      <CloudUpload className="h-4 w-4 text-[#ea580c]" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Project Documents</p>
@@ -1379,7 +1381,7 @@ const Index = () => {
                       )}
                     >
                       <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-muted")}>
-                        <CloudUpload className={cn("w-6 h-6 transition-colors", isDragging ? "text-primary" : "text-[#6b7280]")} />
+                        <CloudUpload className={cn("h-6 w-6 transition-colors", isDragging ? "text-primary" : "text-[#6b7280]")} />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-[#374151]">Drag and drop your files here</p>
@@ -1392,7 +1394,7 @@ const Index = () => {
                         {s3Upload.entries.map((f) => (
                           <div key={f.id} className="bg-muted/50 rounded-xl px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <FileText className="w-4 h-4 text-primary shrink-0" />
+                              <FileText className="h-4 w-4 text-primary shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-normal text-[#111827] truncate">{f.file.name}</p>
                                 <p className="text-xs text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -1406,9 +1408,10 @@ const Index = () => {
                                   />
                                 </div>
                               </div>
-                              {f.status === "done" && <Check className="w-4 h-4 text-[#00b894] shrink-0" />}
-                              <button type="button" onClick={() => s3Upload.removeEntry(f.id)} className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                                <X className="w-4 h-4" />
+                              {f.status === "done" && <Check className="h-4 w-4 text-[#00b894] shrink-0" />}
+                              <button
+                                aria-label="Remove file" type="button" onClick={() => s3Upload.removeEntry(f.id)} className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
+                                <X className="h-4 w-4" />
                               </button>
                             </div>
                             {f.status === "uploading" && (

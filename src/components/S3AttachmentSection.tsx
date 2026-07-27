@@ -70,7 +70,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
             <div key={entry.id} className="bg-card border border-border rounded-xl p-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
                   <span className="text-sm truncate">{entry.file.name}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -84,6 +84,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
                     </button>
                   )}
                   <button
+                    aria-label="Remove attachment"
                     type="button"
                     onClick={() => s3Upload.removeEntry(entry.id)}
                     className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
@@ -108,7 +109,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
 
               {entry.status === "done" && (
                 <div className="mt-1 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500" />
                   <span className="text-xs text-green-500">Uploaded</span>
                 </div>
               )}

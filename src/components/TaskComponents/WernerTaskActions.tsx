@@ -504,9 +504,9 @@ export function WernerTaskActions({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="font-normal bg-primary hover:bg-primary/90 text-white">
-              <Plus className="mr-1 h-3.5 w-3.5" />
+              <Plus className="mr-1" />
               Action
-              <ChevronDown className="ml-1 h-3.5 w-3.5" />
+              <ChevronDown className="ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -524,7 +524,7 @@ export function WernerTaskActions({
           className="font-normal text-green-700 border-green-300 hover:bg-green-50"
           onClick={openSignModal}
         >
-          <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+          <ShieldCheck className="mr-1" />
           Sign &amp; Issue
         </Button>
       )}
@@ -540,7 +540,7 @@ export function WernerTaskActions({
           className="font-normal text-slate-700 border-border hover:bg-muted/50"
           onClick={openCloseModal}
         >
-          <Lock className="mr-1 h-3.5 w-3.5" />
+          <Lock className="mr-1" />
           Close out
         </Button>
       )}
@@ -560,7 +560,7 @@ export function WernerTaskActions({
           {signMethod === "click-confirm" && HIGH_STAKES_SIGN_TYPES.has(taskType) ? (
             <div className="py-2">
               <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
                 <div className="space-y-2 text-amber-900">
                   <p className="font-normal">A signing PIN is required to sign this document.</p>
                   <p className="text-xs text-amber-800 leading-relaxed">
@@ -651,7 +651,7 @@ export function WernerTaskActions({
 
           <div className="py-2">
             <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-              <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
               <div className="space-y-1 text-amber-900">
                 <p className="font-normal">This action sends an email.</p>
                 <p className="text-xs text-amber-800 leading-relaxed">

@@ -242,12 +242,12 @@ const OrganizationPage = () => {
                 disabled={isSaving}
                 className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-all flex items-center gap-2 shrink-0"
               >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 <span className="font-normal">{isSaving ? "Saving Changes..." : "Save Details"}</span>
               </Button>
             ) : (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-                <Lock className="w-3.5 h-3.5" />
+                <Lock className="h-3.5 w-3.5" />
                 <span>Read-only access</span>
               </div>
             )
@@ -322,7 +322,7 @@ const OrganizationPage = () => {
               <SectionCard
                 title="Personal Information"
                 subtitle="Your basic account identity and contact details"
-                icon={<UserIcon className="w-5 h-5" />}
+                icon={<UserIcon className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Full Name">
@@ -334,7 +334,7 @@ const OrganizationPage = () => {
                   </Field>
                   <Field label="Work Email Address">
                     <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
-                      <Mail className="w-4 h-4" />
+                      <Mail className="h-4 w-4" />
                       {user?.email}
                       <span className="ml-auto text-xs bg-muted border border-border px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
                     </div>
@@ -380,12 +380,12 @@ const OrganizationPage = () => {
               <SectionCard
                 title="Professional Credentials"
                 subtitle="Professional body registrations and discipline details"
-                icon={<Briefcase className="w-5 h-5" />}
+                icon={<Briefcase className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Primary Discipline / Role">
                     <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-foreground border border-border cursor-not-allowed font-normal">
-                      <Briefcase className="w-4 h-4 text-primary" />
+                      <Briefcase className="h-4 w-4 text-primary" />
                       {user?.role?.name || "Architect"}
                     </div>
                   </Field>
@@ -427,7 +427,7 @@ const OrganizationPage = () => {
                     {/* Show existing certificate */}
                     {!insuranceFile && user?.insurance_document?.file_name && (
                       <div className="flex items-center gap-3 px-3.5 h-10 bg-muted/50 rounded-lg border border-border text-sm text-foreground mb-2">
-                        <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                        <Paperclip className="h-4 w-4 text-primary shrink-0" />
                         <span className="truncate flex-1">{user.insurance_document.file_name}</span>
                         <span className="text-xs text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded uppercase tracking-tight shrink-0">Current</span>
                       </div>
@@ -440,7 +440,7 @@ const OrganizationPage = () => {
                         : "border-border text-muted-foreground",
                       canEditOrg ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-muted/50 opacity-60"
                     )}>
-                      <Paperclip className="w-4 h-4 shrink-0" />
+                      <Paperclip className="h-4 w-4 shrink-0" />
                       <span className="truncate flex-1 text-xs">
                         {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
                       </span>
@@ -450,7 +450,7 @@ const OrganizationPage = () => {
                           onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
                           className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="h-4 w-4" />
                         </button>
                       )}
                       {canEditOrg && (
@@ -472,7 +472,7 @@ const OrganizationPage = () => {
                 <SectionCard
                   title="Organisation & Entity Details"
                   subtitle="Corporate profile and registration information"
-                  icon={<Building2 className="w-5 h-5" />}
+                  icon={<Building2 className="h-5 w-5" />}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <Field label="Company / Entity Name">
@@ -545,7 +545,7 @@ const OrganizationPage = () => {
               <SectionCard
                 title="Physical Address"
                 subtitle="Registered entity or personal physical location"
-                icon={<MapPin className="w-5 h-5" />}
+                icon={<MapPin className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Street Address" colSpan>
@@ -600,7 +600,7 @@ const OrganizationPage = () => {
                     ? "Your company's bank account — shown on the invoices and payment certificates your company issues"
                     : "Your payment details for invoices and payment certificates"
                 }
-                icon={<CreditCard className="w-5 h-5" />}
+                icon={<CreditCard className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Bank Name">

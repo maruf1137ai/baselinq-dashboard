@@ -208,11 +208,11 @@ const Audit = () => {
       <Tabs defaultValue="overview">
         <TabsList className="bg-sidebar p-1 rounded-lg h-auto w-full">
           <TabsTrigger value="overview" className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm w-full">
-            <BarChart3 className="w-4 h-4 mr-2" />
+            <BarChart3 className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
           <TabsTrigger value="audit-trail" className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm w-full">
-            <Activity className="w-4 h-4 mr-2" />
+            <Activity className="h-4 w-4 mr-2" />
             Audit Trail
           </TabsTrigger>
         </TabsList>
@@ -356,7 +356,7 @@ const Audit = () => {
             <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
               {filteredAuditTrail.map((log, i) => (
                 <div key={i} className="relative pl-8">
-                  <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-card border-2 rounded-full z-10 ${(log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
+                  <div className={`absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 rounded-full z-10 ${(log.action || '').toLowerCase().includes('completed') || (log.action || '').toLowerCase().includes('approved')
                     ? 'border-green-600'
                     : (log.action || '').toLowerCase().includes('rejected') || (log.action || '').toLowerCase().includes('overdue')
                       ? 'border-red-600'

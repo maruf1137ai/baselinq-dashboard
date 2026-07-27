@@ -43,7 +43,7 @@ export function UploadWizardSteps({ currentStep, onStepClick }: UploadWizardStep
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="w-5 h-5" />
+                    <Check className="h-5 w-5" />
                   ) : (
                     <span>{step.number}</span>
                   )}

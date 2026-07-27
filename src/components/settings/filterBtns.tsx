@@ -55,7 +55,7 @@ const FilterBtns = () => {
                 ? "bg-card text-primary hover:bg-muted"
                 : "bg-card text-foreground hover:bg-muted"
             }`}>
-            <FilterIcon className="w-4 h-4" />
+            <FilterIcon className="h-4 w-4" />
             <span>Filter</span>
 
             {activeFilterCount > 0 && (
@@ -64,7 +64,7 @@ const FilterBtns = () => {
               </span>
             )}
 
-            <ChevronDownIcon className="w-4 h-4 text-muted-foreground" />
+            <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
           </button>
         </DropdownMenuTrigger>
 

@@ -228,9 +228,9 @@ const OnboardingDashboard = () => {
   }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "project", label: "Select Project", icon: <FolderOpen className="w-4 h-4" /> },
-    { key: "profile", label: "Profile Details", icon: <UserIcon className="w-4 h-4" /> },
-    { key: "organization", label: "Organisation", icon: <Building2 className="w-4 h-4" /> },
+    { key: "project", label: "Select Project", icon: <FolderOpen className="h-4 w-4" /> },
+    { key: "profile", label: "Profile Details", icon: <UserIcon className="h-4 w-4" /> },
+    { key: "organization", label: "Organisation", icon: <Building2 className="h-4 w-4" /> },
   ];
 
   return (
@@ -248,7 +248,7 @@ const OnboardingDashboard = () => {
             onClick={() => navigate("/create-project")}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Project
           </Button>
         )}
@@ -258,7 +258,7 @@ const OnboardingDashboard = () => {
             disabled={isSaving}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
         )}
@@ -268,13 +268,13 @@ const OnboardingDashboard = () => {
             disabled={isSaving}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
         )}
         {activeTab === "organization" && !canEditOrg && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="h-3.5 w-3.5" />
             <span>Read-only access</span>
           </div>
         )}
@@ -328,7 +328,7 @@ const OnboardingDashboard = () => {
                   onClick={() => navigate("/create-project")}
                   className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="h-4 w-4" />
                   Create your first project
                 </Button>
               </div>
@@ -352,13 +352,13 @@ const OnboardingDashboard = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
-                            <FolderOpen className="w-5 h-5 text-primary" />
+                            <FolderOpen className="h-5 w-5 text-primary" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
                             {project.location && (
                               <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
+                                <MapPin className="h-3 w-3" />
                                 {project.location}
                               </p>
                             )}
@@ -380,7 +380,7 @@ const OnboardingDashboard = () => {
                             "w-7 h-7 rounded-full flex items-center justify-center transition-all",
                             isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                           )}>
-                            {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            {isActive ? <Check className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </div>
                         </div>
                       </div>
@@ -398,7 +398,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Personal Information"
               subtitle="Your basic account identity and contact details"
-              icon={<UserIcon className="w-5 h-5" />}
+              icon={<UserIcon className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Full Name">
@@ -410,7 +410,7 @@ const OnboardingDashboard = () => {
                 </Field>
                 <Field label="Work Email Address">
                   <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
-                    <Mail className="w-4 h-4" />
+                    <Mail className="h-4 w-4" />
                     {user?.email}
                     <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
                   </div>
@@ -446,7 +446,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Professional Credentials"
               subtitle="Professional body registrations and discipline details"
-              icon={<Briefcase className="w-5 h-5" />}
+              icon={<Briefcase className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Primary Discipline / Role">
@@ -472,7 +472,7 @@ const OnboardingDashboard = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help shrink-0" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs">Contact your administrator to change your primary role.</p>
@@ -513,7 +513,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Physical Address"
               subtitle="Registered entity or personal physical location"
-              icon={<MapPin className="w-5 h-5" />}
+              icon={<MapPin className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Street Address" colSpan>
@@ -555,7 +555,7 @@ const OnboardingDashboard = () => {
                   ? "Your company's bank account — shown on the invoices and payment certificates your company issues"
                   : "Your payment details for invoices and payment certificates"
               }
-              icon={<CreditCard className="w-5 h-5" />}
+              icon={<CreditCard className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Bank Name">
@@ -618,7 +618,7 @@ const OnboardingDashboard = () => {
               <SectionCard
                 title="Organisation & Entity Details"
                 subtitle="Corporate profile and registration information"
-                icon={<Building2 className="w-5 h-5" />}
+                icon={<Building2 className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Company / Entity Name">
@@ -673,7 +673,7 @@ const OnboardingDashboard = () => {
             ) : (
               <div className="border border-border rounded-xl bg-card shadow-sm p-10 text-center flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-muted-foreground" />
+                  <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Organisation details are only available for organisation accounts.

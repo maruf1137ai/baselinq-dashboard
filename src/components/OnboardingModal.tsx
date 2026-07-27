@@ -218,7 +218,7 @@ function StepPersonnelCard({
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <User className="w-3.5 h-3.5 text-muted-foreground/50" />
+          <User className="h-4 w-4 text-muted-foreground/50" />
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
         </div>
         <span className="text-xs px-2.5 py-0.5 rounded-full font-medium text-white" style={{ background: roleColor }}>
@@ -227,15 +227,15 @@ function StepPersonnelCard({
       </div>
       <div className="grid grid-cols-3 gap-2">
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
           <input className={cn(fieldCls, "pl-9")} placeholder="Full name" value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} />
         </div>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
           <input className={cn(fieldCls, "pl-9")} placeholder="Email address" type="email" value={value.email} onChange={(e) => onChange({ ...value, email: e.target.value })} />
         </div>
         <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
           <input className={cn(fieldCls, "pl-9")} placeholder="Phone number" type="tel" value={value.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} />
         </div>
       </div>
@@ -723,7 +723,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Building2 className="w-4 h-4 text-primary" />
+                  <Building2 className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-muted-foreground">Company Information</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -748,6 +748,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         }
                       />
                       <button
+                        aria-label="Look up company"
                         type="button"
                         onClick={() => handleCompanyLookup("client")}
                         disabled={isLookingUp}
@@ -755,9 +756,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                         ) : (
-                          <Search className="w-3.5 h-3.5" />
+                          <Search className="h-4 w-4" />
                         )}
                       </button>
                     </div>
@@ -783,7 +784,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                       onClick={() => setShowClientPersonnel(true)}
                       className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
                     </button>
@@ -801,7 +802,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Briefcase className="w-4 h-4 text-[#f59e0b]" />
+                  <Briefcase className="h-4 w-4 text-[#f59e0b]" />
                   <span className="text-sm font-medium text-muted-foreground">Associated Company</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -830,6 +831,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         }
                       />
                       <button
+                        aria-label="Look up company"
                         type="button"
                         onClick={() => handleCompanyLookup("appointed")}
                         disabled={isLookingUp}
@@ -837,9 +839,9 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                         ) : (
-                          <Search className="w-3.5 h-3.5" />
+                          <Search className="h-4 w-4" />
                         )}
                       </button>
                     </div>
@@ -865,7 +867,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                       onClick={() => setShowAppointedPersonnel(true)}
                       className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
                     </button>
@@ -884,7 +886,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <ScrollText className="w-4 h-4 text-primary" />
+                    <ScrollText className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-muted-foreground">Scope of Works</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">

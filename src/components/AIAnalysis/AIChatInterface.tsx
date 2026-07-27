@@ -168,7 +168,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
             <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center shadow-lg p-1">
               <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain scale-110" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#00b894] border-2 border-white rounded-full" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-[#00b894] border-2 border-white rounded-full" />
           </div>
           <div className="flex flex-col">
             <h3 className="text-sm font-medium text-[#1a1a2e] leading-tight flex items-center gap-1.5">
@@ -264,7 +264,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                   {msg.sources.map((source, si) => (
                     <div key={si} className="relative group">
                       <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                        <FileText className="h-3 w-3 text-muted-foreground" />
+                        <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground font-medium">Clause {source.clause_number}</span>
                       </button>
                       <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
@@ -272,7 +272,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                           <p className="text-xs font-medium text-primary/70 mb-1 truncate">{source.document_name}</p>
                         )}
                         <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
                           <p className="text-xs font-normal text-foreground truncate">{source.clause_title}, Page {source.page_number}</p>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">{source.excerpt}</p>
@@ -354,6 +354,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                 className="w-full bg-muted/50 border-2 border-border rounded-lg pl-6 pr-14 py-4 text-sm font-medium text-[#1a1a2e] focus:outline-none focus:bg-card focus:border-[#6c5ce7] transition-all duration-300 placeholder:text-[#94a3b8] placeholder:font-normal resize-none overflow-hidden leading-relaxed"
               />
               <button
+                aria-label="Send message"
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isTyping}
                 className={cn(
@@ -363,7 +364,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                     : "bg-muted text-[#cbd5e0] cursor-not-allowed"
                 )}
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </button>
             </div>
           </div>

@@ -184,7 +184,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
           {/* Warning banner */}
           <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-xs text-amber-900 leading-relaxed translate-y-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
             <span>
               Once {mode === "approve" ? "approved" : "recommended"}, this Variation Order becomes a
               binding contractual instruction. It cannot be amended without a further Variation Order.
@@ -217,7 +217,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           {needsPinSetup && (
             <div className="pt-2">
               <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
                 <div className="space-y-2 text-amber-900">
                   <p className="font-normal">A signing PIN is required to approve this Variation Order.</p>
                   <p className="text-xs text-amber-800 leading-relaxed">

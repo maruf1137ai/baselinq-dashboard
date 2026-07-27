@@ -191,7 +191,7 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
           <ol className="space-y-2">
             {data.recommendations.map((rec, i) => (
               <li key={i} className="flex items-start gap-3 text-sm text-foreground">
-                <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium mt-0.5">
+                <span className="shrink-0 h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium mt-0.5">
                   {i + 1}
                 </span>
                 {rec}

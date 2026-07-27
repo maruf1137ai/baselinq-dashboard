@@ -191,7 +191,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
         <span className="w-28 shrink-0">Status</span>
         <span className="w-16 shrink-0 flex justify-end">
           <Button size="sm" variant="outline" onClick={onAddMilestone} className="h-7 text-xs gap-1">
-            <Plus className="h-3 w-3" />
+            <Plus />
             Add
           </Button>
         </span>
@@ -212,7 +212,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
           description="Define the phases of the works so cost and progress can be tracked against the contract programme."
           action={
             <Button size="sm" variant="outline" onClick={onAddMilestone} className="gap-1.5">
-              <Plus className="h-3 w-3" />
+              <Plus />
               Add first phase
             </Button>
           }
@@ -271,14 +271,16 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
               </span>
               <div className="w-16 shrink-0 flex items-center justify-end gap-2">
                 <button
+                  aria-label="Edit milestone"
                   onClick={() => openEdit(m)}
                   className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
                 </button>
                 <button
+                  aria-label="Delete milestone"
                   onClick={() => setDeleteConfirmId(m._id)}
                   className="text-muted-foreground hover:text-red-500 transition-colors">
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>

@@ -56,7 +56,7 @@ const AiRouting = () => {
         <div key={id} className="border border-border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-foreground">{title}</span>
               <StatusBadge status={badge} />
             </div>

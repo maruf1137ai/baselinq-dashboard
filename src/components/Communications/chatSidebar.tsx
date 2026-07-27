@@ -143,8 +143,14 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                           : "No details"}
                       </div>
 
+                      {/* Sits in the footer row rather than absolutely at
+                          top-2 right-2, which put it directly on top of the
+                          status chip in the header row. */}
                       {count > 0 && (
-                        <div className="absolute top-2 right-2 flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-primary rounded-full text-white text-xs font-normal">
+                        <div
+                          aria-label={`${count} unread`}
+                          className="shrink-0 ml-2 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-primary rounded-full text-primary-foreground text-xs font-medium tabular-nums"
+                        >
                           {count}
                         </div>
                       )}

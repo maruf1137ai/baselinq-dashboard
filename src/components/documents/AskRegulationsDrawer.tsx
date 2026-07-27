@@ -308,8 +308,8 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                           }}
                         >
                           {copiedId === msg.id
-                            ? <Check className="h-3.5 w-3.5 text-green-500" />
-                            : <Copy className="h-3.5 w-3.5 text-gray-400" />}
+                            ? <Check className="h-4 w-4 text-green-500" />
+                            : <Copy className="h-4 w-4 text-gray-400" />}
                         </button>
                         <button
                           title="Helpful"
@@ -354,7 +354,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                           <Tooltip key={ci}>
                             <TooltipTrigger asChild>
                               <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                                <FileText className="h-3 w-3 text-muted-foreground" />
+                                <FileText className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground font-medium">Clause {cite.clause}</span>
                               </button>
                             </TooltipTrigger>
@@ -363,7 +363,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                                 <p className="text-xs font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
                               )}
                               <div className="flex items-center gap-1.5 mb-1">
-                                <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <FileText className="h-4 w-4 text-primary shrink-0" />
                                 <p className="text-xs font-normal truncate">{cite.clauseTitle ?? `Clause ${cite.clause}`}, Page {cite.page}</p>
                               </div>
                               {cite.snippet && (
@@ -412,8 +412,9 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
         {/* Input Footer */}
         <div className="p-5 border-t bg-card shrink-0">
           <div className="relative flex items-center bg-muted/50 border border-border rounded-3xl px-4 py-2 focus-within:bg-card focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 transition-all">
-            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
-              <Paperclip className="h-5 w-5" />
+            <button
+              aria-label="Attach a file" className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-muted transition-colors">
+              <Paperclip className="h-4 w-4" />
             </button>
             <textarea
               rows={1}

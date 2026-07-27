@@ -95,7 +95,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
               : 'text-muted-foreground hover:text-foreground'
               }`}
           >
-            <User className="h-3.5 w-3.5" />
+            <User className="h-4 w-4" />
             My Tasks
           </button>
           <button
@@ -105,7 +105,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
               : 'text-muted-foreground hover:text-foreground'
               }`}
           >
-            <Users className="h-3.5 w-3.5" />
+            <Users className="h-4 w-4" />
             All Tasks
           </button>
         </div>

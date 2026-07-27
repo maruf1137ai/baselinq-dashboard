@@ -203,7 +203,7 @@ const Communications = () => {
             <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-[#f0edff] flex items-center justify-center">
-                  <Hash className="w-4 h-4 text-[#6c5ce7]" />
+                  <Hash className="h-4 w-4 text-[#6c5ce7]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-normal text-[#1a1a2e]">New Channel</h3>
@@ -214,7 +214,7 @@ const Communications = () => {
                 type="button"
                 onClick={() => { setShowNewChannel(false); resetModal(); }}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -258,7 +258,7 @@ const Communications = () => {
                         type="button"
                         className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
                         <span className="text-xs text-[#9ca3af]">Add users…</span>
-                        <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                        <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -304,7 +304,7 @@ const Communications = () => {
                       {/* Creator — locked */}
                       {currentUser.id && (
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0edff] border border-[#d6d3ff] text-xs text-[#6c5ce7]">
-                          <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                          <div className="h-4 w-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                             {(currentUser.name || currentUser.email || "Y").charAt(0).toUpperCase()}
                           </div>
                           <span>{currentUser.name || currentUser.email || "You"}</span>
@@ -317,15 +317,16 @@ const Communications = () => {
                         const name: string = m.user?.name || m.name || m.user?.email || "Unknown";
                         return (
                           <div key={uid} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border text-xs text-[#374151]">
-                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                            <div className="h-4 w-4 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
                               {name.charAt(0).toUpperCase()}
                             </div>
                             <span>{name}</span>
                             <button
+                              aria-label="Remove member"
                               type="button"
                               onClick={() => removeMember(uid)}
                               className="ml-0.5 text-[#9ca3af] hover:text-[#374151] transition-colors">
-                              <X className="w-3 h-3" />
+                              <X className="h-3 w-3" />
                             </button>
                           </div>
                         );
@@ -350,9 +351,9 @@ const Communications = () => {
                   className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
                   {isCreating ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating…</>
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating…</>
                   ) : (
-                    <><Check className="w-3.5 h-3.5" /> Create Channel</>
+                    <><Check className="h-4 w-4" /> Create Channel</>
                   )}
                 </button>
               </div>

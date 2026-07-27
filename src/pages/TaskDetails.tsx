@@ -165,23 +165,23 @@ const groupLogsByDate = (logs: any[]) => {
 
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
-  if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-primary" />, bg: '#EEF2FF' };
-  if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
-  if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-  if (a === 'task_assigned') return { icon: <UserPlus className="w-3 h-3 text-[#0284c7]" />, bg: '#E0F2FE' };
-  if (a === 'request_info') return { icon: <FileText className="w-3 h-3 text-[#9333ea]" />, bg: '#FDF4FF' };
-  if (a === 'response_added') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+  if (a === 'task_created') return { icon: <Circle className="h-3 w-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a.endsWith('_created')) return { icon: <Circle className="h-3 w-3 text-primary" />, bg: '#EEF2FF' };
+  if (a === 'created') return { icon: <Circle className="h-3 w-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a === 'approved') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+  if (a === 'rejected') return { icon: <XCircle className="h-3 w-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+  if (a === 'task_assigned') return { icon: <UserPlus className="h-3 w-3 text-[#0284c7]" />, bg: '#E0F2FE' };
+  if (a === 'request_info') return { icon: <FileText className="h-3 w-3 text-[#9333ea]" />, bg: '#FDF4FF' };
+  if (a === 'response_added') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
     const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
-      return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+      return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
-      return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-    return { icon: <Clock className="w-3 h-3 text-primary" />, bg: '#EEF2FF' };
+      return { icon: <XCircle className="h-3 w-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+    return { icon: <Clock className="h-3 w-3 text-primary" />, bg: '#EEF2FF' };
   }
-  return { icon: <Circle className="w-3 h-3 text-muted-foreground" />, bg: '#F3F4F6' };
+  return { icon: <Circle className="h-3 w-3 text-muted-foreground" />, bg: '#F3F4F6' };
 };
 
 const getStatusBadgeColor = (status: string) => {
@@ -1834,7 +1834,8 @@ export default function TaskDetails() {
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-card">
+                          <button
+                            aria-label="More actions" className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-card">
                             <MoreVertical className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -1975,7 +1976,7 @@ export default function TaskDetails() {
                               )}
                               title="Open the referenced task"
                             >
-                              <Link2 className="h-3 w-3" />
+                              <Link2 className="h-4 w-4" />
                               {refCode}
                             </Link>
                           ) : (
@@ -1983,7 +1984,7 @@ export default function TaskDetails() {
                               className={chipClasses}
                               title="Referenced task not found on this project"
                             >
-                              <Link2 className="h-3 w-3 text-muted-foreground" />
+                              <Link2 className="h-4 w-4 text-muted-foreground" />
                               {refCode}
                             </span>
                           )}
@@ -2141,7 +2142,7 @@ export default function TaskDetails() {
                 <Card className="p-6 shadow-none bg-card border-border">
                   <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
                     <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      <LockIcon className="w-5 h-5 text-primary" />
+                      <LockIcon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm font-normal text-foreground">Task Locked</p>
@@ -2185,7 +2186,7 @@ export default function TaskDetails() {
                             }}
                             className="inline-flex items-center justify-center rounded-md border border-border bg-card p-1.5 hover:bg-muted/50"
                           >
-                            <CopyIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <CopyIcon className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </div>
                       );
@@ -2399,7 +2400,7 @@ export default function TaskDetails() {
                                 <span className="text-sm font-normal text-foreground">{formatVOCurrency(round.financials.grandTotal)}</span>
                               </div>
                               <span className="text-xs text-primary flex items-center gap-0.5 font-normal">
-                                View breakdown <ChevronRight className="w-3 h-3" />
+                                View breakdown <ChevronRight className="h-3 w-3" />
                               </span>
                             </div>
                           )}
@@ -2451,7 +2452,7 @@ export default function TaskDetails() {
                         className="w-full flex items-center justify-between py-2 text-sm font-normal text-primary hover:text-primary/80 transition-colors"
                       >
                         <span>{showPricingResponse ? "Hide Pricing Response" : "Add Pricing Response"}</span>
-                        {showPricingResponse ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {showPricingResponse ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </button>
                     )}
 
@@ -2509,8 +2510,9 @@ export default function TaskDetails() {
                                       <td className="px-3 py-1.5 text-sm text-right text-foreground font-normal whitespace-nowrap">{formatVOCurrency(amount)}</td>
                                       <td className="px-2 py-1.5">
                                         {voLineItems.length > 1 && (
-                                          <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                          <button
+                                            aria-label="Remove line item" type="button" onClick={() => removeVoItem(item.id)} className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors">
+                                            <Trash2 className="h-3.5 w-3.5" />
                                           </button>
                                         )}
                                       </td>
@@ -2553,8 +2555,9 @@ export default function TaskDetails() {
                                       onChange={e => updateVoItem(item.id, "description", e.target.value)}
                                     />
                                     {voLineItems.length > 1 && (
-                                      <button type="button" onClick={() => removeVoItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                      <button
+                                        aria-label="Remove line item" type="button" onClick={() => removeVoItem(item.id)} className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                                        <Trash2 className="h-3.5 w-3.5" />
                                       </button>
                                     )}
                                   </div>
@@ -2610,7 +2613,7 @@ export default function TaskDetails() {
                             onClick={() => setVoLineItems(prev => [...prev, { id: crypto.randomUUID(), description: "", qty: "", rate: "" }])}
                             className="mt-2 flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="h-4 w-4" />
                             Add line item
                           </button>
                         </div>
@@ -2816,7 +2819,7 @@ export default function TaskDetails() {
                           id="siTimeImpact"
                           checked={siTimeImpact}
                           onChange={(e) => setSiTimeImpact(e.target.checked)}
-                          className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                          className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
                         />
                         <span className="text-sm font-medium text-foreground">TIME</span>
                       </label>
@@ -2826,7 +2829,7 @@ export default function TaskDetails() {
                           id="siCostImpact"
                           checked={siCostImpact}
                           onChange={(e) => setSiCostImpact(e.target.checked)}
-                          className="w-4 h-4 text-orange-600 border-border rounded focus:ring-orange-500"
+                          className="h-4 w-4 text-orange-600 border-border rounded focus:ring-orange-500"
                         />
                         <span className="text-sm font-medium text-foreground">COST</span>
                       </label>
@@ -2913,6 +2916,7 @@ export default function TaskDetails() {
                       <span key={u.userId || u.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
                         {u.name}
                         <button
+                          aria-label="Remove recipient"
                           type="button"
                           onClick={() => setReplyRecipients(r => r.filter(x => (x.userId || x.id) !== (u.userId || u.id)))}
                           className="hover:bg-primary/20 rounded"
@@ -2980,6 +2984,7 @@ export default function TaskDetails() {
                         <FileText className="h-3 w-3" />
                         {f.name}
                         <button
+                          aria-label="Remove attachment"
                           type="button"
                           onClick={() => setReplyAttachments(arr => arr.filter((_, idx) => idx !== i))}
                           className="hover:bg-border rounded"
@@ -3012,6 +3017,7 @@ export default function TaskDetails() {
                         <Link2 className="h-3 w-3" />
                         {r.label}
                         <button
+                          aria-label="Remove reference"
                           type="button"
                           onClick={() => setReplyRefs(arr => arr.filter(x => x.id !== r.id))}
                           className="hover:bg-border rounded"
@@ -3363,7 +3369,7 @@ export default function TaskDetails() {
                                   }
                                 }}
                                 className={cn(
-                                  "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300 mt-1",
+                                  "relative z-10 h-3.5 w-3.5 rounded-full transition-all duration-300 mt-1",
                                   isComplete && "bg-primary shadow-sm",
                                   isCurrent && "bg-primary ring-4 ring-primary/20",
                                   !isComplete && !isCurrent && "bg-card border-2 border-border",
@@ -3415,7 +3421,7 @@ export default function TaskDetails() {
                         verified path. */}
                     {isTerminalBeyondStages && (
                       <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <XCircle className="w-3.5 h-3.5" />
+                        <XCircle className="h-3.5 w-3.5" />
                         <span>
                           {displayTask.timeline?.current || "Closed"} — this task ended outside the normal stage flow.
                         </span>
@@ -3567,7 +3573,7 @@ export default function TaskDetails() {
                             return (
                               <div key={i} className="flex gap-3">
                                 <div className="flex flex-col items-center">
-                                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
+                                  <div className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
                                     {icon}
                                   </div>
                                   {!isLast && <div className="w-0.5 flex-1 bg-muted mt-1 mb-1" />}
@@ -3593,7 +3599,7 @@ export default function TaskDetails() {
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                                       {chips.map((name, idx) => (
                                         <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
-                                          <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
+                                          <span className="h-4 w-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
                                             {name.charAt(0).toUpperCase()}
                                           </span>
                                           {name}
@@ -3623,8 +3629,8 @@ export default function TaskDetails() {
                     ))
                   ) : (
                     <div className="flex gap-3 items-start pl-2">
-                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <Circle className="w-3 h-3 text-muted-foreground" />
+                      <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Circle className="h-3 w-3 text-muted-foreground" />
                       </div>
                       <p className="text-sm text-muted-foreground pt-1">No activity recorded yet</p>
                     </div>
@@ -3788,12 +3794,12 @@ export default function TaskDetails() {
                       </h3>
                       {selectedResponse.timeConsequence > 0 ? (
                         <Badge variant="outline" className="text-xs border-amber-200 text-amber-600 bg-amber-50 gap-1.5 font-normal">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="h-3 w-3" />
                           +{selectedResponse.timeConsequence} Days EOT
                         </Badge>
                       ) : selectedResponse.timeConsequence === 0 ? (
                         <Badge variant="outline" className="text-xs border-border text-muted-foreground bg-muted/50 gap-1.5 font-normal">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="h-3 w-3" />
                           No Time Impact
                         </Badge>
                       ) : null}
@@ -3917,7 +3923,7 @@ export default function TaskDetails() {
                           await handleApproveTask('Approved');
                         }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="h-4 w-4" />
                         Approve
                       </Button>
                       <Button
@@ -3929,7 +3935,7 @@ export default function TaskDetails() {
                           await handleApproveTask('Closed');
                         }}
                       >
-                        <XCircle className="w-4 h-4" />
+                        <XCircle className="h-4 w-4" />
                         Close
                       </Button>
                     </>
@@ -3944,7 +3950,7 @@ export default function TaskDetails() {
                           await handleApproveTask(displayTask.timeline.stages[displayTask.timeline.stages.length - 1]);
                         }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="h-4 w-4" />
                         Close Proposal
                       </Button>
                       <Button
@@ -3956,7 +3962,7 @@ export default function TaskDetails() {
                           await handleApproveTask('Rejected');
                         }}
                       >
-                        <XCircle className="w-4 h-4" />
+                        <XCircle className="h-4 w-4" />
                         Reject Proposal
                       </Button>
                     </>

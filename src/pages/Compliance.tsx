@@ -112,11 +112,11 @@ const Compliance = () => {
           <h1 className="text-2xl font-normal text-foreground tracking-tight">Compliance</h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground" onClick={() => setIsRiskDrawerOpen(true)}>
-              <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
+              <AlertTriangle className="mr-1.5" />
               Risk Overview
             </Button>
             <Button className="h-8 text-xs rounded-lg bg-primary text-primary-foreground" onClick={() => setIsGenerateNoticeModalOpen(true)}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              <Plus className="mr-1.5" />
               Add Item
             </Button>
           </div>
@@ -159,7 +159,7 @@ const Compliance = () => {
             />
           </div>
           <Button variant="outline" className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Analyse with AI
+            <Sparkles className="mr-1.5" /> Analyse with AI
           </Button>
         </div>
 
@@ -272,7 +272,7 @@ const Compliance = () => {
         <SheetContent side="right" size="sm" className="p-0 flex flex-col">
           <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
             <SheetTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="h-4 w-4" />
               Risk Overview
             </SheetTitle>
           </SheetHeader>

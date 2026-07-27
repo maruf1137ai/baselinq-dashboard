@@ -302,7 +302,7 @@ export function UploadStep3FileMetadata({
       <div className="rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
         <div className="flex items-start gap-3">
           <div className="shrink-0 mt-0.5 text-primary">
-            <FolderIcon className="w-4 h-4" />
+            <FolderIcon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -385,6 +385,7 @@ export function UploadStep3FileMetadata({
                         </div>
                       </div>
                       <button
+                        aria-label="Remove file"
                         onClick={() => s3Upload.removeEntry(entry.id)}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
                       >
@@ -644,11 +645,11 @@ export function UploadStep3FileMetadata({
               className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-primary" />
+                <Link2 className="h-4 w-4 text-primary" />
                 <span className="text-sm font-normal text-foreground">Link to Existing Documents</span>
                 <span className="text-xs text-muted-foreground">(Optional)</span>
               </div>
-              <ChevronRight className={cn("w-4 h-4 text-muted-foreground transition-transform", showLinking && "rotate-90")} />
+              <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", showLinking && "rotate-90")} />
             </button>
 
             {showLinking && (
@@ -716,7 +717,7 @@ export function UploadStep3FileMetadata({
                         >
                           <div className="flex items-center gap-3">
                             <div className="h-7 w-7 rounded-lg bg-muted border border-border flex items-center justify-center">
-                              <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <Link2 className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div>
                               <p className="text-sm text-foreground">{task.rawId}</p>

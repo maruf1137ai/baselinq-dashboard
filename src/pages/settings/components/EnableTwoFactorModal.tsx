@@ -41,7 +41,7 @@ const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps)
           </div>
 
           <div className="bg-sidebar rounded-lg p-4 flex gap-3">
-            <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <Lightbulb className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-sm text-foreground">
               Keep your backup codes in a safe place. You'll need them if you lose access to your authenticator app.
             </p>

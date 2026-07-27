@@ -66,8 +66,8 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600">
-              <CloseIcon className="w-6 h-6" />
+              className="h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-muted transition-colors">
+              <CloseIcon className="h-4 w-4" />
               <span className="sr-only">Close panel</span>
             </button>
           </header>
@@ -127,7 +127,7 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
+                    <span className="h-3 w-3 bg-green-500 rounded-full mr-3"></span>
                     <span className="text-sm text-muted-foreground">Approved</span>
                   </div>
                   <span className="text-sm text-foreground">
@@ -136,7 +136,7 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></span>
+                    <span className="h-3 w-3 bg-yellow-500 rounded-full mr-3"></span>
                     <span className="text-sm text-muted-foreground">In Review</span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
@@ -145,7 +145,7 @@ export const VOSummaryDrawer: React.FC<VOSummaryDrawerProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <span className="w-3 h-3 bg-gray-400 rounded-full mr-3"></span>
+                    <span className="h-3 w-3 bg-gray-400 rounded-full mr-3"></span>
                     <span className="text-sm text-muted-foreground">Draft</span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">

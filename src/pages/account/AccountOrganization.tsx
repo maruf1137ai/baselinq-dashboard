@@ -209,12 +209,12 @@ const AccountOrganization = () => {
         </div>
         {canEdit ? (
           <Button onClick={handleSave} disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+            {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="mr-1.5" />}
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         ) : (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="h-3.5 w-3.5" />
             <span>Read-only access</span>
           </div>
         )}
@@ -223,10 +223,10 @@ const AccountOrganization = () => {
       <>
         {/* Org details */}
         <form onSubmit={handleSave}>
-          <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="w-4 h-4" />}>
+          <SectionCard title="Organisation & Entity Details" subtitle="Corporate profile and registration information" icon={<Building2 className="h-4 w-4" />}>
             {!isOrg && !user?.organization && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50 text-muted-foreground text-sm mb-4">
-                <Building2 className="w-4 h-4 shrink-0" />
+                <Building2 className="h-4 w-4 shrink-0" />
                 <span>You are not linked to any organisation. Contact your organisation admin for access.</span>
               </div>
             )}
@@ -261,13 +261,13 @@ const AccountOrganization = () => {
         <SectionCard
           title="Insurance Certificate"
           subtitle="Professional indemnity or public liability certificate"
-          icon={<ShieldCheck className="w-4 h-4" />}
+          icon={<ShieldCheck className="h-4 w-4" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Certificate Document">
               {!insuranceFile && user?.insurance_document?.file_name && (
                 <div className="flex items-center gap-2.5 px-3.5 h-10 bg-muted/50 rounded-lg border border-border text-sm text-foreground mb-2">
-                  <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                  <Paperclip className="h-4 w-4 text-primary shrink-0" />
                   <span className="truncate flex-1 text-xs">{user.insurance_document.file_name}</span>
                   <span className="text-xs text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded shrink-0">Current</span>
                 </div>
@@ -279,7 +279,7 @@ const AccountOrganization = () => {
                   : "border-border text-muted-foreground",
                 canEdit ? "cursor-pointer hover:border-primary hover:text-primary" : "cursor-not-allowed bg-muted/50 opacity-60"
               )}>
-                <Paperclip className="w-4 h-4 shrink-0" />
+                <Paperclip className="h-4 w-4 shrink-0" />
                 <span className="truncate flex-1 text-xs">
                   {insuranceFile ? insuranceFile.name : user?.insurance_document?.file_name ? "Replace certificate…" : "Upload certificate…"}
                 </span>
@@ -289,7 +289,7 @@ const AccountOrganization = () => {
                     onClick={e => { e.preventDefault(); setInsuranceFile(null); }}
                     className="shrink-0 text-muted-foreground hover:text-red-500 transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
                 {canEdit && (
@@ -321,7 +321,7 @@ const AccountOrganization = () => {
         <SectionCard
           title="Banking Details"
           subtitle="Your company's bank account — shown on the invoices and payment certificates your company issues"
-          icon={<CreditCard className="w-4 h-4" />}
+          icon={<CreditCard className="h-4 w-4" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Bank Name">
@@ -349,14 +349,14 @@ const AccountOrganization = () => {
         <SectionCard
           title="Users"
           subtitle="People who have joined your organisation"
-          icon={<Users className="w-4 h-4" />}
+          icon={<Users className="h-4 w-4" />}
           action={canEdit && (
             <button
               type="button"
               onClick={() => setShowInviteForm(v => !v)}
               className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-normal"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="h-3.5 w-3.5" />
               Invite User
             </button>
           )}
@@ -396,11 +396,12 @@ const AccountOrganization = () => {
                     </div>
                     {inviteRows.length > 1 && (
                       <button
+                        aria-label="Remove invite row"
                         type="button"
                         onClick={() => setInviteRows(p => p.filter(r => r.id !== row.id))}
                         className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -411,12 +412,12 @@ const AccountOrganization = () => {
                 onClick={() => setInviteRows(p => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
                 className="mt-3 flex items-center gap-2 text-xs text-[#6c5ce7] hover:text-[#6c6de9] transition-colors"
               >
-                <UserPlus className="w-3.5 h-3.5" />
+                <UserPlus className="h-4 w-4" />
                 Add another user
               </button>
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
                 <Button type="submit" disabled={inviting} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90">
-                  {inviting && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                  {inviting && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
                   {inviting ? "Sending..." : "Send Invitation"}
                 </Button>
                 <button type="button" onClick={() => { setShowInviteForm(false); setInviteRows([{ id: crypto.randomUUID(), name: "", email: "", position: "" }]); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
@@ -453,13 +454,14 @@ const AccountOrganization = () => {
                   )}
                   {canEdit && (
                     <button
+                      aria-label="Remove member"
                       type="button"
                       onClick={() => handleRemoveMember(member.id)}
                       disabled={removingId === member.id}
                       className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
                       title="Remove user"
                     >
-                      {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      {removingId === member.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </button>
                   )}
                 </div>
@@ -472,7 +474,7 @@ const AccountOrganization = () => {
                   {pendingInvites.map(inv => (
                     <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/50">
                       <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <Clock className="h-4 w-4 text-amber-500" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground truncate">{inv.name || inv.email}</p>
@@ -481,13 +483,14 @@ const AccountOrganization = () => {
                       <Badge variant="warning" className="shrink-0">Pending</Badge>
                       {canEdit && (
                         <button
+                          aria-label="Cancel invitation"
                           type="button"
                           onClick={() => handleCancelInvite(inv.id)}
                           disabled={cancellingId === inv.id}
                           className="shrink-0 text-muted-foreground/50 hover:text-red-500 transition-colors disabled:opacity-40"
                           title="Cancel invitation"
                         >
-                          {cancellingId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                          {cancellingId === inv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                         </button>
                       )}
                     </div>

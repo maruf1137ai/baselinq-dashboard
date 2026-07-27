@@ -223,7 +223,7 @@ export function LocationPickerMap({
       {/* Search input */}
       {!readOnly && (
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none z-10" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none z-10" />
           <input
             className="w-full h-12 pl-10 pr-10 rounded-lg text-sm outline-none transition-all bg-muted/50 border border-border text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
             placeholder="Search address or city…"
@@ -234,15 +234,16 @@ export function LocationPickerMap({
             autoComplete="off"
           />
           {(isSearching || isReverseGeocoding) ? (
-            <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] animate-spin" />
+            <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] animate-spin" />
           ) : pin ? (
             <button
+              aria-label="Clear location"
               type="button"
               onClick={handleClear}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-red-500 transition-colors"
               title="Clear location"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           ) : null}
 
@@ -256,7 +257,7 @@ export function LocationPickerMap({
                   onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
                   className="w-full flex items-start gap-2.5 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-0"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#9ca3af] mt-0.5 shrink-0" />
+                  <MapPin className="h-4 w-4 text-[#9ca3af] mt-0.5 shrink-0" />
                   <span className="text-xs text-[#374151] leading-snug line-clamp-2">{s.display_name}</span>
                 </button>
               ))}
@@ -268,7 +269,7 @@ export function LocationPickerMap({
       {/* Read-only address display */}
       {readOnly && location && (
         <div className="flex items-center gap-2 px-3.5 h-10 bg-muted/50 rounded-lg border border-border text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4 shrink-0 text-primary" />
+          <MapPin className="h-4 w-4 shrink-0 text-primary" />
           <span className="truncate">{location}</span>
         </div>
       )}

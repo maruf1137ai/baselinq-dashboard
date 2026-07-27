@@ -45,7 +45,7 @@ export function ActionItem({
         <span className="text-xs text-muted-foreground/50">Due: {dueDate}</span>
         <button className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group" onClick={() => navigate(`/tasks/${id}`)}>
           View
-          <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>

@@ -345,7 +345,7 @@ const CostLadger = () => {
               className="flex items-center space-x-2 h-10 px-4 rounded-lg text-sm text-white bg-primary hover:opacity-90 transition-all"
               onClick={handleCreateNew}
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="h-4 w-4" />
               <span>New Entry</span>
             </button>
           )}
@@ -355,7 +355,7 @@ const CostLadger = () => {
             className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
             onClick={() => setIsDrawerOpen(true)}
           >
-            <ExternalLinkIcon className="w-4 h-4" />
+            <ExternalLinkIcon className="h-4 w-4" />
             <span>Fee Schedule</span>
           </button>
 
@@ -368,14 +368,14 @@ const CostLadger = () => {
                   : 'bg-card text-foreground border-border hover:bg-muted'
                   }`}
               >
-                <FilterIcon className="w-4 h-4" />
+                <FilterIcon className="h-4 w-4" />
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
                   <span className="bg-foreground text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">
                     {activeFilterCount}
                   </span>
                 )}
-                <ChevronDownIcon className="w-5 h-5 text-muted-foreground" />
+                <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-60" align="end">
@@ -409,7 +409,7 @@ const CostLadger = () => {
             onClick={exportToCSV}
             className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
           >
-            <ExportIcon className="w-4 h-4" />
+            <ExportIcon className="h-4 w-4" />
             <span>Export CSV</span>
           </button>
         </div>

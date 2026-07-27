@@ -384,15 +384,15 @@ const ProjectDetails = () => {
               className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
               )}
               {isSaving ? "Saving..." : "Save Details"}
             </Button>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="h-3.5 w-3.5" />
               <span>Read-only access</span>
             </div>
           )}
@@ -402,7 +402,7 @@ const ProjectDetails = () => {
         <SectionCard
           title="Project Information"
           subtitle="Core details, dates, and financials"
-          icon={<FileText className="w-4 h-4" />}
+          icon={<FileText className="h-4 w-4" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Project Name">
@@ -461,7 +461,7 @@ const ProjectDetails = () => {
                     disabled={!canEditProject}
                     className={cn(DATE_BTN_CLS, !formData.start_date && "text-muted-foreground", !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   >
-                    <CalendarIcon className="w-4 h-4 shrink-0" />
+                    <CalendarIcon className="h-4 w-4 shrink-0" />
                     {formData.start_date
                       ? format(parseISO(formData.start_date), "PPP")
                       : "Pick a date"}
@@ -487,7 +487,7 @@ const ProjectDetails = () => {
                     disabled={!canEditProject}
                     className={cn(DATE_BTN_CLS, !formData.end_date && "text-muted-foreground", !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   >
-                    <CalendarIcon className="w-4 h-4 shrink-0" />
+                    <CalendarIcon className="h-4 w-4 shrink-0" />
                     {formData.end_date
                       ? format(parseISO(formData.end_date), "PPP")
                       : "Pick a date"}
@@ -598,7 +598,7 @@ const ProjectDetails = () => {
           title="Client Details"
           subtitle="Company information and contacts"
           badge="Contracts & Invoicing"
-          icon={<Building2 className="w-4 h-4" />}
+          icon={<Building2 className="h-4 w-4" />}
         >
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -767,7 +767,7 @@ const ProjectDetails = () => {
         <SectionCard
           title="Scope of Works"
           subtitle="Client brief and project requirements"
-          icon={<ClipboardList className="w-4 h-4" />}
+          icon={<ClipboardList className="h-4 w-4" />}
         >
           <Field label="Client Brief">
             <Textarea
@@ -788,7 +788,7 @@ const ProjectDetails = () => {
       <SectionCard
         title="Documents"
         badge={`${documents.length} file${documents.length !== 1 ? "s" : ""}`}
-        icon={<FolderOpen className="w-4 h-4" />}
+        icon={<FolderOpen className="h-4 w-4" />}
       >
         {documents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -814,11 +814,12 @@ const ProjectDetails = () => {
                 </div>
                 {canEditProject && (
                   <button
+                    aria-label="Delete document"
                     onClick={(e) => handleDeleteDocument(e, doc)}
                     className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
                     title="Delete document"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -849,7 +850,7 @@ const ProjectDetails = () => {
         <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <TriangleAlert className="w-4 h-4" />
+              <TriangleAlert className="h-4 w-4" />
               Confirm Deletion
             </DialogTitle>
           </DialogHeader>

@@ -71,23 +71,23 @@ const groupLogsByDate = (logs: any[]) => {
 
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
-  if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
-  if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
-  if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-  if (a === 'task_assigned') return { icon: <UserPlus className="w-3 h-3 text-[#0284c7]" />, bg: '#E0F2FE' };
-  if (a === 'request_info') return { icon: <FileText className="w-3 h-3 text-[#9333ea]" />, bg: '#FDF4FF' };
-  if (a === 'response_added') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+  if (a === 'task_created') return { icon: <Circle className="h-3 w-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a.endsWith('_created')) return { icon: <Circle className="h-3 w-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
+  if (a === 'created') return { icon: <Circle className="h-3 w-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
+  if (a === 'approved') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+  if (a === 'rejected') return { icon: <XCircle className="h-3 w-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+  if (a === 'task_assigned') return { icon: <UserPlus className="h-3 w-3 text-[#0284c7]" />, bg: '#E0F2FE' };
+  if (a === 'request_info') return { icon: <FileText className="h-3 w-3 text-[#9333ea]" />, bg: '#FDF4FF' };
+  if (a === 'response_added') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
     const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
-      return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
+      return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
-      return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-    return { icon: <Clock className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
+      return { icon: <XCircle className="h-3 w-3 text-[#DC2626]" />, bg: '#FEF2F2' };
+    return { icon: <Clock className="h-3 w-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
   }
-  return { icon: <Circle className="w-3 h-3 text-muted-foreground" />, bg: '#F3F4F6' };
+  return { icon: <Circle className="h-3 w-3 text-muted-foreground" />, bg: '#F3F4F6' };
 };
 
 const getStatusBadgeColor = getStatusBadgeClasses;
@@ -254,7 +254,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     {/* Dot — relative + z-10 so it covers the connector edges */}
                     <div
                       className={cn(
-                        "relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-300",
+                        "relative z-10 h-4 w-4 rounded-full border-2 transition-all duration-300",
                         isComplete
                           ? "bg-[#6c5ce7] border-[#6c5ce7]"
                           : "bg-card border-border",
@@ -283,7 +283,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Clock className="w-3.5 h-3.5 text-primary" />
+                <Clock className="h-4 w-4 text-primary" />
                 <span className="text-xs text-blue-700 font-normal">
                   Requested
                 </span>
@@ -295,7 +295,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             </div>
             <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-green-600" />
                 <span className="text-xs text-green-700 font-normal">
                   Approved
                 </span>
@@ -329,7 +329,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <div>
               <p className="text-xs text-muted-foreground mb-1">Created By</p>
               <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground" />
                 <p className="text-sm text-foreground">
                   {taskData?.createdBy || "Mike Wilson"}
                 </p>
@@ -520,7 +520,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                   return (
                     <div key={i} className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
+                        <div className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 z-10" style={{ backgroundColor: bg }}>
                           {icon}
                         </div>
                         {!isLast && <div className="w-0.5 flex-1 bg-muted mt-1 mb-1" />}
@@ -546,7 +546,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             {chips.map((name, idx) => (
                               <span key={idx} className="inline-flex items-center gap-1.5 text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-normal">
-                                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
+                                <span className="h-4 w-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-normal shrink-0">
                                   {name.charAt(0).toUpperCase()}
                                 </span>
                                 {name}
@@ -576,8 +576,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
           ))
         ) : (
           <div className="flex gap-3 items-start pl-2">
-            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <Circle className="w-3 h-3 text-muted-foreground" />
+            <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <Circle className="h-3 w-3 text-muted-foreground" />
             </div>
             <div className="pt-1">
               <p className="text-sm text-muted-foreground">No activity recorded yet</p>

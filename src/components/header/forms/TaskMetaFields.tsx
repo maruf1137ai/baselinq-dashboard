@@ -146,7 +146,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                   </div>
                   {/* Radio for single-select, checkbox circle for multi */}
                   <span
-                    className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    className={`flex-shrink-0 h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
                       selected_
                         ? "border-primary bg-primary"
                         : "border-border bg-background"
@@ -174,6 +174,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                 <span className="text-muted-foreground">— {u.role}</span>
               )}
               <button
+                aria-label="Remove user"
                 type="button"
                 onClick={() => onRemove(u.userId || u.id)}
                 className="hover:bg-border rounded"

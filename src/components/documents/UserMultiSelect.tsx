@@ -134,6 +134,7 @@ export function UserMultiSelect({ projectId, value, onChange }: UserMultiSelectP
             >
               <span className="text-xs">{user.name}</span>
               <button
+                aria-label="Remove user"
                 type="button"
                 onClick={() => handleRemove(String(user.id))}
                 className="ml-1 hover:bg-destructive/10 rounded-full p-0.5"

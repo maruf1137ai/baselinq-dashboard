@@ -418,7 +418,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                       ? 'text-amber-600'
                       : 'text-muted-foreground'
                   }`}>
-                  <Calendar className="h-3 w-3" />
+                  <Calendar className="h-4 w-4" />
                   {dueDisplay}
                 </span>
               ) : !isDefaultDue && isResolved && task.due_date ? (
@@ -504,7 +504,8 @@ function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
             )}
           </div>
           {onAddClick && (
-            <button onClick={onAddClick} className="text-muted-foreground hover:text-gray-600">
+            <button
+              aria-label="Add task" onClick={onAddClick} className="text-muted-foreground hover:text-gray-600">
               <Plus className="h-4 w-4" />
             </button>
           )}

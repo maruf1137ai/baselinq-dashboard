@@ -102,7 +102,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
   if (isLoading) {
     return (
       <div className="border border-border rounded-xl bg-card p-5 flex items-center gap-3 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
         Loading primary contract…
       </div>
     );
@@ -116,7 +116,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
       <div className="relative border border-dashed border-amber-300 bg-amber-50/50 rounded-xl p-6">
         <div className="flex items-start gap-4">
           <div className="shrink-0 w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-amber-700" />
+            <AlertTriangle className="h-5 w-5 text-amber-700" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -160,12 +160,12 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                       Uploading… {uploadProgress}%
                     </>
                   ) : (
                     <>
-                      <Upload className="w-3.5 h-3.5 mr-2" />
+                      <Upload className="mr-2" />
                       Upload primary contract (PDF)
                     </>
                   )}
@@ -189,7 +189,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
     <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-card rounded-xl p-5">
       <div className="flex items-start gap-4">
         <div className="shrink-0 w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-          <ShieldCheck className="w-6 h-6 text-emerald-700" />
+          <ShieldCheck className="h-6 w-6 text-emerald-700" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -206,12 +206,12 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
             )}
           </div>
           <h3 className="text-base font-medium text-foreground flex items-center gap-2 truncate">
-            <FileCheck2 className="w-4 h-4 text-emerald-700 shrink-0" />
+            <FileCheck2 className="h-4 w-4 text-emerald-700 shrink-0" />
             <span className="truncate">{filled.name || filled.file_name}</span>
           </h3>
           {age && (
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" /> Uploaded {age}
+              <Calendar className="h-3 w-3" /> Uploaded {age}
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-2xl">
@@ -241,12 +241,12 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                     Replacing… {uploadProgress}%
                   </>
                 ) : (
                   <>
-                    <RefreshCcw className="w-3 h-3 mr-1.5" />
+                    <RefreshCcw className="mr-1.5" />
                     Replace
                   </>
                 )}

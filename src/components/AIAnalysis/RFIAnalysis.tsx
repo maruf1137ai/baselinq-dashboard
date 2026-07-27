@@ -93,9 +93,9 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
         )}
 
         {open ? (
-          <ChevronDown className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0" />
+          <ChevronDown className="h-4 w-4 text-[#9CA3AF] shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0" />
+          <ChevronRight className="h-4 w-4 text-[#9CA3AF] shrink-0" />
         )}
       </button>
 
@@ -269,7 +269,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                     const dl = value.response_deadline ? getDeadlineInfo(value.response_deadline) : null;
                     return (
                       <div key={key} className="flex items-center gap-3 p-2.5 rounded-lg bg-card" style={{ borderLeft: `4px solid ${value.status?.toUpperCase() === "PENDING" ? "#fdcb6e" : "#d63031"}` }}>
-                        <Clock className={cn("h-3.5 w-3.5 shrink-0", sc.text)} />
+                        <Clock className={cn("h-4 w-4 shrink-0", sc.text)} />
                         <span className="text-xs text-[#1a1a1a] font-medium flex-1">
                           {key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
@@ -305,7 +305,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
               ].map((card) => (
                 <div key={card.label} className="p-3 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <card.icon className="h-3 w-3 text-[#9CA3AF]" />
+                    <card.icon className="h-4 w-4 text-[#9CA3AF]" />
                     <span className="text-xs font-normal normal-case text-[#9CA3AF]">{card.label}</span>
                   </div>
                   <p className="text-xs font-medium text-[#1a1a1a]">{card.value}</p>
@@ -450,7 +450,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
               <div className="space-y-1.5">
                 {data.contract_citations.map((cite: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                    <FileText className="h-3.5 w-3.5 text-[#0984e3] shrink-0" />
+                    <FileText className="h-4 w-4 text-[#0984e3] shrink-0" />
                     <span className="text-xs text-[#1a1a1a] font-medium">
                       Clause {cite.clause_number}, {cite.clause_title}
                     </span>

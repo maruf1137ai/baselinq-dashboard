@@ -58,7 +58,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
               size="sm"
               className="h-8 text-xs text-primary font-normal hover:bg-muted gap-1.5"
             >
-              <AiIcon size={14} /> Re-run Analysis
+              <AiIcon size={16} /> Re-run Analysis
             </Button>
           </div>
           <p className="text-xs text-muted-foreground font-normal">{document.reference} · {document.name}</p>

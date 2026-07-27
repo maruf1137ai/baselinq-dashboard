@@ -329,7 +329,7 @@ export default function MeetingDetails() {
           to="/meetings"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           Back to Meetings
         </Link>
 
@@ -353,7 +353,7 @@ export default function MeetingDetails() {
                     })}
                     className="gap-1.5 bg-green-50 border border-green-200 text-green-700 hover:bg-green-100"
                   >
-                    <Check className="h-3.5 w-3.5" /> Accept
+                    <Check className="h-4 w-4" /> Accept
                   </Button>
                   <Button
                     variant="outline"
@@ -365,7 +365,7 @@ export default function MeetingDetails() {
                     })}
                     className="gap-1.5 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
                   >
-                    <X className="h-3.5 w-3.5" /> Decline
+                    <X className="h-4 w-4" /> Decline
                   </Button>
                 </div>
               ) : canUpdateMeeting ? (
@@ -382,16 +382,16 @@ export default function MeetingDetails() {
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
+              <Calendar className="h-4 w-4" /> {meeting.scheduled_utc ? formatMeetingDateTime(meeting.scheduled_utc) : (meeting.date_display + (meeting.time ? ` • ${meeting.time}` : ""))}
             </span>
             {meeting.location && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" /> {meeting.location}
+                <MapPin className="h-4 w-4" /> {meeting.location}
               </span>
             )}
             {meeting.participants.length > 0 && (
               <span className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" /> {meeting.participants.length} participants
+                <Users className="h-4 w-4" /> {meeting.participants.length} participants
               </span>
             )}
             {meeting.meeting_link && !isTerminal && (
@@ -400,7 +400,7 @@ export default function MeetingDetails() {
                 disabled={startingBot}
                 className="flex items-center gap-1 text-primary hover:underline disabled:opacity-60"
               >
-                <ExternalLink className="h-3.5 w-3.5" /> Join Meeting
+                <ExternalLink className="h-4 w-4" /> Join Meeting
               </button>
             )}
           </div>
@@ -489,7 +489,7 @@ export default function MeetingDetails() {
                 onClick={() => setAiNotesOpen(true)}
                 className="text-xs text-primary hover:underline flex items-center gap-1"
               >
-                <AiIcon size={12} /> Paste transcript
+                <AiIcon size={16} /> Paste transcript
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">

@@ -106,7 +106,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
           </Badge>
           {date && (
             <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Due {formatDate(date)}
+              <Clock className="h-3 w-3" /> Due {formatDate(date)}
             </span>
           )}
         </div>
@@ -118,7 +118,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-normal text-gray-900 flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-400" />
+              <Users className="h-4 w-4 text-gray-400" />
               Participants
             </h3>
             <span className="text-xs text-gray-400 font-normal">
@@ -156,18 +156,18 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-muted/50 rounded-lg">
               <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <Tag className="w-3 h-3" /> Priority
+                <Tag className="h-3 w-3" /> Priority
               </div>
               <div className="text-sm font-normal text-gray-900">{priority || "Normal"}</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
               <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> Discipline
+                <AlertCircle className="h-3 w-3" /> Discipline
               </div>
               {taskType && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <FileText className="w-3 h-3" /> Type
+                    <FileText className="h-3 w-3" /> Type
                   </span>
                   <span className="text-xs font-medium text-foreground truncate ml-2">{taskType}</span>
                 </div>

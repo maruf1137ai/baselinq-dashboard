@@ -215,7 +215,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
         <div className="bg-green-50 border border-green-200 rounded-lg p-5">
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
               <h3 className="text-sm font-medium text-green-900">Provide Feedback</h3>
             </div>
 
@@ -247,7 +247,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-5">
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-purple-600 mt-0.5 shrink-0" />
               <h3 className="text-sm font-medium text-purple-900">Verify Completion</h3>
             </div>
 
@@ -294,7 +294,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
       {decisionTimeline === "Verified" && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-green-900">Site Instruction Verified</h3>
               <p className="text-sm text-green-800 mt-1">

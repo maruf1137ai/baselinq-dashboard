@@ -45,13 +45,13 @@ const ACCOUNT_TYPES = [
     id: "organisation" as AccountType,
     label: "Organisation",
     desc: "A registered company, firm or practice",
-    icon: <Building2 className="w-5 h-5" />,
+    icon: <Building2 className="h-5 w-5" />,
   },
   {
     id: "individual" as AccountType,
     label: "Individual / Sole Proprietor",
     desc: "Working independently, legal liability flows through you personally",
-    icon: <User className="w-5 h-5" />,
+    icon: <User className="h-5 w-5" />,
   },
 ];
 
@@ -250,7 +250,7 @@ export default function AcceptAppointedInvitation() {
 
           <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5 text-[#6c5ce7]" />
+              <Building2 className="h-5 w-5 text-[#6c5ce7]" />
             </div>
             <div>
               <p className="text-xs text-white/80 font-medium">Invited by {info?.invited_by || "a user"}</p>
@@ -266,10 +266,10 @@ export default function AcceptAppointedInvitation() {
               return (
                 <div key={s.id} className="flex items-center gap-3.5">
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300",
+                    "h-6 w-6 rounded-full flex items-center justify-center text-xs transition-all duration-300",
                     done ? "bg-[#6c5ce7] text-white" : active ? "bg-[#6c5ce7] text-white shadow-lg" : "bg-white/5 text-white/20 border border-white/10"
                   )}>
-                    {done ? <Check className="w-3 h-3" /> : s.id}
+                    {done ? <Check className="h-3 w-3" /> : s.id}
                   </div>
                   <div className="flex flex-col">
                     <span className={cn(
@@ -366,8 +366,9 @@ export default function AcceptAppointedInvitation() {
                         onChange={e => setPassword(e.target.value)}
                         placeholder="Min. 8 characters"
                       />
-                      <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <button
+                        aria-label={showPassword ? "Hide password" : "Show password"} type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
@@ -381,8 +382,9 @@ export default function AcceptAppointedInvitation() {
                         onChange={e => setPasswordConfirm(e.target.value)}
                         placeholder="Repeat password"
                       />
-                      <button type="button" onClick={() => setShowPasswordConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                        {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <button
+                        aria-label={showPasswordConfirm ? "Hide password" : "Show password"} type="button" onClick={() => setShowPasswordConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
@@ -421,8 +423,8 @@ export default function AcceptAppointedInvitation() {
                       <p className="text-xs text-gray-500 mt-0.5">{type.desc}</p>
                     </div>
                     {accountType === type.id && (
-                      <div className="w-5 h-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 text-white" />
+                      <div className="h-5 w-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
+                        <Check className="h-3 w-3 text-white" />
                       </div>
                     )}
                   </button>
@@ -487,7 +489,7 @@ export default function AcceptAppointedInvitation() {
                         "flex items-center gap-2 px-3.5 py-2.5 border border-dashed border-border rounded-xl text-sm cursor-pointer hover:border-[#6c5ce7] hover:text-[#6c5ce7] transition-all",
                         insuranceFile ? "border-[#6c5ce7] text-[#6c5ce7] bg-[#6c5ce7]/5" : "text-gray-400"
                       )}>
-                        <Paperclip className="w-4 h-4 shrink-0" />
+                        <Paperclip className="h-4 w-4 shrink-0" />
                         <span className="truncate text-xs">
                           {insuranceFile ? insuranceFile.name : "Upload certificate"}
                         </span>
@@ -504,7 +506,7 @@ export default function AcceptAppointedInvitation() {
                           onClick={() => setInsuranceFile(null)}
                           className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
                         >
-                          <X className="w-3 h-3" /> Remove
+                          <X className="h-3 w-3" /> Remove
                         </button>
                       )}
                     </div>
@@ -579,8 +581,9 @@ export default function AcceptAppointedInvitation() {
                   <div key={p.id} className="bg-muted/50 rounded-xl p-4">
                     <div className="flex justify-end mb-2">
                       {personnel.length > 1 && (
-                        <button type="button" onClick={() => setPersonnel(prev => prev.filter(x => x.id !== p.id))} className="text-gray-400 hover:text-red-500 transition-colors">
-                          <X className="w-4 h-4" />
+                        <button
+                          aria-label="Remove person" type="button" onClick={() => setPersonnel(prev => prev.filter(x => x.id !== p.id))} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <X className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -608,7 +611,7 @@ export default function AcceptAppointedInvitation() {
                   onClick={() => setPersonnel(prev => [...prev, { id: crypto.randomUUID(), name: "", email: "", position: "" }])}
                   className="w-full py-3 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-gray-400 hover:border-[#6c5ce7] hover:text-[#6c5ce7] transition-all"
                 >
-                  <Plus className="w-4 h-4" /> Add User
+                  <Plus className="h-4 w-4" /> Add User
                 </button>
               </div>
             )}
@@ -636,7 +639,7 @@ export default function AcceptAppointedInvitation() {
                   className="flex-1 py-2.5 bg-[#6c5ce7] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all flex items-center justify-center gap-2"
                 >
                   Continue
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               ) : (
                 <button
@@ -646,7 +649,7 @@ export default function AcceptAppointedInvitation() {
                   className="flex-1 py-2.5 bg-[#6c5ce7] text-white text-sm rounded-xl hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? "Submitting…" : "Complete Setup"}
-                  {!isSubmitting && <ArrowRight className="w-4 h-4" />}
+                  {!isSubmitting && <ArrowRight className="h-4 w-4" />}
                 </button>
               )}
             </div>

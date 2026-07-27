@@ -574,7 +574,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <CloseIcon className="w-5 h-5" />
+            <CloseIcon className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </button>
         </header>
@@ -611,7 +611,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             ? format(valuationPeriod, "MMMM yyyy")
                             : "Select period"}
                         </span>
-                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -642,7 +642,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             ? format(certificateDate, "dd MMM yyyy")
                             : "Select date"}
                         </span>
-                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -666,7 +666,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   onClick={addWorkItem}
                   className="flex items-center gap-1 text-xs text-[#6c5ce7] hover:text-[#6c5ce7] transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   Add Line Item
                 </button>
               </div>
@@ -757,10 +757,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           </td>
                           <td className="px-3 py-2 text-center">
                             <button
+                              aria-label="Remove work item"
                               onClick={() => removeWorkItem(item.id)}
                               className="text-gray-300 hover:text-red-400 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
                         </tr>
@@ -830,7 +831,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             type="checkbox"
                             checked={vo.included}
                             onChange={() => toggleVO(vo.voNumber)}
-                            className="w-4 h-4 rounded border-border accent-[#6c5ce7] cursor-pointer"
+                            className="h-4 w-4 rounded border-border accent-[#6c5ce7] cursor-pointer"
                           />
                         </td>
                         <td className="px-3 py-3 text-[#3A6FF7] text-sm">
@@ -1064,7 +1065,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     onClick={() => fileRef.current?.click()}
                     className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-colors"
                   >
-                    <Paperclip className="w-5 h-5 text-gray-400 mx-auto mb-1.5" />
+                    <Paperclip className="h-5 w-5 text-gray-400 mx-auto mb-1.5" />
                     <p className="text-sm text-muted-foreground">
                       Click to upload valuations, site photos, delivery notes
                     </p>
@@ -1088,7 +1089,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           className="flex items-center justify-between px-3 py-2 bg-muted/50 border border-border rounded-md"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="text-sm text-foreground truncate">
                               {file.name}
                             </span>
@@ -1097,10 +1098,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             </span>
                           </div>
                           <button
+                            aria-label="Remove attachment"
                             onClick={() => removeAttachment(i)}
                             className="text-gray-400 hover:text-red-400 ml-2 shrink-0 transition-colors"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                           </button>
                         </li>
                       ))}

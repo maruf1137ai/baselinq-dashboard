@@ -133,7 +133,7 @@ const Site = () => {
           )
         ) : (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="h-3.5 w-3.5" />
             <span>Read-only access</span>
           </div>
         )}

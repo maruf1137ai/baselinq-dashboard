@@ -90,7 +90,7 @@ const ChangePasswordPage = () => {
                   onClick={() => setShowOld(!showOld)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showOld ? "Hide password" : "Show password"}>
-                  {showOld ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showOld ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>
@@ -114,7 +114,7 @@ const ChangePasswordPage = () => {
                   onClick={() => setShowNew(!showNew)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showNew ? "Hide password" : "Show password"}>
-                  {showNew ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showNew ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>
@@ -138,7 +138,7 @@ const ChangePasswordPage = () => {
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   aria-label={showConfirm ? "Hide password" : "Show password"}>
-                  {showConfirm ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showConfirm ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
             </div>

@@ -236,7 +236,7 @@ export function DashboardSidebar() {
                           selectedProject?.name || ""
                         )}
                       </h1>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                     </div>
                   </div>
                 </DropdownMenuTrigger>
@@ -259,7 +259,7 @@ export function DashboardSidebar() {
                           onClick={() => handleProjectSelect(project)}
                           className="cursor-pointer flex items-center gap-2"
                         >
-                          {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                          {isSelected && <Check className="h-4 w-4 shrink-0" />}
                           <span className={isSelected ? "font-medium" : "pl-[18px]"}>{project.name}</span>
                         </DropdownMenuItem>
                       );
@@ -280,9 +280,9 @@ export function DashboardSidebar() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {[
-                      { title: "Projects", url: "/account", icon: <FolderOpen className="w-4 h-4" />, show: true },
-                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="w-4 h-4" />, show: true },
-                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="w-4 h-4" />, show: user?.account_type === "organisation" },
+                      { title: "Projects", url: "/account", icon: <FolderOpen className="h-4 w-4" />, show: true },
+                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="h-4 w-4" />, show: true },
+                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="h-4 w-4" />, show: user?.account_type === "organisation" },
                     ].filter(item => item.show).map((item) => {
                       const isActive = location.pathname === item.url;
                       return (

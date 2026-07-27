@@ -174,7 +174,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-2 text-primary pl-0.5">
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </div>
             <div className="flex items-start gap-2">
               <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground pt-0.5">To</span>
@@ -297,7 +297,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
           <Button onClick={handlePrimary} disabled={isBusy || copyBlocked}
             className="h-8 text-xs rounded-lg">
             {isBusy
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Working…</>
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Working…</>
               : primaryLabel}
           </Button>
         </DialogFooter>

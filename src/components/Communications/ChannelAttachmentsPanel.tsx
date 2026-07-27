@@ -97,7 +97,7 @@ const MediaTile = ({
         />
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="h-7 w-7 rounded-full bg-black/55 flex items-center justify-center">
-            <Play className="h-3.5 w-3.5 text-white fill-white" />
+            <Play className="h-4 w-4 text-white fill-white" />
           </span>
         </span>
         <span className="absolute bottom-1 left-1 text-xs px-1 rounded bg-black/60 text-white">Video</span>
@@ -143,7 +143,7 @@ const LinkRow = ({ href }: { href: string }) => (
       <p className="text-sm text-gray-900 truncate">{linkHost(href)}</p>
       <p className="text-xs text-gray-400 truncate">{href}</p>
     </div>
-    <ExternalLink className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+    <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
   </a>
 );
 
@@ -160,7 +160,7 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
         <AccordionItem value="shared" className="border-none">
           <AccordionTrigger className="py-2 text-sm font-normal text-gray-900 hover:no-underline">
             <span className="flex items-center gap-2">
-              <Paperclip className="w-4 h-4 text-gray-400" />
+              <Paperclip className="h-4 w-4 text-gray-400" />
               Shared Files
               <span className="text-xs font-normal text-gray-500 bg-muted rounded-full px-1.5 py-0.5">
                 {total}

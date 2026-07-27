@@ -386,7 +386,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                   }}
                   className="ml-2 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X />
                 </span>
               ) : (
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -474,7 +474,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                     {/* Radio indicator */}
                     <span
                       className={cn(
-                        "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                        "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors",
                         isSelected
                           ? "border-primary"
                           : "border-border bg-background",

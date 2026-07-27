@@ -46,19 +46,19 @@ import AiIcon from "@/components/icons/AiIcon";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ROLES = [
-  { id: "architect", label: "Architect", icon: <Compass className="w-4 h-4" />, body: "SACAP" },
-  { id: "structural", label: "Structural Engineer", icon: <Layers className="w-4 h-4" />, body: "ECSA" },
-  { id: "civil", label: "Civil Engineer", icon: <Map className="w-4 h-4" />, body: "ECSA" },
-  { id: "mep", label: "MEP Engineer", icon: <Zap className="w-4 h-4" />, body: "ECSA" },
-  { id: "contractor", label: "Contractor", icon: <HardHat className="w-4 h-4" />, body: "CIDB" },
-  { id: "pm", label: "Project Manager", icon: <ClipboardList className="w-4 h-4" />, body: "SACPCMP" },
-  { id: "qs", label: "Quantity Surveyor", icon: <Calculator className="w-4 h-4" />, body: "ASAQS" },
-  { id: "client", label: "Client / Owner", icon: <Briefcase className="w-4 h-4" />, body: "" },
+  { id: "architect", label: "Architect", icon: <Compass className="h-4 w-4" />, body: "SACAP" },
+  { id: "structural", label: "Structural Engineer", icon: <Layers className="h-4 w-4" />, body: "ECSA" },
+  { id: "civil", label: "Civil Engineer", icon: <Map className="h-4 w-4" />, body: "ECSA" },
+  { id: "mep", label: "MEP Engineer", icon: <Zap className="h-4 w-4" />, body: "ECSA" },
+  { id: "contractor", label: "Contractor", icon: <HardHat className="h-4 w-4" />, body: "CIDB" },
+  { id: "pm", label: "Project Manager", icon: <ClipboardList className="h-4 w-4" />, body: "SACPCMP" },
+  { id: "qs", label: "Quantity Surveyor", icon: <Calculator className="h-4 w-4" />, body: "ASAQS" },
+  { id: "client", label: "Client / Owner", icon: <Briefcase className="h-4 w-4" />, body: "" },
 ];
 
 const ACCOUNT_TYPES = [
-  { id: "organisation" as const, label: "Organisation", desc: "A registered company, firm or practice", icon: <Building2 className="w-5 h-5" /> },
-  { id: "individual" as const, label: "Individual / Sole Proprietor", desc: "Working independently", icon: <User className="w-5 h-5" /> },
+  { id: "organisation" as const, label: "Organisation", desc: "A registered company, firm or practice", icon: <Building2 className="h-5 w-5" /> },
+  { id: "individual" as const, label: "Individual / Sole Proprietor", desc: "Working independently", icon: <User className="h-5 w-5" /> },
 ];
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
@@ -270,8 +270,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               </div>
               <span className="text-sm text-white/90 tracking-tight">baselinq</span>
             </div>
-            <button onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
-              <X className="w-5 h-5" />
+            <button
+              aria-label="Close" onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
+              <X className="h-4 w-4" />
             </button>
           </div>
 
@@ -297,7 +298,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs transition-all duration-200",
                         done || active ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/40 border border-white/10"
                       )}>
-                        {done ? <Check className="w-3.5 h-3.5" /> : sId}
+                        {done ? <Check className="h-3.5 w-3.5" /> : sId}
                       </div>
                       <p className={cn(
                         "text-xs leading-tight transition-colors",
@@ -305,7 +306,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                       )}>
                         {label}
                       </p>
-                      {active && <ChevronRight className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
+                      {active && <ChevronRight className="h-4 w-4 text-primary shrink-0 ml-auto" />}
                     </div>
                     {i < STEP_LABELS.length - 1 && (
                       <div style={{ marginLeft: "13px", paddingLeft: "10px", height: "12px", borderLeft: `2px solid ${done ? "#6c5ce7" : "rgba(255,255,255,0.1)"}` }} />
@@ -344,8 +345,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               <span className="text-xs font-medium text-gray-700">
                 Step {step} of {totalSteps}: {STEP_LABELS[step - 1]}
               </span>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
-                <X className="w-5 h-5" />
+              <button
+                aria-label="Close" onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -404,7 +406,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             {r.label}
                           </span>
                           {role === r.id && (
-                            <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                            <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center shrink-0">
                               <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                           )}
@@ -440,8 +442,8 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             <p className="text-xs text-gray-400 mt-0.5">{type.desc}</p>
                           </div>
                           {accountType === type.id && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                              <Check className="w-3 h-3 text-white" />
+                            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                              <Check className="h-3 w-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -487,7 +489,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           </div>
                         </div>
                         <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-[#f0edff] border border-[#d6d3ff]">
-                          <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                          <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                           <p className="text-xs text-[#5b5bcc] leading-snug">These details will auto-populate into all contracts and appointment letters.</p>
                         </div>
                       </>
@@ -602,9 +604,10 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => setInsuranceCertificate(e.target.files?.[0] ?? null)} />
                         {insuranceCertificate ? (
                           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
-                            <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                            <FileText className="h-4 w-4 text-gray-400 shrink-0" />
                             <span className="text-sm text-gray-700 flex-1 truncate">{insuranceCertificate.name}</span>
-                            <button type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                            <button
+                              aria-label="Remove certificate" type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
                           </div>
                         ) : (
                           <button
@@ -612,7 +615,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             onClick={() => fileInputRef.current?.click()}
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-all"
                           >
-                            <Upload className="w-4 h-4" />
+                            <Upload className="h-4 w-4" />
                             Upload certificate, PDF or image (optional)
                           </button>
                         )}
@@ -623,7 +626,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             <PopoverTrigger asChild>
                               <button type="button" className={cn(INPUT_CLS, "flex items-center justify-between text-left", !insuranceExpiry && "text-gray-400")}>
                                 <span>{insuranceExpiry ? format(insuranceExpiry, "dd MMM yyyy") : "Pick a date"}</span>
-                                <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
                               </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -654,15 +657,16 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             </select>
                           </div>
                           {teamMembers.length > 1 && (
-                            <button type="button" onClick={() => setTeamMembers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
-                              <Trash2 className="w-4 h-4" />
+                            <button
+                              aria-label="Remove team member" type="button" onClick={() => setTeamMembers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
                     <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-xs text-primary hover:text-primary/90 transition-colors">
-                      <UserPlus className="w-3.5 h-3.5" />
+                      <UserPlus className="h-4 w-4" />
                       Add another user
                     </button>
                   </div>
@@ -684,7 +688,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 1 && (
                 <button type="button" disabled={!role} onClick={() => setStep(2)}
                   className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
+                  Continue <ArrowRight className="h-4 w-4" />
                 </button>
               )}
 
@@ -692,7 +696,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 2 && (
                 <button type="button" disabled={!accountType} onClick={handleGoToDetails}
                   className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
+                  Continue <ArrowRight className="h-4 w-4" />
                 </button>
               )}
 
@@ -701,12 +705,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 accountType === "organisation" ? (
                   <button type="button" disabled={!companyName} onClick={() => setStep(4)}
                     className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    Continue <ArrowRight className="w-4 h-4" />
+                    Continue <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
                   <button type="button" disabled={saving} onClick={handleSave}
                     className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="h-4 w-4" />}
                   </button>
                 )
               )}
@@ -716,7 +720,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 <>
                   <button type="button" disabled={saving} onClick={handleSave}
                     className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="h-4 w-4" />}
                   </button>
                   <button type="button" disabled={saving} onClick={handleSave} className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
                     Skip invites
@@ -877,7 +881,7 @@ const SelectProject = () => {
               onClick={() => navigate("/create-project")}
               className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Create your first project
             </Button>
           </div>
@@ -905,7 +909,7 @@ const SelectProject = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
-                          <FolderOpen className="w-4 h-4 text-primary" />
+                          <FolderOpen className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
@@ -932,7 +936,7 @@ const SelectProject = () => {
                           "w-7 h-7 rounded-full flex items-center justify-center transition-all",
                           isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                         )}>
-                          {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          {isActive ? <Check className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </div>
                         {project.canDelete && (
                           <button
@@ -943,7 +947,7 @@ const SelectProject = () => {
                             }}
                             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         )}
                       </div>
@@ -958,7 +962,7 @@ const SelectProject = () => {
               className="w-full group border-2 border-dashed border-border rounded-xl bg-muted/50 px-6 py-8 hover:border-primary/40 hover:bg-card hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center text-center"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mb-3 group-hover:scale-110 transition-transform duration-200">
-                <Plus className="w-6 h-6 text-primary" />
+                <Plus className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-normal text-foreground">Create New Project</p>

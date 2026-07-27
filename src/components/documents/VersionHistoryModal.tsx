@@ -111,12 +111,12 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                         <div className="grid grid-cols-2 gap-4 text-sm font-normal">
                           {ver.uploadedBy && (
                             <div className="flex items-center gap-2 text-gray-500">
-                              <User className="h-3.5 w-3.5" />
+                              <User className="h-4 w-4" />
                               <span>Uploaded by: <span className="text-gray-900">{ver.uploadedBy.name}</span></span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-gray-500">
-                            <FileText className="h-3.5 w-3.5" />
+                            <FileText className="h-4 w-4" />
                             <span>File: <span className="text-gray-900">{ver.fileName}</span>{sizeMB ? ` · ${sizeMB}` : ''}</span>
                           </div>
                         </div>
@@ -151,7 +151,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                                   className="h-8 text-xs font-normal text-primary hover:bg-primary/5"
                                   onClick={() => window.open(ver.downloadUrl, '_blank')}
                                 >
-                                  <Download className="h-3.5 w-3.5 mr-1.5" /> Download
+                                  <Download className="mr-1.5" /> Download
                                 </Button>
                               )}
                             </div>

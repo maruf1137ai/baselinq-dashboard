@@ -76,7 +76,7 @@ export function CreateTaskDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 !py-3 text-base font-normal">
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon />
           Create Task
         </Button>
       </DialogTrigger>

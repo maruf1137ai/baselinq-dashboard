@@ -32,7 +32,7 @@ function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
         }}
         className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
       >
-        <Check className="h-3 w-3" /> Accept
+        <Check className="h-4 w-4" /> Accept
       </button>
       <button
         disabled={isPending}
@@ -45,7 +45,7 @@ function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
         }}
         className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
       >
-        <X className="h-3 w-3" /> Decline
+        <X className="h-4 w-4" /> Decline
       </button>
     </div>
   );
@@ -106,7 +106,7 @@ function NotificationItem({
         }}
         className="absolute right-2 top-3 p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 transition-opacity"
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash2 className="h-4 w-4" />
       </button>
     </div>
   );
@@ -172,7 +172,7 @@ export function DashboardHeader() {
               variant="outline"
               className="h-9 px-4 rounded-lg border-border text-muted-foreground hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all flex items-center gap-2 font-normal text-sm"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-4 w-4" />
               Logout
             </Button>
           ) : (
@@ -186,7 +186,7 @@ export function DashboardHeader() {
                 size="icon"
                 onClick={() => handleDropdownOpen(true)}
                 className="relative h-10 w-10 flex justify-center items-center bg-card border border-border rounded-lg">
-                <Bell className="h-6 w-6" />
+                <Bell />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
                     {unreadCount > 99 ? "99+" : unreadCount}

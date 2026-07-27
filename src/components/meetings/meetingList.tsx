@@ -283,7 +283,7 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
                     className="flex items-center gap-1.5 whitespace-nowrap cursor-help"
                     onClick={(e) => e.preventDefault()}
                   >
-                    <Users className="h-3.5 w-3.5" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
+                    <Users className="h-4 w-4" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="end" className="max-w-[18rem]">

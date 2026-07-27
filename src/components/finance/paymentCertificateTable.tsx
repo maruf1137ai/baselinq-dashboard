@@ -74,8 +74,9 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
-            <MoreHorizontal className="w-5 h-5" />
+          <button
+            aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+            <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
@@ -163,7 +164,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             value={search}
@@ -177,7 +178,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             onClick={onNew}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-primary hover:bg-primary transition-all shadow-sm shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Certificate
           </button>
         )}
@@ -242,7 +243,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {aiFlags[order.pcNumber] ? (
                       <span className="inline-flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <Sparkles className="h-4 w-4 text-amber-500" />
                         <span className="text-xs text-amber-600">{aiFlags[order.pcNumber]} flags</span>
                       </span>
                     ) : (
@@ -271,10 +272,11 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
         </p>
         <div className="flex items-center gap-1">
           <button
+            aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
             className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
@@ -298,10 +300,11 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
               )
             )}
           <button
+            aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
             className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

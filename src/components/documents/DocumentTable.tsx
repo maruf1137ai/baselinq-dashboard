@@ -190,7 +190,7 @@ function DocumentRow({
       <span className="w-24 shrink-0">
         {doc.aiFlags > 0 ? (
           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-xs font-normal leading-5">
-            <AiIcon size={10} />
+            <AiIcon size={12} />
             {doc.aiFlags}
           </span>
         ) : (
@@ -207,29 +207,30 @@ function DocumentRow({
       <div className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
-              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+            <button
+              aria-label="More actions" className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => onRowClick(doc._id)} className="gap-2 text-sm font-normal">
-              <Eye className="w-4 h-4" /> View Details
+              <Eye className="h-4 w-4" /> View Details
             </DropdownMenuItem>
             {doc.downloadUrl && doc.userPermissions?.canDownload === true && (
               <DropdownMenuItem onClick={() => window.open(doc.downloadUrl, '_blank')} className="gap-2 text-sm font-normal">
-                <Download className="w-4 h-4" /> Download
+                <Download className="h-4 w-4" /> Download
               </DropdownMenuItem>
             )}
             {onVersionUpload && doc.userPermissions?.canUploadVersion === true && (
               <DropdownMenuItem onClick={() => onVersionUpload(doc)} className="gap-2 text-sm font-normal">
-                <Upload className="w-4 h-4" /> Upload Version
+                <Upload className="h-4 w-4" /> Upload Version
               </DropdownMenuItem>
             )}
             {onDelete && doc.userPermissions?.canDelete === true && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(doc)} className="gap-2 text-sm font-normal text-red-600 focus:text-red-600">
-                  <Trash2 className="w-4 h-4" /> Delete
+                  <Trash2 className="h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </>
             )}
@@ -344,7 +345,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     {group.items.length}
                   </span>
                 </div>
-                <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isCollapsed && '-rotate-90')} />
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isCollapsed && '-rotate-90')} />
               </div>
             )}
 

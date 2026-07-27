@@ -95,7 +95,7 @@ function DocumentRow({
         {/* Primary accent stripe down the left — matches ContractsTree. */}
         <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
         <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
-          <FileText className="w-3.5 h-3.5 text-primary" />
+          <FileText className="h-4 w-4 text-primary" />
         </div>
         <p className="text-sm truncate flex-1 min-w-0">
           <span className="text-foreground group-hover/doc:text-primary transition-colors">
@@ -112,7 +112,7 @@ function DocumentRow({
             {doc.reference}
           </span>
         )}
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
     </DocItemContextMenu>
   );
@@ -154,7 +154,7 @@ function UnfiledRow({
         )}
         onClick={() => onDocumentClick?.(doc._id)}
       >
-        <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
+        <File className="h-4 w-4 text-muted-foreground/60 shrink-0 ml-7" />
         <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
           <span className="font-mono text-xs text-muted-foreground shrink-0">
@@ -221,16 +221,16 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
           )}
         >
           <div className="flex-shrink-0 text-muted-foreground">
-            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </div>
           <div className="flex-shrink-0 text-muted-foreground">
-            {isOpen ? <FolderOpen className="w-3.5 h-3.5" /> : <FolderIcon className="w-3.5 h-3.5" />}
+            {isOpen ? <FolderOpen className="h-4 w-4" /> : <FolderIcon className="h-4 w-4" />}
           </div>
           <span className="text-sm text-foreground flex-1 truncate">{folder.name.replace(/_/g, ' ')}</span>
 
           {hasAiFlags && (
             <span className="text-primary shrink-0" title="Contains AI findings">
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="h-4 w-4" />
             </span>
           )}
           {hasRecent && (
@@ -256,7 +256,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
               onClick={handleViewRegister}
               title="View Issue Register"
             >
-              <FileText className="w-3 h-3 mr-1" />
+              <FileText className="mr-1" />
               Register
             </Button>
             {canUploadDocument && (
@@ -267,7 +267,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
                 onClick={handleUpload}
                 title="Upload Document"
               >
-                <Upload className="w-3 h-3 mr-1" />
+                <Upload className="mr-1" />
                 Upload
               </Button>
             )}
@@ -388,7 +388,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
               className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
               onClick={() => navigate(`/documents/upload?tab=${tab}`)}
             >
-              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              <Upload className="h-4 w-4 mr-1.5" />
               Upload {tabLabel.replace(/s$/, '')}
             </Button>
           ) : undefined

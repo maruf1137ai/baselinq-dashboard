@@ -91,7 +91,7 @@ export const RenameDocumentDialog: React.FC<RenameDocumentDialogProps> = ({
           </Button>
           <Button onClick={() => mutate(trimmed)} disabled={!canSave}
             className="h-8 text-xs rounded-lg">
-            {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Saving…</> : 'Save'}
+            {isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Saving…</> : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

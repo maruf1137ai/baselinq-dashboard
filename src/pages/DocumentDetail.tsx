@@ -296,12 +296,12 @@ const DocumentDetail = () => {
               onClick={() => navigate('/documents')}
               className="hover:text-foreground transition-colors flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
               Documents
             </button>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
             <span className="text-muted-foreground">{doc.discipline || '—'}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
             <span className="text-foreground font-normal">{doc.reference}</span>
           </nav>
         </div>
@@ -362,7 +362,7 @@ const DocumentDetail = () => {
                 <>
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1 text-amber-700">
-                    <AlertCircle className="w-3 h-3" /> Finance Gated
+                    <AlertCircle className="h-3 w-3" /> Finance Gated
                   </span>
                 </>
               )}
@@ -379,7 +379,7 @@ const DocumentDetail = () => {
               className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
               onClick={() => setIsAskOpen(true)}
             >
-              <AiIcon size={13} className="mr-1.5" /> Ask AI
+              <AiIcon size={16} className="mr-1.5" /> Ask AI
             </Button>
             {doc.userPermissions?.canDownload !== false && (
               <Button
@@ -394,9 +394,9 @@ const DocumentDetail = () => {
                 disabled={!doc.downloadUrl && !doc.certificateUrl}
               >
                 {doc.certificateUrl ? (
-                  <><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open certificate</>
+                  <><ExternalLink className="h-4 w-4 mr-1.5" /> Open certificate</>
                 ) : (
-                  <><Download className="w-3.5 h-3.5 mr-1.5" /> Download</>
+                  <><Download className="h-4 w-4 mr-1.5" /> Download</>
                 )}
               </Button>
             )}
@@ -405,7 +405,7 @@ const DocumentDetail = () => {
                 className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 onClick={() => setIsVersionUploadOpen(true)}
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Upload revision
+                <Plus className="mr-1.5" /> Upload revision
               </Button>
             )}
             {(doc.userPermissions?.canEdit !== false || doc.userPermissions?.canDelete !== false) && (
@@ -417,13 +417,13 @@ const DocumentDetail = () => {
                     className="h-8 w-8 rounded-lg border-border text-foreground hover:bg-muted"
                     aria-label="More actions"
                   >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
+                    <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   {doc.userPermissions?.canEdit !== false && (
                     <DropdownMenuItem onClick={() => setIsEditModalOpen(true)} className="text-xs">
-                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit details
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
                     </DropdownMenuItem>
                   )}
                   {doc.userPermissions?.canEdit !== false && doc.userPermissions?.canDelete !== false && (
@@ -434,7 +434,7 @@ const DocumentDetail = () => {
                       onClick={() => setShowDeleteConfirm(true)}
                       className="text-xs text-red-600 focus:text-red-600 focus:bg-red-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete document
+                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete document
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -529,7 +529,7 @@ const DocumentDetail = () => {
                   <div className="bg-card rounded-xl border border-border overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                       <div className="flex items-center gap-2">
-                        <FileClock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <FileClock className="h-4 w-4 text-muted-foreground" />
                         <h3 className="text-sm font-medium text-foreground">Version history</h3>
                         <span className="text-xs text-muted-foreground">({versions.length})</span>
                       </div>
@@ -580,15 +580,16 @@ const DocumentDetail = () => {
                                     className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
                                     title="View this version"
                                   >
-                                    <Eye className="w-3 h-3" />
+                                    <Eye className="h-4 w-4" />
                                   </button>
                                   <button
+                                    aria-label="Download this version"
                                     type="button"
                                     onClick={() => window.open(v.downloadUrl, '_blank')}
                                     className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
                                     title="Download this version"
                                   >
-                                    <Download className="w-3 h-3" />
+                                    <Download className="h-3 w-3" />
                                   </button>
                                 </>
                               )}
@@ -645,7 +646,7 @@ const DocumentDetail = () => {
                         ? "bg-amber-50 text-amber-700"
                         : "bg-muted/40 text-muted-foreground"
                   )}>
-                    <AiIcon size={18} />
+                    <AiIcon size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -663,7 +664,7 @@ const DocumentDetail = () => {
                 {/* Linked summary */}
                 <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
-                    <Link2 className="w-4 h-4" />
+                    <Link2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -681,7 +682,7 @@ const DocumentDetail = () => {
                 {/* Obligations summary */}
                 <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -701,7 +702,7 @@ const DocumentDetail = () => {
               <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <AiIcon size={14} />
+                  <AiIcon size={16} />
                   AI findings
                   <span className="text-xs text-muted-foreground font-normal">({findings.length})</span>
                 </h3>
@@ -713,15 +714,15 @@ const DocumentDetail = () => {
                   disabled={isAnalysisRunning || doc.aiStatus === 'running'}
                 >
                   {(isAnalysisRunning || doc.aiStatus === 'running')
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running...</>
-                    : <><AiIcon size={14} /> Re-run analysis</>
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Running...</>
+                    : <><AiIcon size={16} /> Re-run analysis</>
                   }
                 </Button>
               </div>
 
               {doc.aiStatus === 'running' && (
                 <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm font-normal">AI analysis is currently running...</span>
                 </div>
               )}
@@ -743,7 +744,7 @@ const DocumentDetail = () => {
                       onClick={() => runAnalysis()}
                       disabled={isAnalysisRunning || doc.aiStatus === 'running'}
                     >
-                      <AiIcon size={14} />
+                      <AiIcon size={16} />
                       <span className="ml-1.5">Run AI analysis</span>
                     </Button>
                   }
@@ -818,7 +819,7 @@ const DocumentDetail = () => {
               <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Link2 className="w-3.5 h-3.5" />
+                  <Link2 className="h-4 w-4" />
                   Linked items
                   <span className="text-xs text-muted-foreground font-normal">({links.length})</span>
                 </h3>
@@ -828,7 +829,7 @@ const DocumentDetail = () => {
                   className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add link
+                  <Plus /> Add link
                 </Button>
               </div>
 
@@ -846,7 +847,7 @@ const DocumentDetail = () => {
                       className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                       onClick={() => setIsLinkModalOpen(true)}
                     >
-                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Link to a task
+                      <Plus className="mr-1.5" /> Link to a task
                     </Button>
                   }
                 />
@@ -873,9 +874,9 @@ const DocumentDetail = () => {
                           className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
                           aria-label="Remove link"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
                       </div>
                     </div>
                   ))}
@@ -887,7 +888,7 @@ const DocumentDetail = () => {
               <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="h-4 w-4" />
                   Obligations
                   <span className="text-xs text-muted-foreground font-normal">({obligations.length})</span>
                 </h3>
@@ -901,7 +902,7 @@ const DocumentDetail = () => {
                     className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                     onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                   >
-                    <Plus className="h-3.5 w-3.5" /> Add obligation
+                    <Plus className="h-4 w-4" /> Add obligation
                   </Button>
                 </div>
               </div>
@@ -950,7 +951,7 @@ const DocumentDetail = () => {
                         createObligation(data);
                       }}
                     >
-                      {isCreatingObligation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {isCreatingObligation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                       Create
                     </Button>
                   </div>
@@ -971,7 +972,7 @@ const DocumentDetail = () => {
                       className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                       onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                     >
-                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Add an obligation
+                      <Plus className="h-4 w-4 mr-1.5" /> Add an obligation
                     </Button>
                   }
                 />
@@ -1022,12 +1023,12 @@ const DocumentDetail = () => {
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               {ob.dueDate && (
                                 <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" /> Due: {ob.dueDate}
+                                  <Calendar className="h-3 w-3" /> Due: {ob.dueDate}
                                 </span>
                               )}
                               {ob.responsibleRole && (
                                 <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" /> {ob.responsibleRole}
+                                  <User className="h-3 w-3" /> {ob.responsibleRole}
                                 </span>
                               )}
                               <Badge className={cn(
@@ -1084,7 +1085,7 @@ const DocumentDetail = () => {
               disabled={isDeleting}
               onClick={() => { if (linkToDelete) deleteLink(linkToDelete.id); }}
             >
-              {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Removing...</> : 'Remove'}
+              {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Removing...</> : 'Remove'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1130,7 +1131,7 @@ const DocumentDetail = () => {
               disabled={isDeletingDoc}
               onClick={() => deleteDocument()}
             >
-              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+              {isDeletingDoc ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

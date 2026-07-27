@@ -242,8 +242,9 @@ const ActionsCell = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded-md text-muted-foreground hover:text-muted-foreground hover:bg-muted">
-            <MoreHorizontal className="w-4 h-4" />
+          <button
+            aria-label="More actions" className="p-1 rounded-md text-muted-foreground hover:text-muted-foreground hover:bg-muted">
+            <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
@@ -531,7 +532,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
             <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-[#f0fdf4] flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-[#00b894]" />
+                  <UserIcon className="h-4 w-4 text-[#00b894]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-normal text-[#1a1a2e]">Add User</h3>
@@ -539,10 +540,11 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 </div>
               </div>
               <button
+                aria-label="Close"
                 type="button"
                 onClick={resetModal}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -586,7 +588,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                           ) : (
                             <span className="text-xs text-[#9ca3af]">Select a user...</span>
                           )}
-                          <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                          <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -691,7 +693,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <div>
                     <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Full Name</label>
                     <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                       <input
                         type="text"
                         value={inviteName}
@@ -704,7 +706,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   <div>
                     <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                       <input
                         type="email"
                         value={inviteEmail}
@@ -775,9 +777,9 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                 {isSubmitting ? (
                   activeTab === "add" ? "Adding..." : "Inviting..."
                 ) : activeTab === "add" ? (
-                  <><Check className="w-3.5 h-3.5" /> Add User</>
+                  <><Check className="h-4 w-4" /> Add User</>
                 ) : (
-                  <><Mail className="w-3.5 h-3.5" /> Send Invitation</>
+                  <><Mail className="h-4 w-4" /> Send Invitation</>
                 )}
               </button>
             </div>

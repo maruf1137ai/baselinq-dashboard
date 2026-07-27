@@ -314,7 +314,7 @@ const AssociatedCompanies = () => {
           </div>
           {!canManageAssociatedCompanies && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="h-3.5 w-3.5" />
               <span>Read-only access</span>
             </div>
           )}
@@ -326,7 +326,7 @@ const AssociatedCompanies = () => {
           {/* Header */}
           <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-muted/50">
             <div className="w-10 h-10 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
-              <Building2 className="w-5 h-5" />
+              <Building2 className="h-5 w-5" />
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground tracking-tight">Associated Companies</h3>
@@ -356,7 +356,7 @@ const AssociatedCompanies = () => {
                         <div className="flex items-center justify-between p-4">
                           <div className="flex gap-3 items-center">
                             <div className="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground shadow-sm shrink-0">
-                              <Building2 className="w-4 h-4" />
+                              <Building2 className="h-4 w-4" />
                             </div>
                             <div>
                               <p className="text-sm font-normal text-foreground">{comp.company_name}</p>
@@ -380,9 +380,9 @@ const AssociatedCompanies = () => {
                                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-muted"
                                 title={isExpanded ? "Hide members" : "Show members"}
                               >
-                                <User className="w-3.5 h-3.5" />
+                                <User className="h-3.5 w-3.5" />
                                 <span>{members.length}</span>
-                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                               </button>
                             )}
 
@@ -396,7 +396,7 @@ const AssociatedCompanies = () => {
                                 className="text-muted-foreground hover:text-primary transition-colors p-1 rounded-lg hover:bg-primary/10"
                                 title="Edit company"
                               >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <Pencil className="h-4 w-4" />
                               </button>
                             )}
 
@@ -409,7 +409,7 @@ const AssociatedCompanies = () => {
                                     disabled={removeLoading}
                                     className="text-xs px-2 py-1 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors flex items-center gap-1"
                                   >
-                                    {removeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                    {removeLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                     Confirm
                                   </button>
                                   <button
@@ -421,11 +421,12 @@ const AssociatedCompanies = () => {
                                 </div>
                               ) : (
                                 <button
+                                  aria-label="Remove company"
                                   onClick={() => setRemoveConfirmId(comp.id)}
                                   className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10"
                                   title="Remove company"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
                               )
                             )}
@@ -478,7 +479,7 @@ const AssociatedCompanies = () => {
                                 disabled={isSavingCompany || !editCompanyForm.name.trim()}
                                 className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
                               >
-                                {isSavingCompany ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                {isSavingCompany ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                                 Save
                               </button>
                             </div>
@@ -521,10 +522,10 @@ const AssociatedCompanies = () => {
                                               onClick={() => handleUpdateMemberRole(m.team_member_id)}
                                               className="text-xs px-2 py-0.5 rounded bg-primary text-white disabled:opacity-50"
                                             >
-                                              {isUpdatingRole ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                                              {isUpdatingRole ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                                             </button>
                                             <button onClick={() => { setEditingMember(null); setEditingMemberRole(""); }} className="text-xs text-muted-foreground hover:text-foreground">
-                                              <X className="w-3 h-3" />
+                                              <X className="h-4 w-4" />
                                             </button>
                                           </div>
                                         ) : (
@@ -560,7 +561,7 @@ const AssociatedCompanies = () => {
                                                 onClick={() => handleRemoveMember(m.team_member_id)}
                                                 className="text-xs px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
                                               >
-                                                {isRemovingMember ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                {isRemovingMember ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                                 Confirm
                                               </button>
                                               <button onClick={() => setRemovingMemberId(null)} className="text-xs text-muted-foreground hover:text-foreground px-1">
@@ -569,11 +570,12 @@ const AssociatedCompanies = () => {
                                             </div>
                                           ) : (
                                             <button
+                                              aria-label="Remove member"
                                               onClick={() => setRemovingMemberId(m.team_member_id)}
                                               className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
                                               title="Remove member"
                                             >
-                                              <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="h-4 w-4" />
                                             </button>
                                           )
                                         )}
@@ -586,7 +588,7 @@ const AssociatedCompanies = () => {
                                                 onClick={() => handleRevokeInvite(comp.id, m.invitation_id)}
                                                 className="text-xs px-2 py-0.5 rounded bg-destructive text-white hover:bg-destructive/90 flex items-center gap-1"
                                               >
-                                                {isRevokingInvite ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                                {isRevokingInvite ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                                                 Confirm
                                               </button>
                                               <button onClick={() => setRevokingInviteId(null)} className="text-xs text-muted-foreground hover:text-foreground px-1">
@@ -595,11 +597,12 @@ const AssociatedCompanies = () => {
                                             </div>
                                           ) : (
                                             <button
+                                              aria-label="Revoke invitation"
                                               onClick={() => setRevokingInviteId(m.invitation_id)}
                                               className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-destructive/10"
                                               title="Revoke invitation"
                                             >
-                                              <Trash2 className="w-3 h-3" />
+                                              <Trash2 className="h-4 w-4" />
                                             </button>
                                           )
                                         )}
@@ -662,7 +665,7 @@ const AssociatedCompanies = () => {
                                       className="px-4 py-1.5 text-xs text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                       style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}
                                     >
-                                      {isMemberInviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                      {isMemberInviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-4 w-4" />}
                                       Send Invitation
                                     </button>
                                   </div>
@@ -673,7 +676,7 @@ const AssociatedCompanies = () => {
                                   onClick={() => { setInvitingForCompany(comp.id); setMemberInviteForm({ name: "", email: "", position: "" }); }}
                                   className="mt-2 w-full py-2 border border-dashed border-border rounded-lg flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
+                                  <Plus className="h-4 w-4" />
                                   Invite User
                                 </button>
                               )}
@@ -701,10 +704,10 @@ const AssociatedCompanies = () => {
                           )}>
                             <div className="flex items-center gap-2 text-white">
                               {hasInsurance && !isExpired
-                                ? <ShieldCheck className="w-3.5 h-3.5" />
+                                ? <ShieldCheck className="h-4 w-4" />
                                 : hasInsurance && isExpired
-                                  ? <ShieldAlert className="w-3.5 h-3.5" />
-                                  : <FileText className="w-3.5 h-3.5" />
+                                  ? <ShieldAlert className="h-4 w-4" />
+                                  : <FileText className="h-4 w-4" />
                               }
                               <span className="text-xs font-medium uppercase tracking-widest">
                                 {hasInsurance && !isExpired
@@ -744,7 +747,7 @@ const AssociatedCompanies = () => {
                                     ? "bg-amber-100 text-amber-600"
                                     : "bg-muted text-slate-400"
                               )}>
-                                <FileText className="w-4 h-4" />
+                                <FileText className="h-4 w-4" />
                               </div>
                               <div>
                                 <p className="text-xs font-normal text-foreground leading-snug">
@@ -776,7 +779,7 @@ const AssociatedCompanies = () => {
                                 )}
                                 title="Download insurance certificate"
                               >
-                                <Download className="w-3 h-3" />
+                                <Download className="h-3 w-3" />
                               </a>
                             )}
                           </div>
@@ -794,11 +797,12 @@ const AssociatedCompanies = () => {
               <div key={entry.id} className="rounded-lg p-4 space-y-4 bg-muted/50">
                 <div className="flex items-center justify-end">
                   <button
+                    aria-label="Remove invitation"
                     type="button"
                     onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
                     className="text-muted-foreground hover:text-destructive transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -856,7 +860,7 @@ const AssociatedCompanies = () => {
                   disabled={isSendingInvites}
                   className="h-10 px-6 rounded-lg bg-primary text-white hover:bg-primary/90 shadow-sm transition-all flex items-center gap-2"
                 >
-                  {isSendingInvites ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSendingInvites ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   <span className="font-normal">{isSendingInvites ? "Inviting..." : "Send Invitations"}</span>
                 </Button>
               </div>
@@ -874,7 +878,7 @@ const AssociatedCompanies = () => {
                 }
                 className="w-full py-4 border border-dashed border-border rounded-lg flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
               </button>
             )}

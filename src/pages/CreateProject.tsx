@@ -293,7 +293,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
     return (
       <div className="w-9 h-9 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center border border-blue-100 shrink-0">
         <svg
-          className="w-4 h-4"
+          className="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -312,7 +312,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
     );
   return (
     <div className="w-9 h-9 bg-muted/50 text-gray-500 rounded-lg flex items-center justify-center border border-border shrink-0">
-      <FileText className="w-4 h-4" />
+      <FileText className="h-4 w-4" />
     </div>
   );
 }
@@ -322,7 +322,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
 function Tooltip({ text }: { text: string }) {
   return (
     <div className="relative group inline-flex items-center">
-      <Info className="w-3.5 h-3.5 text-[#9ca3af] cursor-help" />
+      <Info className="h-4 w-4 text-[#9ca3af] cursor-help" />
       <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#1a1a2e] text-white text-xs rounded-lg px-3 py-2 w-48 text-center z-20 shadow-lg leading-relaxed">
         {text}
         <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1a1a2e]" />
@@ -352,7 +352,7 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}>
         {children}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
     </div>
   );
 }
@@ -392,7 +392,7 @@ function PersonnelEntryCard({
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+            <User className="h-3.5 w-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
           </div>
           <select
             value={entry.role}
@@ -417,17 +417,18 @@ function PersonnelEntryCard({
           )}
           {canRemove && (
             <button
+              aria-label="Remove entry"
               type="button"
               onClick={onRemove}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
-              <X className="w-3.5 h-3.5" />
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Full name"
@@ -436,7 +437,7 @@ function PersonnelEntryCard({
           />
         </div>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Email address"
@@ -530,7 +531,7 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
       <div
-        className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+        className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0"
         style={{ background: iconBg }}>
         <span style={{ color: iconColor }}>{icon}</span>
       </div>
@@ -1231,7 +1232,7 @@ export default function CreateProject() {
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-[#9ca3af]"
                       )}>
-                      {done ? <Check className="w-4 h-4" /> : step.id}
+                      {done ? <Check className="h-4 w-4" /> : step.id}
                     </div>
                     {/* Label */}
                     <div className="min-w-0">
@@ -1296,13 +1297,13 @@ export default function CreateProject() {
             <button
               onClick={() => location.key !== "default" ? navigate(-1) : navigate("/")}
               className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-[#374151] transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </button>
             <button
               onClick={() => { localStorage.clear(); navigate("/login"); }}
               className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-red-500 border border-transparent hover:border-red-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
@@ -1389,11 +1390,12 @@ export default function CreateProject() {
                               onBlur={() => setPnEditable(false)}
                             />
                             <button
+                              aria-label="Edit project number"
                               type="button"
                               tabIndex={-1}
                               onClick={() => setPnEditable((v) => !v)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/90 transition-colors">
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="h-4 w-4" />
                             </button>
                           </div>
                           <p className="text-xs text-[#9ca3af] mt-1">
@@ -1444,7 +1446,7 @@ export default function CreateProject() {
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                                 isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-primary shadow-sm"
                               )}>
-                                {isInvited || inviteClientData.email.trim() ? <Check className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
+                                {isInvited || inviteClientData.email.trim() ? <Check className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
                               </div>
                               <div>
                                 <h3 className="text-sm font-normal text-[#101828]">
@@ -1476,7 +1478,7 @@ export default function CreateProject() {
                                 <div>
                                   <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Name</label>
                                   <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="e.g. John Smith"
@@ -1488,7 +1490,7 @@ export default function CreateProject() {
                                 <div>
                                   <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Email</label>
                                   <div className="relative">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="email@example.com"
@@ -1505,7 +1507,7 @@ export default function CreateProject() {
                                 disabled={!inviteClientData.email}
                                 className="w-full h-11 bg-primary text-primary-foreground rounded-xl text-xs font-normal hover:bg-primary/90 shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
-                                <Check className="w-4 h-4" />
+                                <Check className="h-4 w-4" />
                                 Confirm, Invite will be sent after project is created
                               </button>
                             </div>
@@ -1517,7 +1519,7 @@ export default function CreateProject() {
                       {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div>
                           <SectionHeader
-                            icon={<Building2 className="w-3.5 h-3.5" />}
+                            icon={<Building2 className="h-4 w-4" />}
                             label="Client Company Information"
                             iconBg="#eef2ff"
                             iconColor="#6c5ce7"
@@ -1567,6 +1569,7 @@ export default function CreateProject() {
                                     }
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("client")}
                                     disabled={isLookingUp}
@@ -1574,9 +1577,9 @@ export default function CreateProject() {
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
@@ -1621,7 +1624,7 @@ export default function CreateProject() {
                                   Office Number
                                 </label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -1642,7 +1645,7 @@ export default function CreateProject() {
                       {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div>
                           <SectionHeader
-                            icon={<User className="w-3.5 h-3.5" />}
+                            icon={<User className="h-4 w-4" />}
                             label="Project Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
@@ -1665,10 +1668,11 @@ export default function CreateProject() {
                                   </div>
                                   <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                   <button
+                                    aria-label="Remove person"
                                     type="button"
                                     onClick={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                     className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
                               );
@@ -1685,10 +1689,11 @@ export default function CreateProject() {
                                 </div>
                                 <span className="text-xs text-[#9ca3af] bg-muted border border-border px-2 py-0.5 rounded-full shrink-0">Invited</span>
                                 <button
+                                  aria-label="Remove invited person"
                                   type="button"
                                   onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
                                   className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                  <X className="w-4 h-4" />
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
                             ))}
@@ -1704,8 +1709,8 @@ export default function CreateProject() {
                                 setShowAddMemberModal(true);
                               }}
                               className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
                               </div>
                               <span className="font-normal">Add User</span>
                             </button>
@@ -1724,7 +1729,7 @@ export default function CreateProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Invite Associated Companies"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
@@ -1739,11 +1744,12 @@ export default function CreateProject() {
                                 <div className="flex items-center justify-end">
                                   {appointedInvites.length > 1 && (
                                     <button
+                                      aria-label="Remove invitation"
                                       type="button"
                                       onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))}
                                       className="text-[#9ca3af] hover:text-red-500 transition-colors"
                                     >
-                                      <X className="w-4 h-4" />
+                                      <X className="h-4 w-4" />
                                     </button>
                                   )}
                                 </div>
@@ -1798,8 +1804,8 @@ export default function CreateProject() {
                               onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: '' }])}
                               className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group"
                             >
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
                               </div>
                               <span className="font-normal">Add Another Company</span>
                             </button>
@@ -1812,7 +1818,7 @@ export default function CreateProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Your Organisation"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
@@ -1844,6 +1850,7 @@ export default function CreateProject() {
                                     onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))}
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("appointed")}
                                     disabled={isLookingUp}
@@ -1851,9 +1858,9 @@ export default function CreateProject() {
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
@@ -1886,7 +1893,7 @@ export default function CreateProject() {
                               <div>
                                 <label className="block text-xs font-normal text-[#374151] mb-1.5">Office Number</label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -1914,7 +1921,7 @@ export default function CreateProject() {
 
                           <div>
                             <SectionHeader
-                              icon={<User className="w-3.5 h-3.5" />}
+                              icon={<User className="h-4 w-4" />}
                               label="Add Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
@@ -1923,7 +1930,7 @@ export default function CreateProject() {
                               These members will be given predetermined access rights to the project.
                             </p>
                             <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-3 py-2 mb-4">
-                              <svg className="w-3.5 h-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
+                              <svg className="h-3.5 w-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
                               <p className="text-xs text-[#92400e] leading-snug">
                                 Only internal organisation users can be assigned here.
                               </p>
@@ -1942,10 +1949,11 @@ export default function CreateProject() {
                                     </div>
                                     <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                     <button
+                                      aria-label="Remove person"
                                       type="button"
                                       onClick={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                       className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                      <X className="w-4 h-4" />
+                                      <X className="h-4 w-4" />
                                     </button>
                                   </div>
                                 );
@@ -1959,8 +1967,8 @@ export default function CreateProject() {
                                   setShowAddAppointedModal(true);
                                 }}
                                 className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
-                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                                  <Plus className="w-3.5 h-3.5" />
+                                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                  <Plus className="h-3.5 w-3.5" />
                                 </div>
                                 <span className="font-normal">Add User</span>
                               </button>
@@ -2016,7 +2024,7 @@ export default function CreateProject() {
                           isDragging ? "bg-[#ede9fb]" : "bg-muted"
                         )}>
                           <CloudUpload className={cn(
-                            "w-6 h-6 transition-colors",
+                            "h-6 w-6 transition-colors",
                             isDragging ? "text-primary" : "text-[#6b7280]"
                           )} />
                         </div>
@@ -2069,10 +2077,11 @@ export default function CreateProject() {
                                   </button>
                                 )}
                                 <button
+                                  aria-label="Remove file"
                                   type="button"
                                   onClick={() => s3Upload.removeEntry(f.id)}
                                   className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                                  <X className="w-4 h-4" />
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
 
@@ -2100,7 +2109,7 @@ export default function CreateProject() {
                               )}
                               {f.status === "done" && (
                                 <div className="mt-1.5 flex items-center gap-1.5">
-                                  <Check className="w-3 h-3 text-[#00b894]" />
+                                  <Check className="h-4 w-4 text-[#00b894]" />
                                   <span className="text-xs text-[#00b894] font-normal">Uploaded</span>
                                 </div>
                               )}
@@ -2121,7 +2130,7 @@ export default function CreateProject() {
                     <div className="p-8 space-y-6 text-left">
                       <div>
                         <SectionHeader
-                          icon={<ScrollText className="w-3.5 h-3.5" />}
+                          icon={<ScrollText className="h-4 w-4" />}
                           label="Scope of Works"
                           iconBg="#f0edff"
                           iconColor="#6c5ce7"
@@ -2161,8 +2170,8 @@ export default function CreateProject() {
                       {/* ── Timeline group ── */}
                       <div>
                         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
-                          <div className="w-6 h-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
-                            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                          <div className="h-6 w-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
+                            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <span className="text-xs font-normal text-[#374151]">Timeline</span>
                         </div>
@@ -2182,7 +2191,7 @@ export default function CreateProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.start_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.start_date ? format(parseISO(form.start_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
@@ -2217,7 +2226,7 @@ export default function CreateProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.end_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.end_date ? format(parseISO(form.end_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
@@ -2266,8 +2275,8 @@ export default function CreateProject() {
                       {/* ── Financial group ── */}
                       <div>
                         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
-                          <div className="w-6 h-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
-                            <DollarSign className="w-3.5 h-3.5 text-[#00b894]" />
+                          <div className="h-6 w-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
+                            <DollarSign className="h-3.5 w-3.5 text-[#00b894]" />
                           </div>
                           <span className="text-xs font-normal text-[#374151]">Financial Parameters</span>
                         </div>
@@ -2394,7 +2403,7 @@ export default function CreateProject() {
                           "hover:border-border hover:bg-muted/50",
                           isLoading && "opacity-50 cursor-not-allowed"
                         )}>
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="h-4 w-4" />
                         Back
                       </button>
                     )}
@@ -2418,7 +2427,7 @@ export default function CreateProject() {
                             "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
                           )}>
                           Continue
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                           </svg>
                         </button>
@@ -2436,7 +2445,7 @@ export default function CreateProject() {
                           background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
                           boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
                         }}>
-                        <Rocket className="w-4 h-4" />
+                        <Rocket className="h-4 w-4" />
                         {isLoading ? "Creating…" : "Create Project"}
                       </button>
                     )}
@@ -2460,7 +2469,7 @@ export default function CreateProject() {
               <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-[#eef2ff] flex items-center justify-center">
-                    <User className="w-4 h-4 text-[#6366f1]" />
+                    <User className="h-4 w-4 text-[#6366f1]" />
                   </div>
                   <div>
                     <h3 className="text-sm font-normal text-[#1a1a2e]">Add Users</h3>
@@ -2468,10 +2477,11 @@ export default function CreateProject() {
                   </div>
                 </div>
                 <button
+                  aria-label="Close"
                   type="button"
                   onClick={() => setShowAddAppointedModal(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
@@ -2498,7 +2508,7 @@ export default function CreateProject() {
                         ) : (
                           <span className="text-xs text-[#9ca3af]">Select a user...</span>
                         )}
-                        <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                        <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -2589,7 +2599,7 @@ export default function CreateProject() {
                   }}
                   className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                  <Check className="w-3.5 h-3.5" /> Add User
+                  <Check className="h-4 w-4" /> Add User
                 </button>
               </div>
             </div>
@@ -2612,7 +2622,7 @@ export default function CreateProject() {
               <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-[#f0fdf4] flex items-center justify-center">
-                    <User className="w-4 h-4 text-[#00b894]" />
+                    <User className="h-4 w-4 text-[#00b894]" />
                   </div>
                   <div>
                     <h3 className="text-sm font-normal text-[#1a1a2e]">Add Users</h3>
@@ -2620,10 +2630,11 @@ export default function CreateProject() {
                   </div>
                 </div>
                 <button
+                  aria-label="Close"
                   type="button"
                   onClick={() => setShowAddMemberModal(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
@@ -2668,7 +2679,7 @@ export default function CreateProject() {
                             ) : (
                               <span className="text-xs text-[#9ca3af]">Select a user...</span>
                             )}
-                            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                            <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -2737,7 +2748,7 @@ export default function CreateProject() {
                     <div>
                       <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Full Name</label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                         <input
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           placeholder="e.g. John Smith"
@@ -2749,7 +2760,7 @@ export default function CreateProject() {
                     <div>
                       <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                         <input
                           type="email"
                           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
@@ -2805,7 +2816,7 @@ export default function CreateProject() {
                     }}
                     className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Check className="w-3.5 h-3.5" /> Add User
+                    <Check className="h-4 w-4" /> Add User
                   </button>
                 ) : (
                   <button
@@ -2819,7 +2830,7 @@ export default function CreateProject() {
                     }}
                     className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Mail className="w-3.5 h-3.5" /> Send Invite
+                    <Mail className="h-4 w-4" /> Send Invite
                   </button>
                 )}
               </div>
@@ -2840,7 +2851,7 @@ export default function CreateProject() {
 
                 {locationWeatherLoading && (
                   <div className="flex items-center gap-2 text-xs text-[#6b7280]">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Loading weather…
                   </div>
                 )}

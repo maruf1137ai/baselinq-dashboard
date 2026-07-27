@@ -213,7 +213,7 @@ const NavbarWeather = () => {
               onClick={() => { setOpen(false); setHovered(false); setAiOpen(true); }}
               className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              <Zap className="h-3.5 w-3.5" />
+              <Zap className="h-4 w-4" />
               Analyze with AI
             </button>
           )}

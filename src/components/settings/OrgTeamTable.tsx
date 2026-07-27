@@ -220,7 +220,7 @@ const OrgTeamTable = () => {
             onClick={() => setShowInviteModal(true)}
             className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             Invite User
           </Button>
         )}
@@ -296,7 +296,7 @@ const OrgTeamTable = () => {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
@@ -305,7 +305,7 @@ const OrgTeamTable = () => {
                             setEditForm({ role_code: member.role_code || "" });
                             setShowEditModal(true);
                           }}>
-                            <Shield className="w-3.5 h-3.5 mr-2" />
+                            <Shield className="h-4 w-4 mr-2" />
                             Change Role
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -316,7 +316,7 @@ const OrgTeamTable = () => {
                             }}
                             className="text-red-600 focus:bg-red-50 focus:text-red-700"
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-2" />
                             Remove
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -332,7 +332,7 @@ const OrgTeamTable = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 opacity-70">
                       <div className="w-8 h-8 rounded-full bg-muted/50 border border-border border-dashed flex items-center justify-center text-slate-400">
-                        <Mail className="w-3.5 h-3.5" />
+                        <Mail className="h-4 w-4" />
                       </div>
                       <div>
                         <p className="text-sm font-normal text-foreground leading-none">{invite.name || "Invited Peer"}</p>
@@ -347,7 +347,7 @@ const OrgTeamTable = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="h-3 w-3" />
                       Pending
                     </span>
                   </td>

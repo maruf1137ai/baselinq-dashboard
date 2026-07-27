@@ -75,10 +75,10 @@ export function IssueRegisterTable({ folderId, projectId }: IssueRegisterTablePr
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30" />;
-    if (sortDirection === 'asc') return <ArrowUp className="ml-1 h-3 w-3 text-primary" />;
-    if (sortDirection === 'desc') return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
-    return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30" />;
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-30" />;
+    if (sortDirection === 'asc') return <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary" />;
+    if (sortDirection === 'desc') return <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary" />;
+    return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-30" />;
   };
 
   const sortedRows = rows ? [...rows].sort((a, b) => {

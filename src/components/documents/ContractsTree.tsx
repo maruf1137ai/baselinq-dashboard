@@ -108,7 +108,7 @@ function ContractDocumentRow({
           style={{ left: `${depth * 16 + 8}px` }}
         />
         <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
-          <FileText className="w-3.5 h-3.5 text-primary" />
+          <FileText className="h-4 w-4 text-primary" />
         </div>
         <p className="text-sm truncate flex-1 min-w-0">
           <span className="text-foreground group-hover/doc:text-primary transition-colors">{doc.name}</span>
@@ -123,7 +123,7 @@ function ContractDocumentRow({
             {doc.reference}
           </span>
         )}
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
     </DocItemContextMenu>
   );
@@ -164,7 +164,7 @@ function ContractsUnfiledRow({
           isDragging && "opacity-40",
         )}
       >
-        <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
+        <File className="h-4 w-4 text-muted-foreground/60 shrink-0 ml-7" />
         <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
           <span className="font-mono text-xs text-muted-foreground shrink-0">
@@ -263,8 +263,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
         isTopLevel ? "text-foreground" : "text-muted-foreground"
       )}>
         {isOpen
-          ? <ChevronDown className="w-4 h-4 transition-transform" />
-          : <ChevronRight className="w-4 h-4 transition-transform" />}
+          ? <ChevronDown className="h-4 w-4 transition-transform" />
+          : <ChevronRight className="h-4 w-4 transition-transform" />}
       </div>
 
       <div className={cn(
@@ -274,8 +274,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
             : "text-muted-foreground/70"
       )}>
         {isOpen
-          ? <FolderOpen className="w-3.5 h-3.5" />
-          : <FolderIcon className="w-3.5 h-3.5" />}
+          ? <FolderOpen className="h-4 w-4" />
+          : <FolderIcon className="h-4 w-4" />}
       </div>
 
       <span className={cn(
@@ -289,7 +289,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
       {hasAiFlags && (
         <span className="text-primary" title="Contains AI findings">
-          <Sparkles className="w-3 h-3" />
+          <Sparkles className="h-4 w-4" />
         </span>
       )}
       {hasRecent && (
@@ -314,7 +314,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
             onClick={handleViewRegister}
             title="View Issue Register"
           >
-            <FileText className="w-3 h-3 mr-1" />
+            <FileText className="mr-1" />
             Register
           </Button>
           {canUploadDocument && (
@@ -325,7 +325,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
               onClick={handleUpload}
               title="Upload Document"
             >
-              <Upload className="w-3 h-3 mr-1" />
+              <Upload className="mr-1" />
               Upload
             </Button>
           )}

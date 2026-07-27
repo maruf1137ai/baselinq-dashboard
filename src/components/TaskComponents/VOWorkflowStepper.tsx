@@ -67,9 +67,9 @@ export const VOWorkflowStepper: React.FC<VOWorkflowStepperProps> = ({ currentSta
                   isPending && "bg-muted border-2 border-border"
                 )}
               >
-                {isCompleted && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                {isCurrent && <Clock className="w-5 h-5 text-primary" />}
-                {isPending && <Circle className="w-5 h-5 text-muted-foreground" />}
+                {isCompleted && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                {isCurrent && <Clock className="h-5 w-5 text-primary" />}
+                {isPending && <Circle className="h-5 w-5 text-muted-foreground" />}
               </div>
 
               {/* Label */}

@@ -315,6 +315,7 @@ const AiWorkSpace = () => {
       <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
       <span className="max-w-[180px] truncate">{pendingAttachment.file_name}</span>
       <button
+        aria-label="Remove attachment"
         onClick={() => setPendingAttachment(null)}
         className="ml-1 text-muted-foreground hover:text-foreground"
         title="Remove attachment"
@@ -440,9 +441,9 @@ const AiWorkSpace = () => {
                                     <div key={ci} className="relative group">
                                       <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
                                         {cite.type === 'clause' ? (
-                                          <FileText className="h-3 w-3 text-muted-foreground" />
+                                          <FileText className="h-4 w-4 text-muted-foreground" />
                                         ) : (
-                                          <Globe className="h-3 w-3 text-muted-foreground" />
+                                          <Globe className="h-4 w-4 text-muted-foreground" />
                                         )}
                                         <span className="text-xs text-muted-foreground font-medium">{cite.label}</span>
                                       </button>
@@ -453,9 +454,9 @@ const AiWorkSpace = () => {
                                         )}
                                         <div className="flex items-center gap-1.5 mb-1">
                                           {cite.type === 'clause' ? (
-                                            <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <FileText className="h-4 w-4 text-primary shrink-0" />
                                           ) : (
-                                            <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <Globe className="h-4 w-4 text-primary shrink-0" />
                                           )}
                                           <p className="text-xs font-normal text-foreground truncate">{cite.detail}</p>
                                         </div>
@@ -519,7 +520,7 @@ const AiWorkSpace = () => {
                   {/* Brand badge */}
                   {/* <div className="flex justify-center mb-8">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1A1A] text-white text-xs font-medium">
-                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                    <div className="h-4 w-4 flex items-center justify-center shrink-0">
                       <img src="/LOGO-ai.png" alt="Linq AI" className="w-full h-full object-contain" />
                     </div>
                     <span>Linq AI</span>
@@ -529,7 +530,7 @@ const AiWorkSpace = () => {
                   {/* Greeting heading with inline logo */}
                   <h2 className="text-2xl font-normal tracking-tight text-center text-foreground mb-8 flex items-center justify-center gap-3 flex-wrap">
                     <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#f0f0ff] flex items-center justify-center shrink-0">
-                      <AiIcon size={18} className="text-[#6366f1]" />
+                      <AiIcon size={20} className="text-[#6366f1]" />
                     </div>
                     {firstName ? `What can I help with, ${firstName}?` : 'What can I help with?'}
                   </h2>

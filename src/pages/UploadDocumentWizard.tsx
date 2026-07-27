@@ -267,10 +267,11 @@ export default function UploadDocumentWizard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
+              aria-label="Back to documents"
               onClick={() => navigate('/documents')}
               className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
+              <ArrowLeft className="h-4 w-4 text-muted-foreground" />
             </button>
             <h1 className="text-2xl font-normal tracking-tight text-foreground">Upload Document</h1>
           </div>

@@ -257,10 +257,10 @@ const PreviewSurface: React.FC<{
               size="sm"
               onClick={() => window.open(downloadUrl, "_blank", "noopener")}
             >
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+              <ExternalLink className="mr-1" /> Open
             </Button>
             <Button size="sm" onClick={onDownload}>
-              <Download className="h-3.5 w-3.5 mr-1" /> Download
+              <Download className="mr-1" /> Download
             </Button>
           </div>
         </div>
@@ -336,7 +336,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 aria-label="Close"
                 className="text-background hover:bg-background/10 hover:text-background ml-2"
                 onClick={() => onOpenChange(false)}>
-                <X className="h-5 w-5" />
+                <X />
               </Button>
             </div>
           </div>

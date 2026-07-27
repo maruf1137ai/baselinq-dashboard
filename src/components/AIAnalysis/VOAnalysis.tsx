@@ -55,7 +55,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
           {weather?.today && (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
               <div className="flex items-center gap-2 mb-1">
-                <Cloud className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                <Cloud className="h-4 w-4 text-blue-500 flex-shrink-0" />
                 <span className="text-xs font-medium text-blue-700">Site Weather</span>
               </div>
               <p className="text-xs text-blue-600">

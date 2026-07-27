@@ -78,11 +78,11 @@ const ChecklistItem: React.FC<{
         className="sr-only peer"
       />
       {item.completed ? (
-        <div className="w-5 h-5 rounded bg-[#3A6FF7] flex items-center justify-center flex-shrink-0">
+        <div className="h-5 w-5 rounded bg-[#3A6FF7] flex items-center justify-center flex-shrink-0">
           <CircleCheck className="w-2.5 h-2.5 text-white" />
         </div>
       ) : (
-        <div className="w-5 h-5 border-2 border-border rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
+        <div className="h-5 w-5 border-2 border-border rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
       )}
       <span
         className={`text-gray-700 text-base ${
@@ -146,7 +146,7 @@ export default function RightSideDrawer() {
                 <div>
                   <p className="text-xs [#6B7280]">Assignee</p>
                   <div className="flex items-center space-x-3 mt-2">
-                    <div className="w-6 h-6 rounded-full bg-[#E8F1FF] flex items-center justify-center">
+                    <div className="h-6 w-6 rounded-full bg-[#E8F1FF] flex items-center justify-center">
                       <span className="text-[#3A6FF7] text-xs">
                         {task.assignee.initials}
                       </span>
@@ -159,7 +159,7 @@ export default function RightSideDrawer() {
                 <div>
                   <p className="text-xs [#6B7280]">Due Date</p>
                   <div className="flex items-center space-x-2 mt-2">
-                    <CalendarIcon className="w-4 h-4 text-red_dark" />
+                    <CalendarIcon className="h-4 w-4 text-red_dark" />
                     <span className="text-sm text-red_dark">
                       {task.dueDate}
                     </span>
@@ -239,7 +239,7 @@ export default function RightSideDrawer() {
                   <button
                     disabled={!isAllComplete}
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-base font-medium rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
-                    <CircleCheck className="w-5 h-5" />
+                    <CircleCheck className="h-4 w-4" />
                     Mark Complete
                   </button>
                 </div>

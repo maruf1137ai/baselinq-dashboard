@@ -1086,10 +1086,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
             {/* Attachment Icon */}
             <button
+              type="button"
+              aria-label="Attach a file"
               onClick={triggerFileInput}
-              className="shrink-0 w-6 h-6 text-[#676767] cursor-pointer hover:text-[#101828]">
+              className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               <svg
-                className="w-6 h-6"
+                className="h-4 w-4"
                 viewBox="0 0 16 22"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -1104,13 +1106,17 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
             {/* Voice Icon */}
             <button
+              type="button"
+              aria-label={isRecording ? "Pause recording" : "Record a voice message"}
               onClick={handleVoiceRecord}
-              className={`shrink-0 w-6 h-6 cursor-pointer hover:text-[#101828] ${isRecording ? "text-red-500" : "text-[#676767]"
+              className={`shrink-0 h-8 w-8 flex items-center justify-center rounded-full transition-colors ${isRecording
+                ? "text-destructive hover:bg-destructive/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}>
               {isRecording && !isPaused ? (
-                <Pause className="w-6 h-6" />
+                <Pause className="h-4 w-4" />
               ) : (
-                <Mic className="w-6 h-6" />
+                <Mic className="h-4 w-4" />
               )}
             </button>
 
@@ -1139,7 +1145,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                     ? "Add a caption (optional)…"
                     : "Type a message… (use @ to mention)"
                 }
-                className="flex-grow bg-transparent outline-none text-base text-[#676767] resize-none leading-normal max-h-[120px] overflow-y-auto disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-grow bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground resize-none leading-normal max-h-[120px] overflow-y-auto disabled:opacity-60 disabled:cursor-not-allowed"
                 rows={1}
                 value={message}
                 disabled={isTaskCompleted}
@@ -1156,14 +1162,15 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
             <button
               onClick={handleSend}
               disabled={isTaskCompleted || (message.trim() === "" && attachedFiles.length === 0 && !isRecording) || isUploading}
-              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
-                ? "bg-[#101828] cursor-pointer"
-                : "bg-muted cursor-not-allowed"
+              aria-label="Send message"
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${(message.trim() || attachedFiles.length > 0 || isRecording) && !isUploading
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}>
               {isUploading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Send className="w-4 h-4 text-white" />
+                <Send className="h-4 w-4" />
               )}
             </button>
           </div>

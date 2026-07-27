@@ -246,20 +246,20 @@ const AccountProfile = () => {
           <div className="flex items-center gap-3">
 
             <Button type="submit" disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="mr-1.5" />}
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
 
-        <SectionCard title="Personal Information" subtitle="Basic identity and contact details" icon={<UserIcon className="w-4 h-4" />}>
+        <SectionCard title="Personal Information" subtitle="Basic identity and contact details" icon={<UserIcon className="h-4 w-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Full Name">
               <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={cn(INPUT_CLS, "font-normal")} />
             </Field>
             <Field label="Work Email Address">
               <div className="flex items-center gap-2.5 px-3 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
-                <Mail className="w-3.5 h-3.5 shrink-0" />
+                <Mail className="h-4 w-4 shrink-0" />
                 <span className="truncate">{user?.email}</span>
                 <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">Verified</span>
               </div>
@@ -278,7 +278,7 @@ const AccountProfile = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Professional Credentials" subtitle="Registrations, discipline, and insurance" icon={<Briefcase className="w-4 h-4" />}>
+        <SectionCard title="Professional Credentials" subtitle="Registrations, discipline, and insurance" icon={<Briefcase className="h-4 w-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Primary Discipline / Role">
               <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ const AccountProfile = () => {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">Contact your administrator to change your primary role.</p>
@@ -323,7 +323,7 @@ const AccountProfile = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Physical Address" subtitle="Registered entity or personal location" icon={<MapPin className="w-4 h-4" />}>
+        <SectionCard title="Physical Address" subtitle="Registered entity or personal location" icon={<MapPin className="h-4 w-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Street Address" colSpan>
               <Input value={formData.profile.address} onChange={e => setFormData({ ...formData, profile: { ...formData.profile, address: e.target.value } })} className={INPUT_CLS} placeholder="Building Number, Street Name..." />
@@ -345,7 +345,7 @@ const AccountProfile = () => {
         <>
           {/* Company details */}
           <form onSubmit={handleSaveCompany}>
-            <SectionCard title="My Company" subtitle="Your organisation's registered details" icon={<Building2 className="w-4 h-4" />}>
+            <SectionCard title="My Company" subtitle="Your organisation's registered details" icon={<Building2 className="h-4 w-4" />}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <Field label="Company Name" colSpan>
                   <Input value={companyForm.name} onChange={e => setCompanyForm(f => ({ ...f, name: e.target.value }))} className={INPUT_CLS} placeholder="Company legal name" />
@@ -359,7 +359,7 @@ const AccountProfile = () => {
               </div>
               <div className="flex justify-end mt-5">
                 <Button type="submit" disabled={isSavingCompany} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
-                  {isSavingCompany ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                  {isSavingCompany ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="mr-1.5" />}
                   {isSavingCompany ? "Saving..." : "Save Company"}
                 </Button>
               </div>
@@ -371,7 +371,7 @@ const AccountProfile = () => {
             <SectionCard
               title="Company Team"
               subtitle={`Users representing ${myCompany.company_name} on this project`}
-              icon={<UserPlus className="w-4 h-4" />}
+              icon={<UserPlus className="h-4 w-4" />}
             >
               {/* Member list */}
               <div className="space-y-2 mb-4">
@@ -396,6 +396,7 @@ const AccountProfile = () => {
                         <span className="text-xs text-muted-foreground">{m.role}</span>
                         {m.team_member_id && (
                           <button
+                            aria-label="Remove member"
                             type="button"
                             onClick={() => handleRemoveMember(m.team_member_id!)}
                             disabled={removingMemberId === m.team_member_id}
@@ -403,8 +404,8 @@ const AccountProfile = () => {
                             title="Remove member"
                           >
                             {removingMemberId === m.team_member_id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Trash2 className="w-3.5 h-3.5" />
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-4 w-4" />
                             }
                           </button>
                         )}
@@ -419,8 +420,9 @@ const AccountProfile = () => {
                 <div className="rounded-xl p-4 bg-muted/50 space-y-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs font-medium text-foreground">Invite a team member</p>
-                    <button type="button" onClick={() => setShowInviteForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-                      <X className="w-4 h-4" />
+                    <button
+                      aria-label="Close invite form" type="button" onClick={() => setShowInviteForm(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -473,7 +475,7 @@ const AccountProfile = () => {
                       onClick={handleInviteMember}
                       className="h-8 text-xs bg-primary text-white hover:bg-primary/90"
                     >
-                      {isInviting ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Sending...</> : <><UserPlus className="w-3.5 h-3.5 mr-1.5" />Send Invite</>}
+                      {isInviting ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Sending...</> : <><UserPlus className="mr-1.5" />Send Invite</>}
                     </Button>
                   </div>
                 </div>
@@ -483,7 +485,7 @@ const AccountProfile = () => {
                   onClick={() => setShowInviteForm(true)}
                   className="w-full py-3 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="h-4 w-4" />
                   Invite a team member
                 </button>
               )}
@@ -493,13 +495,13 @@ const AccountProfile = () => {
       )}
 
       <form onSubmit={handleChangePassword}>
-        <SectionCard title="Change Password" subtitle="Update your account password" icon={<Lock className="w-4 h-4" />}>
+        <SectionCard title="Change Password" subtitle="Update your account password" icon={<Lock className="h-4 w-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Current Password" colSpan>
               <div className="relative">
                 <Input type={showPw.old ? "text" : "password"} value={pwForm.old_password} onChange={e => setPwForm({ ...pwForm, old_password: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="Enter current password" />
                 <button type="button" onClick={() => setShowPw(s => ({ ...s, old: !s.old }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showPw.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPw.old ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </Field>
@@ -507,7 +509,7 @@ const AccountProfile = () => {
               <div className="relative">
                 <Input type={showPw.new ? "text" : "password"} value={pwForm.new_password} onChange={e => setPwForm({ ...pwForm, new_password: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="At least 8 characters" />
                 <button type="button" onClick={() => setShowPw(s => ({ ...s, new: !s.new }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showPw.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPw.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </Field>
@@ -515,14 +517,14 @@ const AccountProfile = () => {
               <div className="relative">
                 <Input type={showPw.confirm ? "text" : "password"} value={pwForm.new_password_confirm} onChange={e => setPwForm({ ...pwForm, new_password_confirm: e.target.value })} className={cn(INPUT_CLS, "pr-10")} placeholder="Repeat new password" />
                 <button type="button" onClick={() => setShowPw(s => ({ ...s, confirm: !s.confirm }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showPw.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPw.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </Field>
           </div>
           <div className="flex justify-end mt-5">
             <Button type="submit" disabled={isSavingPw || !pwForm.old_password || !pwForm.new_password} className="gap-2 font-normal">
-              {isSavingPw ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Update Password</>}
+              {isSavingPw ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : <><Save className="h-4 w-4" /> Update Password</>}
             </Button>
           </div>
         </SectionCard>

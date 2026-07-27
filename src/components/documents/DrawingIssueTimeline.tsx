@@ -99,7 +99,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-gray-400 normal-case">Latest Site Copy</p>
             {siteNotUpToDate && (
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
             )}
           </div>
           {latestSiteCopy ? (
@@ -151,7 +151,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
       {siteNotUpToDate && (
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
             <p className="text-sm text-amber-800 font-normal">
               Site copy (Rev {latestSiteCopy?.revision}) is behind the current revision (Rev {currentRevision}).
               Consider issuing Rev {currentRevision} to site.
@@ -162,7 +162,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
             className="bg-amber-600 hover:bg-amber-700 text-white h-8 px-4 text-xs font-normal rounded-lg shrink-0 ml-4"
             onClick={onIssueDrawing}
           >
-            <Send className="w-3 h-3 mr-1.5" />
+            <Send className="mr-1.5" />
             Issue to Site
           </Button>
         </div>
@@ -179,7 +179,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
           onClick={onIssueDrawing}
         >
-          <Plus className="h-3.5 w-3.5" /> Issue Drawing
+          <Plus /> Issue Drawing
         </Button>
       </div>
 
@@ -196,7 +196,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
               className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
               onClick={onIssueDrawing}
             >
-              <Plus className="h-3.5 w-3.5" /> Issue drawing
+              <Plus /> Issue drawing
             </Button>
           }
         />
@@ -251,7 +251,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
 
                 {/* Date */}
                 <div className="flex items-center gap-1.5 text-sm text-foreground font-normal">
-                  <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+                  <Clock className="h-4 w-4 text-gray-400 shrink-0" />
                   {format(new Date(issue.issuedAt), 'dd MMM yyyy')}
                 </div>
 
@@ -262,7 +262,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
 
                 {/* Issued by */}
                 <div className="flex items-center gap-1.5 justify-end">
-                  <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs text-gray-600 font-medium shrink-0">
+                  <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs text-gray-600 font-medium shrink-0">
                     {issue.issuedBy.split(' ').map(n => n[0]).join('')}
                   </div>
                   <span className="text-xs text-gray-500 font-normal">{issue.issuedBy.split(' ')[0]}</span>

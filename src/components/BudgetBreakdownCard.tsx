@@ -172,7 +172,7 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
             {budgetData.map((item) => (
               <div key={item.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="text-sm text-foreground">{item.name}</span>
                 </div>
                 <span className="text-sm text-foreground">

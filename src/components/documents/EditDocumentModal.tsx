@@ -274,7 +274,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
                 {folders.map((f) => (
                   <SelectItem key={f._id} value={f._id}>
                     <span className="flex items-center gap-2">
-                      <FolderIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                      <FolderIcon className="h-4 w-4 text-muted-foreground" />
                       {f.name.replace(/_/g, ' ')}
                     </span>
                   </SelectItem>
@@ -283,7 +283,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
             </Select>
             {folderChanged && (
               <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-700">
-                <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />
+                <AlertCircle className="h-3.5 w-3.5 mt-px shrink-0" />
                 You changed the category — please pick a folder for the new category.
               </p>
             )}

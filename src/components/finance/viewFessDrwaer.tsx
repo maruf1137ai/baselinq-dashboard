@@ -73,8 +73,8 @@ export const ViewFeesDrawer: React.FC<ViewFeesDrawerProps> = ({
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600">
-              <CloseIcon className="w-6 h-6" />
+              className="h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-muted transition-colors">
+              <CloseIcon className="h-4 w-4" />
               <span className="sr-only">Close panel</span>
             </button>
           </header>

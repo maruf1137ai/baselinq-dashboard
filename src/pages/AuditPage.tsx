@@ -355,26 +355,26 @@ export default function AuditPage() {
               <TabsTrigger
                 value="overview"
                 className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
-                <BarChart3 className="w-4 h-4 mr-2" />
+                <BarChart3 className="h-4 w-4 mr-2" />
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="audit-trail"
                 className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
-                <Activity className="w-4 h-4 mr-2" />
+                <Activity className="h-4 w-4 mr-2" />
                 Audit Trail
               </TabsTrigger>
               <TabsTrigger
                 value="deadlines"
                 className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
-                <Clock className="w-4 h-4 mr-2" />
+                <Clock className="h-4 w-4 mr-2" />
                 Deadline Tracker
               </TabsTrigger>
               {accessLevel === "full" && (
                 <TabsTrigger
                   value="export"
                   className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="h-4 w-4 mr-2" />
                   Export & Reports
                 </TabsTrigger>
               )}
@@ -554,7 +554,7 @@ export default function AuditPage() {
                   {auditTrail.length > 0 ? (
                     auditTrail.slice(0, 50).map((log: any, i: number) => (
                       <div key={i} className="relative pl-8">
-                        <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-card border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
+                        <div className={`absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
                           ? "border-green-600"
                           : (log.action || "").toLowerCase().includes("overdue") || (log.action || "").toLowerCase().includes("rejected")
                             ? "border-red-600"
@@ -583,7 +583,7 @@ export default function AuditPage() {
                     ))
                   ) : (
                     <div className="relative pl-8">
-                      <div className="absolute -left-[9px] top-1 w-4 h-4 bg-card border-2 border-border rounded-full z-10" />
+                      <div className="absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 border-border rounded-full z-10" />
                       <p className="text-xs text-gray-400">
                         {isLoading ? (
                           <AwesomeLoader message="Compiling audit trail" />
@@ -635,7 +635,7 @@ export default function AuditPage() {
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <Card className="bg-red-50 border-red-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
                     <div>
                       <p className="text-2xl font-medium text-red-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining < 0 && !d.isCompleted).length}
@@ -646,7 +646,7 @@ export default function AuditPage() {
                 </Card>
                 <Card className="bg-amber-50 border-amber-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-amber-600" />
+                    <Clock className="h-5 w-5 text-amber-600" />
                     <div>
                       <p className="text-2xl font-medium text-amber-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining >= 0 && d.daysRemaining <= 3 && !d.isCompleted).length}
@@ -657,7 +657,7 @@ export default function AuditPage() {
                 </Card>
                 <Card className="bg-green-50 border-green-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-2xl font-medium text-green-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining > 3 && !d.isCompleted).length}
@@ -746,7 +746,7 @@ export default function AuditPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-600" />
+                          <FileText className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Export CSV</h3>
@@ -761,7 +761,7 @@ export default function AuditPage() {
                         className="w-full"
                         variant="outline"
                         onClick={exportCSV}>
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="h-4 w-4 mr-2" />
                         Download CSV
                       </Button>
                     </CardContent>
@@ -772,7 +772,7 @@ export default function AuditPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                          <Printer className="w-5 h-5 text-green-600" />
+                          <Printer className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Print Report</h3>
@@ -787,7 +787,7 @@ export default function AuditPage() {
                         className="w-full"
                         variant="outline"
                         onClick={() => window.print()}>
-                        <Printer className="w-4 h-4 mr-2" />
+                        <Printer className="h-4 w-4 mr-2" />
                         Print Report
                       </Button>
                     </CardContent>
@@ -798,7 +798,7 @@ export default function AuditPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-purple-600" />
+                          <TrendingUp className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Report Summary</h3>

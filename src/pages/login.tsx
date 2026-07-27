@@ -86,8 +86,8 @@ const LoginPage = () => {
           <div className="mt-10 space-y-4">
             {FEATURES.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-[#6c5ce7]" />
+                <div className="h-5 w-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
+                  <Check className="h-3 w-3 text-[#6c5ce7]" />
                 </div>
                 <p className="text-xs text-white/60 leading-snug">{feature}</p>
               </div>
@@ -182,11 +182,12 @@ const LoginPage = () => {
                     className={cn(INPUT_CLS, "pr-10")}
                   />
                   <button
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>

@@ -149,7 +149,7 @@ export function UploadStep1TabDiscipline({
           className="h-9 px-5 gap-2 font-normal"
         >
           Next: Select Folder
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

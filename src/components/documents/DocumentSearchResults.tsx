@@ -85,7 +85,7 @@ export function DocumentSearchResults({
             {/* Primary accent stripe on the left — consistent with folder views. */}
             <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-primary/40 group-hover/doc:bg-primary transition-colors" />
             <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
-              <FileText className="w-3.5 h-3.5 text-primary" />
+              <FileText className="h-4 w-4 text-primary" />
             </div>
 
             <p className="text-sm truncate flex-1 min-w-0">
@@ -115,7 +115,7 @@ export function DocumentSearchResults({
                 {doc.reference}
               </span>
             )}
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
           </div>
         );
       })}

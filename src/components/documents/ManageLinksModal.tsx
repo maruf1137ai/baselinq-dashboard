@@ -113,7 +113,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
                           "h-10 w-10 rounded-xl flex items-center justify-center border transition-colors",
                           isRemoved ? "bg-red-100/50 border-red-100" : "bg-muted/50 border-border"
                         )}>
-                          <Link2 className={cn("h-5 w-5", isRemoved ? "text-red-400" : "text-gray-400")} />
+                          <Link2 className={cn("h-4 w-4", isRemoved ? "text-red-400" : "text-gray-400")} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -139,7 +139,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
                             size="sm"
                             className="h-8 text-xs text-primary font-normal hover:bg-primary/5 gap-1.5"
                           >
-                            <RotateCcw className="h-3.5 w-3.5" /> Undo
+                            <RotateCcw /> Undo
                           </Button>
                         ) : (
                           <Button
@@ -148,7 +148,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
                             size="sm"
                             className="h-8 text-xs text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all font-normal gap-1.5"
                           >
-                            Unlink <Trash2 className="h-3.5 w-3.5" />
+                            Unlink <Trash2 />
                           </Button>
                         )}
                       </div>

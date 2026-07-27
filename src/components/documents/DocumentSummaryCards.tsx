@@ -115,7 +115,7 @@ export const DocumentSummaryCards: React.FC = () => {
         value={String(total)}
         subtitle={`${total} documents across ${uniqueCategories} categories`}
         breakdown={breakdownParts.join(' · ')}
-        icon={<FileText className="w-4 h-4" />}
+        icon={<FileText className="h-4 w-4" />}
       />
       <SummaryCard
         title="With AI Flags"
@@ -129,14 +129,14 @@ export const DocumentSummaryCards: React.FC = () => {
         value="2"
         subtitle="Next due: March 15"
         badge={{ text: "2 Overdue", variant: 'destructive' }}
-        icon={<AlertCircle className="w-4 h-4 text-red-500" />}
+        icon={<AlertCircle className="h-4 w-4 text-red-500" />}
       />
       <SummaryCard
         title="Finance Gated"
         value={String(gatedDocs.length)}
         subtitle={`${gatedDocs.length} document${gatedDocs.length !== 1 ? 's' : ''} blocked`}
         breakdown={gatedDoc ? `${gatedDoc.reference}, awaiting TCC` : undefined}
-        icon={<Lock className="w-4 h-4 text-amber-500" />}
+        icon={<Lock className="h-4 w-4 text-amber-500" />}
         className="border-l-4 border-amber-400"
       />
     </div>

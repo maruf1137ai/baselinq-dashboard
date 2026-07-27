@@ -311,7 +311,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
     return (
       <div className="w-9 h-9 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center border border-blue-100 shrink-0">
         <svg
-          className="w-4 h-4"
+          className="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -330,7 +330,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
     );
   return (
     <div className="w-9 h-9 bg-muted/50 text-gray-500 rounded-lg flex items-center justify-center border border-border shrink-0">
-      <FileText className="w-4 h-4" />
+      <FileText className="h-4 w-4" />
     </div>
   );
 }
@@ -340,7 +340,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
 function Tooltip({ text }: { text: string }) {
   return (
     <div className="relative group inline-flex items-center">
-      <Info className="w-3.5 h-3.5 text-[#9ca3af] cursor-help" />
+      <Info className="h-4 w-4 text-[#9ca3af] cursor-help" />
       <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#1a1a2e] text-white text-xs rounded-lg px-3 py-2 w-48 text-center z-20 shadow-lg leading-relaxed">
         {text}
         <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1a1a2e]" />
@@ -370,7 +370,7 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}>
         {children}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
     </div>
   );
 }
@@ -410,7 +410,7 @@ function PersonnelEntryCard({
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+            <User className="h-3.5 w-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
           </div>
           <select
             value={entry.role}
@@ -435,17 +435,18 @@ function PersonnelEntryCard({
           )}
           {canRemove && (
             <button
+              aria-label="Remove entry"
               type="button"
               onClick={onRemove}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
-              <X className="w-3.5 h-3.5" />
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Full name"
@@ -454,7 +455,7 @@ function PersonnelEntryCard({
           />
         </div>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Email address"
@@ -518,7 +519,7 @@ function OrgPersonnelSelectCard({
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+            <User className="h-3.5 w-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
           </div>
           <select
             value={entry.role}
@@ -545,10 +546,11 @@ function OrgPersonnelSelectCard({
           )}
           {canRemove && (
             <button
+              aria-label="Remove entry"
               type="button"
               onClick={onRemove}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
-              <X className="w-3.5 h-3.5" />
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -575,7 +577,7 @@ function OrgPersonnelSelectCard({
             ) : (
               <span className="text-xs text-[#9ca3af]">Select team member...</span>
             )}
-            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+            <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -615,7 +617,7 @@ function OrgPersonnelSelectCard({
                             <p className="text-xs text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
                           </div>
                         </div>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0" />}
+                        {isSelected && <Check className="h-4 w-4 text-[#6c5ce7] shrink-0" />}
                       </div>
                     </CommandItem>
                   );
@@ -629,7 +631,7 @@ function OrgPersonnelSelectCard({
       {/* Org role — editable dropdown, pre-filled with user's role */}
       {selectedOrgUser && (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/50">
-          <User className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+          <User className="h-4 w-4 text-[#9ca3af] shrink-0" />
           <div className="flex-1">
             <p className="text-xs text-[#9ca3af] mb-0.5">Organisation Role</p>
             <select
@@ -665,7 +667,7 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
       <div
-        className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+        className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0"
         style={{ background: iconBg }}>
         <span style={{ color: iconColor }}>{icon}</span>
       </div>
@@ -1376,7 +1378,7 @@ export default function EditProject() {
                             ? "bg-[#6c5ce7] text-white"
                             : "bg-muted text-[#9ca3af]"
                       )}>
-                      {done ? <Check className="w-4 h-4" /> : step.id}
+                      {done ? <Check className="h-4 w-4" /> : step.id}
                     </div>
                     {/* Label */}
                     <div className="min-w-0">
@@ -1443,13 +1445,13 @@ export default function EditProject() {
             <button
               onClick={() => navigate("/settings/project-details")}
               className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-[#374151] transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back to Project Details
             </button>
             <button
               onClick={() => { localStorage.clear(); navigate("/login"); }}
               className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-red-500 border border-transparent hover:border-red-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
@@ -1537,11 +1539,12 @@ export default function EditProject() {
                               onBlur={() => setPnEditable(false)}
                             />
                             <button
+                              aria-label="Edit project number"
                               type="button"
                               tabIndex={-1}
                               onClick={() => setPnEditable((v) => !v)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6c5ce7] hover:text-[#5a4bd1] transition-colors">
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="h-4 w-4" />
                             </button>
                           </div>
                           {errors.project_number && (
@@ -1557,7 +1560,7 @@ export default function EditProject() {
                       {/* Location */}
                       <div>
                         <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="w-3.5 h-3.5 text-[#9ca3af]" />
+                          <MapPin className="h-4 w-4 text-[#9ca3af]" />
                           <label className="text-xs font-normal text-[#374151]">Project Site Location</label>
                         </div>
                         <LocationPickerMap
@@ -1579,7 +1582,7 @@ export default function EditProject() {
                     <div className="p-8 space-y-6 text-left">
                       <div>
                         <SectionHeader
-                          icon={<ScrollText className="w-3.5 h-3.5" />}
+                          icon={<ScrollText className="h-4 w-4" />}
                           label="Scope of Works"
                           iconBg="#f0edff"
                           iconColor="#6c5ce7"
@@ -1627,7 +1630,7 @@ export default function EditProject() {
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                                 isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-[#6c5ce7] shadow-sm"
                               )}>
-                                {isInvited || inviteClientData.email.trim() ? <Check className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
+                                {isInvited || inviteClientData.email.trim() ? <Check className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
                               </div>
                               <div className="text-left">
                                 <h3 className="text-sm font-normal text-[#101828]">
@@ -1659,7 +1662,7 @@ export default function EditProject() {
                                 <div className="text-left">
                                   <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Name</label>
                                   <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="e.g. John Smith"
@@ -1671,7 +1674,7 @@ export default function EditProject() {
                                 <div className="text-left">
                                   <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Email</label>
                                   <div className="relative">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="email@example.com"
@@ -1688,7 +1691,7 @@ export default function EditProject() {
                                 disabled={!inviteClientData.email}
                                 className="w-full h-11 bg-[#6c5ce7] text-white rounded-xl text-xs font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
-                                <Check className="w-4 h-4" />
+                                <Check className="h-4 w-4" />
                                 Confirm, Invite will be sent after project is updated
                               </button>
                             </div>
@@ -1700,7 +1703,7 @@ export default function EditProject() {
                       {isClientOrContractor && (
                         <div>
                           <SectionHeader
-                            icon={<Building2 className="w-3.5 h-3.5" />}
+                            icon={<Building2 className="h-4 w-4" />}
                             label="Client Company Information"
                             iconBg="#eef2ff"
                             iconColor="#6c5ce7"
@@ -1750,6 +1753,7 @@ export default function EditProject() {
                                     }
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("client")}
                                     disabled={isLookingUp}
@@ -1757,9 +1761,9 @@ export default function EditProject() {
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#6c5ce7]" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
@@ -1804,7 +1808,7 @@ export default function EditProject() {
                                   Office Number
                                 </label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -1825,7 +1829,7 @@ export default function EditProject() {
                       {isClientOrContractor && (
                         <div>
                           <SectionHeader
-                            icon={<User className="w-3.5 h-3.5" />}
+                            icon={<User className="h-4 w-4" />}
                             label="Project Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
@@ -1852,8 +1856,8 @@ export default function EditProject() {
                                 type="button"
                                 onClick={() => setClientPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                 className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                  <Plus className="w-3.5 h-3.5" />
+                                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                  <Plus className="h-3.5 w-3.5" />
                                 </div>
                                 <span className="font-normal">Add User</span>
                               </button>
@@ -1862,7 +1866,7 @@ export default function EditProject() {
                               type="button"
                               onClick={() => setShowInvitePersonnelModal(true)}
                               className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-xs text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
-                              <Mail className="w-3.5 h-3.5" />
+                              <Mail className="h-3.5 w-3.5" />
                               <span className="font-normal">Invite User</span>
                             </button>
                           </div>
@@ -1880,7 +1884,7 @@ export default function EditProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Invite Associated Companies"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
@@ -1895,11 +1899,12 @@ export default function EditProject() {
                                 <div className="flex items-center justify-end">
                                   {appointedInvites.length > 1 && (
                                     <button
+                                      aria-label="Remove invitation"
                                       type="button"
                                       onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))}
                                       className="text-[#9ca3af] hover:text-red-500 transition-colors"
                                     >
-                                      <X className="w-4 h-4" />
+                                      <X className="h-4 w-4" />
                                     </button>
                                   )}
                                 </div>
@@ -1954,8 +1959,8 @@ export default function EditProject() {
                               onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: 'architect' }])}
                               className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
                             >
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
                               </div>
                               <span className="font-normal">Add Another Company</span>
                             </button>
@@ -1968,7 +1973,7 @@ export default function EditProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Associated Company Information"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
@@ -2000,6 +2005,7 @@ export default function EditProject() {
                                     onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))}
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("appointed")}
                                     disabled={isLookingUp}
@@ -2007,9 +2013,9 @@ export default function EditProject() {
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#6c5ce7]" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
@@ -2029,7 +2035,7 @@ export default function EditProject() {
                               <div>
                                 <label className="block text-xs font-normal text-[#374151] mb-1.5">Office Number</label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -2066,7 +2072,7 @@ export default function EditProject() {
 
                           <div className="pt-6">
                             <SectionHeader
-                              icon={<User className="w-3.5 h-3.5" />}
+                              icon={<User className="h-4 w-4" />}
                               label="Key Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
@@ -2093,8 +2099,8 @@ export default function EditProject() {
                                   type="button"
                                   onClick={() => setAppointedPersonnelList((prev) => [...prev, { id: crypto.randomUUID(), role: "", name: "", email: "", position: "" }])}
                                   className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                    <Plus className="w-3.5 h-3.5" />
+                                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                    <Plus className="h-3.5 w-3.5" />
                                   </div>
                                   <span className="font-normal">Add User</span>
                                 </button>
@@ -2103,7 +2109,7 @@ export default function EditProject() {
                                 type="button"
                                 onClick={() => setShowInvitePersonnelModal(true)}
                                 className="w-full py-3 border border-[#6c5ce7] rounded-xl flex items-center justify-center gap-2 text-xs text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all">
-                                <Mail className="w-3.5 h-3.5" />
+                                <Mail className="h-3.5 w-3.5" />
                                 <span className="font-normal">Invite User</span>
                               </button>
                             </div>
@@ -2120,8 +2126,8 @@ export default function EditProject() {
                       {existingDocs.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 pb-3 mb-3 border-b border-border">
-                            <div className="w-6 h-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
-                              <FileText className="w-3.5 h-3.5 text-[#6c5ce7]" />
+                            <div className="h-6 w-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
+                              <FileText className="h-3.5 w-3.5 text-[#6c5ce7]" />
                             </div>
                             <span className="text-xs font-normal text-[#374151]">
                               Existing Documents ({existingDocs.length})
@@ -2156,11 +2162,12 @@ export default function EditProject() {
                                     ) : null}
                                   </div>
                                   <button
+                                    aria-label="Delete document"
                                     type="button"
                                     disabled={isDeleting}
                                     onClick={() => handleDeleteExistingDoc(doc)}
                                     className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0 disabled:cursor-not-allowed">
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
                               );
@@ -2216,7 +2223,7 @@ export default function EditProject() {
                             isDragging ? "bg-[#ede9fb]" : "bg-muted"
                           )}>
                             <CloudUpload className={cn(
-                              "w-6 h-6 transition-colors",
+                              "h-6 w-6 transition-colors",
                               isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]"
                             )} />
                           </div>
@@ -2263,10 +2270,11 @@ export default function EditProject() {
                                     </button>
                                   )}
                                   <button
+                                    aria-label="Remove file"
                                     type="button"
                                     onClick={() => s3Upload.removeEntry(f.id)}
                                     className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
 
@@ -2294,7 +2302,7 @@ export default function EditProject() {
                                 )}
                                 {f.status === "done" && (
                                   <div className="mt-1.5 flex items-center gap-1.5">
-                                    <Check className="w-3 h-3 text-[#00b894]" />
+                                    <Check className="h-4 w-4 text-[#00b894]" />
                                     <span className="text-xs text-[#00b894] font-normal">Uploaded</span>
                                   </div>
                                 )}
@@ -2317,8 +2325,8 @@ export default function EditProject() {
                       {/* ── Timeline group ── */}
                       <div>
                         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
-                          <div className="w-6 h-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
-                            <CalendarIcon className="w-3.5 h-3.5 text-[#6c5ce7]" />
+                          <div className="h-6 w-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
+                            <CalendarIcon className="h-3.5 w-3.5 text-[#6c5ce7]" />
                           </div>
                           <span className="text-xs font-normal text-[#374151]">Timeline</span>
                         </div>
@@ -2338,7 +2346,7 @@ export default function EditProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.start_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.start_date ? format(parseISO(form.start_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
@@ -2373,7 +2381,7 @@ export default function EditProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.end_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.end_date ? format(parseISO(form.end_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
@@ -2422,8 +2430,8 @@ export default function EditProject() {
                       {/* ── Financial group ── */}
                       <div>
                         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
-                          <div className="w-6 h-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
-                            <DollarSign className="w-3.5 h-3.5 text-[#00b894]" />
+                          <div className="h-6 w-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
+                            <DollarSign className="h-3.5 w-3.5 text-[#00b894]" />
                           </div>
                           <span className="text-xs font-normal text-[#374151]">Financial Parameters</span>
                         </div>
@@ -2579,7 +2587,7 @@ export default function EditProject() {
                           "hover:border-border hover:bg-muted/50",
                           isLoading && "opacity-50 cursor-not-allowed"
                         )}>
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="h-4 w-4" />
                         Back
                       </button>
                     )}
@@ -2603,7 +2611,7 @@ export default function EditProject() {
                             "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
                           )}>
                           Continue
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                           </svg>
                         </button>
@@ -2621,7 +2629,7 @@ export default function EditProject() {
                           background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
                           boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
                         }}>
-                        <Rocket className="w-4 h-4" />
+                        <Rocket className="h-4 w-4" />
                         {isLoading ? "Saving…" : "Save Changes"}
                       </button>
                     )}
@@ -2640,7 +2648,7 @@ export default function EditProject() {
             <div className="flex items-center justify-between px-6 py-5 border-b border-border">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#f0fdf4" }}>
-                  <Mail className="w-4 h-4" style={{ color: "#00b894" }} />
+                  <Mail className="h-4 w-4" style={{ color: "#00b894" }} />
                 </div>
                 <div>
                   <h3 className="text-sm font-normal text-[#1a1a2e]">Invite User</h3>
@@ -2651,7 +2659,7 @@ export default function EditProject() {
                 type="button"
                 onClick={() => { setShowInvitePersonnelModal(false); setInvitePersonnelForm({ name: "", email: "", role_code: "" }); }}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -2660,7 +2668,7 @@ export default function EditProject() {
               <div className="text-left">
                 <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Full Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                   <input
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all text-left"
                     placeholder="e.g. John Smith"
@@ -2673,7 +2681,7 @@ export default function EditProject() {
               <div className="text-left">
                 <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                   <input
                     type="email"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all text-left"

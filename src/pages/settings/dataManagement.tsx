@@ -30,7 +30,7 @@ const DataManagement = () => {
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 ">
-                <Download className="w-4 h-4 text-muted-foreground" />
+                <Download className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="space-y-4 flex-1">
                 <div>
@@ -67,7 +67,7 @@ const DataManagement = () => {
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Upload className="w-4 h-4 text-muted-foreground" />
+                <Upload className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="space-y-4 flex-1">
                 <div>
@@ -79,7 +79,7 @@ const DataManagement = () => {
 
                 <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted transition-colors">
                   <div className="mb-3">
-                    <Upload className="w-4 h-4 text-muted-foreground" />
+                    <Upload className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="text-foreground text-sm mb-1">Drop files here or click to browse</p>
                   <p className="text-muted-foreground text-sm">Supported formats: CSV, JSON, XLSX</p>
@@ -93,7 +93,7 @@ const DataManagement = () => {
           <CardContent className="p-[25px]">
             <div className="flex gap-4">
               <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0 ">
-                <Archive className="w-4 h-4 text-destructive" />
+                <Archive className="h-4 w-4 text-destructive" />
               </div>
               <div className="space-y-4 flex-1">
                 <div>
@@ -116,7 +116,7 @@ const DataManagement = () => {
         <DialogContent className="p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b border-border">
             <DialogTitle className="flex items-center gap-2">
-              <TriangleAlert className="w-4 h-4" />
+              <TriangleAlert className="h-4 w-4" />
               Archive Project
             </DialogTitle>
           </DialogHeader>

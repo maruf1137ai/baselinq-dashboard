@@ -293,7 +293,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -313,7 +313,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                 className="h-8 text-xs rounded-lg bg-primary text-primary-foreground"
                 onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                <Plus className="h-4 w-4 mr-1.5" />
                 Upload
               </Button>
             )}
@@ -358,7 +358,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                       onClick={() => setShowSortMenu(v => !v)}
                       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-normal whitespace-nowrap"
                     >
-                      {currentSortLabel} <ChevronDown className="w-4 h-4" />
+                      {currentSortLabel} <ChevronDown className="h-4 w-4" />
                     </button>
                     {showSortMenu && (
                       <div className="absolute right-0 top-8 bg-card border border-border rounded-xl shadow-lg z-10 py-1 w-48">
@@ -469,7 +469,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
               disabled={isDeletingDoc}
               onClick={() => { if (docToDelete) handleDeleteDoc(docToDelete._id); }}
             >
-              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+              {isDeletingDoc ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
