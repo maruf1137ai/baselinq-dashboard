@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ProjectStatusCard } from '../ProjectStatusCard';
 
 import CostLedgerTable from './costLadgerTable';
-import { ExternalLinkIcon, FilterIcon, ExportIcon, ChevronDownIcon } from '../icons/icons';
+import { FilterIcon, ExportIcon, ChevronDownIcon } from '../icons/icons';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,81 +12,13 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
 } from '../ui/dropdown-menu';
-import { ViewFeesDrawer } from './viewFessDrwaer';
 import { CostLedgerDrawer } from './costLedgerDrawer';
 import CashIcon from '../icons/CashIcon';
 import useFetch from '@/hooks/useFetch';
 import { PlusIcon } from 'lucide-react';
-import { deleteData } from '@/lib/Api';
 import { toast } from 'sonner';
-import { useUserRoleStore } from '@/store/useUserRoleStore';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
-import { resolvePermissionCode, NEW_ROLE_DISPLAY_TO_CODE } from '@/lib/roleUtils';
 import { usePermission } from '@/hooks/usePermission';
-
-// Roles allowed to update/edit cost ledger entries (mirrors backend COST_LEDGER_UPDATE_ALLOWED_ROLES)
-const COST_LEDGER_EDIT_ROLES = new Set(["CQS", "CONTRACTS_MGR", "CPM", "CLIENT"]);
-
-// Maps common display names / legacy strings → role code, mirroring backend get_user_project_role_code
-const ROLE_NAME_TO_CODE: Record<string, string> = {
-  // Backbone codes pass through
-  "CQS": "CQS",
-  "CONTRACTS_MGR": "CONTRACTS_MGR",
-  "CPM": "CPM",
-  "CLIENT": "CLIENT",
-  "CLIENT/OWNER": "CLIENT",
-  "PM": "PM",
-  "CM": "CM",
-  "ARCH": "ARCH",
-  // Legacy display names → backbone codes
-  "Consultant Quantity Surveyor": "CQS",
-  "Contracts Manager": "CONTRACTS_MGR",
-  "Client Project Manager": "CPM",
-  "Client": "CLIENT",
-  "Owner": "CLIENT",
-  "Client / Owner": "CLIENT",
-  "Client/Owner": "CLIENT",
-  "CLIENT / OWNER": "CLIENT",
-  "Project Manager": "PM",
-  "Construction Manager": "CM",
-  "Architect": "ARCH",
-  // New role codes → backbone
-  "ADMIN": "CLIENT",
-  "PROJECT_ADMIN": "CPM",
-  "SUPER_USER": "CPM",
-  "QS": "CQS",
-  "LEGAL": "CONTRACTS_MGR",
-  // New display names → backbone
-  "Administrator": "CLIENT",
-  "Project Administrator": "CPM",
-  "Super User": "CPM",
-  "Quantity Surveyor": "CQS",
-  "Legal": "CONTRACTS_MGR",
-};
-
-/**
- * Resolve a raw roleName string (which may be a display name, code, or compound
- * like "Client / Owner") to a set of uppercase role codes for comparison.
- * Also applies backbone resolution for new role codes.
- */
-function resolveRoleCodes(roleName: string): string[] {
-  if (!roleName) return [];
-  const parts = roleName.split(/\s*\/\s*/);
-  const codes: string[] = [];
-  for (const part of parts) {
-    const trimmed = part.trim();
-    // Direct ROLE_NAME_TO_CODE lookup
-    let code = ROLE_NAME_TO_CODE[trimmed] || ROLE_NAME_TO_CODE[trimmed.toUpperCase()] || trimmed.toUpperCase();
-    // Display name → new code → backbone
-    if (!ROLE_NAME_TO_CODE[trimmed]) {
-      const newCode = NEW_ROLE_DISPLAY_TO_CODE[trimmed];
-      if (newCode) code = resolvePermissionCode(newCode);
-      else code = resolvePermissionCode(code);
-    }
-    codes.push(code);
-  }
-  return codes;
-}
 
 export enum Category {
   Subcontractor = 'Subcontractor',
@@ -170,15 +102,18 @@ const formatLedgerDate = (dateStr: string): string => {
 
 const CostLadger = () => {
   const projectId = localStorage.getItem('selectedProjectId') || '';
-  const { userRole } = useUserRoleStore();
 
   // Use permission matrix instead of hardcoded true
   const projectIdNum = parseInt(projectId) || null;
   const canEdit = usePermission("finance.edit", projectIdNum);
   const canCreate = usePermission("finance.edit", projectIdNum);
+  // Exporting hands over the entire ledger as a file, so it is gated on the
+  // same read permission that gates the tab rather than left open to anyone
+  // who happens to reach the page.
+  const canView = usePermission("finance.view", projectIdNum);
+  const canExport = canView || canEdit;
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
 
@@ -186,37 +121,11 @@ const CostLadger = () => {
     ? `cost-ledger/?project_id=${projectId}`
     : '';
 
-  const { data: listData, isLoading, refetch } = useFetch<LedgerListResponse>(listUrl);
+  const { data: listData, isLoading } = useFetch<LedgerListResponse>(listUrl);
 
-  const { data: summaryData, refetch: refetchSummary } = useFetch<LedgerSummary>(
+  const { data: summaryData } = useFetch<LedgerSummary>(
     projectId ? `cost-ledger/summary/?project_id=${projectId}` : '',
   );
-
-  const { data: projectData } = useFetch<{ name: string; totalBudget: number }>(
-    projectId ? `projects/${projectId}/` : '',
-  );
-
-  const feeData = useMemo(() => {
-    const totalBudget = projectData?.totalBudget ?? 0;
-    const spent = summaryData?.totalDebits ?? 0;
-    const credits = summaryData?.totalCredits ?? 0;
-    const available = totalBudget - spent;
-    const progress = totalBudget > 0 ? ((spent / totalBudget) * 100).toFixed(1) : '0';
-    return {
-      project: projectData?.name ?? '—',
-      to_date: formatSummary(spent),
-      cap: formatSummary(totalBudget),
-      progress,
-      view_billing_ledger: true,
-      financial_summary: {
-        available: formatSummary(available),
-        pending: formatSummary(0),
-        committed: formatSummary(spent),
-        spent: formatSummary(spent),
-        total: formatSummary(credits),
-      },
-    };
-  }, [projectData, summaryData]);
 
   const availableCategories = useMemo(() => {
     if (!listData?.results) return [];
@@ -248,22 +157,6 @@ const CostLadger = () => {
   const clearFilters = useCallback(() => {
     setSelectedCategories([]);
   }, []);
-
-  const handleDeleteEntry = useCallback(
-    async (id: number) => {
-      if (!projectId) return;
-      try {
-        await deleteData({ url: `cost-ledger/${id}/`, data: undefined });
-        toast.success('Entry deleted');
-        refetch();
-        refetchSummary();
-      } catch (err) {
-        toast.error('Failed to delete entry');
-        console.error(err);
-      }
-    },
-    [projectId, refetch, refetchSummary],
-  );
 
   const handleEditEntry = useCallback((entry: LedgerEntry) => {
     setEditingEntry(entry);
@@ -350,15 +243,6 @@ const CostLadger = () => {
             </button>
           )}
 
-          {/* View Fees Button */}
-          <button
-            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
-            onClick={() => setIsDrawerOpen(true)}
-          >
-            <ExternalLinkIcon className="h-4 w-4" />
-            <span>Fee Schedule</span>
-          </button>
-
           {/* Filter Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -405,13 +289,15 @@ const CostLadger = () => {
           </DropdownMenu>
 
           {/* Export CSV Button */}
-          <button
-            onClick={exportToCSV}
-            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
-          >
-            <ExportIcon className="h-4 w-4" />
-            <span>Export CSV</span>
-          </button>
+          {canExport && (
+            <button
+              onClick={exportToCSV}
+              className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
+            >
+              <ExportIcon className="h-4 w-4" />
+              <span>Export CSV</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -451,8 +337,6 @@ const CostLadger = () => {
           />
         )}
       </main>
-
-      <ViewFeesDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} data={feeData} />
 
       <CostLedgerDrawer
         isOpen={isCreateOpen}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { MoreIcon } from "../icons/icons";
 import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { AiMark } from "@/components/icons/AiMark";
+import { UserChip } from "@/components/TaskComponents/UserChip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
-  onViewDetails?: (orderId: string) => void;
+  /** Opens the underlying VO record. Receives the task id, which is what
+   *  `/tasks/:taskId` resolves against — not the display VO number. */
+  onViewDetails?: (taskId: string) => void;
   onEdit?: (order: VariationOrder) => void;
   onDelete?: (order: VariationOrder) => void;
   onNew?: () => void;
@@ -31,12 +33,11 @@ export interface VariationOrder {
   title: string;
   value: number;
   status: OrderStatus;
-  requestedBy: {
-    name: string;
-    avatarUrl: string;
-  };
+  /** null when the record carries no assignee — never substituted. */
+  requestedBy: { name: string } | null;
   updated: string;
-  impact: number;
+  /** Schedule impact in days, or null when the record does not state one. */
+  impact: number | null;
   rawTask?: any;
 }
 
@@ -83,6 +84,7 @@ const ImpactBadge: React.FC<{ days: number }> = ({ days }) => {
 
 export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   orders,
+  onViewDetails,
   onEdit,
   onDelete,
   onNew,
@@ -99,7 +101,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
       (o) =>
         o.id.toLowerCase().includes(q) ||
         o.title.toLowerCase().includes(q) ||
-        o.requestedBy.name.toLowerCase().includes(q) ||
+        (o.requestedBy?.name || "").toLowerCase().includes(q) ||
         o.status.toLowerCase().includes(q)
     );
   }, [orders, search]);
@@ -142,7 +144,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
         <table className="w-full divide-y divide-border">
           <thead className="bg-muted/50">
             <tr>
-              {["VO #", "Title", "Value", "Status", "Requested By", "Updated", "Impact", "AI", "Actions"].map((h) => (
+              {["VO #", "Title", "Value", "Status", "Requested By", "Updated", "Impact", "Actions"].map((h) => (
                 <th
                   key={h}
                   scope="col"
@@ -155,7 +157,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
           <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9}>
+                <td colSpan={8}>
                   {search ? (
                     <EmptyState
                       variant="plain"
@@ -176,8 +178,17 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
             ) : (
               paginated.map((order) => (
                 <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary hover:text-primary/80 cursor-pointer">
-                    {order.id}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {onViewDetails ? (
+                      <button
+                        type="button"
+                        onClick={() => onViewDetails(order.taskId)}
+                        className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+                        {order.id}
+                      </button>
+                    ) : (
+                      <span className="text-foreground">{order.id}</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.title}
@@ -189,36 +200,18 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                     <StatusBadge status={order.status} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      {order.requestedBy.avatarUrl ? (
-                        <img
-                          src={order.requestedBy.avatarUrl}
-                          alt={order.requestedBy.name}
-                          className="w-7 h-7 rounded-full object-cover text-white"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; }}
-                        />
-                      ) : null}
-                      <div
-                        className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs font-medium shrink-0"
-                        style={{ display: order.requestedBy.avatarUrl ? 'none' : 'flex' }}
-                      >
-                        {order.requestedBy.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <span className="text-sm text-foreground">{order.requestedBy.name}</span>
-                    </div>
+                    {order.requestedBy ? (
+                      <UserChip name={order.requestedBy.name} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Unassigned</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.updated}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <ImpactBadge days={order.impact} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {order.value > 100000 ? (
-                      <span className="flex items-center gap-1 text-amber-600">
-                        <AiMark />
-                        <span className="text-xs">{order.value > 300000 ? '3 flags' : '1 flag'}</span>
-                      </span>
+                    {order.impact != null ? (
+                      <ImpactBadge days={order.impact} />
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}

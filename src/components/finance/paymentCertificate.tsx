@@ -1,12 +1,9 @@
 import React, { useState } from "react";
 import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
-import { PaymentCertificateDrawer } from "./paymentCertificateDrawer";
 import { CreatePCDrawer, CreatePCApiPayload } from "./createPCDrawer";
 import useFetch from "@/hooks/useFetch";
 import { postData } from "@/lib/Api";
-import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
-import { resolvePermissionCode } from "@/lib/roleUtils";
 import { usePermission } from "@/hooks/usePermission";
 import { useNavigate } from "react-router-dom";
 import { BarChart2 } from "lucide-react";
@@ -18,36 +15,9 @@ interface PCListResponse {
   results: PCEntry[];
 }
 
-interface SummaryData {
-  totalApproved: number;
-  inReview: number;
-  draftPipeline: number;
-  totalValue: number;
-  approvedCount: number;
-  inReviewCount: number;
-  draftCount: number;
-  contingencyRemaining: number;
-  contingencyTotal: number;
-  contingencyUsagePercentage: number;
-}
-
-const summaryData: SummaryData = {
-  totalApproved: 3657500,
-  inReview: 192500,
-  draftPipeline: 3465000,
-  totalValue: 1748297,
-  approvedCount: 3465000,
-  inReviewCount: 192500,
-  draftCount: 0,
-  contingencyRemaining: -998297,
-  contingencyTotal: 750000,
-  contingencyUsagePercentage: 233.10626666666664,
-};
-
 const PaymentCertificate = () => {
   const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId") || "";
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const { data, isLoading, refetch } = useFetch<PCListResponse>(
@@ -55,11 +25,11 @@ const PaymentCertificate = () => {
   );
 
   const certificates: PCEntry[] = data?.results ?? [];
-  const { userRole } = useUserRoleStore();
 
-  // Use permission matrix instead of hardcoded true
+  // Drafting a certificate is an edit action. `finance.approve_payment` is the
+  // separate final sign-off and must not double as permission to create.
   const projectIdNum = parseInt(projectId) || null;
-  const canCreatePC = usePermission("finance.approve_payment", projectIdNum);
+  const canCreatePC = usePermission("finance.edit", projectIdNum);
 
   return (
     <main className="p-6">
@@ -87,18 +57,11 @@ const PaymentCertificate = () => {
         />
       )}
 
-      <PaymentCertificateDrawer
-        isOpen={isSummaryOpen}
-        onClose={() => setIsSummaryOpen(false)}
-        data={summaryData}
-      />
-
       <CreatePCDrawer
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         projectId={projectId}
         onSubmit={async (payload: CreatePCApiPayload) => {
-          console.log("Submitting PC payload:", payload);
           try {
             await postData({
               url: "tasks/payment-certificates/",

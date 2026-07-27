@@ -6,11 +6,9 @@ import {
 } from "@/components/finance/VariationOrdersTable";
 import { Button } from "@/components/ui/button";
 import React, { useMemo, useState } from "react";
-import { VOSummaryDrawer } from "@/components/finance/voSummaryDrwaer";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
-import Forecast from "@/components/finance/forecast";
 import useFetch from "@/hooks/useFetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePermission } from "@/hooks/usePermission";
@@ -34,13 +32,7 @@ import { deleteData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-
-const TABS = [
-  "Cost Ledger",
-  "Payment Certificates",
-  "Variation Orders",
-  // "Forecast",
-];
+import { useNavigate } from "react-router-dom";
 
 const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
@@ -93,8 +85,8 @@ const Finance = () => {
     ]
     : [];
 
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isVOModalOpen, setIsVOModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -109,15 +101,15 @@ const Finance = () => {
 
   const variationOrders = useMemo((): VariationOrder[] => {
     const results = voResponse?.results || [];
-    // Fallback names for VOs missing assignee data
-    const fallbackNames = ["Murray & Roberts", "WBHO Construction", "Stefanutti Stocks", "Group Five", "Raubex Group"];
 
     return results
-      .map((item: any, idx: number): VariationOrder => {
-        const assigneeName = item.assignedBy?.name || item.task?.createdBy?.name || fallbackNames[idx % fallbackNames.length];
-        // Estimate schedule impact from value: larger VOs typically have more impact
+      .map((item: any): VariationOrder => {
+        // No fabricated fallback: when the API carries no assignee the row
+        // says so rather than borrowing a real contractor's name.
+        const assigneeName = item.assignedBy?.name || item.task?.createdBy?.name || null;
         const value = item.task?.grandTotal || 0;
-        const estimatedImpact = item.task?.impact ?? (value > 300000 ? 14 : value > 100000 ? 7 : value > 50000 ? 3 : 0);
+        // Schedule impact is only shown when the record actually carries one.
+        const impact = typeof item.task?.impact === "number" ? item.task.impact : null;
 
         return {
           // Werner rev H — read camelCase OR snake_case before
@@ -128,56 +120,13 @@ const Finance = () => {
           title: item.task?.title || "-",
           value,
           status: mapStatus(item.status),
-          requestedBy: {
-            name: assigneeName,
-            avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(assigneeName)}&size=32&background=random`,
-          },
+          requestedBy: assigneeName ? { name: assigneeName } : null,
           updated: formatDate(item.update_at),
-          impact: estimatedImpact,
+          impact,
           rawTask: item.task,
         };
       });
   }, [voResponse]);
-
-  const summaryData = useMemo(() => {
-    const totalApproved = variationOrders
-      .filter((order) => order.status === OrderStatus.Approved)
-      .reduce((sum, order) => sum + order.value, 0);
-
-    const inReview = variationOrders
-      .filter((order) => order.status === OrderStatus.InReview)
-      .reduce((sum, order) => sum + order.value, 0);
-
-    const draftPipeline = 0;
-    const totalValue = totalApproved + inReview + draftPipeline;
-
-    const approvedCount = variationOrders.filter(
-      (o) => o.status === OrderStatus.Approved
-    ).length;
-    const inReviewCount = variationOrders.filter(
-      (o) => o.status === OrderStatus.InReview
-    ).length;
-    const draftCount = 0;
-
-    const contingencyTotal = 750000;
-    const contingencyUsed = totalValue;
-    const contingencyRemaining = contingencyTotal - contingencyUsed;
-    const contingencyUsagePercentage =
-      (contingencyUsed / contingencyTotal) * 100;
-
-    return {
-      totalApproved,
-      inReview,
-      draftPipeline,
-      totalValue,
-      approvedCount,
-      inReviewCount,
-      draftCount,
-      contingencyRemaining,
-      contingencyTotal,
-      contingencyUsagePercentage,
-    };
-  }, [variationOrders]);
 
   const handleEdit = (order: VariationOrder) => {
     setSelectedOrder(order);
@@ -246,6 +195,7 @@ const Finance = () => {
               ) : (
                 <VariationOrdersTable
                   orders={variationOrders}
+                  onViewDetails={(taskId) => navigate(`/tasks/${taskId}`)}
                   onEdit={canEditVariationOrder ? handleEdit : undefined}
                   onDelete={canEditVariationOrder ? handleDelete : undefined}
                   onNew={canEditVariationOrder ? () => setIsVOModalOpen(true) : undefined}
@@ -259,12 +209,6 @@ const Finance = () => {
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
       </div>
-
-      <VOSummaryDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        data={summaryData}
-      />
 
       {/* Create VO drawer */}
       <Sheet open={canEditVariationOrder && isVOModalOpen} onOpenChange={setIsVOModalOpen}>

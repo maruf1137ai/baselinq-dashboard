@@ -34,13 +34,13 @@ const ActionsCell = ({
   entry,
   onEdit,
   canEdit,
+  onViewDetails,
 }: {
   entry: LedgerEntry;
   onEdit: (entry: LedgerEntry) => void;
   canEdit: boolean;
+  onViewDetails: () => void;
 }) => {
-  const [showViewDialog, setShowViewDialog] = useState(false);
-
   return (
     <>
       <DropdownMenu>
@@ -51,7 +51,7 @@ const ActionsCell = ({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
-          <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
+          <DropdownMenuItem onSelect={onViewDetails}>
             View Details
           </DropdownMenuItem>
           {canEdit && (
@@ -61,8 +61,22 @@ const ActionsCell = ({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+    </>
+  );
+};
 
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+const LedgerDetailsDialog = ({
+  entry,
+  open,
+  onOpenChange,
+}: {
+  entry: LedgerEntry;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Details for {entry.ref}</DialogTitle>
@@ -88,6 +102,66 @@ const ActionsCell = ({
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+const LedgerRow = ({
+  entry,
+  onEdit,
+  canEdit,
+}: {
+  entry: LedgerEntry;
+  onEdit: (entry: LedgerEntry) => void;
+  canEdit: boolean;
+}) => {
+  const [showViewDialog, setShowViewDialog] = useState(false);
+
+  return (
+    <tr className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.date}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+        <div>{entry.supplier}</div>
+        {entry.supplierShort && (
+          <div className="font-normal text-muted-foreground">{entry.supplierShort}</div>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <button
+          type="button"
+          onClick={() => setShowViewDialog(true)}
+          className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+          {entry.ref || "—"}
+        </button>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.period}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+        {formatCurrency(entry.net)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+        {formatCurrency(entry.total)}
+      </td>
+      {/* Plain text, not a link: the ledger payload carries the VO/PC number
+          and its own primary key, neither of which resolves to a route. */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+        {entry.linkedVOOrPC || entry.linkedVO || "—"}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <CategoryBadge category={entry.category} />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+        <ActionsCell
+          entry={entry}
+          onEdit={onEdit}
+          canEdit={canEdit}
+          onViewDetails={() => setShowViewDialog(true)}
+        />
+        <LedgerDetailsDialog
+          entry={entry}
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+        />
+      </td>
+    </tr>
   );
 };
 
@@ -194,30 +268,12 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
               </tr>
             ) : (
               paginated.map((entry) => (
-                <tr
+                <LedgerRow
                   key={entry.id}
-                  className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    <div>{entry.supplier}</div>
-                    {entry.supplierShort && <div className="font-normal text-muted-foreground">{entry.supplierShort}</div>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-primary/80 cursor-pointer">
-                    {entry.ref}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.period}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">{formatCurrency(entry.net)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">{formatCurrency(entry.total)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-primary/80 cursor-pointer">
-                    {entry.linkedVOOrPC || entry.linkedVO || "—"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <CategoryBadge category={entry.category} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                    <ActionsCell entry={entry} onEdit={onEditEntry} canEdit={canEdit} />
-                  </td>
-                </tr>
+                  entry={entry}
+                  onEdit={onEditEntry}
+                  canEdit={canEdit}
+                />
               ))
             )}
           </tbody>

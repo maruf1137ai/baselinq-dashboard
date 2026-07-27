@@ -16,7 +16,6 @@ import {
   DialogClose,
 } from "../ui/dialog";
 import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { AiMark } from "@/components/icons/AiMark";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -60,34 +59,18 @@ const ApprovalBadge = ({ status }: { status: string }) => {
   );
 };
 
-// Mock AI flags per PC number
-const aiFlags: Record<string, number> = {
-  'PC-004': 2,
-  'PC-003': 2,
-  'PC-002': 1,
-};
-
-const ActionsCell = ({ entry }: { entry: PCEntry }) => {
-  const [showViewDialog, setShowViewDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
+const PCDetailsDialog = ({
+  entry,
+  open,
+  onOpenChange,
+}: {
+  entry: PCEntry;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) => {
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-40" align="end">
-          <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
-            View Details
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
@@ -109,30 +92,62 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Entry</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{entry.pcNumber}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
-                Cancel
-              </button>
-            </DialogClose>
-            <button
-              onClick={() => setShowDeleteDialog(false)}
-              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-red-600 hover:bg-red-700">
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
+  );
+};
+
+const PCRow = ({ entry }: { entry: PCEntry }) => {
+  const [showViewDialog, setShowViewDialog] = useState(false);
+
+  return (
+    <tr>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <button
+          type="button"
+          onClick={() => setShowViewDialog(true)}
+          className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+          {entry.pcNumber}
+        </button>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+        {entry.period}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+        {formatCurrency(entry.claimAmount)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
+        {formatCurrency(entry.retentionAmount)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+        {formatCurrency(entry.netAmount)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <ApprovalBadge status={entry.approvalStatus} />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+        {formatDate(entry.updatedAt)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-40" align="end">
+            <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
+              View Details
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <PCDetailsDialog
+          entry={entry}
+          open={showViewDialog}
+          onOpenChange={setShowViewDialog}
+        />
+      </td>
+    </tr>
   );
 };
 
@@ -189,7 +204,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-muted/50">
             <tr>
-              {["PC #", "Period", "Claim", "Retention", "Net", "Approvals", "AI", "Updated", "Actions"].map((header) => (
+              {["PC #", "Period", "Claim", "Retention", "Net", "Approvals", "Updated", "Actions"].map((header) => (
                 <th
                   key={header}
                   scope="col"
@@ -202,7 +217,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
           <tbody className="bg-card divide-y divide-gray-200">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9}>
+                <td colSpan={8}>
                   {search ? (
                     <EmptyState
                       variant="plain"
@@ -221,44 +236,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                 </td>
               </tr>
             ) : (
-              paginated.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-primary/80 cursor-pointer">
-                    {order.pcNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {order.period}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
-                    {formatCurrency(order.claimAmount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
-                    {formatCurrency(order.retentionAmount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
-                    {formatCurrency(order.netAmount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <ApprovalBadge status={order.approvalStatus} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {aiFlags[order.pcNumber] ? (
-                      <span className="inline-flex items-center gap-1">
-                        <AiMark className="text-amber-500" />
-                        <span className="text-xs text-amber-600">{aiFlags[order.pcNumber]} flags</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDate(order.updatedAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    <ActionsCell entry={order} />
-                  </td>
-                </tr>
-              ))
+              paginated.map((order) => <PCRow key={order.id} entry={order} />)
             )}
           </tbody>
         </table>

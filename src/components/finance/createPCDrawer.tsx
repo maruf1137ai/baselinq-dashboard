@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import useFetch from "@/hooks/useFetch";
 import { CloseIcon } from "../icons/icons";
 import { Plus, Trash2, Paperclip, X, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -70,102 +71,6 @@ interface CreatePCDrawerProps {
   projectId: string | null;
   onSubmit?: (payload: CreatePCApiPayload) => void | Promise<void>;
 }
-
-// ─── Default seed data (from prior PCs) ──────────────────────────────────────
-
-const DEFAULT_WORK_ITEMS: WorkLineItem[] = [
-  {
-    id: "1",
-    description: "Preliminaries",
-    contractValue: 4500000,
-    previouslyCertified: 3825000,
-    thisPeriod: 225000,
-  },
-  {
-    id: "2",
-    description: "Substructure",
-    contractValue: 6800000,
-    previouslyCertified: 6800000,
-    thisPeriod: 0,
-  },
-  {
-    id: "3",
-    description: "Superstructure",
-    contractValue: 12000000,
-    previouslyCertified: 9600000,
-    thisPeriod: 600000,
-  },
-  {
-    id: "4",
-    description: "Roof Works",
-    contractValue: 3800000,
-    previouslyCertified: 2660000,
-    thisPeriod: 380000,
-  },
-  {
-    id: "5",
-    description: "Internal Finishes",
-    contractValue: 8500000,
-    previouslyCertified: 2975000,
-    thisPeriod: 850000,
-  },
-  {
-    id: "6",
-    description: "Mechanical",
-    contractValue: 4200000,
-    previouslyCertified: 1260000,
-    thisPeriod: 630000,
-  },
-  {
-    id: "7",
-    description: "Electrical",
-    contractValue: 3800000,
-    previouslyCertified: 1140000,
-    thisPeriod: 570000,
-  },
-  {
-    id: "8",
-    description: "External Works",
-    contractValue: 2100000,
-    previouslyCertified: 0,
-    thisPeriod: 210000,
-  },
-];
-
-const DEFAULT_VO_ITEMS: VOLineItem[] = [
-  {
-    voNumber: "VO-005",
-    description: "HVAC system upgrade for server room",
-    approvedValue: 2850000,
-    previouslyCertified: 1425000,
-    thisPeriod: 0,
-    included: false,
-  },
-  {
-    voNumber: "VO-003",
-    description: "Structural steel upgrade - main columns",
-    approvedValue: 3200000,
-    previouslyCertified: 3200000,
-    thisPeriod: 0,
-    included: false,
-  },
-  {
-    voNumber: "VO-002",
-    description: "Facade panel material change",
-    approvedValue: 1750000,
-    previouslyCertified: 1050000,
-    thisPeriod: 0,
-    included: false,
-  },
-  {
-    voNumber: "VO-001",
-    description: "Electrical capacity increase",
-    approvedValue: 980000,
-    previouslyCertified: 980000,
-    thisPeriod: 0,
-    included: false,
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -298,17 +203,47 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // Certificate Info (pcNumber is set by backend on create)
   const pcNumber = "—"; // readonly; backend returns PC-001, PC-002, etc.
   const [valuationPeriod, setValuationPeriod] = useState<Date | undefined>(
-    new Date(2025, 10, 1) // Nov 2025 — next after last PC
+    // First day of the current month — not a date pinned to a demo dataset.
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [certificateDate, setCertificateDate] = useState<Date | undefined>(
     new Date()
   );
 
   // Work Completed
-  const [workItems, setWorkItems] = useState<WorkLineItem[]>(DEFAULT_WORK_ITEMS);
+  const [workItems, setWorkItems] = useState<WorkLineItem[]>([]);
 
-  // Variation Orders
-  const [voItems, setVoItems] = useState<VOLineItem[]>(DEFAULT_VO_ITEMS);
+  // Variation Orders — populated from the project's approved VOs, never seeded.
+  const [voItems, setVoItems] = useState<VOLineItem[]>([]);
+
+  const { data: voResponse, isLoading: isLoadingVOs } = useFetch<{ results: any[] }>(
+    isOpen && projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
+    { enabled: !!(isOpen && projectId) }
+  );
+
+  const approvedVOs = useMemo<VOLineItem[]>(() => {
+    return (voResponse?.results || [])
+      .filter((item: any) => String(item.status || "").toLowerCase() === "approved")
+      .map((item: any) => ({
+        voNumber: item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`,
+        description: item.task?.title || "",
+        approvedValue: item.task?.grandTotal || 0,
+        previouslyCertified: 0,
+        thisPeriod: 0,
+        included: false,
+      }));
+  }, [voResponse]);
+
+  // Sync the editable VO rows with the fetched register, preserving any
+  // inclusion / amount the user has already entered for a given VO.
+  useEffect(() => {
+    setVoItems((prev) =>
+      approvedVOs.map((vo) => {
+        const existing = prev.find((p) => p.voNumber === vo.voNumber);
+        return existing ? { ...vo, included: existing.included, thisPeriod: existing.thisPeriod } : vo;
+      })
+    );
+  }, [approvedVOs]);
 
   // Materials on Site
   const [materialsOnSite, setMaterialsOnSite] = useState(0);
@@ -697,6 +632,25 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-card">
+                    {workItems.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-8">
+                          <div className="rounded-lg bg-muted/50 px-4 py-6 text-center">
+                            <p className="text-sm text-foreground">No work items yet</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Add a line for each section of work being valued this period.
+                            </p>
+                            <button
+                              onClick={addWorkItem}
+                              className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Add Line Item
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {workItems.map((item) => {
                       const cumulative =
                         item.previouslyCertified + item.thisPeriod;
@@ -818,6 +772,20 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-card">
+                    {voItems.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-8">
+                          <div className="rounded-lg bg-muted/50 px-4 py-6 text-center">
+                            <p className="text-sm text-foreground">
+                              {isLoadingVOs ? "Loading approved variation orders…" : "No approved variation orders"}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Variations appear here once they are approved on this project.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {voItems.map((vo) => (
                       <tr
                         key={vo.voNumber}
