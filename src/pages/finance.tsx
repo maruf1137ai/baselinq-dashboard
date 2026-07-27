@@ -9,9 +9,11 @@ import React, { useMemo, useState } from "react";
 import { VOSummaryDrawer } from "@/components/finance/voSummaryDrwaer";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
+import PlatformFees from "@/components/finance/platformFees";
 import Forecast from "@/components/finance/forecast";
 import useFetch from "@/hooks/useFetch";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePermission } from "@/hooks/usePermission";
 import {
   Dialog,
   DialogContent,
@@ -57,8 +59,38 @@ const Finance = () => {
   const { canViewFinance, canEditFinance } = usePermissions();
   const canEditVariationOrder = canEditFinance;
 
+  const selectedProjectId =
+    parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+
+  // Platform Fees is the EMPLOYER'S BILL from Baselinq. It is not project
+  // cost — it is what this project's employer owes us, broken down to the
+  // certificate and variation it arose from. A contractor holding
+  // `finance.view` should not be reading it.
+  //
+  // `finance.approve_payment` is the closest existing code: it is the final
+  // sign-off on payment certificates, so it sits with the employer/PA side
+  // rather than with anyone who merely has read access to Finance.
+  //
+  // TODO(security): this is a CLIENT-SIDE GATE ONLY and must not be mistaken
+  // for access control.
+  //   1. `GET /api/cost-ledger/fees/` is `IsAuthenticated` + project
+  //      membership. Any project member can still read the employer's bill
+  //      directly from the API — hiding the tab hides the UI, not the data.
+  //      Server-side enforcement on that action is still required.
+  //   2. `finance.approve_payment` is being borrowed, not chosen. It means
+  //      "may sign off a payment certificate", which is adjacent to but not
+  //      the same as "may see what Baselinq bills the employer". A dedicated
+  //      `finance.platform_fee.view` code should be added to the permission
+  //      matrix and enforced on both sides, and this gate switched to it.
+  const canViewPlatformFees = usePermission("finance.approve_payment", selectedProjectId);
+
   const visibleTabs = canViewFinance
-    ? ["Cost Ledger", "Payment Certificates", "Variation Orders"]
+    ? [
+      "Cost Ledger",
+      "Payment Certificates",
+      "Variation Orders",
+      ...(canViewPlatformFees ? ["Platform Fees"] : []),
+    ]
     : [];
 
   const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
@@ -181,14 +213,23 @@ const Finance = () => {
             <h1 className="text-2xl font-normal text-foreground tracking-tight">Finance</h1>
           </div>
           <header className="border-b border-border">
-            <div className="flex items-center gap-2">
+            {/* role="tablist" + aria-selected so the tab strip is navigable and
+                announced as tabs rather than a row of unrelated buttons.
+
+                focus-visible is declared explicitly because these are bare
+                <button>s, not the Button primitive. Without it the browser
+                draws its own default outline — a blue box that belongs to no
+                part of this design system and does not match the brand. */}
+            <div className="flex items-center gap-2" role="tablist">
               {visibleTabs.map((tab) => (
                 <button
                   key={tab}
+                  role="tab"
+                  aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`text-sm py-4 px-6 border-b-2 transition-all ${activeTab === tab
+                  className={`text-sm py-4 px-6 border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
-                    : "text-muted-foreground border-transparent"
+                    : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
                   {tab}
                 </button>
@@ -214,6 +255,7 @@ const Finance = () => {
           )}
           {activeTab === "Cost Ledger" && <CostLadger />}
           {activeTab === "Payment Certificates" && <PaymentCertificate />}
+          {activeTab === "Platform Fees" && canViewPlatformFees && <PlatformFees />}
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
       </div>

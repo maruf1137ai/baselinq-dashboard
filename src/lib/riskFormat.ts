@@ -104,7 +104,13 @@ const HIDDEN_KEYS = new Set([
   "status",
 ]);
 
-function titleCase(key: string): string {
+/**
+ * Fallback label for a backend key with no metadata entry.
+ * Exported because the same "raw snake_case key → human label" problem recurs
+ * wherever the backend hands the UI a structured detail blob — see
+ * `lib/feeBasis.ts`, which applies this module's approach to platform fees.
+ */
+export function titleCase(key: string): string {
   return key
     .replace(/_/g, " ")
     .replace(/\b\w/g, c => c.toUpperCase());
