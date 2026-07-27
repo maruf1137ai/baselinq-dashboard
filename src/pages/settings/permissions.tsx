@@ -136,10 +136,13 @@ export function PermissionsContent({ readOnly = false, projectId = null }: { rea
  * Standalone page — full header + content. Used by the sidebar "Roles & Permissions" route.
  */
 export default function PermissionsPage() {
+  // p-6 matches every other settings sub-page. Without it this page rendered
+  // flush against the settings sidebar, because settings.tsx passes
+  // padding="p-0" to the layout and each sub-page owns its own padding.
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-normal text-foreground">Roles & Permissions</h1>
+        <h2 className="text-2xl font-normal tracking-tight text-foreground">Roles &amp; Permissions</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Manage roles and what each role can do. Changes take effect immediately.
         </p>
