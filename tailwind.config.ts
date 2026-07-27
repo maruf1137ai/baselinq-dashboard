@@ -41,7 +41,10 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#6c5ce7",
+          // --primary is the exact HSL of the previous #6c5ce7 literal, so
+          // this is a zero-pixel change today. It also means a rebrand is
+          // one CSS variable rather than a find-and-replace.
+          DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -81,11 +84,14 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         sidebar: {
-          DEFAULT: "#f3f2f0",
+          // These three were hardcoded literals, which orphaned the
+          // --sidebar-* variables entirely. Values below are the exact HSL
+          // equivalents, so appearance is unchanged.
+          DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
-          primary: "#f3f2f0",
+          primary: "hsl(var(--sidebar-background))",
           "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "#E8E8E8",
+          accent: "hsl(var(--sidebar-accent))",
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",

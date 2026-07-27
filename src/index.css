@@ -18,13 +18,23 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: #f7f8fb;
+    /* HSL triplet, not hex. Tailwind consumes this as hsl(var(--background)),
+       so a hex value here compiles to hsl(#f7f8fb) — invalid CSS that the
+       browser drops, silently making every `bg-background` a no-op
+       (including body). 225 33% 98% is the exact HSL of the previous
+       #f7f8fb, so the intended appearance is preserved. */
+    --background: 225 33% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 248 73% 65%;
+    /* Exact HSL of #6c5ce7, the brand purple that tailwind.config.ts has
+       been hardcoding. Pointing the config at this token instead of the
+       literal is therefore a zero-pixel change. (The previous value,
+       248 73% 65%, was a near-miss that would have shifted the brand
+       colour slightly if anything had actually used it.) */
+    --primary: 247 74% 63%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -44,11 +54,17 @@ All colors MUST be HSL.
     --input: 214 32% 91%;
     --ring: 248 73% 65%;
     --radius: 0.5rem;
-    --sidebar-background: #f3f2f0;
+    /* HSL of the previous #f3f2f0. This variable was dead — nothing
+       consumed it, because tailwind.config.ts hardcoded the literal
+       instead. The config now points here, making this the single source
+       of truth for the sidebar surface. */
+    --sidebar-background: 40 11% 95%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 248 73% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
+    /* HSL of the previous #E8E8E8 literal in tailwind.config.ts, which the
+       config now reads from here. The old value (220 14% 96%) was unused. */
+    --sidebar-accent: 0 0% 91%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
     --sidebar-ring: 248 73% 65%;

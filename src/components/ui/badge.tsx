@@ -15,6 +15,20 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+
+        // Semantic status variants.
+        //
+        // These exist because 31 call sites were hand-rolling status colour
+        // classNames, and had drifted across three intensity scales
+        // (bg-*-50, bg-*-100, bg-*-600) and two different greens (green and
+        // emerald) for the same meaning. The 50/700/200 scale below is the
+        // one already used by src/lib/statusColors.ts, so this codifies the
+        // existing convention rather than inventing a new one.
+        success: "border-green-200 bg-green-50 text-green-700",
+        warning: "border-amber-200 bg-amber-50 text-amber-700",
+        danger: "border-red-200 bg-red-50 text-red-700",
+        info: "border-blue-200 bg-blue-50 text-blue-700",
+        neutral: "border-border bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {
