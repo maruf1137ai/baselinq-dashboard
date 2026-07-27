@@ -25,8 +25,13 @@ export default {
         black3: "#0F172A",
         black4: "#111827",
         gray1: "#8B8B8B",
-        gray2: "#6B6B6B",
-        gray3: "#6F7372",
+        // Legacy secondary-text aliases. gray2 (#6B6B6B) was a dead-neutral
+        // grey and gray3 (#6F7372) a faintly GREEN grey (hue 165) — both sat
+        // outside the hue-220 neutral ramp while doing the same job as
+        // --muted-foreground. Repointed at the token rather than rewriting
+        // the ~30 call sites, so secondary text is one colour everywhere.
+        gray2: "hsl(var(--muted-foreground))",
+        gray3: "hsl(var(--muted-foreground))",
         gray4: "#6B7280",
         purple: "#6c5ce7",
         green_dark: "#10B981",
