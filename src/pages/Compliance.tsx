@@ -115,7 +115,7 @@ const Compliance = () => {
               <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
               Risk Overview
             </Button>
-            <Button className="h-8 text-xs rounded-lg bg-primary text-white" onClick={() => setIsGenerateNoticeModalOpen(true)}>
+            <Button className="h-8 text-xs rounded-lg bg-primary text-primary-foreground" onClick={() => setIsGenerateNoticeModalOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add Item
             </Button>
@@ -269,9 +269,9 @@ const Compliance = () => {
 
       {/* Risk Overview Drawer */}
       <Sheet open={isRiskDrawerOpen} onOpenChange={setIsRiskDrawerOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-[400px] p-0 flex flex-col bg-card">
+        <SheetContent side="right" size="sm" className="p-0 flex flex-col">
           <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-foreground">
+            <SheetTitle className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               Risk Overview
             </SheetTitle>

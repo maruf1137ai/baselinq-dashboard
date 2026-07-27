@@ -12,9 +12,9 @@ interface EnableTwoFactorModalProps {
 const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden bg-card">
+      <DialogContent className="p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border">
-          <DialogTitle className="text-sm font-normal text-foreground">Enable Two-Factor Authentication</DialogTitle>
+          <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 space-y-6">
@@ -48,7 +48,7 @@ const EnableTwoFactorModal = ({ open, onOpenChange }: EnableTwoFactorModalProps)
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-border sm:justify-between gap-3">
+        <DialogFooter className="px-6 py-4 border-t border-border sm:justify-between">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
             Cancel
           </Button>

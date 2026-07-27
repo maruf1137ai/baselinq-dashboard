@@ -40,9 +40,9 @@ This matter requires your immediate attention as it blocks payment.
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-card   p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-lg text-foreground font-normal">Generate Notice</DialogTitle>
+      <DialogContent className="p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>Generate Notice</DialogTitle>
         </DialogHeader>
         
         <div className="p-6 space-y-6">
@@ -59,7 +59,7 @@ This matter requires your immediate attention as it blocks payment.
               {recipients.map((recipient) => (
                 <Badge key={recipient} variant="secondary" className="bg-[#E8F1FF] rounded-xl text-[#3A6FF7] hover:bg-blue-100 gap-1 pl-2 pr-1 py-1 font-normal">
                   {recipient}
-                  <button onClick={() => removeRecipient(recipient)} className="hover:bg-blue-200 rounded-full p-0.5">
+                  <button aria-label={`Remove ${recipient}`} onClick={() => removeRecipient(recipient)} className="hover:bg-primary/10 rounded-full p-0.5">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -84,11 +84,11 @@ This matter requires your immediate attention as it blocks payment.
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t  flex justify-end gap-3">
+        <DialogFooter className="px-6 py-4 border-t border-border">
           <Button variant="outline" onClick={onClose} className="bg-card">
             Cancel
           </Button>
-          <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">
+          <Button className="bg-primary hover:bg-primary text-primary-foreground">
             Generate & Link to Task
           </Button>
         </DialogFooter>

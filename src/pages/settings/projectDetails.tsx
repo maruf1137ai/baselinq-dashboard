@@ -381,7 +381,7 @@ const ProjectDetails = () => {
             <Button
               type="submit"
               disabled={isSaving}
-              className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0"
+              className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -467,7 +467,7 @@ const ProjectDetails = () => {
                       : "Pick a date"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-card" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.start_date ? parseISO(formData.start_date) : undefined}
@@ -493,7 +493,7 @@ const ProjectDetails = () => {
                       : "Pick a date"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-card" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.end_date ? parseISO(formData.end_date) : undefined}
@@ -846,7 +846,7 @@ const ProjectDetails = () => {
       />
 
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-[425px] bg-card">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <TriangleAlert className="w-4 h-4" />

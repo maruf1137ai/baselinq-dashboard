@@ -261,7 +261,7 @@ const Communications = () => {
                         <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search users…" className="text-xs" />
                         <CommandList>

@@ -135,7 +135,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
                     <Tooltip key={member.id || index}>
                       <TooltipTrigger asChild>
                         <div
-                          className="h-8 w-8 rounded-full bg-[#6c5ce7] border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer shadow-sm"
+                          className="h-8 w-8 rounded-full bg-primary border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer shadow-sm"
                         >
                           {initial}
                         </div>

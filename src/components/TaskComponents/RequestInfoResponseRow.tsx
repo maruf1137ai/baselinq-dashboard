@@ -157,7 +157,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
       </div>
 
       <Dialog open={open} onOpenChange={(v) => !submitting && setOpen(v)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Respond to Request</DialogTitle>
             <DialogDescription>
@@ -194,7 +194,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
               Cancel
             </Button>
             <Button
-              className="bg-primary text-white hover:bg-primary/90 disabled:bg-primary/40 disabled:cursor-not-allowed"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/40 disabled:cursor-not-allowed"
               disabled={!canSubmit}
               onClick={handleSubmit}
             >

@@ -287,7 +287,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingId(null); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Phase" : "Add Phase"}</DialogTitle>
           </DialogHeader>
@@ -340,7 +340,7 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
               </Select>
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"

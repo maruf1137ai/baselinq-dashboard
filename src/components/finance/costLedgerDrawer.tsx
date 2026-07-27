@@ -143,8 +143,8 @@ export function CostLedgerDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-[540px] p-0 flex flex-col bg-card">
-        <SheetHeader className="px-6 py-4 border-b shrink-0">
+      <SheetContent side="right" size="md" className="p-0 flex flex-col">
+        <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
           <SheetTitle>{editEntry ? "Edit Cost Ledger Entry" : "New Cost Ledger Entry"}</SheetTitle>
         </SheetHeader>
 
@@ -166,7 +166,7 @@ export function CostLedgerDrawer({
                       {formData.date ? format(new Date(formData.date), "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-card" align="start">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={formData.date ? new Date(formData.date) : undefined}
@@ -315,7 +315,7 @@ export function CostLedgerDrawer({
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white" disabled={loading}>
+              <Button type="submit" className="bg-primary hover:bg-primary text-primary-foreground" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editEntry ? "Update Entry" : "Create Entry"}
               </Button>

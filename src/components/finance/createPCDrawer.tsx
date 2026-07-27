@@ -614,7 +614,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-card" align="start">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={valuationPeriod}
@@ -645,7 +645,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-card" align="start">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={certificateDate}

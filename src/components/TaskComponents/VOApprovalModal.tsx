@@ -104,9 +104,9 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-card border-none shadow-2xl">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-normal">{title}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {vo.voNumber} — {vo.title}
           </DialogDescription>
@@ -253,7 +253,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="pt-6 sm:justify-end gap-2">
+        <DialogFooter className="pt-4">
           <Button
             variant="outline"
             className="font-normal border-border/60 hover:bg-muted/50"
@@ -263,7 +263,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             Cancel
           </Button>
           <Button
-            className="font-normal bg-primary text-white hover:bg-primary/90 px-6 disabled:bg-primary/40 disabled:cursor-not-allowed"
+            className="font-normal bg-primary text-primary-foreground hover:bg-primary/90 px-6 disabled:bg-primary/40 disabled:cursor-not-allowed"
             disabled={!canSubmit}
             onClick={handleConfirm}
           >

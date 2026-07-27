@@ -218,7 +218,7 @@ const OrgTeamTable = () => {
         {isOrgOwner && (
           <Button
             onClick={() => setShowInviteModal(true)}
-            className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2 rounded-lg"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg"
           >
             <Plus className="w-4 h-4" />
             Invite User
@@ -390,9 +390,9 @@ const OrgTeamTable = () => {
 
       {/* Invite Member Modal */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="max-w-md bg-card">
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Invite User</DialogTitle>
+            <DialogTitle>Invite User</DialogTitle>
             <DialogDescription className="text-xs">
               Send an invitation to join your organization on Baselinq.
             </DialogDescription>
@@ -438,12 +438,12 @@ const OrgTeamTable = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setShowInviteModal(false)} className="rounded-lg h-10 px-6">Cancel</Button>
             <Button
               onClick={handleInvite}
               disabled={isSubmitting || !inviteForm.email || !inviteForm.position}
-              className="bg-primary text-white hover:bg-primary/90 rounded-lg h-10 px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 px-6"
             >
               {isSubmitting ? "Sending..." : "Send Invitation"}
             </Button>
@@ -453,9 +453,9 @@ const OrgTeamTable = () => {
 
       {/* Edit Role Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md bg-card">
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-normal">Change User Role</DialogTitle>
+            <DialogTitle>Change User Role</DialogTitle>
             <DialogDescription className="text-xs">
               Update {selectedMember?.name || selectedMember?.email}'s role in the organization.
             </DialogDescription>
@@ -480,12 +480,12 @@ const OrgTeamTable = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setShowEditModal(false)} className="rounded-lg h-10 px-6">Cancel</Button>
             <Button
               onClick={handleUpdateRole}
               disabled={isSubmitting}
-              className="bg-primary text-white hover:bg-primary/90 rounded-lg h-10 px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 px-6"
             >
               {isSubmitting ? "Updating..." : "Save Changes"}
             </Button>
@@ -495,9 +495,9 @@ const OrgTeamTable = () => {
 
       {/* Remove Member Alert */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Remove User</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to remove {selectedMember?.name || selectedMember?.email} from this organization? They will lose access to all associated projects.
             </AlertDialogDescription>
@@ -517,9 +517,9 @@ const OrgTeamTable = () => {
 
       {/* Cancel Invite Alert */}
       <AlertDialog open={showCancelInviteDialog} onOpenChange={setShowCancelInviteDialog}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">Cancel Invitation</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               Are you sure you want to cancel the invitation sent to {selectedInvite?.email}?
             </AlertDialogDescription>

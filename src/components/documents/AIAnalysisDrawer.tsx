@@ -46,12 +46,12 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[550px] p-0 flex flex-col border-border bg-card">
+      <SheetContent size="md" className="p-0 flex flex-col">
         <SheetHeader className="px-6 py-4 border-b border-border pr-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AiIcon size={16} className="text-primary" />
-              <SheetTitle className="text-base font-normal text-foreground">AI Analysis</SheetTitle>
+              <SheetTitle>AI Analysis</SheetTitle>
             </div>
             <Button
               variant="ghost"

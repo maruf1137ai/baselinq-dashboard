@@ -103,9 +103,9 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-card max-h-[88vh] overflow-y-auto font-sans">
+      <DialogContent size="xl" className="max-h-[88vh] overflow-y-auto font-sans">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
+          <DialogTitle className="flex items-center gap-2">
             <AiIcon className="h-5 w-5 text-primary" />
             AI Weather Analysis
           </DialogTitle>

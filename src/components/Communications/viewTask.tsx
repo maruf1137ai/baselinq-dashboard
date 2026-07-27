@@ -128,10 +128,10 @@ export default function RightSideDrawer() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 bg-card text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
+      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 text-foreground shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
         {/* Drawer header */}
-        {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
-          <DialogTitle className="text-lg font-medium">
+        {/* <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>
             Drawer Title
           </DialogTitle>
         </DialogHeader> */}
@@ -176,7 +176,7 @@ export default function RightSideDrawer() {
                     onClick={() => setActiveTab(tab)}
                     className={`py-2.5 px-5 text-sm transition-colors rounded-md ${
                       activeTab === tab
-                        ? "bg-primary text-white rounded-t-lg"
+                        ? "bg-primary text-primary-foreground rounded-t-lg"
                         : "text-foreground hover:text-primary"
                     }`}
                     style={
@@ -333,7 +333,7 @@ export default function RightSideDrawer() {
               {activeTab === "Audit Trail" && (
                 <div className="flex flex-col">
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -345,7 +345,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -357,7 +357,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue

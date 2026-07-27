@@ -266,7 +266,7 @@ const ActionsCell = ({
       </DropdownMenu>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{isPendingInvitation ? "Revoke Invitation" : "Remove User"}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -289,7 +289,7 @@ const ActionsCell = ({
 
       {/* Edit Role Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="bg-card">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -517,7 +517,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
         {canAddTeamMember && (
           <Button
             onClick={openAddModal}
-            className="bg-primary text-white border border-border text-sm !py-3 !px-4 flex items-center gap-0">
+            className="bg-primary text-primary-foreground border border-border text-sm !py-3 !px-4 flex items-center gap-0">
             <span className="mr-1">+</span>
             Add User
           </Button>
@@ -554,7 +554,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   type="button"
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-3 text-xs font-normal transition-all border-b-2 ${activeTab === tab
-                    ? "border-[#6c5ce7] text-[#6c5ce7]"
+                    ? "border-primary text-primary"
                     : "border-transparent text-[#6b7280] hover:text-[#374151]"
                     }`}>
                   {tab === "add" ? "Existing Users" : "Invite External"}
@@ -572,10 +572,10 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-primary transition-all text-left">
                           {selectedUser ? (
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                 {(selectedUser.name || selectedUser.email).charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -589,7 +589,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                           <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search users…" className="text-xs" />
                           <CommandList>
@@ -618,7 +618,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                                     className="cursor-pointer px-3 py-2.5">
                                     <div className="flex items-center justify-between w-full">
                                       <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                           {(u.name || u.email).charAt(0).toUpperCase()}
                                         </div>
                                         <div>
@@ -628,7 +628,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                                       </div>
                                       <div className={cn(
                                         "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                        isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
+                                        isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                       )}>
                                         {isSelected && <Check className="h-3 w-3 text-white" />}
                                       </div>
@@ -696,7 +696,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                         type="text"
                         value={inviteName}
                         onChange={(e) => setInviteName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                         placeholder="e.g. John Doe"
                       />
                     </div>
@@ -709,7 +709,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                         type="email"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                         placeholder="e.g. john@example.com"
                       />
                     </div>
@@ -817,7 +817,7 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
                   className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     <div className="my-auto flex items-center gap-5 capitalize">
-                      <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-normal capitalize">
+                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-normal capitalize">
                         {member.user.name?.charAt(0) || "?"}
                       </div>
                       {member.user.name}

@@ -310,7 +310,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
             </Button>
             {canUploadAny && canUploadDocument && (
               <Button
-                className="h-8 text-xs rounded-lg bg-primary text-white"
+                className="h-8 text-xs rounded-lg bg-primary text-primary-foreground"
                 onClick={() => navigate(`/documents/upload?tab=${activeTab.toLowerCase()}`)}
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -450,7 +450,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
       />
 
       <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>

@@ -104,14 +104,14 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-card rounded-2xl border-none shadow-2xl">
-        <DialogHeader className="px-8 py-6 border-b bg-muted/50">
+      <DialogContent className="p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
               <FileClock className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-normal text-foreground">Upload New Version</DialogTitle>
+              <DialogTitle>Upload New Version</DialogTitle>
               <p className="text-xs text-gray-500 mt-0.5">Updating: {doc.reference}</p>
             </div>
           </div>
@@ -202,7 +202,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
           </div>
         </div>
 
-        <DialogFooter className="px-8 py-6 border-t bg-muted/50 flex gap-3 shrink-0">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 shrink-0">
           <Button variant="outline" onClick={handleClose} disabled={submitting} className="flex-1 font-normal h-11 border-border bg-card">Cancel</Button>
           <Button
             onClick={handleSubmit}

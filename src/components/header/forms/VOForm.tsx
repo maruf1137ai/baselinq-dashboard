@@ -256,7 +256,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
               {dateInstructed ? format(dateInstructed, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-card" align="start">
+          <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
               selected={dateInstructed}

@@ -331,7 +331,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Create dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!o) closeDialogs(); }}>
-        <DialogContent className="bg-card sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Create Custom Role</DialogTitle>
           </DialogHeader>
@@ -347,7 +347,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Edit dialog */}
       <Dialog open={!!editingRole} onOpenChange={(o) => { if (!o) closeDialogs(); }}>
-        <DialogContent className="bg-card sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
           </DialogHeader>
@@ -363,7 +363,7 @@ export function RolesTab({ canManage = true }: { canManage?: boolean }) {
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deletingRole} onOpenChange={(o) => { if (!o) setDeletingRole(null); }}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{deletingRole?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>

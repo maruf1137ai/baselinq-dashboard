@@ -62,7 +62,7 @@ const ActionsCell = ({
       </DropdownMenu>
 
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-card">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Details for {entry.ref}</DialogTitle>
             <DialogDescription>
@@ -252,7 +252,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-muted"
+                    safePage === p ? "bg-primary text-primary-foreground" : "text-gray-600 hover:bg-muted"
                   }`}>
                   {p}
                 </button>

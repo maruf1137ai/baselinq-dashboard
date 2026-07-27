@@ -100,15 +100,15 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90">
+        <Button className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
           <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
           Schedule Meeting
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[650px] bg-card p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-base text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             Schedule New Meeting
           </DialogTitle>
         </DialogHeader>
@@ -235,7 +235,7 @@ export function ScheduleNewMeetingDialog({ onCreated }: { onCreated?: () => void
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>

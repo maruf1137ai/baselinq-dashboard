@@ -64,7 +64,7 @@ const ACCOUNT_TYPES = [
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
+  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 focus:bg-card transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -295,7 +295,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                     <div className="flex items-center gap-3 py-2">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs transition-all duration-200",
-                        done || active ? "bg-[#6c5ce7] text-white" : "bg-white/10 text-white/40 border border-white/10"
+                        done || active ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/40 border border-white/10"
                       )}>
                         {done ? <Check className="w-3.5 h-3.5" /> : sId}
                       </div>
@@ -305,7 +305,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                       )}>
                         {label}
                       </p>
-                      {active && <ChevronRight className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 ml-auto" />}
+                      {active && <ChevronRight className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
                     </div>
                     {i < STEP_LABELS.length - 1 && (
                       <div style={{ marginLeft: "13px", paddingLeft: "10px", height: "12px", borderLeft: `2px solid ${done ? "#6c5ce7" : "rgba(255,255,255,0.1)"}` }} />
@@ -391,12 +391,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setRole(r.id)}
                           className={cn(
                             "flex items-center gap-3 px-3.5 py-3 rounded-xl border text-left transition-all group",
-                            role === r.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-border hover:border-border hover:bg-muted/50"
+                            role === r.id ? "border-primary bg-primary/5" : "border-border hover:border-border hover:bg-muted/50"
                           )}
                         >
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all",
-                            role === r.id ? "bg-[#6c5ce7] text-white" : "bg-muted text-gray-500 group-hover:bg-gray-200"
+                            role === r.id ? "bg-primary text-primary-foreground" : "bg-muted text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {r.icon}
                           </div>
@@ -404,7 +404,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             {r.label}
                           </span>
                           {role === r.id && (
-                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
+                            <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
                               <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                           )}
@@ -426,12 +426,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setAccountType(type.id)}
                           className={cn(
                             "w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition-all group",
-                            accountType === type.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-border hover:border-border hover:bg-muted/50"
+                            accountType === type.id ? "border-primary bg-primary/5" : "border-border hover:border-border hover:bg-muted/50"
                           )}
                         >
                           <div className={cn(
                             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                            accountType === type.id ? "bg-[#6c5ce7] text-white" : "bg-muted text-gray-500 group-hover:bg-gray-200"
+                            accountType === type.id ? "bg-primary text-primary-foreground" : "bg-muted text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {type.icon}
                           </div>
@@ -440,7 +440,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             <p className="text-xs text-gray-400 mt-0.5">{type.desc}</p>
                           </div>
                           {accountType === type.id && (
-                            <div className="w-5 h-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
                               <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
@@ -487,7 +487,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           </div>
                         </div>
                         <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-[#f0edff] border border-[#d6d3ff]">
-                          <Info className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 mt-0.5" />
+                          <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                           <p className="text-xs text-[#5b5bcc] leading-snug">These details will auto-populate into all contracts and appointment letters.</p>
                         </div>
                       </>
@@ -610,7 +610,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm text-gray-400 hover:border-[#6c5ce7]/40 hover:text-[#6c5ce7] transition-all"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-all"
                           >
                             <Upload className="w-4 h-4" />
                             Upload certificate, PDF or image (optional)
@@ -661,7 +661,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         </div>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-xs text-[#6c5ce7] hover:text-[#6c6de9] transition-colors">
+                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-xs text-primary hover:text-primary/90 transition-colors">
                       <UserPlus className="w-3.5 h-3.5" />
                       Add another user
                     </button>
@@ -683,7 +683,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {/* Step 1 → 2 */}
               {step === 1 && (
                 <button type="button" disabled={!role} onClick={() => setStep(2)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -691,7 +691,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {/* Step 2 → 3 */}
               {step === 2 && (
                 <button type="button" disabled={!accountType} onClick={handleGoToDetails}
-                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -700,12 +700,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 3 && (
                 accountType === "organisation" ? (
                   <button type="button" disabled={!companyName} onClick={() => setStep(4)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     Continue <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
                   </button>
                 )
@@ -715,7 +715,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 4 && (
                 <>
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
                   </button>
                   <button type="button" disabled={saving} onClick={handleSave} className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
@@ -819,7 +819,7 @@ const SelectProject = () => {
         <div className="max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 rounded-2xl bg-[#f0edff] flex items-center justify-center mx-auto mb-5">
-              <SparkleIcon className="w-8 h-8 text-[#6c5ce7]" />
+              <SparkleIcon className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-2xl font-normal tracking-tight text-foreground mb-2">
               Complete your profile first
@@ -829,7 +829,7 @@ const SelectProject = () => {
             </p>
             <Button
               onClick={() => setShowModal(true)}
-              className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
+              className="h-10 px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
             >
               <AiIcon size={16} className="text-white" />
               Complete Profile
@@ -875,7 +875,7 @@ const SelectProject = () => {
             </div>
             <Button
               onClick={() => navigate("/create-project")}
-              className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
+              className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create your first project
@@ -930,7 +930,7 @@ const SelectProject = () => {
                         {healthDetail && <HealthBadge status={healthDetail.health} detail={healthDetail} />}
                         <div className={cn(
                           "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                          isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                         )}>
                           {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
@@ -976,7 +976,7 @@ const SelectProject = () => {
         )}
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent className="bg-card">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Project</AlertDialogTitle>
               <AlertDialogDescription>

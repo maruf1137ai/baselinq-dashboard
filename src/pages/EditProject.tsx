@@ -578,7 +578,7 @@ function OrgPersonnelSelectCard({
             <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command>
             <CommandInput placeholder="Search team members..." className="text-xs" />
             <CommandList>
@@ -2342,7 +2342,7 @@ export default function EditProject() {
                                   {form.start_date ? format(parseISO(form.start_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-card" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.start_date ? parseISO(form.start_date) : undefined}
@@ -2377,7 +2377,7 @@ export default function EditProject() {
                                   {form.end_date ? format(parseISO(form.end_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-card" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.end_date ? parseISO(form.end_date) : undefined}

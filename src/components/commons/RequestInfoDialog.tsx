@@ -183,9 +183,9 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[420px] bg-card p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-lg text-foreground">Request Information</DialogTitle>
+      <DialogContent size="sm" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>Request Information</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 px-6">
@@ -240,7 +240,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
@@ -259,7 +259,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-sm font-medium">
+                                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-medium">
                                     {memberName.charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
@@ -271,7 +271,7 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
                                 <div className={cn(
                                   "h-5 w-5 rounded-full border-2 flex items-center justify-center",
                                   isSelected
-                                    ? "border-[#6c5ce7] bg-[#6c5ce7]"
+                                    ? "border-primary bg-primary"
                                     : "border-border bg-card"
                                 )}>
                                   {isSelected && (

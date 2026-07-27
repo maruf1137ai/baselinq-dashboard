@@ -54,15 +54,15 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="sm:max-w-[600px] p-0 flex flex-col bg-card border-l h-full">
-          <SheetHeader className="px-6 py-6 border-b shrink-0 bg-muted/50">
+        <SheetContent size="lg" className="p-0 flex flex-col h-full">
+          <SheetHeader className="px-6 py-4 border-b border-border bg-muted/50 shrink-0">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 bg-purple-50 rounded-xl flex items-center justify-center">
                   <FileText className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <SheetTitle className="text-xl font-normal text-foreground">{document.name}</SheetTitle>
+                  <SheetTitle>{document.name}</SheetTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-0 font-normal">
                       {document.reference}
@@ -227,7 +227,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "h-8 w-8 rounded-lg flex items-center justify-center font-normal text-xs",
-                            ver.current ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
+                            ver.current ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
                           )}>
                             {ver.v}
                           </div>

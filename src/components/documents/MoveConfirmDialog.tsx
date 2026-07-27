@@ -149,14 +149,14 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
 
   return (
     <Dialog open onOpenChange={(open) => !open && !isBusy && onCancel()}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-card border border-border shadow-xl rounded-xl">
-        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/30">
+      <DialogContent className="p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary shrink-0">
               <FolderInput className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-medium text-foreground">
+              <DialogTitle>
                 {verb} document
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">{doc.name}</p>
@@ -282,7 +282,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
           )}
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t border-border bg-muted/30 flex gap-2 shrink-0">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 shrink-0">
           {crossCategory && step === 2 && !copyBlocked ? (
             <Button variant="outline" onClick={() => setStep(1)} disabled={isBusy}
               className="h-8 text-xs rounded-lg border-border text-foreground">

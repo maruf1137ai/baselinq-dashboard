@@ -307,7 +307,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
     && canApprove;
 
   // Card border + background per escalation level (pending review takes priority over warnings)
-  const cardBorder = needsSignOff ? 'border border-[#6c5ce7] bg-[#6c5ce7]/5 ring-1 ring-[#6c5ce7]/20' :
+  const cardBorder = needsSignOff ? 'border border-primary bg-primary/5 ring-1 ring-primary/20' :
     needsReview ? 'border border-amber-400 bg-amber-50/20' :
       isResolved ? 'border border-border' :
         escalationLevel >= 2 ? 'border border-red-300 bg-red-50/30' :
@@ -338,10 +338,10 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
             </div>
             {needsSignOff && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-xs font-medium text-[#6c5ce7] bg-[#6c5ce7]/10 border border-[#6c5ce7] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-xs font-medium text-primary bg-primary/10 border border-primary px-1.5 py-0.5 rounded-full flex items-center gap-1">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6c5ce7] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#6c5ce7]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
                   </span>
                   Awaiting Sign-off
                 </span>
@@ -392,7 +392,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
                   String(task.assignedBy?.userId) === String(currentUserId)
                 );
                 return visibleResponses.length > 0 && (
-                  <span className="flex items-center gap-1 text-xs bg-[#6c5ce7]/10 text-[#6c5ce7] px-1.5 py-0.5 rounded shrink-0">
+                  <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded shrink-0">
                     <MessageSquare className="h-2.5 w-2.5" />
                     {visibleResponses.length}
                   </span>
@@ -941,9 +941,9 @@ export default function Task() {
         />
       )}
       <Dialog open={isSelectionOpen} onOpenChange={setIsSelectionOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-card p-0 overflow-hidden rounded-xl">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle className="text-base font-medium">Select Request Type</DialogTitle>
+        <DialogContent size="sm" className="p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-border">
+            <DialogTitle>Select Request Type</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col">
             {filteredBtns.map((item, index) => (

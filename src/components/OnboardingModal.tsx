@@ -181,7 +181,7 @@ function StepAddressFields({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/10",
   );
   return (
     <div className="space-y-2">
@@ -212,7 +212,7 @@ function StepPersonnelCard({
 }) {
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/10",
   );
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
@@ -645,13 +645,13 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
 
   const fieldCls = cn(
     "w-full h-10 px-3 rounded-lg text-sm border outline-none transition-all",
-    "bg-muted/50 border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+    "bg-muted/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/10",
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] bg-card max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 py-4">
           <DialogTitle>
             {project ? "Edit Project" : "Welcome! Let's set up your first project"}
           </DialogTitle>
@@ -668,8 +668,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 <div className="flex flex-col items-center gap-1">
                   <div className={cn(
                     "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
-                    currentStep > step.id ? "bg-primary text-white" :
-                      currentStep === step.id ? "bg-primary text-white" :
+                    currentStep > step.id ? "bg-primary text-primary-foreground" :
+                      currentStep === step.id ? "bg-primary text-primary-foreground" :
                         "bg-muted text-muted-foreground/50",
                   )}>
                     {currentStep > step.id ? <Check className="h-3.5 w-3.5" /> : step.id}
@@ -723,7 +723,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Building2 className="w-4 h-4 text-[#6c5ce7]" />
+                  <Building2 className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-muted-foreground">Company Information</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -751,11 +751,11 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         type="button"
                         onClick={() => handleCompanyLookup("client")}
                         disabled={isLookingUp}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                         ) : (
                           <Search className="w-3.5 h-3.5" />
                         )}
@@ -781,8 +781,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <button
                       type="button"
                       onClick={() => setShowClientPersonnel(true)}
-                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-primary/10 transition-all group">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
@@ -833,11 +833,11 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                         type="button"
                         onClick={() => handleCompanyLookup("appointed")}
                         disabled={isLookingUp}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                         title="Auto-fill from registration"
                       >
                         {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                         ) : (
                           <Search className="w-3.5 h-3.5" />
                         )}
@@ -863,8 +863,8 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                     <button
                       type="button"
                       onClick={() => setShowAppointedPersonnel(true)}
-                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-primary/10 transition-all group">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                      className="w-full py-4 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-all group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                       <span className="font-normal">Add Assigned Personnel</span>
@@ -884,7 +884,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 pb-2 border-b border-border">
-                    <ScrollText className="w-4 h-4 text-[#6c5ce7]" />
+                    <ScrollText className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium text-muted-foreground">Scope of Works</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
@@ -895,7 +895,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                 <div className="space-y-4">
                   <div className="relative group">
                     <textarea
-                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-muted/50 border border-border focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10 resize-none leading-relaxed"
+                      className="w-full min-h-[200px] px-4 py-4 rounded-xl text-sm text-foreground outline-none transition-all bg-muted/50 border border-border focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none leading-relaxed"
                       placeholder="Describe the project scope, deliverables, and key requirements..."
                       value={taskOrderBrief}
                       onChange={(e) => {
@@ -925,7 +925,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-card" align="start">
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar mode="single" selected={field.value ? parseISO(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
                         </PopoverContent>
                       </Popover>
@@ -944,7 +944,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-card" align="start">
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar mode="single" selected={field.value ? parseISO(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")} disabled={(date) => date < new Date("1900-01-01")} initialFocus />
                         </PopoverContent>
                       </Popover>

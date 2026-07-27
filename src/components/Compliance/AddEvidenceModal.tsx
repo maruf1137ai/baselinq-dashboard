@@ -11,9 +11,9 @@ interface AddEvidenceModalProps {
 const AddEvidenceModal: React.FC<AddEvidenceModalProps> = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-card p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-lg text-foreground font-normal">Add Evidence</DialogTitle>
+      <DialogContent className="p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>Add Evidence</DialogTitle>
         </DialogHeader>
         
         <div className="p-6 space-y-6">
@@ -36,11 +36,11 @@ const AddEvidenceModal: React.FC<AddEvidenceModalProps> = ({ isOpen, onClose }) 
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t flex justify-end gap-3">
+        <DialogFooter className="px-6 py-4 border-t border-border">
           <Button variant="outline" onClick={onClose} className="bg-card">
             Cancel
           </Button>
-          <Button className="bg-[#6c5ce7] hover:bg-[#6c5ce7] text-white">
+          <Button className="bg-primary hover:bg-primary text-primary-foreground">
             Save Evidence
           </Button>
         </DialogFooter>

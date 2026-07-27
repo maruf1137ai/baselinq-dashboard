@@ -50,9 +50,9 @@ export function BillingLadgerDialog({ wFull }) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[682px] bg-card p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-lg text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             Request Information
           </DialogTitle>
         </DialogHeader>
@@ -96,7 +96,7 @@ export function BillingLadgerDialog({ wFull }) {
             <tbody className="bg-card divide-y divide-gray-200">
               {billingLadgerData.map((order, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6c5ce7] hover:text-blue-800">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-blue-800">
                     {order.date}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">

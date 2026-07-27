@@ -120,9 +120,9 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-card flex flex-col max-h-[90vh]">
-        <DialogHeader className="px-8 py-6 border-b bg-muted/50">
-          <DialogTitle className="text-xl font-normal text-foreground">Link to Task</DialogTitle>
+      <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
+          <DialogTitle>Link to Task</DialogTitle>
         </DialogHeader>
 
         <div className="px-5 py-5 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
@@ -241,7 +241,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="px-8 py-6 border-t bg-muted/50 flex items-center justify-between sm:justify-between">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 sm:justify-between">
           <div className="text-sm text-gray-500 font-normal">
             {selectedIds.length > 0 ? (
               <span className="text-primary">{selectedIds.length} selected</span>

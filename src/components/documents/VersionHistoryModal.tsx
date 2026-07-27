@@ -58,10 +58,10 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl bg-card flex flex-col max-h-[90vh]">
-        <DialogHeader className="px-8 py-6 border-b border-border bg-muted/50">
+      <DialogContent size="lg" className="p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex flex-col gap-1">
-            <DialogTitle className="text-xl font-normal text-foreground">Version History, {doc.reference}</DialogTitle>
+            <DialogTitle>Version History, {doc.reference}</DialogTitle>
             <p className="text-sm text-gray-500 font-normal">{doc.name}</p>
           </div>
         </DialogHeader>

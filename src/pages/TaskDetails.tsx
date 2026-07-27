@@ -166,7 +166,7 @@ const groupLogsByDate = (logs: any[]) => {
 const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   const a = (log.action || '').toLowerCase();
   if (a === 'task_created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
-  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
+  if (a.endsWith('_created')) return { icon: <Circle className="w-3 h-3 text-primary" />, bg: '#EEF2FF' };
   if (a === 'created') return { icon: <Circle className="w-3 h-3 text-[#F59E0B]" />, bg: '#FEF3C7' };
   if (a === 'approved') return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'rejected') return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
@@ -179,7 +179,7 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
       return { icon: <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
       return { icon: <XCircle className="w-3 h-3 text-[#DC2626]" />, bg: '#FEF2F2' };
-    return { icon: <Clock className="w-3 h-3 text-[#6c5ce7]" />, bg: '#EEF2FF' };
+    return { icon: <Clock className="w-3 h-3 text-primary" />, bg: '#EEF2FF' };
   }
   return { icon: <Circle className="w-3 h-3 text-muted-foreground" />, bg: '#F3F4F6' };
 };
@@ -194,7 +194,7 @@ const getStatusBadgeColor = (status: string) => {
     'priced', 'recommended', 'sent for review', 'notice issued', 'under assessment', 'distributed',
     'further info required', 'response provided', 'determination made', 'on track / at risk',
     'scheduled'].includes(s))
-    return 'bg-primary/10 text-[#6c5ce7] border border-[#C7D2FE]';
+    return 'bg-primary/10 text-primary border border-[#C7D2FE]';
   // Negative stages - red
   if (['rejected', 'declined'].includes(s))
     return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
@@ -2233,7 +2233,7 @@ export default function TaskDetails() {
                       <h2 className="text-sm font-normal text-foreground">
                         Replies
                       </h2>
-                      <span className="text-xs bg-primary/10 text-[#6c5ce7] px-2 py-0.5 rounded-full font-normal">
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-normal">
                         {displayTask.responses.length} Total
                       </span>
                     </div>
@@ -2876,7 +2876,7 @@ export default function TaskDetails() {
                   </button> */}
                   {/* <Separator orientation="vertical" className="h-6 mx-2" /> */}
                   {/* <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted rounded text-sm">
-                    <Zap className="h-4 w-4 text-[#6c5ce7]" />
+                    <Zap className="h-4 w-4 text-primary" />
                     <span className="text-foreground">Smart Actions</span>
                   </button> */}
                 </div>
@@ -3104,7 +3104,7 @@ export default function TaskDetails() {
                       className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-normal disabled:opacity-50 disabled:cursor-not-allowed",
                         showAiChat
-                          ? "bg-primary text-white border-primary hover:bg-primary/90"
+                          ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                           : "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10",
                       )}>
                       <Zap className={cn("h-4 w-4", showAiChat && "animate-pulse")} />
@@ -3364,8 +3364,8 @@ export default function TaskDetails() {
                                 }}
                                 className={cn(
                                   "relative z-10 w-3.5 h-3.5 rounded-full transition-all duration-300 mt-1",
-                                  isComplete && "bg-[#6c5ce7] shadow-sm",
-                                  isCurrent && "bg-[#6c5ce7] ring-4 ring-[#6c5ce7]/20",
+                                  isComplete && "bg-primary shadow-sm",
+                                  isCurrent && "bg-primary ring-4 ring-primary/20",
                                   !isComplete && !isCurrent && "bg-card border-2 border-border",
                                   canApprove && "cursor-pointer hover:scale-110",
                                   !canApprove && "cursor-default",
@@ -3380,7 +3380,7 @@ export default function TaskDetails() {
                                 <div
                                   className={cn(
                                     "w-[2px] flex-1 min-h-[28px] my-1 transition-colors",
-                                    isComplete ? "bg-[#6c5ce7]" : "bg-border",
+                                    isComplete ? "bg-primary" : "bg-border",
                                   )}
                                 />
                               )}
@@ -3401,7 +3401,7 @@ export default function TaskDetails() {
                                 {stage}
                               </p>
                               {isCurrent && (
-                                <p className="text-xs text-[#6c5ce7] mt-0.5">In progress</p>
+                                <p className="text-xs text-primary mt-0.5">In progress</p>
                               )}
                             </div>
                           </li>
@@ -3432,7 +3432,7 @@ export default function TaskDetails() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-foreground">Reply due</span>
-                      <span className="text-sm  text-[#6c5ce7]">
+                      <span className="text-sm  text-primary">
                         {displayTask.deadlines.replyDue}
                       </span>
                     </div>
@@ -3476,7 +3476,7 @@ export default function TaskDetails() {
                       </div>
                       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#6c5ce7] rounded-full"
+                          className="h-full bg-primary rounded-full"
                           style={{
                             width: `${(displayTask.impact.riskScore / displayTask.impact.riskMax) * 100}%`,
                           }}
@@ -3495,7 +3495,7 @@ export default function TaskDetails() {
                     <h3 className="text-xs font-normal text-muted-foreground">
                       Linked Documents
                     </h3>
-                    <Button variant="ghost" className="h-6 w-6 p-0 text-[#6c5ce7] hover:bg-transparent">
+                    <Button variant="ghost" className="h-6 w-6 p-0 text-primary hover:bg-transparent">
                       <Link2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -3664,7 +3664,7 @@ export default function TaskDetails() {
           setAssignUserPopoverOpen(false);
         }
       }}>
-        <DialogContent className="bg-card">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign User</DialogTitle>
             <DialogDescription>
@@ -3687,7 +3687,7 @@ export default function TaskDetails() {
                         {selectedAssignUsers.map((u) => (
                           <span
                             key={u._id}
-                            className="inline-flex items-center gap-1 bg-primary/10 text-[#6c5ce7] text-xs px-2 py-1 rounded-md"
+                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md"
                           >
                             {u.user?.name || u.name || "User"}
                           </span>
@@ -3699,7 +3699,7 @@ export default function TaskDetails() {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search users..." />
                     <CommandList>
@@ -3724,7 +3724,7 @@ export default function TaskDetails() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-[#6c5ce7] text-white flex items-center justify-center text-sm font-normal">
+                                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-normal">
                                     {(memberName || memberEmail).charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
@@ -3737,7 +3737,7 @@ export default function TaskDetails() {
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                                    isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
+                                    isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                   )}
                                 >
                                   {isSelected && <Check className="h-3 w-3 text-white" />}
@@ -3762,7 +3762,7 @@ export default function TaskDetails() {
             <button
               onClick={handleAssignUser}
               disabled={selectedAssignUsers.length === 0 || isAssigning}
-              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-[#6c5ce7] hover:bg-[#6c6de0] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-transparent rounded-lg text-sm text-white bg-primary hover:bg-[#6c6de0] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAssigning ? "Assigning..." : "Submit"}
             </button>
@@ -3770,7 +3770,7 @@ export default function TaskDetails() {
         </DialogContent>
       </Dialog>
       <Dialog open={isResponseModalOpen} onOpenChange={setIsResponseModalOpen}>
-        <DialogContent className="max-w-2xl bg-card p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+        <DialogContent size="lg" className="p-0 overflow-hidden">
           {selectedResponse && (
             <div className="flex flex-col h-full max-h-[85vh]">
               {/* Header */}

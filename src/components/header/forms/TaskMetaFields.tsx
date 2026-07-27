@@ -296,7 +296,7 @@ export function TaskMetaFields({
                   : "Pick a date"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card" align="start">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={value.dateRequired ? parseISO(value.dateRequired) : undefined}

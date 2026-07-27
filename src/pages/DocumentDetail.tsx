@@ -402,7 +402,7 @@ const DocumentDetail = () => {
             )}
             {doc.userPermissions?.canUploadVersion !== false && (
               <Button
-                className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 onClick={() => setIsVersionUploadOpen(true)}
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Upload revision
@@ -558,7 +558,7 @@ const DocumentDetail = () => {
                           <div key={v._id} className="flex items-center gap-3 px-4 py-2.5">
                             <div className={cn(
                               "h-7 px-2 rounded-md flex items-center justify-center text-xs font-medium shrink-0",
-                              v.isCurrent ? "bg-primary text-white" : "bg-muted/40 text-muted-foreground"
+                              v.isCurrent ? "bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground"
                             )}>
                               v{v.versionNumber}
                             </div>
@@ -739,7 +739,7 @@ const DocumentDetail = () => {
                   action={
                     <Button
                       size="sm"
-                      className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                       onClick={() => runAnalysis()}
                       disabled={isAnalysisRunning || doc.aiStatus === 'running'}
                     >
@@ -843,7 +843,7 @@ const DocumentDetail = () => {
                   action={
                     <Button
                       size="sm"
-                      className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                       onClick={() => setIsLinkModalOpen(true)}
                     >
                       <Plus className="w-3.5 h-3.5 mr-1.5" /> Link to a task
@@ -968,7 +968,7 @@ const DocumentDetail = () => {
                   action={
                     <Button
                       size="sm"
-                      className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                       onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                     >
                       <Plus className="w-3.5 h-3.5 mr-1.5" /> Add an obligation
@@ -1070,7 +1070,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={!!linkToDelete} onOpenChange={(open) => !open && setLinkToDelete(null)}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Link</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1116,7 +1116,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
-        <AlertDialogContent className="bg-card">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>

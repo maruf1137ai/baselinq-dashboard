@@ -547,7 +547,7 @@ export function WernerTaskActions({
 
       {/* Sign & Issue modal */}
       <Dialog open={signOpen} onOpenChange={setSignOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Sign &amp; Issue</DialogTitle>
             <DialogDescription>
@@ -639,7 +639,7 @@ export function WernerTaskActions({
           and Close out. Replaces the browser-native confirm dialog so
           the warning matches the rest of the app. */}
       <Dialog open={riskOpen} onOpenChange={(o) => { if (!settingRisk) setRiskOpen(o); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Set risk to HIGH</DialogTitle>
             <DialogDescription>
@@ -689,7 +689,7 @@ export function WernerTaskActions({
         open={mitigationOpen}
         onOpenChange={(o) => { if (!escalatingClaim) setMitigationOpen(o); }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Escalate to formal Claim</DialogTitle>
             <DialogDescription>
@@ -744,7 +744,7 @@ export function WernerTaskActions({
           two final actions feel consistent. Optional reason for the
           audit trail; backend stores it on the close-out audit row. */}
       <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Close out {taskType}</DialogTitle>
             <DialogDescription>

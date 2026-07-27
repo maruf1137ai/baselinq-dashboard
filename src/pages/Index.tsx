@@ -479,7 +479,7 @@ const Index = () => {
               {projectStats && projectStats.percentage < 100 && canEditProject && (
                 <Button
                   onClick={() => openQuickFill()}
-                  className="h-8 px-4 bg-primary text-white text-xs rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
+                  className="h-8 px-4 bg-primary text-primary-foreground text-xs rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
                 >
                   Complete Setup
                   <ArrowRight className="w-3 h-3" />
@@ -580,7 +580,7 @@ const Index = () => {
         {hasNoProjects && (
           <div className="w-full bg-card rounded-xl border border-border p-8 text-center shadow-sm flex flex-col items-center">
             <div className="w-14 h-14 bg-[#f0edff] rounded-2xl flex items-center justify-center mb-4">
-              <FolderOpen className="w-7 h-7 text-[#6c5ce7]" />
+              <FolderOpen className="w-7 h-7 text-primary" />
             </div>
             <h2 className="text-lg font-medium text-[#111827] mb-1">No projects yet</h2>
             <p className="text-sm text-[#6b7280] mb-5 max-w-md leading-relaxed">
@@ -588,7 +588,7 @@ const Index = () => {
             </p>
             <button
               onClick={() => navigate("/create-project")}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#6c5ce7] text-white text-sm font-normal rounded-xl hover:bg-[#5a4bd1] transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground text-sm font-normal rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               Create your first project
@@ -943,9 +943,9 @@ const Index = () => {
       {/* Quick-fill modal — shows all missing fields at once */}
       {projectStats && (
         <Dialog open={quickFillOpen} onOpenChange={(open) => { if (!open) closeQuickFill(); }}>
-          <DialogContent className="sm:max-w-[680px] w-full bg-card rounded-2xl p-0 overflow-hidden">
-            <DialogHeader className="px-8 pt-7 pb-5 border-b border-border">
-              <DialogTitle className="text-base font-normal text-[#111827]">
+          <DialogContent size="lg" className="p-0 overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b border-border">
+              <DialogTitle>
                 {quickFillSection ?? "Complete Project Setup"}
               </DialogTitle>
               <p className="text-xs text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
@@ -958,7 +958,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-[#6c5ce7]" />
+                      <FileText className="w-4 h-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Scope of Work</p>
@@ -981,7 +981,7 @@ const Index = () => {
                 <div className="border border-border rounded-xl overflow-hidden">
                   <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
                     <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
-                      <Shield className="w-4 h-4 text-[#6c5ce7]" />
+                      <Shield className="w-4 h-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs font-normal text-[#111827]">Client Details</p>
@@ -1375,15 +1375,15 @@ const Index = () => {
                       onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
                       className={cn(
                         "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200 border-2 border-dashed",
-                        isDragging ? "border-[#6c5ce7] bg-[#f8f7ff]" : "border-border bg-card hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                        isDragging ? "border-primary bg-[#f8f7ff]" : "border-border bg-card hover:border-primary hover:bg-[#f8f7ff]"
                       )}
                     >
                       <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-muted")}>
-                        <CloudUpload className={cn("w-6 h-6 transition-colors", isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]")} />
+                        <CloudUpload className={cn("w-6 h-6 transition-colors", isDragging ? "text-primary" : "text-[#6b7280]")} />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-[#374151]">Drag and drop your files here</p>
-                        <p className="text-xs text-[#6b7280] mt-0.5">or <span className="text-[#6c5ce7] underline">click to browse</span></p>
+                        <p className="text-xs text-[#6b7280] mt-0.5">or <span className="text-primary underline">click to browse</span></p>
                         <p className="text-xs text-[#9ca3af] mt-1 uppercase tracking-tight">PDF, Excel, Images up to 20MB</p>
                       </div>
                     </div>
@@ -1392,14 +1392,14 @@ const Index = () => {
                         {s3Upload.entries.map((f) => (
                           <div key={f.id} className="bg-muted/50 rounded-xl px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <FileText className="w-4 h-4 text-[#6c5ce7] shrink-0" />
+                              <FileText className="w-4 h-4 text-primary shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-normal text-[#111827] truncate">{f.file.name}</p>
                                 <p className="text-xs text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
                                 <div className="mt-2">
                                   <input
                                     type="text"
-                                    className="w-full h-7 px-2 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                    className="w-full h-7 px-2 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                                     placeholder="Document title (optional)"
                                     value={f.title || ""}
                                     onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
@@ -1414,7 +1414,7 @@ const Index = () => {
                             {f.status === "uploading" && (
                               <div className="mt-2.5">
                                 <div className="h-1 bg-muted rounded-full overflow-hidden">
-                                  <div className="h-full bg-[#6c5ce7] rounded-full transition-all duration-300" style={{ width: `${f.progress}%` }} />
+                                  <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${f.progress}%` }} />
                                 </div>
                                 <p className="text-xs text-[#9ca3af] mt-1">{f.progress}%</p>
                               </div>
@@ -1439,7 +1439,7 @@ const Index = () => {
               <Button
                 onClick={() => submitQuickFill(quickFillSection ? [quickFillSection] : projectStats.missing)}
                 disabled={isSaving || !canEditProject}
-                className="h-10 px-6 bg-[#6c5ce7] text-white text-xs rounded-xl shadow-sm hover:bg-[#5a4bd1] transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-10 px-6 bg-primary text-primary-foreground text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>

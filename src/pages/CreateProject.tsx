@@ -1226,9 +1226,9 @@ export default function CreateProject() {
                       className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-xs font-normal shrink-0 mt-0.5 transition-colors",
                         done
-                          ? "bg-[#6c5ce7] text-white"
+                          ? "bg-primary text-primary-foreground"
                           : active
-                            ? "bg-[#6c5ce7] text-white"
+                            ? "bg-primary text-primary-foreground"
                             : "bg-muted text-[#9ca3af]"
                       )}>
                       {done ? <Check className="w-4 h-4" /> : step.id}
@@ -1377,8 +1377,8 @@ export default function CreateProject() {
                               className={cn(
                                 "w-full h-12 px-4 pr-10 rounded-lg text-sm outline-none transition-all",
                                 pnEditable
-                                  ? "bg-muted/50 border border-border text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                  : "bg-[#f0edff] border border-[#d4ccff] text-[#6c5ce7] cursor-pointer",
+                                  ? "bg-muted/50 border border-border text-[#111827] focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                  : "bg-[#f0edff] border border-[#d4ccff] text-primary cursor-pointer",
                                 errors.project_number && "!border-red-400"
                               )}
                               value={form.project_number}
@@ -1392,7 +1392,7 @@ export default function CreateProject() {
                               type="button"
                               tabIndex={-1}
                               onClick={() => setPnEditable((v) => !v)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6c5ce7] hover:text-[#5a4bd1] transition-colors">
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/90 transition-colors">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1442,7 +1442,7 @@ export default function CreateProject() {
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-[#6c5ce7] shadow-sm"
+                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-primary shadow-sm"
                               )}>
                                 {isInvited || inviteClientData.email.trim() ? <Check className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
                               </div>
@@ -1463,7 +1463,7 @@ export default function CreateProject() {
                               <button
                                 type="button"
                                 onClick={() => setIsInvitingClient(!isInvitingClient)}
-                                className="text-xs text-[#6c5ce7] font-normal hover:text-[#5a4bd1] px-3 py-1.5 rounded-lg hover:bg-[#6c5ce7]/5 transition-colors"
+                                className="text-xs text-primary font-normal hover:text-primary/90 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
                               >
                                 {isInvitingClient ? "Cancel" : inviteClientData.email.trim() ? "Edit" : "Invite Client"}
                               </button>
@@ -1503,7 +1503,7 @@ export default function CreateProject() {
                                 type="button"
                                 onClick={() => setIsInvitingClient(false)}
                                 disabled={!inviteClientData.email}
-                                className="w-full h-11 bg-[#6c5ce7] text-white rounded-xl text-xs font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full h-11 bg-primary text-primary-foreground rounded-xl text-xs font-normal hover:bg-primary/90 shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
                                 <Check className="w-4 h-4" />
                                 Confirm, Invite will be sent after project is created
@@ -1570,11 +1570,11 @@ export default function CreateProject() {
                                     type="button"
                                     onClick={() => handleCompanyLookup("client")}
                                     disabled={isLookingUp}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                                     ) : (
                                       <Search className="w-3.5 h-3.5" />
                                     )}
@@ -1656,14 +1656,14 @@ export default function CreateProject() {
                               const roleName = entry.position || entry.role || "Member";
                               return (
                                 <div key={entry.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
-                                  <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs font-normal shrink-0">
+                                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-normal shrink-0">
                                     {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-xs font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
                                     <p className="text-xs text-[#9ca3af] truncate">{entry.email}</p>
                                   </div>
-                                  <span className="text-xs text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                  <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                   <button
                                     type="button"
                                     onClick={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
@@ -1676,7 +1676,7 @@ export default function CreateProject() {
                             {/* Invited external users */}
                             {invitedPersonnelList.map((person, i) => (
                               <div key={i} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
-                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6c5ce7] text-xs font-normal shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-primary text-xs font-normal shrink-0">
                                   {(person.name || person.email || "U").charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -1703,8 +1703,8 @@ export default function CreateProject() {
                                 setInvitePersonnelForm({ name: "", email: "", role_code: "" });
                                 setShowAddMemberModal(true);
                               }}
-                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                                 <Plus className="w-3.5 h-3.5" />
                               </div>
                               <span className="font-normal">Add User</span>
@@ -1796,9 +1796,9 @@ export default function CreateProject() {
                             <button
                               type="button"
                               onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: '' }])}
-                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
+                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group"
                             >
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                                 <Plus className="w-3.5 h-3.5" />
                               </div>
                               <span className="font-normal">Add Another Company</span>
@@ -1847,11 +1847,11 @@ export default function CreateProject() {
                                     type="button"
                                     onClick={() => handleCompanyLookup("appointed")}
                                     disabled={isLookingUp}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                                     ) : (
                                       <Search className="w-3.5 h-3.5" />
                                     )}
@@ -1933,14 +1933,14 @@ export default function CreateProject() {
                                 const roleName = entry.position || entry.role || "Member";
                                 return (
                                   <div key={entry.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
-                                    <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs font-normal shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-normal shrink-0">
                                       {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-xs font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
                                       <p className="text-xs text-[#9ca3af] truncate">{entry.email}</p>
                                     </div>
-                                    <span className="text-xs text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                    <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                     <button
                                       type="button"
                                       onClick={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
@@ -1958,8 +1958,8 @@ export default function CreateProject() {
                                   setAppointedPopoverOpen(false);
                                   setShowAddAppointedModal(true);
                                 }}
-                                className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
+                                className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
+                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                                   <Plus className="w-3.5 h-3.5" />
                                 </div>
                                 <span className="font-normal">Add User</span>
@@ -2006,10 +2006,10 @@ export default function CreateProject() {
                           "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200",
                           "border-2 border-dashed",
                           isDragging
-                            ? "border-[#6c5ce7] bg-[#f8f7ff]"
+                            ? "border-primary bg-[#f8f7ff]"
                             : errors.attachments
                               ? "border-red-400 bg-red-50"
-                              : "border-border bg-card hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                              : "border-border bg-card hover:border-primary hover:bg-[#f8f7ff]"
                         )}>
                         <div className={cn(
                           "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
@@ -2017,7 +2017,7 @@ export default function CreateProject() {
                         )}>
                           <CloudUpload className={cn(
                             "w-6 h-6 transition-colors",
-                            isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]"
+                            isDragging ? "text-primary" : "text-[#6b7280]"
                           )} />
                         </div>
                         <div className="flex-1">
@@ -2026,7 +2026,7 @@ export default function CreateProject() {
                           </p>
                           <p className="text-xs text-[#6b7280] mt-0.5">
                             or{" "}
-                            <span className="text-[#6c5ce7] underline font-normal">
+                            <span className="text-primary underline font-normal">
                               click to browse
                             </span>
                           </p>
@@ -2064,7 +2064,7 @@ export default function CreateProject() {
                                   <button
                                     type="button"
                                     onClick={() => s3Upload.retryUpload(f.id)}
-                                    className="text-xs text-[#6c5ce7] hover:underline shrink-0 px-1">
+                                    className="text-xs text-primary hover:underline shrink-0 px-1">
                                     Retry
                                   </button>
                                 )}
@@ -2080,7 +2080,7 @@ export default function CreateProject() {
                                 <label className="block text-xs font-medium text-[#6b7280] mb-1">Document Title</label>
                                 <input
                                   type="text"
-                                  className="w-full h-8 px-3 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                  className="w-full h-8 px-3 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                                   placeholder="e.g. JBCC Contract, Site Plan, etc."
                                   value={f.title || ""}
                                   onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
@@ -2091,7 +2091,7 @@ export default function CreateProject() {
                                 <div className="mt-2.5">
                                   <div className="h-1 bg-muted rounded-full overflow-hidden">
                                     <div
-                                      className="h-full bg-[#6c5ce7] rounded-full transition-all duration-300"
+                                      className="h-full bg-primary rounded-full transition-all duration-300"
                                       style={{ width: `${f.progress}%` }}
                                     />
                                   </div>
@@ -2137,7 +2137,7 @@ export default function CreateProject() {
                             className={cn(
                               "w-full px-4 py-4 rounded-xl text-sm text-[#111827] outline-none transition-all resize-none leading-relaxed",
                               "bg-muted/50 border border-border",
-                              "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+                              "focus:border-primary focus:ring-2 focus:ring-primary/10",
                               "min-h-[250px]"
                             )}
                             placeholder={`e.g. The Client wishes to appoint an Architect to measure up the existing residential building with the intention for alterations and additions to the existing guest house...`}
@@ -2162,7 +2162,7 @@ export default function CreateProject() {
                       <div>
                         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
                           <div className="w-6 h-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
-                            <CalendarIcon className="w-3.5 h-3.5 text-[#6c5ce7]" />
+                            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
                           </div>
                           <span className="text-xs font-normal text-[#374151]">Timeline</span>
                         </div>
@@ -2186,7 +2186,7 @@ export default function CreateProject() {
                                   {form.start_date ? format(parseISO(form.start_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-card" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.start_date ? parseISO(form.start_date) : undefined}
@@ -2221,7 +2221,7 @@ export default function CreateProject() {
                                   {form.end_date ? format(parseISO(form.end_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-card" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.end_date ? parseISO(form.end_date) : undefined}
@@ -2252,7 +2252,7 @@ export default function CreateProject() {
                               <span className="text-xs text-[#9ca3af]">
                                 {format(duration.start, "MMM d, yyyy")}
                               </span>
-                              <span className="text-xs font-normal text-[#6c5ce7]">
+                              <span className="text-xs font-normal text-primary">
                                 {getDurationLabel()}
                               </span>
                               <span className="text-xs text-[#9ca3af]">
@@ -2287,7 +2287,7 @@ export default function CreateProject() {
                                 className={cn(
                                   "w-full rounded-lg outline-none transition-all",
                                   "bg-muted/50 border border-border",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+                                  "focus:border-primary focus:ring-2 focus:ring-primary/10",
                                   "pl-10 pr-4 text-lg font-normal text-[#111827] h-[52px]",
                                   errors.total_budget && "!border-red-400 focus:ring-red-400/10"
                                 )}
@@ -2348,7 +2348,7 @@ export default function CreateProject() {
                         <div
                           className="mt-5 rounded-xl p-4 border"
                           style={{ background: "#f0edff", borderColor: "#e0d9ff" }}>
-                          <p className="text-xs font-normal text-[#6c5ce7] normal-case mb-3">
+                          <p className="text-xs font-normal text-primary normal-case mb-3">
                             Budget Summary
                           </p>
                           <div className="space-y-2">
@@ -2414,7 +2414,7 @@ export default function CreateProject() {
                           onClick={handleNext}
                           className={cn(
                             "flex items-center gap-2 h-12 px-8 rounded-lg text-sm font-normal text-white transition-all",
-                            "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
+                            "bg-primary hover:bg-primary/90",
                             "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
                           )}>
                           Continue
@@ -2484,10 +2484,10 @@ export default function CreateProject() {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-primary transition-all text-left">
                         {selectedAppointedUser ? (
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                               {(selectedAppointedUser.name || selectedAppointedUser.email).charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -2501,7 +2501,7 @@ export default function CreateProject() {
                         <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search members..." className="text-xs" />
                         <CommandList>
@@ -2520,7 +2520,7 @@ export default function CreateProject() {
                                   className="cursor-pointer px-3 py-2.5">
                                   <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center gap-2.5">
-                                      <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                         {(u.name || u.email).charAt(0).toUpperCase()}
                                       </div>
                                       <div>
@@ -2530,7 +2530,7 @@ export default function CreateProject() {
                                     </div>
                                     <div className={cn(
                                       "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                      isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
+                                      isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                     )}>
                                       {isSelected && <Check className="h-3 w-3 text-white" />}
                                     </div>
@@ -2550,7 +2550,7 @@ export default function CreateProject() {
                   <div className="space-y-1.5">
                     <label className="block text-xs font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
                     <select
-                      className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                      className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                       value={selectedAppointedRole}
                       onChange={(e) => setSelectedAppointedRole(e.target.value)}>
                       <option value="">Select role…</option>
@@ -2635,7 +2635,7 @@ export default function CreateProject() {
                     type="button"
                     onClick={() => setAddMemberTab(tab)}
                     className={`flex-1 py-3 text-xs font-normal transition-all border-b-2 ${addMemberTab === tab
-                      ? "border-[#6c5ce7] text-[#6c5ce7]"
+                      ? "border-primary text-primary"
                       : "border-transparent text-[#6b7280] hover:text-[#374151]"
                       }`}>
                     {tab === "existing" ? "Existing Users" : "Invite External"}
@@ -2654,10 +2654,10 @@ export default function CreateProject() {
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-[#6c5ce7] transition-all text-left">
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-primary transition-all text-left">
                             {selectedMemberToAdd ? (
                               <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                   {(selectedMemberToAdd.name || selectedMemberToAdd.email).charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -2671,7 +2671,7 @@ export default function CreateProject() {
                             <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border shadow-lg rounded-xl" align="start">
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                           <Command>
                             <CommandInput placeholder="Search team members..." className="text-xs" />
                             <CommandList>
@@ -2690,7 +2690,7 @@ export default function CreateProject() {
                                       className="cursor-pointer px-3 py-2.5">
                                       <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-2.5">
-                                          <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-xs shrink-0">
+                                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                             {(u.name || u.email).charAt(0).toUpperCase()}
                                           </div>
                                           <div>
@@ -2700,7 +2700,7 @@ export default function CreateProject() {
                                         </div>
                                         <div className={cn(
                                           "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                          isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-border bg-card"
+                                          isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                         )}>
                                           {isSelected && <Check className="h-3 w-3 text-white" />}
                                         </div>
@@ -2720,7 +2720,7 @@ export default function CreateProject() {
                       <div className="space-y-1.5">
                         <label className="block text-xs font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
                         <select
-                          className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                          className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           value={selectedMemberRole}
                           onChange={(e) => setSelectedMemberRole(e.target.value)}>
                           <option value="">Select role…</option>
@@ -2739,7 +2739,7 @@ export default function CreateProject() {
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
                         <input
-                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           placeholder="e.g. John Smith"
                           value={inviteUserForm.name}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
@@ -2752,7 +2752,7 @@ export default function CreateProject() {
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
                         <input
                           type="email"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           placeholder="e.g. john@company.com"
                           value={inviteUserForm.email}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
@@ -2762,7 +2762,7 @@ export default function CreateProject() {
                     <div>
                       <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                       <select
-                        className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-[#6c5ce7] focus:bg-card transition-all"
+                        className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                         value={inviteUserForm.role_code}
                         onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
                         <option value="">Select role…</option>
@@ -2829,9 +2829,9 @@ export default function CreateProject() {
       })()}
       {/* ── Location confirmation dialog ── */}
       <AlertDialog open={showLocationWarning} onOpenChange={setShowLocationWarning}>
-        <AlertDialogContent className="max-w-sm bg-card rounded-xl shadow-xl border border-border">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-sm font-normal text-[#101828]">
+            <AlertDialogTitle>
               Are you sure about your project location?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -2894,7 +2894,7 @@ export default function CreateProject() {
                 setShowLocationWarning(false);
                 goToStep(2);
               }}
-              className="text-xs rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              className="text-xs rounded-lg bg-primary hover:bg-primary/90 text-white">
               Yes, confirm
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2903,9 +2903,9 @@ export default function CreateProject() {
 
       {/* ── Empty location warning dialog ── */}
       <AlertDialog open={showEmptyLocationWarning} onOpenChange={setShowEmptyLocationWarning}>
-        <AlertDialogContent className="max-w-sm bg-card rounded-xl shadow-xl border border-border">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-sm font-normal text-[#101828]">
+            <AlertDialogTitle>
               No project location added
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -2930,7 +2930,7 @@ export default function CreateProject() {
                 setShowEmptyLocationWarning(false);
                 goToStep(2);
               }}
-              className="text-xs rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              className="text-xs rounded-lg bg-primary hover:bg-primary/90 text-white">
               Skip for now
             </AlertDialogAction>
           </AlertDialogFooter>

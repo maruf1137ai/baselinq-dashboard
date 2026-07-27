@@ -342,7 +342,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-card" align="start">
+          <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
               selected={formData.dueDate}

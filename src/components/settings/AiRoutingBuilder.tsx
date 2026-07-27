@@ -20,16 +20,16 @@ export default function AiRoutingBuilderDrawer() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="bg-primary text-white border border-border text-sm !py-3 !px-4">
+        <Button className="bg-primary text-primary-foreground border border-border text-sm !py-3 !px-4">
           <span className="mr-1">+</span>
           Add AI Rules
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-full max-w-[384px] !rounded-none border-0 bg-card text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right !p-0">
+      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-full max-w-[384px] !rounded-none border-0 text-foreground shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right !p-0">
         {/* Drawer header */}
-        {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
-          <DialogTitle className="text-lg font-medium">
+        {/* <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>
             Drawer Title
           </DialogTitle>
         </DialogHeader> */}

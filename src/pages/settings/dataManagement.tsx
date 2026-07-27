@@ -113,9 +113,9 @@ const DataManagement = () => {
       </div>
 
       <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-card p-0 gap-0 overflow-hidden">
-          <DialogHeader className="py-[18px] px-6  border-b">
-            <DialogTitle className="flex items-center gap-2 text-sm text-foreground font-normal">
+        <DialogContent className="p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-border">
+            <DialogTitle className="flex items-center gap-2">
               <TriangleAlert className="w-4 h-4" />
               Archive Project
             </DialogTitle>
@@ -152,7 +152,7 @@ const DataManagement = () => {
             </ul>
           </div>
 
-          <DialogFooter className="p-6 border-t sm:justify-between gap-3">
+          <DialogFooter className="px-6 py-4 border-t border-border sm:justify-between">
             <Button
               variant="outline"
               onClick={() => setIsArchiveModalOpen(false)}

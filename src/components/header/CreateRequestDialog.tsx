@@ -54,7 +54,8 @@ export default function CreateRequestDialog({
       <SheetContent
         hideClose
         side="right"
-        className="w-full sm:max-w-[600px] p-0 flex flex-col bg-card"
+        size="lg"
+        className="p-0 flex flex-col"
         // The create-task form is intentionally non-dismissable from outside:
         // clicking the dimmed overlay or pressing Esc must NOT close it (that
         // silently discarded a half-filled form). The only ways out are the
@@ -63,7 +64,7 @@ export default function CreateRequestDialog({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <SheetHeader className="px-6 py-4 border-b shrink-0">
+        <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center justify-between gap-2">
             <SheetTitle>Create New {selectedType}</SheetTitle>
             <div className="flex items-center gap-1">

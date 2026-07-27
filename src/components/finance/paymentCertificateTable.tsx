@@ -86,7 +86,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
       </DropdownMenu>
 
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-card">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
             <DialogDescription>Period: {entry.period}</DialogDescription>
@@ -109,7 +109,7 @@ const ActionsCell = ({ entry }: { entry: PCEntry }) => {
       </Dialog>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="bg-card">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Entry</DialogTitle>
             <DialogDescription>
@@ -169,13 +169,13 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             value={search}
             onChange={handleSearch}
             placeholder="Search by PC #, period, status..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/30 focus:border-[#6c5ce7]"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
           />
         </div>
         {onNew && (
           <button
             onClick={onNew}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-[#6c5ce7] hover:bg-[#6c5ce7] transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-primary hover:bg-primary transition-all shadow-sm shrink-0"
           >
             <Plus className="w-4 h-4" />
             New Certificate
@@ -291,7 +291,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-muted"
+                    safePage === p ? "bg-primary text-primary-foreground" : "text-gray-600 hover:bg-muted"
                   }`}>
                   {p}
                 </button>

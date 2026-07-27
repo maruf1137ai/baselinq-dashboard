@@ -73,10 +73,10 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-card flex flex-col max-h-[90vh]">
-          <DialogHeader className="px-8 py-6 border-b bg-muted/50">
+        <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]">
+          <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
             <div className="flex flex-col gap-1">
-              <DialogTitle className="text-xl font-normal text-foreground">Manage Links, {document.reference}</DialogTitle>
+              <DialogTitle>Manage Links, {document.reference}</DialogTitle>
               <p className="text-sm text-gray-500 font-normal">{document.name}</p>
             </div>
           </DialogHeader>
@@ -168,7 +168,7 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="px-8 py-6 border-t bg-muted/50 flex gap-3 sm:justify-between items-center">
+          <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 sm:justify-between">
             <Button variant="outline" onClick={onClose} className="font-normal h-11 border-border px-6 bg-card">
               Close
             </Button>
