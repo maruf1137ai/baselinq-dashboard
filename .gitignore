@@ -24,4 +24,14 @@ dist-ssr
 *.sw?
 
 .env
+
+# Production renamed the bare `test` rule to `test 1`, which has the same
+# effect as scoping it — but keep both: `test 1` is theirs, and `/test`
+# states the intent explicitly.
+#
+# A bare `test` here matched any file or directory named `test` at ANY depth.
+# That silently excluded src/test/, which is where vitest.config.ts points its
+# setupFiles — so the setup file could never be committed, and without it
+# vitest failed to load every suite. 112 tests existed and none had ever run.
 test 1
+/test

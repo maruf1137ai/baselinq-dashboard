@@ -29,6 +29,29 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+  # The repository had 112 tests across 7 files and no job running them, so a
+  # failing test could never fail a build. They were not running locally
+  # either: vitest.config.ts declared a setupFiles entry pointing at a file
+  # that did not exist, which makes vitest error on every suite before it
+  # executes. Both are fixed; this job is what stops it recurring.
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
   build:
     name: Build
     runs-on: ubuntu-latest
