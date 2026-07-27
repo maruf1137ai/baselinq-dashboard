@@ -23,9 +23,12 @@ import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
 import {
   AlertTriangle, CheckCircle2, ChevronDown, ChevronRight,
-  RefreshCw, ShieldAlert, TrendingUp, Clock, Banknote, FileWarning,
+  RefreshCw, ShieldAlert, TrendingUp, Clock, Banknote, FileWarning, Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  buildFigures, getCaveat, getCalculation, getMilestoneBreakdown,
+} from "@/lib/riskFormat";
 import TimeBarsTab from "@/components/risk/TimeBarsTab";
 import EvidenceTab from "@/components/risk/EvidenceTab";
 import InsurerTab from "@/components/risk/InsurerTab";
@@ -108,6 +111,13 @@ function SignalRow({
   const Icon = CATEGORY_ICON[signal.category] ?? FileWarning;
   const isAcknowledged = signal.status === "acknowledged";
 
+  // Detail is formatted for humans rather than rendered raw — see
+  // lib/riskFormat.ts for the field metadata driving labels and units.
+  const figures = useMemo(() => buildFigures(signal.detail), [signal.detail]);
+  const caveat = getCaveat(signal.detail);
+  const calculation = getCalculation(signal.detail);
+  const milestoneRows = getMilestoneBreakdown(signal.detail);
+
   return (
     <div
       className={cn(
@@ -169,30 +179,76 @@ function SignalRow({
           </div>
 
           {expanded && (
-            <div className="mt-3 p-3 rounded-md bg-muted/40 border border-border">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
-                Rule {signal.code}
-              </p>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {Object.entries(signal.detail || {})
-                  .filter(([k]) => !["evidence", "basis_note", "coverage_note"].includes(k))
-                  .map(([k, v]) => (
-                    <div key={k} className="contents">
-                      <dt className="text-xs text-muted-foreground">{k.replace(/_/g, " ")}</dt>
-                      <dd className="text-xs text-foreground font-medium">{String(v)}</dd>
+            <div className="mt-3 rounded-lg bg-muted/30 border border-border overflow-hidden">
+              {/* Figures — the numbers behind the finding, formatted for a
+                  construction professional rather than dumped as raw keys. */}
+              {figures.length > 0 && (
+                <div className="flex flex-wrap gap-x-8 gap-y-4 p-4">
+                  {figures.map(f => (
+                    <div key={f.key}>
+                      <p className="text-[11px] text-muted-foreground">{f.label}</p>
+                      <p className={cn(
+                        "text-sm mt-0.5 tabular-nums",
+                        f.emphasis ? "font-semibold text-foreground" : "text-foreground"
+                      )}>
+                        {f.value}
+                      </p>
                     </div>
                   ))}
-              </dl>
-              {/* Legal caveats travel with the signal so they cannot be lost
-                  in translation between backend and UI. */}
-              {(signal.detail?.basis_note || signal.detail?.coverage_note) && (
-                <p className="text-[11px] text-muted-foreground mt-3 pt-2 border-t border-border leading-relaxed">
-                  {signal.detail.basis_note || signal.detail.coverage_note}
-                </p>
+                </div>
               )}
+
+              {/* Plain-English calculation, where the rule provides one. */}
+              {calculation && (
+                <div className="px-4 pb-4 -mt-1">
+                  <p className="text-xs text-muted-foreground leading-relaxed">{calculation}</p>
+                </div>
+              )}
+
+              {/* Milestone breakdown for certification divergence. */}
+              {milestoneRows && (
+                <div className="px-4 pb-4 -mt-1 space-y-1">
+                  {milestoneRows.map((m: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{m.milestone}</span>
+                      <span className="text-foreground tabular-nums">
+                        {m.percent_complete !== null && m.percent_complete !== undefined
+                          ? `${m.percent_complete}% complete`
+                          : "progress not tracked"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* The legal caveat. Given real visual weight because several
+                  rules report things that look contractual but are not — that
+                  distinction must survive all the way to the screen. */}
+              {caveat && (
+                <div className="flex gap-2.5 px-4 py-3 bg-amber-50/60 border-t border-amber-100">
+                  <Info className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-900">
+                      {signal.is_contractual
+                        ? "Contractual breach"
+                        : "Commercial guide — not a contract breach"}
+                    </p>
+                    <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">{caveat}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="px-4 py-2 border-t border-border bg-background/40">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Rule {signal.code}
+                </p>
+              </div>
+
               {signal.acknowledgement_note && (
-                <p className="text-xs text-foreground mt-3 pt-2 border-t border-border">
-                  <span className="text-muted-foreground">Note: </span>
+                <p className="text-xs text-foreground px-4 py-3 border-t border-border">
+                  <span className="text-muted-foreground">
+                    Note from {signal.acknowledged_by_name || "team"}:{" "}
+                  </span>
                   {signal.acknowledgement_note}
                 </p>
               )}

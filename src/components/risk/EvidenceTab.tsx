@@ -29,6 +29,29 @@ interface Pack {
   created_at: string;
 }
 
+/**
+ * Pull the non-zero record types out of the backend's summary sentence.
+ * The backend reports every category including empty ones (useful for the
+ * audit record); the UI shows only what is actually in the pack.
+ */
+function parseCounts(summary: string): string[] {
+  if (!summary) return [];
+  const tail = summary.split(":")[1];
+  if (!tail) return [];
+  return tail
+    .split(",")
+    .map(s => s.trim().replace(/\.$/, ""))
+    .filter(s => s && !s.startsWith("0 "));
+}
+
+function formatSealed(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 export default function EvidenceTab({ projectId }: { projectId: string }) {
   const [compiling, setCompiling] = useState(false);
   const { data, refetch } = useFetch<{ packs: Pack[] }>(
@@ -87,10 +110,32 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
             <div key={pack.id} className="border border-border rounded-lg p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{pack.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{pack.summary}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono mt-2 break-all">
-                    sha256: {pack.manifest_hash.slice(0, 32)}…
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-foreground">
+                      Evidence pack #{pack.id}
+                    </p>
+                    {/* Time, not just date — several packs are often compiled
+                        on the same day and must be distinguishable. */}
+                    <span className="text-xs text-muted-foreground">
+                      sealed {formatSealed(pack.sealed_at || pack.created_at)}
+                    </span>
+                  </div>
+
+                  {/* Only the record types actually present. Listing
+                      "0 payment certificates" is noise. */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+                    <span className="text-sm text-foreground">
+                      {pack.item_count} record{pack.item_count === 1 ? "" : "s"}
+                    </span>
+                    {parseCounts(pack.summary).map(part => (
+                      <span key={part} className="text-xs text-muted-foreground">
+                        {part}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground font-mono mt-2">
+                    {pack.manifest_hash.slice(0, 16)}…{pack.manifest_hash.slice(-8)}
                   </p>
                 </div>
 
