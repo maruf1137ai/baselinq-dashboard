@@ -22,6 +22,7 @@ import "./App.css";
 import "../public/fonts/stylesheet.css";
 import Programme from "./pages/programme";
 import Compliance from "./pages/Compliance";
+import ProjectHealth from "./pages/ProjectHealth";
 import Documents from "./pages/Documents";
 import TeamManagement from "./pages/settings/teamManagement";
 import Settings from "./pages/settings/settings";
@@ -197,6 +198,18 @@ const App = () => (
               <ProjectProtectedRoute>
                 <RoleRoute permission="viewCompliance">
                   <Compliance />
+                </RoleRoute>
+              </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          {/* Project Health — live risk dashboard. Gated on the same
+              permission as Compliance so no new permission code has to be
+              seeded before this page is usable. */}
+          <Route path="/project-health" element={
+            <ProtectedRoute>
+              <ProjectProtectedRoute>
+                <RoleRoute permission="viewCompliance">
+                  <ProjectHealth />
                 </RoleRoute>
               </ProjectProtectedRoute>
             </ProtectedRoute>
