@@ -26,6 +26,12 @@ import {
   RefreshCw, ShieldAlert, TrendingUp, Clock, Banknote, FileWarning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TimeBarsTab from "@/components/risk/TimeBarsTab";
+import EvidenceTab from "@/components/risk/EvidenceTab";
+import InsurerTab from "@/components/risk/InsurerTab";
+
+const TABS = ["Risk signals", "Notice deadlines", "Evidence", "Insurer"] as const;
+type TabKey = (typeof TABS)[number];
 
 // ── Types (mirror the backend serializer) ─────────────────────────────
 
@@ -205,6 +211,7 @@ export default function ProjectHealth() {
   const [ackTarget, setAckTarget] = useState<RiskSignal | null>(null);
   const [ackNote, setAckNote] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [tab, setTab] = useState<TabKey>("Risk signals");
 
   const { data, isLoading, refetch } = useFetch<SignalsResponse>(
     projectId ? `projects/${projectId}/risk-signals/?refresh=true` : null
@@ -270,13 +277,40 @@ export default function ProjectHealth() {
               Live risk signals across programme, financial and contractual data.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={cn("h-3.5 w-3.5 mr-2", refreshing && "animate-spin")} />
-            Refresh
-          </Button>
+          {tab === "Risk signals" && (
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-2", refreshing && "animate-spin")} />
+              Refresh
+            </Button>
+          )}
         </div>
 
-        {isLoading ? (
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b border-border">
+          {TABS.map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "text-sm py-2.5 px-4 border-b-2 transition-colors -mb-px",
+                tab === t
+                  ? "border-primary text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t}
+              {t === "Risk signals" && counts.total > 0 && (
+                <span className="ml-1.5 text-[11px] text-muted-foreground">{counts.total}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {tab === "Notice deadlines" && <TimeBarsTab projectId={projectId} />}
+        {tab === "Evidence" && <EvidenceTab projectId={projectId} />}
+        {tab === "Insurer" && <InsurerTab projectId={projectId} />}
+
+        {tab === "Risk signals" && (isLoading ? (
           <AwesomeLoader message="Evaluating project risk" />
         ) : (
           <>
@@ -349,7 +383,7 @@ export default function ProjectHealth() {
               </div>
             )}
           </>
-        )}
+        ))}
       </div>
 
       {/* Acknowledge dialog — the note becomes part of the contemporaneous record */}
