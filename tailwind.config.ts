@@ -98,9 +98,16 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        // The whole scale derives from --radius. Previously only sm/md/lg
+        // did, while xl (282 uses) and 2xl (50 uses) fell through to
+        // Tailwind's defaults of 12px/16px — so the radius token only
+        // controlled part of the app and cards were always rounder than
+        // buttons by accident rather than by intent.
+        sm: "calc(var(--radius) - 3px)",   // 3px — inline chips, small tags
+        md: "calc(var(--radius) - 2px)",   // 4px — badges, inputs, menu items
+        lg: "var(--radius)",               // 6px — buttons, form controls
+        xl: "calc(var(--radius) + 2px)",   // 8px — cards, panels, wells
+        "2xl": "calc(var(--radius) + 6px)", // 12px — modals, drawers, hero
       },
       keyframes: {
         "accordion-down": {

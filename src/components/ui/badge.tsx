@@ -4,7 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  // rounded-md (4px), not rounded-full. A status badge is a data element,
+  // and a squared-off chip reads as precise where a pill reads as consumer.
+  // Genuinely circular things — avatars, unread dots, icon buttons — keep
+  // rounded-full at their call sites; this only changes the badge chip.
+  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {

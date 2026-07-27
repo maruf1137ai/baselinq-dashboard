@@ -53,7 +53,13 @@ All colors MUST be HSL.
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 248 73% 65%;
-    --radius: 0.5rem;
+    /* 6px. Sharper than the previous 8px, and the single origin for the
+       whole radius scale (see borderRadius in tailwind.config.ts).
+       Rationale: Baselinq produces legally defensible records for contract
+       administration and insurance. Tighter geometry reads precise and
+       authoritative; softer geometry reads consumer. Best-in-class
+       enterprise tooling sits in the 4-8px band. */
+    --radius: 0.375rem;
     /* HSL of the previous #f3f2f0. This variable was dead — nothing
        consumed it, because tailwind.config.ts hardcoded the literal
        instead. The config now points here, making this the single source
