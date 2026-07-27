@@ -39,7 +39,7 @@ export function ProjectStatusCard({
   };
 
   const cardBg = {
-    default: 'bg-sidebar',
+    default: 'bg-muted/50',
     destructive: 'bg-red-50/80',
     success: 'bg-emerald-50/60',
     warning: 'bg-orange-50/60',
@@ -76,7 +76,7 @@ export function ProjectStatusCard({
               <h3 className={`text-3xl mt-5 ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
               {trendIcon && <span className={`text-lg font-medium ${trendColor}`}>{trendIcon}</span>}
             </div>
-            {subtitle && <p className="text-xs text-gray2 bg-sidebar py-1.5 px-5 rounded">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-gray2 bg-muted/50 py-1.5 px-5 rounded">{subtitle}</p>}
           </div>
 
           {/* Progress arc for visual weight */}

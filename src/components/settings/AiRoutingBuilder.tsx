@@ -68,7 +68,7 @@ export default function AiRoutingBuilderDrawer() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg bg-sidebar">
+              <div className="p-4 rounded-lg bg-muted/50">
                 💡 AI will learn from your actions and improve routing accuracy
                 over time.
               </div>

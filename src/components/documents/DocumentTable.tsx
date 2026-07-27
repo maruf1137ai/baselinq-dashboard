@@ -331,7 +331,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
             {groupBy !== 'none' && (
               <div
                 className={cn(
-                  "bg-sidebar/60 px-6 py-3 flex items-center justify-between cursor-pointer",
+                  "bg-muted/50 px-6 py-3 flex items-center justify-between cursor-pointer",
                   gi > 0 && "border-t border-border"
                 )}
                 onClick={() => toggle(group.key)}

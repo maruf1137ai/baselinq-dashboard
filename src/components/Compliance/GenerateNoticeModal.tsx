@@ -48,7 +48,7 @@ This matter requires your immediate attention as it blocks payment.
         <div className="p-6 space-y-6">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground font-normal">Compliance Item</label>
-            <div className="bg-sidebar border border-border py-[9px] px-[17px] rounded-xl text-muted-foreground text-base">
+            <div className="bg-muted/50 border border-border py-[9px] px-[17px] rounded-xl text-muted-foreground text-base">
               Client Approval for VO-001
             </div> 
           </div>

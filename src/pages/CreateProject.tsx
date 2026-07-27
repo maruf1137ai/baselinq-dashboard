@@ -1337,7 +1337,7 @@ export default function CreateProject() {
                 key={stepKey}
                 className={stepDir === "fwd" ? "anim-fwd" : "anim-back"}>
                 <div
-                  className="bg-sidebar rounded-xl"
+                  className="bg-card rounded-xl"
                   style={{
                     boxShadow:
                       "0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.04)",

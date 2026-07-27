@@ -1770,7 +1770,7 @@ export default function TaskDetails() {
               <Card className="p-0 bg-card shadow-none border-border overflow-hidden">
                 {/* ─── Title strip — light grey banner with title, type tag,
                        status + priority pills + 3-dot menu ─── */}
-                <div className="bg-sidebar/50 px-6 py-4 border-b border-border">
+                <div className="bg-muted/50 px-6 py-4 border-b border-border">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
@@ -2251,7 +2251,7 @@ export default function TaskDetails() {
                             key={resp.id}
                             className="p-0 bg-card border border-border overflow-hidden shadow-none"
                           >
-                            <div className="bg-sidebar/50 px-5 py-3 border-b border-border flex items-center justify-between">
+                            <div className="bg-muted/50 px-5 py-3 border-b border-border flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-7 w-7 border border-primary/20">
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
@@ -2417,7 +2417,7 @@ export default function TaskDetails() {
                   cards. Heading uses Werner's wording "Add a reply" so
                   the form is consistent across all task types. */}
               {!isTaskLocked && <Card className="p-0 shadow-none bg-card border-border overflow-hidden">
-                <div className="bg-sidebar/50 px-6 py-3 border-b border-border flex items-center justify-between">
+                <div className="bg-muted/50 px-6 py-3 border-b border-border flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {user?.name && (
                       <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
@@ -3343,7 +3343,7 @@ export default function TaskDetails() {
                     and the line geometry is unambiguous (connector is
                     centred under the dot, not floating below it). */}
                 <Card className="p-0 bg-card shadow-none border border-border overflow-hidden">
-                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                  <div className="bg-muted/50 px-4 py-2.5 border-b border-border">
                     <h3 className="text-xs font-medium text-foreground">Decision Timeline</h3>
                   </div>
                   <div className="px-4 py-4">
@@ -3431,7 +3431,7 @@ export default function TaskDetails() {
                 </Card>
 
                 {/* Deadlines */}
-                {/* <Card className="p-[17px] shadow-none rounded-lg bg-sidebar border-0">
+                {/* <Card className="p-[17px] shadow-none rounded-lg bg-muted/50 border-0">
                   <h3 className="text-xs font-normal text-muted-foreground mb-3">
                     Deadlines
                   </h3>
@@ -3529,7 +3529,7 @@ export default function TaskDetails() {
 
                 {/* Audit Trail — grey header strip + white body. */}
                 <Card className="p-0 bg-card shadow-none border border-border overflow-hidden">
-                  <div className="bg-sidebar/50 px-4 py-2.5 border-b border-border">
+                  <div className="bg-muted/50 px-4 py-2.5 border-b border-border">
                     <h3 className="text-xs font-medium text-foreground">Audit Trail</h3>
                   </div>
                   <div className="px-4 py-4">

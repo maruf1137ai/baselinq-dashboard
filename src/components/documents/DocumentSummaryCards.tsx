@@ -34,7 +34,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md border-0 bg-sidebar rounded-xl shadow-none overflow-hidden group",
+        "cursor-pointer transition-all hover:shadow-md border-0 bg-muted/50 rounded-xl shadow-none overflow-hidden group",
         className
       )}
       onClick={onClick}

@@ -347,7 +347,7 @@ const AiWorkSpace = () => {
                     <div key={message.id} className="mb-6">
                       {message.role === 'user' ? (
                         <div className="flex justify-end">
-                          <div className="max-w-[85%] text-sm rounded-lg bg-sidebar px-4 py-3 space-y-2">
+                          <div className="max-w-[85%] text-sm rounded-lg bg-muted/50 px-4 py-3 space-y-2">
                             {message.attachment && (
                               <div className="flex items-center gap-2.5 p-2 rounded-md bg-red-50 border border-red-100">
                                 <div className="w-8 h-8 rounded bg-red-500 flex items-center justify-center shrink-0">

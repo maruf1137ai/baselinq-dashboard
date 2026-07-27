@@ -64,7 +64,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
 
         <div className="space-y-4 px-6 pb-6 pt-4">
           {/* What AI will generate */}
-          <div className="bg-sidebar border border-border rounded-xl p-4">
+          <div className="bg-muted/50 border border-border rounded-xl p-4">
             <p className="text-sm text-foreground mb-2">AI will generate:</p>
             {WILL_GENERATE.map((item, i) => (
               <div key={i} className="flex items-center gap-2">

@@ -253,7 +253,7 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
   return (
     <Link
       to={`/meetings/${item.id}`}
-      className={`block rounded-xl border px-4 py-3 hover:bg-sidebar transition-colors ${
+      className={`block rounded-xl border px-4 py-3 hover:bg-muted/50 transition-colors ${
         isUnread ? "border-primary/40 bg-primary/5" : "border-border bg-card"
       }`}
     >

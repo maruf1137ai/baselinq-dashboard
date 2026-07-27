@@ -13,7 +13,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
       />
 
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="p-6 bg-sidebar rounded-xl">
+        <div className="p-6 bg-muted/50 rounded-xl">
           <h4 className="text-base text-foreground mb-3 flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />Claim Summary
           </h4>
@@ -29,7 +29,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="space-y-4">
               {Object.entries(data.delay_cause_analysis).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground normal-case">
                       {key.replace(/_/g, " ")}
@@ -107,7 +107,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <DollarSign className="h-4 w-4 text-primary" />Financial Impact
             </h4>
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Cost Entitlement</p>
                 <Badge variant="outline" className={`${data.cost_impact_assessment.cost_entitlement.entitled ? 'text-green_dark' : 'text-gray-400'}`}>
                   {data.cost_impact_assessment.cost_entitlement.entitled ? 'YES' : 'NO'}
@@ -118,7 +118,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs text-primary mt-1">Ref: {data.cost_impact_assessment.cost_entitlement.clause_reference}</p>
                 )}
               </div>
-              <div className="p-4 bg-sidebar rounded-lg border-l-2 border-destructive">
+              <div className="p-4 bg-muted/50 rounded-lg border-l-2 border-destructive">
                 <p className="text-xs font-medium text-destructive normal-case mb-1">LD Exposure</p>
                 <p className="text-sm font-medium text-destructive">{data.cost_impact_assessment.liquidated_damages_exposure.daily_rate}/day</p>
                 <p className="text-xs text-gray-500 mt-1">{data.cost_impact_assessment.liquidated_damages_exposure.assessment}</p>
@@ -127,7 +127,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs text-destructive mt-1">Ref: Clause {data.cost_impact_assessment.liquidated_damages_exposure.clause_reference}</p>
                 )}
               </div>
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Prolongation</p>
                 <Badge variant="outline" className={`${data.cost_impact_assessment.prolongation_costs.applicable ? 'text-green_dark' : 'text-gray-400'}`}>
                   {data.cost_impact_assessment.prolongation_costs.applicable ? 'YES' : 'NO'}
@@ -150,7 +150,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-3 gap-4">
               {Object.entries(data.procedural_compliance).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">{key.replace(/_/g, " ")}</p>
                   <Badge variant="outline" className={`${value.status === "COMPLIANT" ? "text-green_dark" : "text-amber-600"}`}>
                     {value.status || "N/A"}

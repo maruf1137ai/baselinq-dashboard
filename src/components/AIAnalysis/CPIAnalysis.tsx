@@ -14,7 +14,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
       />
 
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="p-6 bg-sidebar rounded-xl">
+        <div className="p-6 bg-muted/50 rounded-xl">
           <h4 className="text-base text-foreground mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />Critical Path Summary
           </h4>
@@ -30,7 +30,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </h4>
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(data.cpi_categorization).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">
                     {key.replace(/_/g, " ")}
                   </p>
@@ -55,7 +55,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </h4>
             <div className="space-y-4">
               {Object.entries(data.contract_compliance).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground normal-case">{key.replace(/_/g, " ")}</span>
                     <Badge variant="outline" className={`${value.status === "COMPLIANT" ? "text-green_dark border-green-200" : "text-warning border-warning/30"}`}>{value.status}</Badge>
@@ -132,7 +132,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </div>
 
             {data.potential_implications.resource_implications && (
-              <div className="mt-4 p-4 bg-sidebar rounded-lg">
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Resource Needs</p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {data.potential_implications.resource_implications.key_resources.map((res: string, i: number) => (

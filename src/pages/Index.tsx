@@ -597,7 +597,7 @@ const Index = () => {
           </div>
         )}
         {/* Project Context Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-4 bg-sidebar border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 bg-muted/50 border border-border rounded-xl p-4">
           <div className="flex items-center gap-4">
             {/* Progress Ring */}
             <div className="relative h-12 w-12 shrink-0">
@@ -849,7 +849,7 @@ const Index = () => {
                     <button
                       key={doc.id || doc._id || i}
                       onClick={() => setSelectedDoc(doc)}
-                      className="w-full flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-sidebar transition-colors text-left"
+                      className="w-full flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/50 transition-colors text-left"
                     >
                       <span className="text-base">{getFileIcon(doc.file_name || doc.fileName || doc.name || "Doc")}</span>
                       <div className="flex-1 min-w-0">

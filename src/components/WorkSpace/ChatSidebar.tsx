@@ -175,7 +175,7 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                           <div
                             key={session.id}
                             className={`group relative flex items-center justify-between border border-transparent rounded-lg px-4 py-[10px] text-left text-sm transition-colors hover:bg-accent cursor-pointer ${isActive
-                              ? "bg-sidebar border-border"
+                              ? "bg-muted/50 border-border"
                               : ""
                               }`} onClick={() => navigate(targetUrl)}>
                             <SessionLabel label={session.label} />

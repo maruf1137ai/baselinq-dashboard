@@ -116,7 +116,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                     key={channel.id}
                     onClick={() => onSelectTask(channel)}
                     className={`py-3 px-4 rounded-lg cursor-pointer border relative transition-colors group
-                      ${isSelected ? 'bg-sidebar border-border' : 'bg-card hover:bg-sidebar border-border'}
+                      ${isSelected ? 'bg-muted/50 border-border' : 'bg-card hover:bg-muted/50 border-border'}
                     `}
                   >
                     {/* Header Row: ID/Title and Status */}

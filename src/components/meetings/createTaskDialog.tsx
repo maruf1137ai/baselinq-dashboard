@@ -90,7 +90,7 @@ export function CreateTaskDialog() {
 
         <div className="space-y-4 px-6 pb-6">
           <div className="space-y-5">
-            <div className="text-sm p-3 rounded-xl text-foreground bg-sidebar">
+            <div className="text-sm p-3 rounded-xl text-foreground bg-muted/50">
               From meeting: Site Coordination Meeting
             </div>
             {/* Document Title */}

@@ -13,7 +13,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
       />
 
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="p-6 bg-sidebar rounded-xl">
+        <div className="p-6 bg-muted/50 rounded-xl">
           <h4 className="text-base text-foreground mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />Instruction Summary
           </h4>
@@ -29,7 +29,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             </h4>
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(data.procedural_compliance).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground normal-case">{key.replace(/_/g, " ")}</span>
                     <Badge variant="outline" className={`${value.status === "COMPLIANT" || value.status === "JUSTIFIED"
@@ -57,7 +57,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <Zap className="h-4 w-4 text-primary" />Scope & Cost Assessment
             </h4>
             <div className="space-y-4">
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Within Contract Scope</p>
                 <Badge variant="outline" className={`${data.scope_assessment.within_contract_scope.in_scope ? 'text-green_dark' : 'text-destructive'}`}>
                   {data.scope_assessment.within_contract_scope.in_scope ? 'IN SCOPE' : 'OUT OF SCOPE'}
@@ -66,7 +66,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <p className="text-xs text-gray-400 mt-1">Ref: {data.scope_assessment.within_contract_scope.clause_text}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-sidebar rounded-lg">
+                <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">VO Triggers</p>
                   <p className="text-sm font-medium">{data.scope_assessment.vo_implications.triggers_variation ? 'VARIATION REQUIRED' : 'NO VARIATION'}</p>
                   {data.scope_assessment.vo_implications.clause_reference && (
@@ -74,7 +74,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   )}
                   <p className="text-xs text-gray-500 mt-1">{data.scope_assessment.vo_implications.assessment}</p>
                 </div>
-                <div className="p-4 bg-sidebar rounded-lg border-l-2 border-warning">
+                <div className="p-4 bg-muted/50 rounded-lg border-l-2 border-warning">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Estimated Cost Impact</p>
                   <p className="text-sm font-medium text-warning">{data.scope_assessment.cost_impact_assessment.estimated_impact}</p>
                   {data.scope_assessment.cost_impact_assessment.clause_reference && (
@@ -119,18 +119,18 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <Clock className="h-4 w-4 text-primary" />Time & Urgency
             </h4>
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Programme Effect</p>
                 <p className={`text-sm font-medium ${data.time_impact.programme_effect.affects_programme ? 'text-destructive' : 'text-green_dark'}`}>
                   {data.time_impact.programme_effect.affects_programme ? 'AFFECTS SCHED' : 'NO IMPACT'}
                 </p>
               </div>
-              <div className="p-4 bg-sidebar rounded-lg">
+              <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Due Date</p>
                 <p className="text-sm font-medium text-primary">{data.time_impact.due_date_compliance.due_date}</p>
                 <p className="text-xs text-gray-400">Achievable: {data.time_impact.due_date_compliance.achievable ? 'YES' : 'NO'}</p>
               </div>
-              <div className="p-4 bg-sidebar rounded-lg border-r-2 border-primary/20">
+              <div className="p-4 bg-muted/50 rounded-lg border-r-2 border-primary/20">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Urgency</p>
                 <p className="text-sm font-medium">{data.time_impact.urgency_assessment.assessment}</p>
               </div>
