@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2 } from "lucide-react";
+import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2, AlertCircle, RotateCw } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import { toast } from "sonner";
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
@@ -8,6 +8,7 @@ import { formatTime } from "@/lib/dateUtils";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
+import { MAX_UPLOAD_BYTES, formatFileSize } from "./attachmentUtils";
 import {
   Tooltip,
   TooltipContent,
@@ -19,15 +20,19 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
 
-  // Update local message state AND notify the parent so the right-side
-  // summary panel can derive shared attachments/links from the same list
-  // (avoids a second poll of channels/{id}/messages/).
   const applyMessages = (u: any[] | ((p: any[]) => any[])) =>
-    setMessages((prev) => {
-      const next = typeof u === "function" ? (u as (p: any[]) => any[])(prev) : u;
-      onMessagesChange?.(next);
-      return next;
-    });
+    setMessages((prev) =>
+      typeof u === "function" ? (u as (p: any[]) => any[])(prev) : u
+    );
+
+  // Notify the parent so the right-side summary panel can derive shared
+  // attachments/links from the same list (avoids a second poll of
+  // channels/{id}/messages/). This runs as an effect, not inside the setState
+  // updater — an updater must be pure, and calling it there also warns about
+  // updating another component while this one renders.
+  useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages]);
   const [showContext, setShowContext] = useState(true);
 
   const [isTyping, setIsTyping] = useState(false);
@@ -38,6 +43,20 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  // Object URLs for optimistic attachments, keyed by temp message id. A failed
+  // message stays on screen and keeps rendering its preview, so these are
+  // revoked when the bubble is removed rather than when the send settles.
+  const tempObjectUrlsRef = useRef<Record<string, string[]>>({});
+  // Signature of the last poll payload, ignoring the volatile signed URLs — see
+  // fetchMessages. Lets an unchanged poll skip the state update entirely.
+  const lastSignatureRef = useRef<string | null>(null);
+  // First-seen signed URLs per attachment id. The backend re-signs on every
+  // serialization (SigV4 embeds a per-second timestamp), so the string differs
+  // on every poll even though the file is identical. Reusing the first one
+  // keeps <img>/<video> src stable so they never re-request.
+  const stableUrlsRef = useRef<
+    Map<number | string, { url: string; streamUrl: string; firstSeen: number }>
+  >(new Map());
   const [attachedFiles, setAttachedFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -249,6 +268,34 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const taskStatus = (taskDetails?.task?.status || channel?.task?.status || channel?.status || '').toLowerCase();
   const isTaskCompleted = !!channel?.taskId && COMPLETED_STATUSES.includes(taskStatus);
 
+  // Presigned links live for AWS_S3_PRESIGNED_EXPIRY (1h by default). Re-take
+  // the fresh URL well before that so a long-open channel never renders a
+  // link that is about to 403.
+  const STABLE_URL_MAX_AGE_MS = 45 * 60 * 1000;
+
+  /**
+   * Reuse the first signed URL we saw for this attachment, so its src stays
+   * byte-identical across polls. Falls back to the fresh URLs when we've not
+   * seen the attachment before or the cached pair is close to expiring.
+   */
+  const stableUrlsFor = (
+    id: number | string | undefined,
+    fresh: { url: string; streamUrl: string }
+  ) => {
+    if (id === undefined || id === null) return fresh;
+    const now = Date.now();
+    const cached = stableUrlsRef.current.get(id);
+    if (cached && now - cached.firstSeen < STABLE_URL_MAX_AGE_MS) {
+      return { url: cached.url, streamUrl: cached.streamUrl };
+    }
+    stableUrlsRef.current.set(id, {
+      url: fresh.url,
+      streamUrl: fresh.streamUrl,
+      firstSeen: now,
+    });
+    return fresh;
+  };
+
   // Fetch messages from API
   const fetchMessages = async (showLoader = false) => {
     if (!channel?.id) return;
@@ -262,23 +309,52 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
           content: msg.content,
           sender_name: msg.sender_name,
           timestamp: formatTime(msg.created_at),
-          files: (msg.attachments || []).map((a: any) => ({
-            name: a.fileName || a.file_name || a.name || "",
-            type: a.fileType || a.file_type || a.type || "",
-            url: a.url || a.file_url || "",
-            // Same-origin inline preview URL (backend proxy); falls back to
-            // `url` in the modal when absent (non-S3 / non-previewable types).
-            streamUrl: a.streamUrl || a.stream_url || "",
-          })),
+          files: (msg.attachments || []).map((a: any) => {
+            const id = a.id;
+            const s3Key = a.s3Key || a.s3_key || "";
+            const fresh = {
+              // Stable identity. The URLs below are credentials, not ids —
+              // never key React off them (see stableUrls).
+              id,
+              s3Key,
+              name: a.fileName || a.file_name || a.name || "",
+              type: a.fileType || a.file_type || a.type || "",
+              url: a.url || a.file_url || "",
+              // Same-origin inline preview URL (backend proxy); falls back to
+              // `url` in the modal when absent (non-S3 / non-previewable types).
+              streamUrl: a.streamUrl || a.stream_url || "",
+            };
+            return { ...fresh, ...stableUrlsFor(id, fresh) };
+          }),
           is_urgent: msg.is_urgent,
           message_type: msg.message_type,
           is_system: msg.is_system,
         }));
+
+        // Nothing actually changed → don't touch state. The presigned `url`
+        // and signed `streamUrl` are re-minted on every serialization, so a
+        // naive compare always differs; the signature below deliberately
+        // ignores them. Without this every 2.5s poll produced a new array,
+        // which re-rendered the shared-files panel and remounted its
+        // <video preload="metadata"> tiles — one abandoned media request per
+        // poll, until the browser's connection pool was exhausted.
+        const signature = JSON.stringify(
+          formattedMessages.map((m: any) => [
+            m.id,
+            m.content,
+            m.is_urgent,
+            (m.files || []).map((f: any) => f.id ?? f.s3Key ?? f.name),
+          ])
+        );
+        if (signature === lastSignatureRef.current) return;
+        lastSignatureRef.current = signature;
+
         applyMessages((prev) => {
           // Preserve any still-pending optimistic messages until their real
-          // server copy has been removed explicitly by the send handlers.
-          const pending = prev.filter((m) => m.pending);
-          return [...formattedMessages, ...pending];
+          // server copy has been removed explicitly by the send handlers, plus
+          // failed ones so the retry/discard affordance survives the poll.
+          const unsent = prev.filter((m) => m.pending || m.failed);
+          return [...formattedMessages, ...unsent];
         });
       }
     } catch (error) {
@@ -289,6 +365,10 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   };
 
   useEffect(() => {
+    // A new channel means an entirely different message set — drop the
+    // unchanged-poll signature and the cached URLs with it.
+    lastSignatureRef.current = null;
+    stableUrlsRef.current.clear();
     applyMessages([]);
     fetchMessages(true);
 
@@ -300,6 +380,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     // Cleanup: Clear interval when component unmounts or channel changes
     return () => {
       clearInterval(intervalId);
+      // Optimistic messages are dropped on channel switch — release their
+      // object URLs with them.
+      Object.keys(tempObjectUrlsRef.current).forEach(revokeTempUrls);
     };
   }, [channel]);
 
@@ -320,67 +403,69 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (message.trim() === "" && attachedFiles.length === 0 && !isRecording) return;
+  const revokeTempUrls = (tempId: string) => {
+    (tempObjectUrlsRef.current[tempId] || []).forEach((u) => URL.revokeObjectURL(u));
+    delete tempObjectUrlsRef.current[tempId];
+  };
 
-    if (isRecording) {
-      stopRecording();
-      return;
-    }
+  /** Patch one optimistic message in place, keyed by its temp id. */
+  const updateTempMessage = (tempId: string, patch: Record<string, any>) =>
+    applyMessages((prev) =>
+      prev.map((m) => (m.id === tempId ? { ...m, ...patch } : m))
+    );
 
+  /**
+   * Upload the attachments to S3 and post the message.
+   *
+   * Split out of handleSend so a failed send can be retried from its own
+   * bubble without re-populating the composer. On failure the optimistic
+   * message is kept and flagged `failed` — it used to be removed, which
+   * combined with an upload that could hang forever meant a "Sending…" bubble
+   * that never resolved and a permanently disabled send button.
+   */
+  const uploadAndPost = async (
+    tempId: string,
+    outgoingMessage: string,
+    outgoingFiles: any[],
+    outgoingMentions: any[]
+  ) => {
     setIsUploading(true);
-
-    // Snapshot what we're sending so we can render an optimistic message and
-    // restore the composer if the send fails.
-    const outgoingMessage = message.trim();
-    const outgoingFiles = attachedFiles;
-    const outgoingMentions = mentionedUserIds;
-    const tempId = `temp-${Date.now()}`;
-    // Local object URLs let the just-sent attachment show instantly (before
-    // the server returns its real url). file.type is the real MIME so the
-    // existing in-bubble image/audio detection renders the preview.
-    const objectUrls: string[] = [];
-    const tempFiles = outgoingFiles.map((f) => {
-      const url = URL.createObjectURL(f.file);
-      objectUrls.push(url);
-      return { name: f.name, type: f.file?.type || f.type, url, size: f.file?.size };
-    });
-
-    // Insert the optimistic message and clear the composer immediately.
-    applyMessages((prev) => [
-      ...prev,
-      {
-        id: tempId,
-        sender_id: currentUser?.id,
-        sender_name: currentUser?.name || "You",
-        content: outgoingMessage,
-        timestamp: formatTime(new Date().toISOString()),
-        files: tempFiles,
-        message_type: "text",
-        pending: true,
-      },
-    ]);
-    setMessage("");
-    setAttachedFiles([]);
-    setMentionedUserIds([]);
+    updateTempMessage(tempId, { pending: true, failed: false, progress: undefined });
 
     try {
       // Upload every attached file directly to S3 via a presigned PUT, then send
       // only the resulting keys — never raw bytes to Django's local disk, which
       // is served from /media/ and 403s on staging (reverse proxy + ephemeral
       // disk). Mirrors the voice-note flow in handleAudioUploadAndSend.
-      const attachmentsMeta = await Promise.all(
-        outgoingFiles.map(async (fileData) => {
-          const contentType = fileData.file?.type || "application/octet-stream";
-          const { upload_url, key } = await getPresignedUrl({
-            filename: fileData.name,
-            content_type: contentType,
-            folder: "channel_attachments",
-          });
-          await uploadFileToPresignedUrl(upload_url, fileData.file, contentType);
-          return { s3_key: key, file_name: fileData.name, file_type: contentType };
-        })
-      );
+      //
+      // Sequential, not Promise.all: progress for N parallel uploads is not
+      // meaningfully displayable, and one file at a time is kinder to a weak
+      // connection — which is exactly the case that used to hang.
+      const attachmentsMeta = [];
+      for (let i = 0; i < outgoingFiles.length; i++) {
+        const fileData = outgoingFiles[i];
+        const contentType = fileData.file?.type || "application/octet-stream";
+        const { upload_url, key } = await getPresignedUrl({
+          filename: fileData.name,
+          content_type: contentType,
+          folder: "channel_attachments",
+          size_bytes: fileData.file?.size,
+        });
+        await uploadFileToPresignedUrl(
+          upload_url,
+          fileData.file,
+          contentType,
+          (percent) =>
+            updateTempMessage(tempId, {
+              progress: { index: i, total: outgoingFiles.length, percent },
+            })
+        );
+        attachmentsMeta.push({
+          s3_key: key,
+          file_name: fileData.name,
+          file_type: contentType,
+        });
+      }
 
       const formData = new FormData();
       formData.append("content", outgoingMessage || "");
@@ -401,19 +486,81 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
       // Drop the optimistic copy, then refetch so the real (persisted)
       // message replaces it. The poll never returns temp- ids, so no dup.
       applyMessages((prev) => prev.filter((m) => m.id !== tempId));
+      revokeTempUrls(tempId);
       await fetchMessages();
     } catch (error) {
       console.error("Failed to send message", error);
-      toast.error("Failed to send message");
-      // Remove the failed optimistic message and restore the composer.
-      applyMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setMessage(outgoingMessage);
-      setAttachedFiles(outgoingFiles);
-      setMentionedUserIds(outgoingMentions);
+      const detail =
+        (error as any)?.response?.data?.error ||
+        (error as any)?.message ||
+        "Failed to send message";
+      toast.error(detail);
+      // Keep the bubble so the user can retry or discard it — the files live
+      // only in this closure, so removing it would lose them.
+      updateTempMessage(tempId, {
+        pending: false,
+        failed: true,
+        progress: undefined,
+        error: detail,
+        retry: () => uploadAndPost(tempId, outgoingMessage, outgoingFiles, outgoingMentions),
+      });
     } finally {
       setIsUploading(false);
-      objectUrls.forEach((u) => URL.revokeObjectURL(u));
     }
+  };
+
+  const handleSend = async () => {
+    if (message.trim() === "" && attachedFiles.length === 0 && !isRecording) return;
+
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
+
+    // Snapshot what we're sending so we can render an optimistic message.
+    const outgoingMessage = message.trim();
+    const outgoingFiles = attachedFiles;
+    const outgoingMentions = mentionedUserIds;
+    const tempId = `temp-${Date.now()}`;
+    // Local object URLs let the just-sent attachment show instantly (before
+    // the server returns its real url). file.type is the real MIME so the
+    // existing in-bubble image/audio detection renders the preview. They are
+    // revoked when the bubble goes away — not in a finally, since a failed
+    // message stays on screen and still needs its preview.
+    const objectUrls: string[] = [];
+    const tempFiles = outgoingFiles.map((f) => {
+      const url = URL.createObjectURL(f.file);
+      objectUrls.push(url);
+      return { name: f.name, type: f.file?.type || f.type, url, size: f.file?.size };
+    });
+    tempObjectUrlsRef.current[tempId] = objectUrls;
+
+    // Insert the optimistic message and clear the composer immediately.
+    applyMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender_id: currentUser?.id,
+        sender_name: currentUser?.name || "You",
+        content: outgoingMessage,
+        timestamp: formatTime(new Date().toISOString()),
+        files: tempFiles,
+        message_type: "text",
+        pending: true,
+      },
+    ]);
+    setMessage("");
+    setAttachedFiles([]);
+    setMentionedUserIds([]);
+
+    await uploadAndPost(tempId, outgoingMessage, outgoingFiles, outgoingMentions);
+  };
+
+  /** Drop a failed optimistic message and put its content back in the composer. */
+  const discardFailedMessage = (msg: any) => {
+    applyMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    revokeTempUrls(msg.id);
+    if (msg.content) setMessage((cur) => cur || msg.content);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -427,12 +574,28 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
   const handleFileAttach = (e: any) => {
     const files = Array.from(e.target.files || []) as any[];
-    const newFiles = files.map((file: any) => ({
-      name: file.name,
-      type: file.name.split(".").pop(),
-      file: file,
-    }));
+
+    // Reject oversized files here, before an optimistic bubble exists — an
+    // upload well past this limit was the case that used to hang silently.
+    const tooBig = files.filter((f) => f.size > MAX_UPLOAD_BYTES);
+    tooBig.forEach((f) =>
+      toast.error(
+        `"${f.name}" is ${formatFileSize(f.size)} — the maximum upload size is ${formatFileSize(MAX_UPLOAD_BYTES)}.`
+      )
+    );
+
+    const newFiles = files
+      .filter((f) => f.size <= MAX_UPLOAD_BYTES)
+      .map((file: any) => ({
+        name: file.name,
+        // Real MIME where the browser gives us one; the extension is only a
+        // fallback (the rest of the attachment code expects a MIME here).
+        type: file.type || file.name.split(".").pop(),
+        file: file,
+      }));
     setAttachedFiles((prev) => [...prev, ...newFiles]);
+    // Let the same file be picked again after a rejection.
+    e.target.value = "";
   };
 
   const removeAttachedFile = (index: number) => {
@@ -540,6 +703,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
         filename: audioFile.name,
         content_type: 'audio/webm',
         folder: 'channel_attachments',
+        size_bytes: audioFile.size,
       });
 
       // Step 2: Upload directly to S3 (bypasses Django local storage)
@@ -901,7 +1065,32 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                           {msg.pending && (
                             <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-400">
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              Sending…
+                              {msg.progress
+                                ? `Uploading${
+                                    msg.progress.total > 1
+                                      ? ` ${msg.progress.index + 1}/${msg.progress.total}`
+                                      : ""
+                                  }… ${msg.progress.percent}%`
+                                : "Sending…"}
+                            </div>
+                          )}
+                          {msg.failed && (
+                            <div className="flex items-center gap-2 mt-1.5 text-xs text-red-600">
+                              <AlertCircle className="w-3 h-3 shrink-0" />
+                              <span className="flex-1">{msg.error || "Not sent"}</span>
+                              <button
+                                type="button"
+                                onClick={() => msg.retry?.()}
+                                disabled={isUploading}
+                                className="inline-flex items-center gap-1 font-medium hover:underline disabled:opacity-50">
+                                <RotateCw className="w-3 h-3" /> Retry
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => discardFailedMessage(msg)}
+                                className="font-medium text-gray-500 hover:underline">
+                                Discard
+                              </button>
                             </div>
                           )}
                         </div>

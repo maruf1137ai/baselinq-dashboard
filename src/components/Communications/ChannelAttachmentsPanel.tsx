@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import {
+  attachmentKey,
   collectChannelAttachments,
   getKindMeta,
   formatFileSize,
@@ -192,7 +193,7 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
                 ) : (
                   <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
                     {attachments.map((f, i) => (
-                      <AttachmentRow key={`${f.url}-${i}`} file={f} onPreview={onPreview} />
+                      <AttachmentRow key={attachmentKey(f, i)} file={f} onPreview={onPreview} />
                     ))}
                   </div>
                 )}
@@ -209,7 +210,11 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
                 ) : (
                   <div className="max-h-72 overflow-y-auto pr-1 grid grid-cols-3 gap-2">
                     {media.map((f, i) => (
-                      <MediaTile key={`${f.url}-${i}`} file={f} onPreview={onPreview} />
+                      // Keyed by attachment id, never the presigned url: the url
+                      // is re-signed on every poll, and a changing key remounts
+                      // this tile's <video preload="metadata"> — one abandoned
+                      // media request per poll.
+                      <MediaTile key={attachmentKey(f, i)} file={f} onPreview={onPreview} />
                     ))}
                   </div>
                 )}

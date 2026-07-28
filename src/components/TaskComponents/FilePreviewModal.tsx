@@ -44,6 +44,7 @@ const DOC_VIEWER_CONFIG = {
 } as const;
 
 const VIDEO_EXTS = ["mp4", "webm", "ogg", "mov"];
+const AUDIO_EXTS = ["mp3", "wav", "m4a"];
 const XLSX_EXTS = ["xlsx", "xls"];
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "avif"];
 const PDF_EXTS = ["pdf"];
@@ -52,13 +53,25 @@ const PDF_EXTS = ["pdf"];
 // so cap how long we show its spinner before offering an escape hatch.
 const PREVIEW_TIMEOUT_MS = 15000;
 
-/** Prefer streamUrl (same-origin backend proxy) for preview to avoid S3 CORS. */
-function getViewUrl(file: NonNullable<FilePreviewModalProps["file"]>): string {
-  return file.streamUrl || (file as { stream_url?: string }).stream_url || file.url;
-}
-
 function getFileExtension(filename: string): string {
   return filename.split(".").pop()?.toLowerCase() || "";
+}
+
+/**
+ * Prefer streamUrl (same-origin backend proxy) for preview to avoid S3 CORS —
+ * EXCEPT for video/audio, which play straight from the presigned S3 URL.
+ * A media element seeks with Range requests and these files are often tens of
+ * MB; the proxy has a size cap and ties up a worker per playback, so it used to
+ * answer 413 and the video never opened. S3 serves ranges natively and a
+ * <video src> is not subject to CORS.
+ */
+function getViewUrl(file: NonNullable<FilePreviewModalProps["file"]>): string {
+  const streamUrl = file.streamUrl || (file as { stream_url?: string }).stream_url;
+  const ext = getFileExtension(file.name || "");
+  if (VIDEO_EXTS.includes(ext) || AUDIO_EXTS.includes(ext)) {
+    return file.url || streamUrl || "";
+  }
+  return streamUrl || file.url;
 }
 
 /** Inline error / "can't render" state with escape hatches. */
@@ -176,7 +189,13 @@ const PreviewSurface: React.FC<{
   if (isVideo) {
     return (
       <div className="flex items-center justify-center bg-muted/50 rounded-lg p-4 h-full">
-        <video controls className="max-w-full max-h-[70vh]" src={url}>
+        <video
+          controls
+          playsInline
+          preload="metadata"
+          className="max-w-full max-h-[70vh]"
+          src={url}
+        >
           Your browser does not support the video tag.
         </video>
       </div>

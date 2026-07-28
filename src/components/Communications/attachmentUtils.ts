@@ -24,6 +24,11 @@ export type AttachmentKind =
 export type SegmentKind = "attachments" | "media";
 
 export interface ChatFile {
+  // Stable identity from the API. `url`/`streamUrl` are signed credentials
+  // that are re-minted on every serialization — use these for React keys and
+  // dedupe, never the URLs.
+  id?: number | string;
+  s3Key?: string;
   name?: string;
   type?: string;
   url?: string;
@@ -32,6 +37,10 @@ export interface ChatFile {
   // preview to avoid S3 CORS / Content-Disposition: attachment.
   streamUrl?: string;
 }
+
+/** Stable React key / dedupe key for an attachment. */
+export const attachmentKey = (f: ChatFile, fallback: number | string = ""): string =>
+  String(f?.id ?? f?.s3Key ?? f?.url ?? fallback);
 
 export interface PanelAttachment extends ChatFile {
   kind: AttachmentKind;
@@ -104,6 +113,12 @@ export const getKindMeta = (kind: AttachmentKind): KindMeta => {
   }
 };
 
+// Largest file we accept for upload. Mirrors settings.MAX_UPLOAD_BYTES on the
+// backend, which re-checks it when issuing the presigned PUT URL. Guarding here
+// too means an oversized file is rejected before any optimistic message is
+// rendered, rather than after a long upload that was never going to work.
+export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
+
 export const formatFileSize = (bytes?: number): string => {
   if (!bytes || bytes <= 0) return "";
   const k = 1024;
@@ -157,13 +172,15 @@ export interface CollectedAttachments {
 }
 
 // Aggregate every attachment + link shared across a channel's messages.
-// Files are deduped by url and `blob:` previews (optimistic temp messages) are
-// skipped so in-flight sends never leak into the panel.
+// Files are deduped by stable id (NOT url — presigned urls are re-minted on
+// every poll, so a url-keyed dedupe only worked by accident) and `blob:`
+// previews (optimistic temp messages) are skipped so in-flight sends never
+// leak into the panel.
 export const collectChannelAttachments = (messages: any[]): CollectedAttachments => {
   const attachments: PanelAttachment[] = [];
   const media: PanelAttachment[] = [];
   const links: string[] = [];
-  const seenUrl = new Set<string>();
+  const seenFile = new Set<string>();
   const seenLink = new Set<string>();
 
   for (const msg of messages || []) {
@@ -176,8 +193,9 @@ export const collectChannelAttachments = (messages: any[]): CollectedAttachments
     }
     for (const f of msg?.files || []) {
       if (!f?.url || f.url.startsWith("blob:")) continue;
-      if (seenUrl.has(f.url)) continue;
-      seenUrl.add(f.url);
+      const key = attachmentKey(f);
+      if (seenFile.has(key)) continue;
+      seenFile.add(key);
       const kind = getAttachmentKind(f);
       const item: PanelAttachment = { ...f, kind };
       (categorizeForSegment(kind) === "media" ? media : attachments).push(item);

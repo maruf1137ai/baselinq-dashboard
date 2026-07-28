@@ -752,6 +752,8 @@ export interface PresignedUrlParams {
   filename: string;
   content_type?: string;
   folder?: string;
+  /** Declared file size — the backend rejects anything over MAX_UPLOAD_BYTES. */
+  size_bytes?: number;
 }
 
 /** Request a presigned URL from the backend for uploading a file to S3. */
@@ -765,6 +767,7 @@ export const getPresignedUrl = async (
         filename: params.filename,
         content_type: params.content_type ?? "application/octet-stream",
         folder: params.folder ?? "uploads",
+        size_bytes: params.size_bytes,
       }
     );
     return response.data;
@@ -812,31 +815,94 @@ export function toSafeHeaderFilename(name: string): string {
   return name.replace(/[^\x00-\xFF]/g, "_");
 }
 
+/**
+ * No-progress window after which we give up on an upload.
+ *
+ * NOT a total-duration cap (xhr.timeout would be that, and a legitimate
+ * 250 MB upload can easily run longer). A half-open TCP connection fires
+ * neither `load` nor `error`, so without this watchdog the promise never
+ * settles and the caller's optimistic "Sending…" state hangs forever.
+ */
+const UPLOAD_STALL_TIMEOUT_MS = 60000;
+
 /** Upload a file to S3 using a presigned PUT URL. Does not go through our API. */
 export const uploadFileToPresignedUrl = async (
   uploadUrl: string,
   file: File,
   contentType: string,
   onProgress?: (percent: number) => void,
-  contentDisposition?: string
+  contentDisposition?: string,
+  signal?: AbortSignal
 ): Promise<void> => {
   const xhr = new XMLHttpRequest();
   return new Promise((resolve, reject) => {
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+    let stalled = false;
+    let settled = false;
+
+    const cleanup = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      signal?.removeEventListener("abort", onAbortSignal);
+    };
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+    const armStallTimer = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        stalled = true;
+        xhr.abort();
+      }, UPLOAD_STALL_TIMEOUT_MS);
+    };
+    function onAbortSignal() {
+      xhr.abort();
+    }
+
     xhr.upload.addEventListener("progress", (e) => {
+      // Any forward movement resets the watchdog — a slow upload is fine,
+      // a silent one is not.
+      armStallTimer();
       if (onProgress && e.lengthComputable) {
         onProgress(Math.round((e.loaded / e.total) * 100));
       }
     });
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
-    });
-    xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+    xhr.addEventListener("load", () =>
+      finish(() => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+      })
+    );
+    xhr.addEventListener("error", () => finish(() => reject(new Error("Upload failed"))));
+    xhr.addEventListener("timeout", () =>
+      finish(() => reject(new Error("Upload timed out")))
+    );
+    xhr.addEventListener("abort", () =>
+      finish(() =>
+        reject(
+          new Error(
+            stalled
+              ? "Upload stalled — check your connection and try again."
+              : "Upload cancelled"
+          )
+        )
+      )
+    );
+
+    if (signal?.aborted) {
+      finish(() => reject(new Error("Upload cancelled")));
+      return;
+    }
+    signal?.addEventListener("abort", onAbortSignal);
+
     xhr.open("PUT", uploadUrl);
     xhr.setRequestHeader("Content-Type", contentType);
     if (contentDisposition) {
       xhr.setRequestHeader("Content-Disposition", contentDisposition);
     }
+    armStallTimer();
     xhr.send(file);
   });
 };
