@@ -310,7 +310,10 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       <DialogContent size="xl" hideClose className="max-h-[90vh] overflow-hidden p-0 gap-0">
         <DialogHeader className="px-6 py-4 bg-foreground text-background">
           <div className="flex items-center justify-between">
-            <DialogTitle className="truncate pr-4">
+            {/* DialogTitle hard-codes text-foreground, which beats the
+                text-background inherited from the header. On this dark bar
+                that renders the filename invisible. */}
+            <DialogTitle className="truncate pr-4 text-background">
               {file.name}
             </DialogTitle>
             <div className="flex flex-shrink-0">

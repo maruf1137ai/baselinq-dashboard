@@ -76,7 +76,12 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
   };
 
   const copyLink = (token: string) => {
-    const url = `${window.location.origin}/api/insurer/v1/evidence-packs/${token}/`;
+    // The insurer resolves this against the API host, which is a different
+    // origin from the SPA in every deployed environment. Building it from
+    // window.location only appeared to work locally because vite.config.ts
+    // proxies /api to the backend.
+    const base = String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/?$/, "/");
+    const url = `${base}insurer/v1/evidence-packs/${token}/`;
     navigator.clipboard.writeText(url);
     toast.success("Link copied — recipient still needs an insurer token and project consent");
   };

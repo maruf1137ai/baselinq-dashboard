@@ -386,7 +386,10 @@ export default function TaskDetails() {
     // Same reason as the task fetch above: this action hangs off TaskViewSet,
     // so it inherits get_queryset and 404s without the project id.
     taskId && projectId ? `tasks/tasks/${taskId}/audits/?projectId=${projectId}` : "",
-    { enabled: !!taskId }
+    // Must match the url guard above, as the task fetch does. Without the
+    // projectId check the query still runs on an empty url and fetchData
+    // throws "No URL provided" three times over.
+    { enabled: !!taskId && !!projectId }
   );
 
   const [activeFormats, setActiveFormats] = useState({

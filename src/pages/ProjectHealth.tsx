@@ -273,7 +273,7 @@ export default function ProjectHealth() {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<TabKey>("Risk signals");
 
-  const { data, isLoading, refetch } = useFetch<SignalsResponse>(
+  const { data, isLoading, isError, refetch } = useFetch<SignalsResponse>(
     projectId ? `projects/${projectId}/risk-signals/?refresh=true` : null
   );
 
@@ -325,6 +325,26 @@ export default function ProjectHealth() {
             icon={ShieldAlert}
             title="No project selected"
             description="Select a project to view its risk posture."
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // The risk engine is a separate backend app. If it is absent or erroring,
+  // say so — never fall through to posture(), which reports "Healthy" for
+  // all-zero counts and would tell a user there are no risks when we simply
+  // could not read them. Sits above the tab dispatch so it also covers the
+  // deadlines, evidence and insurer tabs.
+  if (isError) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <PageHeader title="Project Health" />
+          <EmptyState
+            icon={ShieldAlert}
+            title="Risk data unavailable"
+            description="The risk service did not respond. This page cannot confirm the project's risk posture — treat it as unknown, not as healthy."
           />
         </div>
       </DashboardLayout>
