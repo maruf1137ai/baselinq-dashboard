@@ -108,7 +108,7 @@ export function AddPhaseDialog({ open, onOpenChange, projectId }: AddPhaseDialog
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setForm(EMPTY); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Add Phase</DialogTitle>
         </DialogHeader>
@@ -148,7 +148,7 @@ export function AddPhaseDialog({ open, onOpenChange, projectId }: AddPhaseDialog
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => { onOpenChange(false); setForm(EMPTY); }}>
               Cancel
             </Button>

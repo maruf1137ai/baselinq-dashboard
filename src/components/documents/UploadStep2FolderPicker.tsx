@@ -76,7 +76,7 @@ function FolderTreePicker({
               {hasChildren && (
                 <ChevronRight
                   className={cn(
-                    "w-4 h-4 text-muted-foreground transition-transform shrink-0",
+                    "h-4 w-4 text-muted-foreground transition-transform shrink-0",
                     isExpanded && "rotate-90"
                   )}
                 />
@@ -84,7 +84,7 @@ function FolderTreePicker({
               {!hasChildren && <div className="w-4" />}
 
               <Folder className={cn(
-                "w-4 h-4 shrink-0",
+                "h-4 w-4 shrink-0",
                 isSelected ? "text-primary" : "text-muted-foreground"
               )} />
 
@@ -95,7 +95,7 @@ function FolderTreePicker({
                 {folder.name.replace(/_/g, ' ')}
               </span>
 
-              {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+              {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
             </div>
 
             {hasChildren && isExpanded && (
@@ -196,7 +196,7 @@ export function UploadStep2FolderPicker({
 
       {/* Contracts: Tree Picker */}
       {selectedTab === 'contracts' && (
-        <div className="bg-white rounded-lg border border-border p-3 max-h-[420px] overflow-y-auto">
+        <div className="bg-card rounded-xl border border-border p-3 max-h-[420px] overflow-y-auto">
           {foldersLoading ? (
             <div className="flex items-center justify-center py-10">
               <AwesomeLoader />
@@ -216,7 +216,8 @@ export function UploadStep2FolderPicker({
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-10">
-              No folders found. Please contact support.
+              No contract folders have been set up on this project yet. Ask your project
+              administrator to create them, then upload against the right folder.
             </p>
           )}
         </div>
@@ -245,18 +246,18 @@ export function UploadStep2FolderPicker({
                         "px-3 py-2 rounded-lg border transition-colors text-left",
                         isSelected
                           ? "bg-primary/5 border-primary/40"
-                          : "bg-white border-border hover:border-primary/30"
+                          : "bg-card border-border hover:border-primary/30"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         {existing ? (
                           <Folder className={cn(
-                            "w-4 h-4 shrink-0",
+                            "h-4 w-4 shrink-0",
                             isSelected ? "text-primary" : "text-muted-foreground"
                           )} />
                         ) : (
                           <FolderPlus className={cn(
-                            "w-4 h-4 shrink-0",
+                            "h-4 w-4 shrink-0",
                             isSelected ? "text-primary" : "text-muted-foreground"
                           )} />
                         )}
@@ -290,13 +291,13 @@ export function UploadStep2FolderPicker({
             />
             {isNewFolder && (
               <div className="flex items-center gap-2 text-sm text-primary">
-                <FolderPlus className="w-4 h-4" />
+                <FolderPlus className="h-4 w-4" />
                 <span>Will create new folder: <strong>{customInput}</strong></span>
               </div>
             )}
             {existingFolder && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Folder className="w-4 h-4" />
+                <Folder className="h-4 w-4" />
                 <span>Folder already exists: <strong>{customInput}</strong></span>
               </div>
             )}
@@ -311,7 +312,7 @@ export function UploadStep2FolderPicker({
           variant="outline"
           className="h-9 px-5 gap-2 font-normal"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
 
@@ -321,7 +322,7 @@ export function UploadStep2FolderPicker({
           className="h-9 px-5 gap-2 font-normal"
         >
           Next: Upload Files
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

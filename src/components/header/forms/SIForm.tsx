@@ -266,7 +266,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="Select discipline" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             {DISCIPLINE_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
@@ -342,7 +342,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-white" align="start">
+          <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
               selected={formData.dueDate}
@@ -386,7 +386,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                   }}
                   className="ml-2 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X />
                 </span>
               ) : (
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -395,7 +395,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="p-3 bg-white"
+            className="p-3 bg-card"
             style={{ width: "var(--radix-popover-trigger-width)" }}
           >
             {/* Search */}
@@ -423,7 +423,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                       "text-xs px-3 py-1 rounded-full border transition-colors",
                       isActive
                         ? "bg-primary/10 border-primary text-primary"
-                        : "bg-white border-border text-foreground hover:bg-muted",
+                        : "bg-card border-border text-foreground hover:bg-muted",
                     )}
                   >
                     {t}
@@ -437,8 +437,8 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
               {filteredTaskOptions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   {taskOptions.length === 0
-                    ? "No tasks on this project yet"
-                    : "No tasks match"}
+                    ? "Nothing on this project to reference yet — an instruction can be raised without one."
+                    : "No items match this search. Try the reference number instead."}
                 </p>
               )}
               {filteredTaskOptions.map((opt) => {
@@ -455,7 +455,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                       "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors",
                       isSelected
                         ? "bg-primary/[0.06] border-primary"
-                        : "bg-white border-border hover:bg-muted/40",
+                        : "bg-card border-border hover:bg-muted/40",
                     )}
                   >
                     <span className="shrink-0 w-9 h-9 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
@@ -474,7 +474,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
                     {/* Radio indicator */}
                     <span
                       className={cn(
-                        "shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                        "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors",
                         isSelected
                           ? "border-primary"
                           : "border-border bg-background",
@@ -495,7 +495,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
       <S3AttachmentSection s3Upload={s3Upload} inputId="si-upload" label="Attachments" />
 
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}

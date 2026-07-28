@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { MoreIcon } from "../icons/icons";
-import { Search, ChevronLeft, ChevronRight, Plus, Sparkles } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatZAR } from '@/lib/formatCurrency';
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
@@ -112,17 +114,17 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-border overflow-hidden">
+    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={handleSearch}
             placeholder="Search by VO #, title, requested by..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
         {onNew && (
@@ -130,7 +132,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
             onClick={onNew}
             className="flex items-center gap-1.5 h-10 px-4 rounded-lg text-sm text-white bg-primary hover:opacity-90 transition-all shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Variation Order
           </button>
         )}
@@ -150,11 +152,25 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-border">
+          <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                  {search ? "No results match your search." : "No variation orders found."}
+                <td colSpan={9}>
+                  {search ? (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No variation orders match this search"
+                      description="Try a different VO number, title or requester, or clear the search to see the full register."
+                    />
+                  ) : (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No variation orders yet"
+                      description="Variations raised against this project appear here with their approval status and cost impact."
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -166,7 +182,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {order.title}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium tabular-nums">
                     {formatCurrency(order.value)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -200,7 +216,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {order.value > 100000 ? (
                       <span className="flex items-center gap-1 text-amber-600">
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <AiMark />
                         <span className="text-xs">{order.value > 300000 ? '3 flags' : '1 flag'}</span>
                       </span>
                     ) : (
@@ -210,11 +226,12 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreIcon className="w-5 h-5" />
+                        <button
+                          aria-label="More actions" className="text-muted-foreground hover:text-foreground">
+                          <MoreIcon className="h-4 w-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white w-32">
+                      <DropdownMenuContent align="end" className="bg-card w-32">
                         <DropdownMenuItem
                           className="cursor-pointer text-sm"
                           onClick={() => onEdit?.(order)}>
@@ -236,7 +253,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <p className="text-sm text-muted-foreground">
           {filtered.length === 0
             ? "No results"
@@ -244,10 +261,11 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
         </p>
         <div className="flex items-center gap-1">
           <button
+            aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
             className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
@@ -272,10 +290,11 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
               )
             )}
           <button
+            aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
             className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

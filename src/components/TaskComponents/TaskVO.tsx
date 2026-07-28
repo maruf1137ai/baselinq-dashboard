@@ -55,28 +55,28 @@ export const TaskVO: React.FC<TaskVOProps> = ({ formFields }) => {
               </thead>
               <tbody>
                 {lineItems.map((item: any, index: number) => (
-                  <tr key={item._id || index} className="border-b hover:bg-muted/50/50">
+                  <tr key={item._id || index} className="border-b hover:bg-muted/50">
                     <td className="text-sm text-foreground px-4 py-3 font-mono">{index + 1}</td>
                     <td className="text-sm text-foreground px-4 py-3">{item.description || "-"}</td>
                     <td className="text-sm text-muted-foreground px-4 py-3">{item.unit || "nr"}</td>
                     <td className="text-sm text-foreground px-4 py-3 text-right">{item.quantity || 0}</td>
-                    <td className="text-sm text-foreground px-4 py-3 text-right">{formatCurrency(item.unitRate || 0)}</td>
-                    <td className="text-sm font-normal text-foreground px-4 py-3 text-right">{formatCurrency(item.total || 0)}</td>
+                    <td className="text-sm text-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(item.unitRate || 0)}</td>
+                    <td className="text-sm font-normal text-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(item.total || 0)}</td>
                   </tr>
                 ))}
                 <tr className="bg-muted font-medium border-t-2">
                   <td colSpan={5} className="text-sm text-foreground px-4 py-3 text-right">Subtotal:</td>
-                  <td className="text-sm font-normal text-foreground px-4 py-3 text-right">{formatCurrency(subTotal)}</td>
+                  <td className="text-sm font-normal text-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(subTotal)}</td>
                 </tr>
                 <tr className="bg-muted">
                   <td colSpan={5} className="text-sm text-muted-foreground px-4 py-3 text-right">
                     {tax.type || "Tax"} ({tax.rate}%):
                   </td>
-                  <td className="text-sm font-normal text-foreground px-4 py-3 text-right">{formatCurrency(tax.amount)}</td>
+                  <td className="text-sm font-normal text-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(tax.amount)}</td>
                 </tr>
                 <tr className="bg-[#1B1C1F] hover:bg-[#1B1C1F] border-t-2">
                   <td colSpan={5} className="text-sm font-medium text-white px-4 py-3 text-right">Total Amount:</td>
-                  <td className="text-sm font-medium text-white px-4 py-3 text-right">{formatCurrency(grandTotal)}</td>
+                  <td className="text-sm font-medium text-white px-4 py-3 text-right tabular-nums">{formatCurrency(grandTotal)}</td>
                 </tr>
               </tbody>
             </table>

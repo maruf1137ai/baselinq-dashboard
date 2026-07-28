@@ -32,7 +32,7 @@ function ApprovalChains() {
       {data.map((workflow, workflowIndex) => (
         <div
           key={workflowIndex}
-          className="border border-border rounded-lg bg-white overflow-hidden">
+          className="border border-border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <span className="text-sm font-medium text-foreground">{workflow.title}</span>
           </div>

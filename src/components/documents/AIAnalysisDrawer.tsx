@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from '@/lib/utils';
 
 interface AIAnalysisDrawerProps {
@@ -46,19 +46,19 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[550px] p-0 flex flex-col border-border bg-white">
+      <SheetContent size="md" className="p-0 flex flex-col">
         <SheetHeader className="px-6 py-4 border-b border-border pr-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AiIcon size={16} className="text-primary" />
-              <SheetTitle className="text-base font-normal text-foreground">AI Analysis</SheetTitle>
+              <AiMark size={16} className="text-primary" />
+              <SheetTitle>AI Analysis</SheetTitle>
             </div>
             <Button
               variant="ghost"
               size="sm"
               className="h-8 text-xs text-primary font-normal hover:bg-muted gap-1.5"
             >
-              <AiIcon size={14} /> Re-run Analysis
+              <AiMark size={16} /> Re-run Analysis
             </Button>
           </div>
           <p className="text-xs text-muted-foreground font-normal">{document.reference} · {document.name}</p>
@@ -72,7 +72,7 @@ export const AIAnalysisDrawer: React.FC<AIAnalysisDrawerProps> = ({
           {visibleFindings.map((finding, i) => (
             <div
               key={i}
-              className="bg-white rounded-lg border border-border p-4 space-y-2"
+              className="bg-muted/50 rounded-xl p-4 space-y-2"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">

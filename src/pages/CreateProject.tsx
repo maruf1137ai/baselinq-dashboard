@@ -285,7 +285,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   if (ext === "pdf")
     return (
-      <div className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center text-[9px] font-normal border border-red-100 shrink-0">
+      <div className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center text-xs font-normal border border-red-100 shrink-0">
         PDF
       </div>
     );
@@ -293,7 +293,7 @@ function FileTypeIcon({ filename }: { filename: string }) {
     return (
       <div className="w-9 h-9 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center border border-blue-100 shrink-0">
         <svg
-          className="w-4 h-4"
+          className="h-4 w-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -306,13 +306,13 @@ function FileTypeIcon({ filename }: { filename: string }) {
     );
   if (["xlsx", "xls"].includes(ext))
     return (
-      <div className="w-9 h-9 bg-green-50 text-green-600 rounded-lg flex items-center justify-center text-[9px] font-normal border border-green-100 shrink-0">
+      <div className="w-9 h-9 bg-green-50 text-green-600 rounded-lg flex items-center justify-center text-xs font-normal border border-green-100 shrink-0">
         XLS
       </div>
     );
   return (
-    <div className="w-9 h-9 bg-gray-50 text-gray-500 rounded-lg flex items-center justify-center border border-gray-100 shrink-0">
-      <FileText className="w-4 h-4" />
+    <div className="w-9 h-9 bg-muted/50 text-gray-500 rounded-lg flex items-center justify-center border border-border shrink-0">
+      <FileText className="h-4 w-4" />
     </div>
   );
 }
@@ -322,8 +322,8 @@ function FileTypeIcon({ filename }: { filename: string }) {
 function Tooltip({ text }: { text: string }) {
   return (
     <div className="relative group inline-flex items-center">
-      <Info className="w-3.5 h-3.5 text-[#9ca3af] cursor-help" />
-      <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#1a1a2e] text-white text-[11px] rounded-lg px-3 py-2 w-48 text-center z-20 shadow-lg leading-relaxed">
+      <Info className="h-4 w-4 text-[#9ca3af] cursor-help" />
+      <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#1a1a2e] text-white text-xs rounded-lg px-3 py-2 w-48 text-center z-20 shadow-lg leading-relaxed">
         {text}
         <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1a1a2e]" />
       </div>
@@ -352,7 +352,7 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}>
         {children}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
     </div>
   );
 }
@@ -386,18 +386,18 @@ function PersonnelEntryCard({
   const selectedRole = roleOptions.find((r) => r.value === entry.role);
   const { roles: appRoles } = useRoles();
   return (
-    <div className="rounded-xl border border-[#e2e5ea] bg-white p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: (selectedRole?.iconColor ?? "#6b7280") + "18" }}>
-            <User className="w-3.5 h-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
+            <User className="h-3.5 w-3.5" style={{ color: selectedRole?.iconColor ?? "#6b7280" }} />
           </div>
           <select
             value={entry.role}
             onChange={(e) => onChange({ ...entry, role: e.target.value })}
-            className="flex-1 text-[13px] text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
+            className="flex-1 text-xs text-[#374151] bg-transparent border-none outline-none cursor-pointer appearance-none"
           >
             <option value="">Select role...</option>
             {roleOptions.map((r) => (
@@ -410,24 +410,25 @@ function PersonnelEntryCard({
         <div className="flex items-center gap-2 shrink-0">
           {selectedRole && (
             <span
-              className="text-[11px] px-2.5 py-1 rounded-full font-normal text-white"
+              className="text-xs px-2.5 py-1 rounded-full font-normal text-white"
               style={{ background: selectedRole.badgeColor }}>
               {selectedRole.badge}
             </span>
           )}
           {canRemove && (
             <button
+              aria-label="Remove entry"
               type="button"
               onClick={onRemove}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
-              <X className="w-3.5 h-3.5" />
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-400 hover:bg-red-50 transition-all">
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Full name"
@@ -436,7 +437,7 @@ function PersonnelEntryCard({
           />
         </div>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
           <input
             className={inputCls(false, "pl-9")}
             placeholder="Email address"
@@ -482,7 +483,7 @@ function AddressFields({
 }) {
   return (
     <div className="space-y-3">
-      <label className="block text-[13px] font-normal text-[#374151]">{label}</label>
+      <label className="block text-xs font-normal text-[#374151]">{label}</label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input
           className={inputCls()}
@@ -528,13 +529,13 @@ function SectionHeader({
   iconColor: string;
 }) {
   return (
-    <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#f3f4f6]">
+    <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
       <div
-        className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+        className="h-6 w-6 rounded-lg flex items-center justify-center shrink-0"
         style={{ background: iconBg }}>
         <span style={{ color: iconColor }}>{icon}</span>
       </div>
-      <span className="text-[13px] font-normal text-[#374151]">{label}</span>
+      <span className="text-xs font-normal text-[#374151]">{label}</span>
     </div>
   );
 }
@@ -1181,18 +1182,18 @@ export default function CreateProject() {
         }
       `}</style>
 
-      <div className="flex h-screen overflow-hidden bg-white">
+      <div className="flex h-screen overflow-hidden bg-card">
 
         {/* ══════════════════════════════ LEFT SIDEBAR ══════════════════════ */}
-        <aside className="hidden lg:flex w-[280px] bg-sidebar border-r border-[#ededed] flex-col h-full shrink-0">
+        <aside className="hidden lg:flex w-[280px] bg-sidebar border-r border-border flex-col h-full shrink-0">
 
           {/* Logo */}
-          <div className="px-6 pt-6 pb-5 border-b border-[#f3f4f6]">
+          <div className="px-6 pt-6 pb-5 border-b border-border">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 bg-[#121212] rounded-xl flex items-center justify-center shrink-0">
                 <img src="/LOGO-ai.png" alt="AI Logo" className="w-full h-full object-contain" />
               </div>
-              <span className="text-[14px] font-normal text-[#121212] tracking-tight">
+              <span className="text-sm font-normal text-[#121212] tracking-tight">
                 Baselinq
               </span>
             </div>
@@ -1200,10 +1201,10 @@ export default function CreateProject() {
 
           {/* Heading */}
           <div className="px-6 pt-5 pb-2">
-            <p className="text-[18px] font-normal text-[#101828] leading-tight">
+            <p className="text-lg font-normal text-[#101828] leading-tight">
               New Project
             </p>
-            <p className="text-[12px] text-[#9ca3af] mt-1">
+            <p className="text-xs text-[#9ca3af] mt-1">
               Set up your project workspace
             </p>
           </div>
@@ -1224,27 +1225,27 @@ export default function CreateProject() {
                     {/* Circle */}
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-normal shrink-0 mt-0.5 transition-colors",
+                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-normal shrink-0 mt-0.5 transition-colors",
                         done
-                          ? "bg-[#6c5ce7] text-white"
+                          ? "bg-primary text-primary-foreground"
                           : active
-                            ? "bg-[#6c5ce7] text-white"
-                            : "bg-[#f3f4f6] text-[#9ca3af]"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-[#9ca3af]"
                       )}>
-                      {done ? <Check className="w-4 h-4" /> : step.id}
+                      {done ? <Check className="h-4 w-4" /> : step.id}
                     </div>
                     {/* Label */}
                     <div className="min-w-0">
                       <p
                         className={cn(
-                          "text-[13px] font-normal leading-tight",
+                          "text-xs font-normal leading-tight",
                           done || active ? "text-[#101828]" : "text-[#9ca3af]"
                         )}>
                         {step.label}
                       </p>
                       <p
                         className={cn(
-                          "text-[11px] mt-0.5",
+                          "text-xs mt-0.5",
                           done || active ? "text-[#6b7280]" : "text-[#d1d5db]"
                         )}>
                         {step.description}
@@ -1272,7 +1273,7 @@ export default function CreateProject() {
         {/* ══════════════════════════════ RIGHT PANEL ═══════════════════════ */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Mobile progress bar */}
-          <div className="lg:hidden bg-white border-b border-[#ededed] px-5 py-3">
+          <div className="lg:hidden bg-card border-b border-border px-5 py-3">
             <div className="flex gap-1.5 mb-2">
               {STEPS.map((s) => (
                 <div
@@ -1285,7 +1286,7 @@ export default function CreateProject() {
                 />
               ))}
             </div>
-            <p className="text-[13px] font-normal text-[#374151]">
+            <p className="text-xs font-normal text-[#374151]">
               Step {currentStep} of {STEPS.length}:{" "}
               {STEPS[currentStep - 1].label}
             </p>
@@ -1295,14 +1296,14 @@ export default function CreateProject() {
           <div className="flex justify-between px-8 pt-5 pb-1 shrink-0">
             <button
               onClick={() => location.key !== "default" ? navigate(-1) : navigate("/")}
-              className="flex items-center gap-1.5 text-[13px] text-[#9ca3af] hover:text-[#374151] transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" />
+              className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-[#374151] transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </button>
             <button
               onClick={() => { localStorage.clear(); navigate("/login"); }}
-              className="flex items-center gap-1.5 text-[13px] text-[#9ca3af] hover:text-red-500 border border-transparent hover:border-red-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">
-              <LogOut className="w-3.5 h-3.5" />
+              className="flex items-center gap-1.5 text-xs text-[#9ca3af] hover:text-red-500 border border-transparent hover:border-red-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
@@ -1312,10 +1313,10 @@ export default function CreateProject() {
             <div className="max-w-[720px] mx-auto pt-4">
               {/* Step heading */}
               <div className="mb-6">
-                <h1 className="text-[24px] font-normal text-[#101828] leading-tight">
+                <h1 className="text-2xl font-normal text-[#101828] leading-tight">
                   {STEPS[currentStep - 1].label}
                 </h1>
-                <p className="text-[14px] text-[#6b7280] mt-1.5 leading-relaxed">
+                <p className="text-sm text-[#6b7280] mt-1.5 leading-relaxed">
                   {currentStep === 1 &&
                     "Give your project a name and number so your team can identify it."}
                   {currentStep === 2 &&
@@ -1336,7 +1337,7 @@ export default function CreateProject() {
                 key={stepKey}
                 className={stepDir === "fwd" ? "anim-fwd" : "anim-back"}>
                 <div
-                  className="bg-sidebar rounded-2xl"
+                  className="bg-card rounded-xl"
                   style={{
                     boxShadow:
                       "0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.04)",
@@ -1350,7 +1351,7 @@ export default function CreateProject() {
                       <div className="grid grid-cols-5 gap-4">
                         {/* Project Name */}
                         <div className="col-span-3">
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">
                             Project Name <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -1360,7 +1361,7 @@ export default function CreateProject() {
                             onChange={(e) => handleNameChange(e.target.value)}
                           />
                           {errors.name && (
-                            <p className="text-[12px] text-red-500 mt-1.5 flex items-center gap-1">
+                            <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                               <span className="w-1 h-1 rounded-full bg-red-500 shrink-0" />
                               {errors.name}
                             </p>
@@ -1369,16 +1370,16 @@ export default function CreateProject() {
 
                         {/* Project Number */}
                         <div className="col-span-2">
-                          <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                          <label className="block text-xs font-normal text-[#374151] mb-1.5">
                             Project Number
                           </label>
                           <div className="relative">
                             <input
                               className={cn(
-                                "w-full h-12 px-4 pr-10 rounded-[10px] text-sm outline-none transition-all",
+                                "w-full h-12 px-4 pr-10 rounded-lg text-sm outline-none transition-all",
                                 pnEditable
-                                  ? "bg-[#f5f6f8] border border-[#e2e5ea] text-[#111827] focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10"
-                                  : "bg-[#f0edff] border border-[#d4ccff] text-[#6c5ce7] cursor-pointer",
+                                  ? "bg-muted/50 border border-border text-[#111827] focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                  : "bg-[#f0edff] border border-[#d4ccff] text-primary cursor-pointer",
                                 errors.project_number && "!border-red-400"
                               )}
                               value={form.project_number}
@@ -1389,18 +1390,19 @@ export default function CreateProject() {
                               onBlur={() => setPnEditable(false)}
                             />
                             <button
+                              aria-label="Edit project number"
                               type="button"
                               tabIndex={-1}
                               onClick={() => setPnEditable((v) => !v)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6c5ce7] hover:text-[#5a4bd1] transition-colors">
-                              <Pencil className="w-3.5 h-3.5" />
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/90 transition-colors">
+                              <Pencil className="h-4 w-4" />
                             </button>
                           </div>
-                          <p className="text-[11px] text-[#9ca3af] mt-1">
+                          <p className="text-xs text-[#9ca3af] mt-1">
                             Auto-generated · click to edit
                           </p>
                           {errors.project_number && (
-                            <p className="text-[12px] text-red-500 mt-0.5">
+                            <p className="text-xs text-red-500 mt-0.5">
                               {errors.project_number}
                             </p>
                           )}
@@ -1411,7 +1413,7 @@ export default function CreateProject() {
 
                       {/* Location */}
                       <div>
-                        <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                        <label className="block text-xs font-normal text-[#374151] mb-1.5">
                           Project Location
                         </label>
                         <LocationPickerMap
@@ -1435,22 +1437,22 @@ export default function CreateProject() {
                       {/* ── Invite Client (if not CLIENT/OWNER/CONTRACTOR) ── */}
                       {!CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div className={cn(
-                          "p-5 rounded-2xl border transition-all duration-300 mb-2",
-                          isInvited || (inviteClientData.email.trim() && !isInvitingClient) ? "bg-emerald-50 border-emerald-200" : "bg-[#f8f9fb] border-[#e2e5ea] border-dashed"
+                          "p-5 rounded-xl transition-all duration-300 mb-2",
+                          isInvited || (inviteClientData.email.trim() && !isInvitingClient) ? "bg-emerald-50" : "bg-muted/50"
                         )}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-white text-[#6c5ce7] shadow-sm"
+                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-primary shadow-sm"
                               )}>
-                                {isInvited || inviteClientData.email.trim() ? <Check className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
+                                {isInvited || inviteClientData.email.trim() ? <Check className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
                               </div>
                               <div>
-                                <h3 className="text-[14px] font-normal text-[#101828]">
+                                <h3 className="text-sm font-normal text-[#101828]">
                                   {isInvited ? "Client Invited Successfully" : inviteClientData.email.trim() ? "Client invite confirmed" : "Invite Client to fill details"}
                                 </h3>
-                                <p className="text-[12px] text-[#6b7280] mt-0.5">
+                                <p className="text-xs text-[#6b7280] mt-0.5">
                                   {isInvited
                                     ? `Invitation sent to ${inviteClientData.email}`
                                     : inviteClientData.email.trim()
@@ -1463,7 +1465,7 @@ export default function CreateProject() {
                               <button
                                 type="button"
                                 onClick={() => setIsInvitingClient(!isInvitingClient)}
-                                className="text-[13px] text-[#6c5ce7] font-normal hover:text-[#5a4bd1] px-3 py-1.5 rounded-lg hover:bg-[#6c5ce7]/5 transition-colors"
+                                className="text-xs text-primary font-normal hover:text-primary/90 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
                               >
                                 {isInvitingClient ? "Cancel" : inviteClientData.email.trim() ? "Edit" : "Invite Client"}
                               </button>
@@ -1474,9 +1476,9 @@ export default function CreateProject() {
                             <div className="mt-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <label className="block text-[11px] text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Name</label>
+                                  <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Name</label>
                                   <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="e.g. John Smith"
@@ -1486,9 +1488,9 @@ export default function CreateProject() {
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-[11px] text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Email</label>
+                                  <label className="block text-xs text-[#6b7280] normal-case font-normal mb-1.5 ml-1">Client Email</label>
                                   <div className="relative">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af]" />
                                     <input
                                       className={cn(inputCls(), "pl-10 h-11")}
                                       placeholder="email@example.com"
@@ -1503,9 +1505,9 @@ export default function CreateProject() {
                                 type="button"
                                 onClick={() => setIsInvitingClient(false)}
                                 disabled={!inviteClientData.email}
-                                className="w-full h-11 bg-[#6c5ce7] text-white rounded-xl text-[13px] font-normal hover:bg-[#5a4bd1] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full h-11 bg-primary text-primary-foreground rounded-xl text-xs font-normal hover:bg-primary/90 shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               >
-                                <Check className="w-4 h-4" />
+                                <Check className="h-4 w-4" />
                                 Confirm, Invite will be sent after project is created
                               </button>
                             </div>
@@ -1517,19 +1519,19 @@ export default function CreateProject() {
                       {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div>
                           <SectionHeader
-                            icon={<Building2 className="w-3.5 h-3.5" />}
+                            icon={<Building2 className="h-4 w-4" />}
                             label="Client Company Information"
                             iconBg="#eef2ff"
                             iconColor="#6c5ce7"
                           />
-                          <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                          <p className="text-xs text-[#9ca3af] -mt-2 mb-4">
                             Fill in once, this will auto-populate into all contracts and appointment letters.
                           </p>
 
                           <div className="space-y-4">
                             {/* Client Name or Company */}
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                              <label className="block text-xs font-normal text-[#374151] mb-1.5">
                                 Client Name or Company <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -1542,7 +1544,7 @@ export default function CreateProject() {
                                 }}
                               />
                               {clientErrors.company_name && (
-                                <p className="text-[12px] text-red-500 mt-1">
+                                <p className="text-xs text-red-500 mt-1">
                                   {clientErrors.company_name}
                                 </p>
                               )}
@@ -1551,7 +1553,7 @@ export default function CreateProject() {
                             {/* Registration + VAT */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">
                                   Company Registration / ID
                                 </label>
                                 <div className="relative group">
@@ -1567,22 +1569,23 @@ export default function CreateProject() {
                                     }
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("client")}
                                     disabled={isLookingUp}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">
                                   VAT Number
                                 </label>
                                 <input
@@ -1617,11 +1620,11 @@ export default function CreateProject() {
                             {/* Office */}
                             <div className="space-y-5">
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">
                                   Office Number
                                 </label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -1642,12 +1645,12 @@ export default function CreateProject() {
                       {CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div>
                           <SectionHeader
-                            icon={<User className="w-3.5 h-3.5" />}
+                            icon={<User className="h-4 w-4" />}
                             label="Project Users"
                             iconBg="#f0fdf4"
                             iconColor="#00b894"
                           />
-                          <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                          <p className="text-xs text-[#9ca3af] -mt-2 mb-4">
                             These members will be given predetermined access rights to the project.
                           </p>
                           <div className="space-y-3">
@@ -1655,40 +1658,42 @@ export default function CreateProject() {
                             {clientPersonnelList.map((entry) => {
                               const roleName = entry.position || entry.role || "Member";
                               return (
-                                <div key={entry.id} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
-                                  <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] font-normal shrink-0">
+                                <div key={entry.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
+                                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-normal shrink-0">
                                     {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
-                                    <p className="text-[11px] text-[#9ca3af] truncate">{entry.email}</p>
+                                    <p className="text-xs font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
+                                    <p className="text-xs text-[#9ca3af] truncate">{entry.email}</p>
                                   </div>
-                                  <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                  <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                   <button
+                                    aria-label="Remove person"
                                     type="button"
                                     onClick={() => setClientPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                     className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                   </button>
                                 </div>
                               );
                             })}
                             {/* Invited external users */}
                             {invitedPersonnelList.map((person, i) => (
-                              <div key={i} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
-                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-[#6c5ce7] text-[11px] font-normal shrink-0">
+                              <div key={i} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
+                                <div className="w-8 h-8 rounded-full bg-[#eef2ff] flex items-center justify-center text-primary text-xs font-normal shrink-0">
                                   {(person.name || person.email || "U").charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[13px] font-normal text-[#111827] truncate">{person.name || person.email}</p>
-                                  <p className="text-[11px] text-[#9ca3af] truncate">{person.email}</p>
+                                  <p className="text-xs font-normal text-[#111827] truncate">{person.name || person.email}</p>
+                                  <p className="text-xs text-[#9ca3af] truncate">{person.email}</p>
                                 </div>
-                                <span className="text-[11px] text-[#9ca3af] bg-[#f3f4f6] border border-[#e2e5ea] px-2 py-0.5 rounded-full shrink-0">Invited</span>
+                                <span className="text-xs text-[#9ca3af] bg-muted border border-border px-2 py-0.5 rounded-full shrink-0">Invited</span>
                                 <button
+                                  aria-label="Remove invited person"
                                   type="button"
                                   onClick={() => setInvitedPersonnelList((prev) => prev.filter((_, idx) => idx !== i))}
                                   className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                  <X className="w-4 h-4" />
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
                             ))}
@@ -1703,9 +1708,9 @@ export default function CreateProject() {
                                 setInvitePersonnelForm({ name: "", email: "", role_code: "" });
                                 setShowAddMemberModal(true);
                               }}
-                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
+                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
                               </div>
                               <span className="font-normal">Add User</span>
                             </button>
@@ -1724,31 +1729,32 @@ export default function CreateProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Invite Associated Companies"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            <p className="text-xs text-[#9ca3af] -mt-2 mb-4">
                               Invite the professional firms appointed to this project. They'll receive an email to fill in their company details.
                             </p>
                           </div>
                           <div className="space-y-4">
                             {appointedInvites.map((entry) => (
-                              <div key={entry.id} className="bg-[#f8f9fb] rounded-xl p-4 space-y-3 border border-[#e2e5ea]">
+                              <div key={entry.id} className="bg-card rounded-xl p-4 space-y-3 border border-border">
                                 <div className="flex items-center justify-end">
                                   {appointedInvites.length > 1 && (
                                     <button
+                                      aria-label="Remove invitation"
                                       type="button"
                                       onClick={() => setAppointedInvites(prev => prev.filter(e => e.id !== entry.id))}
                                       className="text-[#9ca3af] hover:text-red-500 transition-colors"
                                     >
-                                      <X className="w-4 h-4" />
+                                      <X className="h-4 w-4" />
                                     </button>
                                   )}
                                 </div>
                                 <div>
-                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Name</label>
+                                  <label className="block text-xs font-normal text-[#6b7280] mb-1">Company Name</label>
                                   <input
                                     className={inputCls()}
                                     placeholder="e.g. Base Architects and Associates"
@@ -1758,7 +1764,7 @@ export default function CreateProject() {
                                 </div>
 
                                 <div>
-                                  <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Company Type</label>
+                                  <label className="block text-xs font-normal text-[#6b7280] mb-1">Company Type</label>
                                   <select
                                     className={inputCls()}
                                     value={entry.company_type}
@@ -1772,7 +1778,7 @@ export default function CreateProject() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Contact Person Name</label>
+                                    <label className="block text-xs font-normal text-[#6b7280] mb-1">Contact Person Name</label>
                                     <input
                                       className={inputCls()}
                                       placeholder="e.g. John Smith"
@@ -1781,7 +1787,7 @@ export default function CreateProject() {
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-[12px] font-normal text-[#6b7280] mb-1">Email Address</label>
+                                    <label className="block text-xs font-normal text-[#6b7280] mb-1">Email Address</label>
                                     <input
                                       className={inputCls()}
                                       placeholder="e.g. john@firm.co.za"
@@ -1796,10 +1802,10 @@ export default function CreateProject() {
                             <button
                               type="button"
                               onClick={() => setAppointedInvites(prev => [...prev, { id: crypto.randomUUID(), company_name: '', company_type: '', contact_name: '', email: '', position: '' }])}
-                              className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group"
+                              className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group"
                             >
-                              <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                <Plus className="w-3.5 h-3.5" />
+                              <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                <Plus className="h-3.5 w-3.5" />
                               </div>
                               <span className="font-normal">Add Another Company</span>
                             </button>
@@ -1812,19 +1818,19 @@ export default function CreateProject() {
                         <>
                           <div>
                             <SectionHeader
-                              icon={<Building2 className="w-3.5 h-3.5" />}
+                              icon={<Building2 className="h-4 w-4" />}
                               label="Your Organisation"
                               iconBg="#eff6ff"
                               iconColor="#3A6FF7"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-2 mb-4">
+                            <p className="text-xs text-[#9ca3af] -mt-2 mb-4">
                               Fill in once, this will auto-populate into all contracts and appointment letters.
                             </p>
                           </div>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Name</label>
+                              <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Name</label>
                               <input
                                 className={inputCls()}
                                 placeholder="e.g. Base Architects and Associates"
@@ -1835,7 +1841,7 @@ export default function CreateProject() {
 
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Registration / ID</label>
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Registration / ID</label>
                                 <div className="relative group">
                                   <input
                                     className={cn(inputCls(), "pr-10")}
@@ -1844,22 +1850,23 @@ export default function CreateProject() {
                                     onChange={(e) => setAppointedForm((p) => ({ ...p, company_registration: e.target.value }))}
                                   />
                                   <button
+                                    aria-label="Look up company"
                                     type="button"
                                     onClick={() => handleCompanyLookup("appointed")}
                                     disabled={isLookingUp}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-[#6c5ce7] hover:bg-[#6c5ce7]/5 transition-all"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                                     title="Auto-fill from registration"
                                   >
                                     {isLookingUp ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6c5ce7]" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                                     ) : (
-                                      <Search className="w-3.5 h-3.5" />
+                                      <Search className="h-4 w-4" />
                                     )}
                                   </button>
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">VAT Number</label>
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">VAT Number</label>
                                 <input
                                   className={inputCls()}
                                   placeholder="e.g. 4123456789"
@@ -1871,7 +1878,7 @@ export default function CreateProject() {
 
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Company Type</label>
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Type</label>
                                 <select
                                   className={inputCls()}
                                   value={appointedForm.company_type}
@@ -1884,9 +1891,9 @@ export default function CreateProject() {
                                 </select>
                               </div>
                               <div>
-                                <label className="block text-[13px] font-normal text-[#374151] mb-1.5">Office Number</label>
+                                <label className="block text-xs font-normal text-[#374151] mb-1.5">Office Number</label>
                                 <div className="relative">
-                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+                                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                                   <input
                                     className={inputCls(false, "pl-10")}
                                     placeholder="e.g. +27 11 123 4567"
@@ -1914,17 +1921,17 @@ export default function CreateProject() {
 
                           <div>
                             <SectionHeader
-                              icon={<User className="w-3.5 h-3.5" />}
+                              icon={<User className="h-4 w-4" />}
                               label="Add Users"
                               iconBg="#eef2ff"
                               iconColor="#6366f1"
                             />
-                            <p className="text-[12px] text-[#9ca3af] -mt-5 mb-2">
+                            <p className="text-xs text-[#9ca3af] -mt-5 mb-2">
                               These members will be given predetermined access rights to the project.
                             </p>
-                            <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-lg px-3 py-2 mb-4">
-                              <svg className="w-3.5 h-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
-                              <p className="text-[11px] text-[#92400e] leading-snug">
+                            <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-3 py-2 mb-4">
+                              <svg className="h-3.5 w-3.5 text-[#d97706] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
+                              <p className="text-xs text-[#92400e] leading-snug">
                                 Only internal organisation users can be assigned here.
                               </p>
                             </div>
@@ -1932,20 +1939,21 @@ export default function CreateProject() {
                               {appointedPersonnelList.map((entry) => {
                                 const roleName = entry.position || entry.role || "Member";
                                 return (
-                                  <div key={entry.id} className="flex items-center gap-3 bg-[#f8f9fb] rounded-xl px-4 py-3 border border-[#e2e5ea]">
-                                    <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] font-normal shrink-0">
+                                  <div key={entry.id} className="flex items-center gap-3 bg-card rounded-xl px-4 py-3 border border-border">
+                                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-normal shrink-0">
                                       {(entry.name || entry.email || "U").charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[13px] font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
-                                      <p className="text-[11px] text-[#9ca3af] truncate">{entry.email}</p>
+                                      <p className="text-xs font-normal text-[#111827] truncate">{entry.name || entry.email}</p>
+                                      <p className="text-xs text-[#9ca3af] truncate">{entry.email}</p>
                                     </div>
-                                    <span className="text-[11px] text-[#6c5ce7] bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
+                                    <span className="text-xs text-primary bg-[#eef2ff] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">{roleName}</span>
                                     <button
+                                      aria-label="Remove person"
                                       type="button"
                                       onClick={() => setAppointedPersonnelList((prev) => prev.filter((e) => e.id !== entry.id))}
                                       className="text-[#9ca3af] hover:text-red-500 transition-colors shrink-0">
-                                      <X className="w-4 h-4" />
+                                      <X className="h-4 w-4" />
                                     </button>
                                   </div>
                                 );
@@ -1958,9 +1966,9 @@ export default function CreateProject() {
                                   setAppointedPopoverOpen(false);
                                   setShowAddAppointedModal(true);
                                 }}
-                                className="w-full py-4 border-2 border-dashed border-[#e2e5ea] rounded-xl flex items-center justify-center gap-2 text-[13px] text-[#6b7280] hover:border-[#6c5ce7] hover:text-[#6c5ce7] hover:bg-[#f8f7ff] transition-all group">
-                                <div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex items-center justify-center group-hover:bg-[#6c5ce7] group-hover:text-white transition-colors">
-                                  <Plus className="w-3.5 h-3.5" />
+                                className="w-full py-4 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs text-[#6b7280] hover:border-primary hover:text-primary hover:bg-[#f8f7ff] transition-all group">
+                                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                  <Plus className="h-3.5 w-3.5" />
                                 </div>
                                 <span className="font-normal">Add User</span>
                               </button>
@@ -1978,7 +1986,7 @@ export default function CreateProject() {
 
                       {/* Label + tooltip */}
                       <div className="flex items-center gap-2">
-                        <label className="text-[13px] font-normal text-[#374151]">
+                        <label className="text-xs font-normal text-[#374151]">
                           Project Documents<span className="text-red-500">*</span>
                         </label>
                         <Tooltip text="Recommended: JBCC contract, BOQ, architectural drawings, specifications" />
@@ -2006,38 +2014,38 @@ export default function CreateProject() {
                           "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200",
                           "border-2 border-dashed",
                           isDragging
-                            ? "border-[#6c5ce7] bg-[#f8f7ff]"
+                            ? "border-primary bg-[#f8f7ff]"
                             : errors.attachments
                               ? "border-red-400 bg-red-50"
-                              : "border-[#d1d5db] bg-white hover:border-[#6c5ce7] hover:bg-[#f8f7ff]"
+                              : "border-border bg-card hover:border-primary hover:bg-[#f8f7ff]"
                         )}>
                         <div className={cn(
                           "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-                          isDragging ? "bg-[#ede9fb]" : "bg-[#f3f4f6]"
+                          isDragging ? "bg-[#ede9fb]" : "bg-muted"
                         )}>
                           <CloudUpload className={cn(
-                            "w-6 h-6 transition-colors",
-                            isDragging ? "text-[#6c5ce7]" : "text-[#6b7280]"
+                            "h-6 w-6 transition-colors",
+                            isDragging ? "text-primary" : "text-[#6b7280]"
                           )} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-[14px] font-medium text-[#374151]">
+                          <p className="text-sm font-medium text-[#374151]">
                             Drag and drop your files here
                           </p>
-                          <p className="text-[12px] text-[#6b7280] mt-0.5">
+                          <p className="text-xs text-[#6b7280] mt-0.5">
                             or{" "}
-                            <span className="text-[#6c5ce7] underline font-normal">
+                            <span className="text-primary underline font-normal">
                               click to browse
                             </span>
                           </p>
-                          <p className="text-[11px] text-[#9ca3af] mt-1">
+                          <p className="text-xs text-[#9ca3af] mt-1">
                             PDF, JPG, PNG, GIF, WEBP, XLSX, XLS (max 20MB)
                           </p>
                         </div>
                       </div>
 
                       {errors.attachments && (
-                        <p className="text-[12px] text-red-500 flex items-center gap-1.5">
+                        <p className="text-xs text-red-500 flex items-center gap-1.5">
                           <span className="w-1 h-1 rounded-full bg-red-500 shrink-0" />
                           {errors.attachments}
                         </p>
@@ -2049,14 +2057,14 @@ export default function CreateProject() {
                           {files.map((f) => (
                             <div
                               key={f.id}
-                              className="bg-[#f9fafb] rounded-[10px] px-4 py-3 border border-[#f3f4f6]">
+                              className="bg-card rounded-xl px-4 py-3 border border-border">
                               <div className="flex items-center gap-3">
                                 <FileTypeIcon filename={f.file.name} />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[13px] font-normal text-[#111827] truncate">
+                                  <p className="text-xs font-normal text-[#111827] truncate">
                                     {f.file.name}
                                   </p>
-                                  <p className="text-[11px] text-[#9ca3af]">
+                                  <p className="text-xs text-[#9ca3af]">
                                     {(f.file.size / 1024).toFixed(1)} KB
                                   </p>
                                 </div>
@@ -2064,23 +2072,24 @@ export default function CreateProject() {
                                   <button
                                     type="button"
                                     onClick={() => s3Upload.retryUpload(f.id)}
-                                    className="text-[11px] text-[#6c5ce7] hover:underline shrink-0 px-1">
+                                    className="text-xs text-primary hover:underline shrink-0 px-1">
                                     Retry
                                   </button>
                                 )}
                                 <button
+                                  aria-label="Remove file"
                                   type="button"
                                   onClick={() => s3Upload.removeEntry(f.id)}
                                   className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                                  <X className="w-4 h-4" />
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
 
                               <div className="mt-3 px-1">
-                                <label className="block text-[11px] font-medium text-[#6b7280] mb-1">Document Title</label>
+                                <label className="block text-xs font-medium text-[#6b7280] mb-1">Document Title</label>
                                 <input
                                   type="text"
-                                  className="w-full h-8 px-3 rounded-lg border border-[#e5e7eb] text-[12px] placeholder:text-[11px] focus:outline-none focus:ring-1 focus:ring-[#6c5ce7] focus:border-[#6c5ce7] transition-all"
+                                  className="w-full h-8 px-3 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                                   placeholder="e.g. JBCC Contract, Site Plan, etc."
                                   value={f.title || ""}
                                   onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
@@ -2089,23 +2098,23 @@ export default function CreateProject() {
 
                               {f.status === "uploading" && (
                                 <div className="mt-2.5">
-                                  <div className="h-1 bg-[#e5e7eb] rounded-full overflow-hidden">
+                                  <div className="h-1 bg-muted rounded-full overflow-hidden">
                                     <div
-                                      className="h-full bg-[#6c5ce7] rounded-full transition-all duration-300"
+                                      className="h-full bg-primary rounded-full transition-all duration-300"
                                       style={{ width: `${f.progress}%` }}
                                     />
                                   </div>
-                                  <p className="text-[10px] text-[#9ca3af] mt-1">{f.progress}%</p>
+                                  <p className="text-xs text-[#9ca3af] mt-1">{f.progress}%</p>
                                 </div>
                               )}
                               {f.status === "done" && (
                                 <div className="mt-1.5 flex items-center gap-1.5">
-                                  <Check className="w-3 h-3 text-[#00b894]" />
-                                  <span className="text-[10px] text-[#00b894] font-normal">Uploaded</span>
+                                  <Check className="h-4 w-4 text-[#00b894]" />
+                                  <span className="text-xs text-[#00b894] font-normal">Uploaded</span>
                                 </div>
                               )}
                               {f.status === "error" && (
-                                <p className="text-[11px] text-red-500 mt-1">
+                                <p className="text-xs text-red-500 mt-1">
                                   {f.error ?? "Upload failed"}
                                 </p>
                               )}
@@ -2121,12 +2130,12 @@ export default function CreateProject() {
                     <div className="p-8 space-y-6 text-left">
                       <div>
                         <SectionHeader
-                          icon={<ScrollText className="w-3.5 h-3.5" />}
+                          icon={<ScrollText className="h-4 w-4" />}
                           label="Scope of Works"
                           iconBg="#f0edff"
                           iconColor="#6c5ce7"
                         />
-                        <p className="text-[13px] text-[#6b7280] -mt-2">
+                        <p className="text-xs text-[#6b7280] -mt-2">
                           Describe the full scope of construction works. This will auto-populate into contract documents and appointment letters.
                         </p>
                       </div>
@@ -2135,9 +2144,9 @@ export default function CreateProject() {
                         <div className="relative group">
                           <textarea
                             className={cn(
-                              "w-full px-4 py-4 rounded-[12px] text-[14px] text-[#111827] outline-none transition-all resize-none leading-relaxed",
-                              "bg-[#f5f6f8] border border-[#e2e5ea]",
-                              "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
+                              "w-full px-4 py-4 rounded-xl text-sm text-[#111827] outline-none transition-all resize-none leading-relaxed",
+                              "bg-muted/50 border border-border",
+                              "focus:border-primary focus:ring-2 focus:ring-primary/10",
                               "min-h-[250px]"
                             )}
                             placeholder={`e.g. The Client wishes to appoint an Architect to measure up the existing residential building with the intention for alterations and additions to the existing guest house...`}
@@ -2160,18 +2169,18 @@ export default function CreateProject() {
 
                       {/* ── Timeline group ── */}
                       <div>
-                        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#f3f4f6]">
-                          <div className="w-6 h-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
-                            <CalendarIcon className="w-3.5 h-3.5 text-[#6c5ce7]" />
+                        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
+                          <div className="h-6 w-6 bg-[#eef2ff] rounded-lg flex items-center justify-center shrink-0">
+                            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
                           </div>
-                          <span className="text-[13px] font-normal text-[#374151]">Timeline</span>
+                          <span className="text-xs font-normal text-[#374151]">Timeline</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           {/* Start date */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              Start Date <span className="text-gray-400 text-[12px]">(optional)</span>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
+                              Start Date <span className="text-gray-400 text-xs">(optional)</span>
                             </label>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2182,11 +2191,11 @@ export default function CreateProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.start_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.start_date ? format(parseISO(form.start_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-white" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.start_date ? parseISO(form.start_date) : undefined}
@@ -2199,14 +2208,14 @@ export default function CreateProject() {
                               </PopoverContent>
                             </Popover>
                             {errors.start_date && (
-                              <p className="text-[12px] text-red-500 mt-1">{errors.start_date}</p>
+                              <p className="text-xs text-red-500 mt-1">{errors.start_date}</p>
                             )}
                           </div>
 
                           {/* End date */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
-                              End Date <span className="text-gray-400 text-[12px]">(optional)</span>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
+                              End Date <span className="text-gray-400 text-xs">(optional)</span>
                             </label>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2217,11 +2226,11 @@ export default function CreateProject() {
                                     "flex items-center gap-2 text-left",
                                     !form.end_date && "text-[#9ca3af]"
                                   )}>
-                                  <CalendarIcon className="w-4 h-4 shrink-0" />
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
                                   {form.end_date ? format(parseISO(form.end_date), "PPP") : "Pick a date"}
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 bg-white" align="start">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={form.end_date ? parseISO(form.end_date) : undefined}
@@ -2234,7 +2243,7 @@ export default function CreateProject() {
                               </PopoverContent>
                             </Popover>
                             {(errors.end_date || errors.date_range) && (
-                              <p className="text-[12px] text-red-500 mt-1">
+                              <p className="text-xs text-red-500 mt-1">
                                 {errors.end_date || errors.date_range}
                               </p>
                             )}
@@ -2249,13 +2258,13 @@ export default function CreateProject() {
                               style={{ background: "linear-gradient(90deg, #6c5ce7, #a78bfa)" }}
                             />
                             <div className="flex justify-between items-center mt-2">
-                              <span className="text-[11px] text-[#9ca3af]">
+                              <span className="text-xs text-[#9ca3af]">
                                 {format(duration.start, "MMM d, yyyy")}
                               </span>
-                              <span className="text-[13px] font-normal text-[#6c5ce7]">
+                              <span className="text-xs font-normal text-primary">
                                 {getDurationLabel()}
                               </span>
-                              <span className="text-[11px] text-[#9ca3af]">
+                              <span className="text-xs text-[#9ca3af]">
                                 {format(duration.end, "MMM d, yyyy")}
                               </span>
                             </div>
@@ -2265,30 +2274,30 @@ export default function CreateProject() {
 
                       {/* ── Financial group ── */}
                       <div>
-                        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#f3f4f6]">
-                          <div className="w-6 h-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
-                            <DollarSign className="w-3.5 h-3.5 text-[#00b894]" />
+                        <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border">
+                          <div className="h-6 w-6 bg-[#f0fdf4] rounded-lg flex items-center justify-center shrink-0">
+                            <DollarSign className="h-3.5 w-3.5 text-[#00b894]" />
                           </div>
-                          <span className="text-[13px] font-normal text-[#374151]">Financial Parameters</span>
+                          <span className="text-xs font-normal text-[#374151]">Financial Parameters</span>
                         </div>
 
                         {/* Row 1: Budget + Currency + Contract Type + VAT Rate */}
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           {/* Budget */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               Total Budget <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[16px] font-normal text-[#6b7280] pointer-events-none select-none">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-normal text-[#6b7280] pointer-events-none select-none">
                                 {CURRENCY_SYMBOLS[form.currency] || "R"}
                               </span>
                               <input
                                 className={cn(
-                                  "w-full rounded-[10px] outline-none transition-all",
-                                  "bg-[#f5f6f8] border border-[#e2e5ea]",
-                                  "focus:border-[#6c5ce7] focus:ring-2 focus:ring-[#6c5ce7]/10",
-                                  "pl-10 pr-4 text-[18px] font-normal text-[#111827] h-[52px]",
+                                  "w-full rounded-lg outline-none transition-all",
+                                  "bg-muted/50 border border-border",
+                                  "focus:border-primary focus:ring-2 focus:ring-primary/10",
+                                  "pl-10 pr-4 text-lg font-normal text-[#111827] h-[52px]",
                                   errors.total_budget && "!border-red-400 focus:ring-red-400/10"
                                 )}
                                 placeholder="0"
@@ -2300,13 +2309,13 @@ export default function CreateProject() {
                               />
                             </div>
                             {errors.total_budget && (
-                              <p className="text-[12px] text-red-500 mt-1">{errors.total_budget}</p>
+                              <p className="text-xs text-red-500 mt-1">{errors.total_budget}</p>
                             )}
                           </div>
 
                           {/* Currency */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               Currency
                             </label>
                             <SelectField value={form.currency} onChange={(v) => setField("currency", v)}>
@@ -2318,7 +2327,7 @@ export default function CreateProject() {
 
                           {/* Contract Type */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               Contract Type
                             </label>
                             <SelectField value={form.contract_type} onChange={(v) => setField("contract_type", v)}>
@@ -2330,7 +2339,7 @@ export default function CreateProject() {
 
                           {/* VAT Rate */}
                           <div>
-                            <label className="block text-[13px] font-normal text-[#374151] mb-1.5">
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               VAT Rate (%)
                             </label>
                             <input
@@ -2348,7 +2357,7 @@ export default function CreateProject() {
                         <div
                           className="mt-5 rounded-xl p-4 border"
                           style={{ background: "#f0edff", borderColor: "#e0d9ff" }}>
-                          <p className="text-[11px] font-normal text-[#6c5ce7] normal-case mb-3">
+                          <p className="text-xs font-normal text-primary normal-case mb-3">
                             Budget Summary
                           </p>
                           <div className="space-y-2">
@@ -2363,10 +2372,10 @@ export default function CreateProject() {
                                   "flex justify-between items-center",
                                   bold && "pt-2 mt-1 border-t border-[#d4ccff]"
                                 )}>
-                                <span className={cn("text-[12px] text-[#6b7280]", bold && "font-normal text-[#374151]")}>
+                                <span className={cn("text-xs text-[#6b7280]", bold && "font-normal text-[#374151]")}>
                                   {label}
                                 </span>
-                                <span className={cn("text-[13px] tabular-nums", bold ? "font-normal text-[#101828]" : "text-[#374151]")}>
+                                <span className={cn("text-xs tabular-nums", bold ? "font-normal text-[#101828]" : "text-[#374151]")}>
                                   {budget > 0 ? formatCurrency(value, form.currency) : "—"}
                                 </span>
                               </div>
@@ -2389,12 +2398,12 @@ export default function CreateProject() {
                         onClick={handleBack}
                         disabled={isLoading}
                         className={cn(
-                          "flex items-center gap-2 h-12 px-6 rounded-[10px] text-[14px] font-normal transition-all",
-                          "bg-white text-[#374151] border-[1.5px] border-[#e5e7eb]",
-                          "hover:border-[#d1d5db] hover:bg-[#f9fafb]",
+                          "flex items-center gap-2 h-12 px-6 rounded-lg text-sm font-normal transition-all",
+                          "bg-card text-[#374151] border-[1.5px] border-border",
+                          "hover:border-border hover:bg-muted/50",
                           isLoading && "opacity-50 cursor-not-allowed"
                         )}>
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="h-4 w-4" />
                         Back
                       </button>
                     )}
@@ -2405,7 +2414,7 @@ export default function CreateProject() {
                           <button
                             type="button"
                             onClick={handleSkip}
-                            className="flex items-center gap-1.5 h-12 px-5 rounded-[10px] text-[14px] font-normal text-[#6b7280] border-[1.5px] border-[#e5e7eb] bg-white hover:bg-[#f9fafb] hover:text-[#374151] transition-all">
+                            className="flex items-center gap-1.5 h-12 px-5 rounded-lg text-sm font-normal text-[#6b7280] border-[1.5px] border-border bg-card hover:bg-muted/50 hover:text-[#374151] transition-all">
                             Skip
                           </button>
                         )}
@@ -2413,12 +2422,12 @@ export default function CreateProject() {
                           type="button"
                           onClick={handleNext}
                           className={cn(
-                            "flex items-center gap-2 h-12 px-8 rounded-[10px] text-[14px] font-normal text-white transition-all",
-                            "bg-[#6c5ce7] hover:bg-[#5a4bd1]",
+                            "flex items-center gap-2 h-12 px-8 rounded-lg text-sm font-normal text-white transition-all",
+                            "bg-primary hover:bg-primary/90",
                             "hover:shadow-[0_4px_12px_rgba(108,92,231,0.3)] hover:-translate-y-px"
                           )}>
                           Continue
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M5 12h14M12 5l7 7-7 7" />
                           </svg>
                         </button>
@@ -2429,14 +2438,14 @@ export default function CreateProject() {
                         onClick={handleSubmit}
                         disabled={isLoading}
                         className={cn(
-                          "flex items-center gap-2.5 h-[52px] px-10 rounded-[10px] text-[15px] font-normal text-white transition-all border-0 cursor-pointer",
+                          "flex items-center gap-2.5 h-[52px] px-10 rounded-lg text-sm font-normal text-white transition-all border-0 cursor-pointer",
                           isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.99]"
                         )}
                         style={{
                           background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
                           boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
                         }}>
-                        <Rocket className="w-4 h-4" />
+                        <Rocket className="h-4 w-4" />
                         {isLoading ? "Creating…" : "Create Project"}
                       </button>
                     )}
@@ -2455,23 +2464,24 @@ export default function CreateProject() {
         const canAdd = !!selectedAppointedUser && !!selectedAppointedRole;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-[#eef2ff] flex items-center justify-center">
-                    <User className="w-4 h-4 text-[#6366f1]" />
+                    <User className="h-4 w-4 text-[#6366f1]" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Users</h3>
-                    <p className="text-[12px] text-[#9ca3af]">Assign your organisation user to this project</p>
+                    <h3 className="text-sm font-normal text-[#1a1a2e]">Add Users</h3>
+                    <p className="text-xs text-[#9ca3af]">Assign your organisation user to this project</p>
                   </div>
                 </div>
                 <button
+                  aria-label="Close"
                   type="button"
                   onClick={() => setShowAddAppointedModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
-                  <X className="w-4 h-4" />
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
@@ -2479,33 +2489,33 @@ export default function CreateProject() {
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
                 {/* User select */}
                 <div className="space-y-1.5">
-                  <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
+                  <label className="block text-xs font-normal text-[#6b7280]">Select User</label>
                   <Popover open={appointedPopoverOpen} onOpenChange={setAppointedPopoverOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-primary transition-all text-left">
                         {selectedAppointedUser ? (
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                               {(selectedAppointedUser.name || selectedAppointedUser.email).charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-[13px] text-[#374151]">{selectedAppointedUser.name || selectedAppointedUser.email}</p>
-                              <p className="text-[11px] text-[#9ca3af]">{selectedAppointedUser.email}</p>
+                              <p className="text-xs text-[#374151]">{selectedAppointedUser.name || selectedAppointedUser.email}</p>
+                              <p className="text-xs text-[#9ca3af]">{selectedAppointedUser.email}</p>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[13px] text-[#9ca3af]">Select a user...</span>
+                          <span className="text-xs text-[#9ca3af]">Select a user...</span>
                         )}
-                        <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                        <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search members..." className="text-[13px]" />
+                        <CommandInput placeholder="Search members..." className="text-xs" />
                         <CommandList>
-                          <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
+                          <CommandEmpty className="text-xs text-[#9ca3af] py-4 text-center">No users match this search</CommandEmpty>
                           <CommandGroup>
                             {filteredOrgUsers.map((u) => {
                               const isSelected = selectedAppointedUser?.id === u.id;
@@ -2520,17 +2530,17 @@ export default function CreateProject() {
                                   className="cursor-pointer px-3 py-2.5">
                                   <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center gap-2.5">
-                                      <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                         {(u.name || u.email).charAt(0).toUpperCase()}
                                       </div>
                                       <div>
-                                        <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
-                                        <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
+                                        <p className="text-xs text-[#374151]">{u.name || u.email}</p>
+                                        <p className="text-xs text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
                                       </div>
                                     </div>
                                     <div className={cn(
                                       "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                      isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-[#e2e5ea] bg-white"
+                                      isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                     )}>
                                       {isSelected && <Check className="h-3 w-3 text-white" />}
                                     </div>
@@ -2548,9 +2558,9 @@ export default function CreateProject() {
                 {/* Role select */}
                 {selectedAppointedUser && (
                   <div className="space-y-1.5">
-                    <label className="block text-[12px] font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
                     <select
-                      className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                      className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                       value={selectedAppointedRole}
                       onChange={(e) => setSelectedAppointedRole(e.target.value)}>
                       <option value="">Select role…</option>
@@ -2563,11 +2573,11 @@ export default function CreateProject() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddAppointedModal(false)}
-                  className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  className="px-4 py-2 rounded-lg text-xs text-[#6b7280] hover:text-[#374151] hover:bg-muted transition-all">
                   Cancel
                 </button>
                 <button
@@ -2587,9 +2597,9 @@ export default function CreateProject() {
                     setSelectedAppointedRole("");
                     setShowAddAppointedModal(false);
                   }}
-                  className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                  <Check className="w-3.5 h-3.5" /> Add User
+                  <Check className="h-4 w-4" /> Add User
                 </button>
               </div>
             </div>
@@ -2607,35 +2617,36 @@ export default function CreateProject() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-5 border-b border-[#f3f4f6] shrink-0">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-[#f0fdf4] flex items-center justify-center">
-                    <User className="w-4 h-4 text-[#00b894]" />
+                    <User className="h-4 w-4 text-[#00b894]" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-normal text-[#1a1a2e]">Add Users</h3>
-                    <p className="text-[12px] text-[#9ca3af]">Assign your organisation user to this project</p>
+                    <h3 className="text-sm font-normal text-[#1a1a2e]">Add Users</h3>
+                    <p className="text-xs text-[#9ca3af]">Assign your organisation user to this project</p>
                   </div>
                 </div>
                 <button
+                  aria-label="Close"
                   type="button"
                   onClick={() => setShowAddMemberModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
-                  <X className="w-4 h-4" />
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-[#374151] hover:bg-muted transition-all">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-[#f3f4f6] shrink-0">
+              <div className="flex border-b border-border shrink-0">
                 {(["existing", "invite"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setAddMemberTab(tab)}
-                    className={`flex-1 py-3 text-[13px] font-normal transition-all border-b-2 ${addMemberTab === tab
-                      ? "border-[#6c5ce7] text-[#6c5ce7]"
+                    className={`flex-1 py-3 text-xs font-normal transition-all border-b-2 ${addMemberTab === tab
+                      ? "border-primary text-primary"
                       : "border-transparent text-[#6b7280] hover:text-[#374151]"
                       }`}>
                     {tab === "existing" ? "Existing Users" : "Invite External"}
@@ -2649,33 +2660,33 @@ export default function CreateProject() {
                   <div className="space-y-4">
                     {/* Combobox — same pattern as team management settings */}
                     <div className="space-y-1.5">
-                      <label className="block text-[12px] font-normal text-[#6b7280]">Select User</label>
+                      <label className="block text-xs font-normal text-[#6b7280]">Select User</label>
                       <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[#e2e5ea] bg-[#f9fafb] hover:bg-white hover:border-[#6c5ce7] transition-all text-left">
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border bg-muted/50 hover:bg-card hover:border-primary transition-all text-left">
                             {selectedMemberToAdd ? (
                               <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                   {(selectedMemberToAdd.name || selectedMemberToAdd.email).charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className="text-[13px] text-[#374151]">{selectedMemberToAdd.name || selectedMemberToAdd.email}</p>
-                                  <p className="text-[11px] text-[#9ca3af]">{selectedMemberToAdd.email}</p>
+                                  <p className="text-xs text-[#374151]">{selectedMemberToAdd.name || selectedMemberToAdd.email}</p>
+                                  <p className="text-xs text-[#9ca3af]">{selectedMemberToAdd.email}</p>
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-[13px] text-[#9ca3af]">Select a user...</span>
+                              <span className="text-xs text-[#9ca3af]">Select a user...</span>
                             )}
-                            <ChevronsUpDown className="w-3.5 h-3.5 text-[#9ca3af] shrink-0" />
+                            <ChevronsUpDown className="h-4 w-4 text-[#9ca3af] shrink-0" />
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-[#e2e5ea] shadow-lg rounded-xl" align="start">
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                           <Command>
-                            <CommandInput placeholder="Search team members..." className="text-[13px]" />
+                            <CommandInput placeholder="Search team members..." className="text-xs" />
                             <CommandList>
-                              <CommandEmpty className="text-[13px] text-[#9ca3af] py-4 text-center">No users found.</CommandEmpty>
+                              <CommandEmpty className="text-xs text-[#9ca3af] py-4 text-center">No users match this search</CommandEmpty>
                               <CommandGroup>
                                 {filteredOrgUsers.map((u) => {
                                   const isSelected = selectedMemberToAdd?.id === u.id;
@@ -2690,17 +2701,17 @@ export default function CreateProject() {
                                       className="cursor-pointer px-3 py-2.5">
                                       <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-2.5">
-                                          <div className="w-8 h-8 rounded-full bg-[#6c5ce7] flex items-center justify-center text-white text-[11px] shrink-0">
+                                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs shrink-0">
                                             {(u.name || u.email).charAt(0).toUpperCase()}
                                           </div>
                                           <div>
-                                            <p className="text-[13px] text-[#374151]">{u.name || u.email}</p>
-                                            <p className="text-[11px] text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
+                                            <p className="text-xs text-[#374151]">{u.name || u.email}</p>
+                                            <p className="text-xs text-[#9ca3af]">{u.email}{u.role?.name ? ` · ${u.role.name}` : ""}</p>
                                           </div>
                                         </div>
                                         <div className={cn(
                                           "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                                          isSelected ? "border-[#6c5ce7] bg-[#6c5ce7]" : "border-[#e2e5ea] bg-white"
+                                          isSelected ? "border-primary bg-primary" : "border-border bg-card"
                                         )}>
                                           {isSelected && <Check className="h-3 w-3 text-white" />}
                                         </div>
@@ -2718,9 +2729,9 @@ export default function CreateProject() {
                     {/* Role select — shown when a user is selected */}
                     {selectedMemberToAdd && (
                       <div className="space-y-1.5">
-                        <label className="block text-[12px] font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
+                        <label className="block text-xs font-normal text-[#6b7280]">Project Role <span className="text-red-400">*</span></label>
                         <select
-                          className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           value={selectedMemberRole}
                           onChange={(e) => setSelectedMemberRole(e.target.value)}>
                           <option value="">Select role…</option>
@@ -2735,11 +2746,11 @@ export default function CreateProject() {
                   /* ── Invite External tab ── */
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Full Name</label>
+                      <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Full Name</label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                         <input
-                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           placeholder="e.g. John Smith"
                           value={inviteUserForm.name}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, name: e.target.value }))}
@@ -2747,12 +2758,12 @@ export default function CreateProject() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                      <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Email Address <span className="text-red-400">*</span></label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ca3af] pointer-events-none" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9ca3af] pointer-events-none" />
                         <input
                           type="email"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                          className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                           placeholder="e.g. john@company.com"
                           value={inviteUserForm.email}
                           onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, email: e.target.value }))}
@@ -2760,9 +2771,9 @@ export default function CreateProject() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
+                      <label className="block text-xs font-normal text-[#6b7280] mb-1.5">Role <span className="text-red-400">*</span></label>
                       <select
-                        className="w-full px-3 py-2.5 rounded-lg border border-[#e2e5ea] text-[13px] text-[#374151] bg-[#f9fafb] focus:outline-none focus:border-[#6c5ce7] focus:bg-white transition-all"
+                        className="w-full px-3 py-2.5 rounded-lg border border-border text-xs text-[#374151] bg-muted/50 focus:outline-none focus:border-primary focus:bg-card transition-all"
                         value={inviteUserForm.role_code}
                         onChange={(e) => setInvitePersonnelForm((p) => ({ ...p, role_code: e.target.value }))}>
                         <option value="">Select role…</option>
@@ -2776,11 +2787,11 @@ export default function CreateProject() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#f9fafb] border-t border-[#f3f4f6] shrink-0">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/50 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddMemberModal(false)}
-                  className="px-4 py-2 rounded-lg text-[13px] text-[#6b7280] hover:text-[#374151] hover:bg-[#f3f4f6] transition-all">
+                  className="px-4 py-2 rounded-lg text-xs text-[#6b7280] hover:text-[#374151] hover:bg-muted transition-all">
                   Cancel
                 </button>
                 {addMemberTab === "existing" ? (
@@ -2803,9 +2814,9 @@ export default function CreateProject() {
                       setMemberSearch("");
                       setShowAddMemberModal(false);
                     }}
-                    className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Check className="w-3.5 h-3.5" /> Add User
+                    <Check className="h-4 w-4" /> Add User
                   </button>
                 ) : (
                   <button
@@ -2817,9 +2828,9 @@ export default function CreateProject() {
                       setInvitePersonnelForm({ name: "", email: "", role_code: "" });
                       setShowAddMemberModal(false);
                     }}
-                    className="px-5 py-2 rounded-lg text-[13px] text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     style={{ background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)" }}>
-                    <Mail className="w-3.5 h-3.5" /> Send Invite
+                    <Mail className="h-4 w-4" /> Send Invite
                   </button>
                 )}
               </div>
@@ -2829,18 +2840,18 @@ export default function CreateProject() {
       })()}
       {/* ── Location confirmation dialog ── */}
       <AlertDialog open={showLocationWarning} onOpenChange={setShowLocationWarning}>
-        <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[15px] font-normal text-[#101828]">
+            <AlertDialogTitle>
               Are you sure about your project location?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-1">
-                <p className="text-[13px] font-medium text-[#374151]">{form.location}</p>
+                <p className="text-xs font-medium text-[#374151]">{form.location}</p>
 
                 {locationWeatherLoading && (
-                  <div className="flex items-center gap-2 text-[12px] text-[#6b7280]">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <div className="flex items-center gap-2 text-xs text-[#6b7280]">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Loading weather…
                   </div>
                 )}
@@ -2855,15 +2866,15 @@ export default function CreateProject() {
                   const humidity = locationWeather.main.humidity;
                   const windSpeed = Math.round(locationWeather.wind?.speed ?? 0);
                   return (
-                    <div className="bg-[#f8f9fb] border border-[#e2e5ea] rounded-xl p-3 space-y-2">
+                    <div className="bg-muted/50 rounded-xl p-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{icon}</span>
                         <div>
-                          <p className="text-[13px] font-medium text-[#101828]">{label}</p>
-                          <p className="text-[11px] text-[#6b7280] capitalize">{description}</p>
+                          <p className="text-xs font-medium text-[#101828]">{label}</p>
+                          <p className="text-xs text-[#6b7280] capitalize">{description}</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <span className="text-[#6b7280]">Temperature</span>
                         <span className="font-medium text-[#374151]">{temp}°C</span>
                         <span className="text-[#6b7280]">Feels like</span>
@@ -2877,7 +2888,7 @@ export default function CreateProject() {
                   );
                 })()}
 
-                <p className="text-[11px] text-[#9ca3af]">
+                <p className="text-xs text-[#9ca3af]">
                   you can edit your project location in settings → site settings
                 </p>
               </div>
@@ -2886,7 +2897,7 @@ export default function CreateProject() {
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => setShowLocationWarning(false)}
-              className="text-[13px] rounded-lg">
+              className="text-xs rounded-lg">
               No
             </AlertDialogCancel>
             <AlertDialogAction
@@ -2894,7 +2905,7 @@ export default function CreateProject() {
                 setShowLocationWarning(false);
                 goToStep(2);
               }}
-              className="text-[13px] rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              className="text-xs rounded-lg bg-primary hover:bg-primary/90 text-white">
               Yes, confirm
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2903,17 +2914,17 @@ export default function CreateProject() {
 
       {/* ── Empty location warning dialog ── */}
       <AlertDialog open={showEmptyLocationWarning} onOpenChange={setShowEmptyLocationWarning}>
-        <AlertDialogContent className="max-w-sm bg-white rounded-xl shadow-xl border border-[#e2e5ea]">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[15px] font-normal text-[#101828]">
+            <AlertDialogTitle>
               No project location added
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 pt-1">
-                <p className="text-[13px] text-[#6b7280]">
+                <p className="text-xs text-[#6b7280]">
                   You haven't selected a project location yet. You can skip for now and add it later, or go back and fill it in.
                 </p>
-                <p className="text-[11px] text-[#9ca3af]">
+                <p className="text-xs text-[#9ca3af]">
                   you can edit your project location in settings → site settings
                 </p>
               </div>
@@ -2922,7 +2933,7 @@ export default function CreateProject() {
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => setShowEmptyLocationWarning(false)}
-              className="text-[13px] rounded-lg">
+              className="text-xs rounded-lg">
               Fill it up
             </AlertDialogCancel>
             <AlertDialogAction
@@ -2930,7 +2941,7 @@ export default function CreateProject() {
                 setShowEmptyLocationWarning(false);
                 goToStep(2);
               }}
-              className="text-[13px] rounded-lg bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white">
+              className="text-xs rounded-lg bg-primary hover:bg-primary/90 text-white">
               Skip for now
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -107,7 +107,7 @@ const Site = () => {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 min-h-[400px]">
-        <AwesomeLoader message="Coordinating Site Data" />
+        <AwesomeLoader message="Coordinating site data" />
       </div>
     );
   }
@@ -132,8 +132,8 @@ const Site = () => {
             </Button>
           )
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
-            <Lock className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+            <Lock className="h-3.5 w-3.5" />
             <span>Read-only access</span>
           </div>
         )}
@@ -158,7 +158,7 @@ const Site = () => {
           coordinates={coordinates ?? { lat: -33.9249, lng: 18.4241 }}
           onLocationChange={handleLocationChange}
         />
-        <div className="mt-2 px-4 py-3 bg-muted rounded-lg border border-border">
+        <div className="mt-2 px-4 py-3 bg-muted/50 rounded-xl">
           <p className="text-sm text-muted-foreground">
             {hasLocation
               ? "Click on the map or drag the marker to update site coordinates"
@@ -168,7 +168,7 @@ const Site = () => {
       </div>
 
       {/* Site Information */}
-      <div className="bg-white rounded-lg border border-border p-6">
+      <div className="bg-card rounded-xl border border-border p-6">
         <h3 className="text-sm font-normal text-foreground mb-6">Site Information</h3>
 
         <div className="mb-6">
@@ -178,7 +178,7 @@ const Site = () => {
             readOnly={!canEditProject}
             onChange={(e) => { if (!canEditProject) return; setSiteAddress(e.target.value); setIsDirty(true); }}
             placeholder="123 Main Street, Cape Town, South Africa"
-            className={`w-full ${!canEditProject ? "bg-slate-50/50 cursor-not-allowed" : ""}`}
+            className={`w-full ${!canEditProject ? "bg-muted/50 cursor-not-allowed" : ""}`}
           />
           <p className="text-xs text-muted-foreground/50 mt-1">
             Auto-filled when you pin a location on the map. Editable.

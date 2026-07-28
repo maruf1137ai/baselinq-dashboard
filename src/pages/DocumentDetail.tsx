@@ -22,6 +22,8 @@ import {
   MoreHorizontal,
   ExternalLink,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
 import { getCategoryForDoc, SUBCATEGORY_LABEL } from '@/lib/documentTaxonomy';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
@@ -244,7 +246,7 @@ const DocumentDetail = () => {
   }) => {
     if (!value) return null;
     return (
-      <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0 hover:bg-muted/30 transition-colors px-2 rounded-lg">
+      <div className="flex items-center justify-between py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors px-2 rounded-lg">
         <span className="text-xs text-muted-foreground font-normal tracking-wide">{label}</span>
         <span className={cn(
           "text-sm font-normal",
@@ -259,7 +261,7 @@ const DocumentDetail = () => {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <AwesomeLoader message="Loading Document" />
+        <AwesomeLoader message="Loading document" />
       </DashboardLayout>
     );
   }
@@ -294,12 +296,12 @@ const DocumentDetail = () => {
               onClick={() => navigate('/documents')}
               className="hover:text-foreground transition-colors flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
               Documents
             </button>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
             <span className="text-muted-foreground">{doc.discipline || '—'}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
             <span className="text-foreground font-normal">{doc.reference}</span>
           </nav>
         </div>
@@ -360,7 +362,7 @@ const DocumentDetail = () => {
                 <>
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1 text-amber-700">
-                    <AlertCircle className="w-3 h-3" /> Finance Gated
+                    <AlertCircle className="h-3 w-3" /> Finance Gated
                   </span>
                 </>
               )}
@@ -377,7 +379,7 @@ const DocumentDetail = () => {
               className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
               onClick={() => setIsAskOpen(true)}
             >
-              <AiIcon size={13} className="mr-1.5" /> Ask AI
+              <AiMark size={16} className="mr-1.5" /> Ask AI
             </Button>
             {doc.userPermissions?.canDownload !== false && (
               <Button
@@ -392,18 +394,18 @@ const DocumentDetail = () => {
                 disabled={!doc.downloadUrl && !doc.certificateUrl}
               >
                 {doc.certificateUrl ? (
-                  <><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open certificate</>
+                  <><ExternalLink className="h-4 w-4 mr-1.5" /> Open certificate</>
                 ) : (
-                  <><Download className="w-3.5 h-3.5 mr-1.5" /> Download</>
+                  <><Download className="h-4 w-4 mr-1.5" /> Download</>
                 )}
               </Button>
             )}
             {doc.userPermissions?.canUploadVersion !== false && (
               <Button
-                className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
+                className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 onClick={() => setIsVersionUploadOpen(true)}
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Upload revision
+                <Plus className="mr-1.5" /> Upload revision
               </Button>
             )}
             {(doc.userPermissions?.canEdit !== false || doc.userPermissions?.canDelete !== false) && (
@@ -415,13 +417,13 @@ const DocumentDetail = () => {
                     className="h-8 w-8 rounded-lg border-border text-foreground hover:bg-muted"
                     aria-label="More actions"
                   >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
+                    <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   {doc.userPermissions?.canEdit !== false && (
                     <DropdownMenuItem onClick={() => setIsEditModalOpen(true)} className="text-xs">
-                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit details
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
                     </DropdownMenuItem>
                   )}
                   {doc.userPermissions?.canEdit !== false && doc.userPermissions?.canDelete !== false && (
@@ -432,7 +434,7 @@ const DocumentDetail = () => {
                       onClick={() => setShowDeleteConfirm(true)}
                       className="text-xs text-red-600 focus:text-red-600 focus:bg-red-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete document
+                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete document
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -504,7 +506,7 @@ const DocumentDetail = () => {
                     secondary tab. */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* About — description as a prose block */}
-                  <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-5 bg-primary rounded-full" />
                       <h3 className="text-sm font-medium text-foreground">About</h3>
@@ -524,10 +526,10 @@ const DocumentDetail = () => {
                       existing VersionHistoryModal for the full audit log.
                       Always visible: versions are the legal record for
                       construction docs. */}
-                  <div className="bg-white rounded-xl border border-border overflow-hidden">
+                  <div className="bg-card rounded-xl border border-border overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                       <div className="flex items-center gap-2">
-                        <FileClock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <FileClock className="h-4 w-4 text-muted-foreground" />
                         <h3 className="text-sm font-medium text-foreground">Version history</h3>
                         <span className="text-xs text-muted-foreground">({versions.length})</span>
                       </div>
@@ -544,11 +546,11 @@ const DocumentDetail = () => {
 
                     {versionsLoading ? (
                       <div className="px-4 py-6">
-                        <AwesomeLoader message="Loading Versions" />
+                        <AwesomeLoader message="Loading versions" />
                       </div>
                     ) : versions.length === 0 ? (
                       <p className="px-4 py-6 text-sm text-muted-foreground text-center">
-                        No versions yet.
+                        No superseded revisions — this is the first version issued.
                       </p>
                     ) : (
                       <div className="divide-y divide-border">
@@ -556,7 +558,7 @@ const DocumentDetail = () => {
                           <div key={v._id} className="flex items-center gap-3 px-4 py-2.5">
                             <div className={cn(
                               "h-7 px-2 rounded-md flex items-center justify-center text-xs font-medium shrink-0",
-                              v.isCurrent ? "bg-primary text-white" : "bg-muted/40 text-muted-foreground"
+                              v.isCurrent ? "bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground"
                             )}>
                               v{v.versionNumber}
                             </div>
@@ -578,15 +580,16 @@ const DocumentDetail = () => {
                                     className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
                                     title="View this version"
                                   >
-                                    <Eye className="w-3 h-3" />
+                                    <Eye className="h-4 w-4" />
                                   </button>
                                   <button
+                                    aria-label="Download this version"
                                     type="button"
                                     onClick={() => window.open(v.downloadUrl, '_blank')}
                                     className="h-6 w-6 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center"
                                     title="Download this version"
                                   >
-                                    <Download className="w-3 h-3" />
+                                    <Download className="h-3 w-3" />
                                   </button>
                                 </>
                               )}
@@ -598,7 +601,7 @@ const DocumentDetail = () => {
                   </div>
 
                   {/* Key dates */}
-                  <div className="bg-white rounded-xl border border-border p-4">
+                  <div className="bg-card rounded-xl border border-border p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-1 h-5 bg-muted-foreground/40 rounded-full" />
                       <h3 className="text-sm font-medium text-foreground">Key dates</h3>
@@ -628,7 +631,7 @@ const DocumentDetail = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* AI summary */}
                 <div className={cn(
-                  "rounded-xl border bg-white p-4 flex items-center gap-3",
+                  "rounded-xl border bg-card p-4 flex items-center gap-3",
                   doc.aiSeverity === 'high' && doc.aiFlags > 0
                     ? "border-red-100"
                     : doc.aiSeverity === 'medium' && doc.aiFlags > 0
@@ -643,7 +646,7 @@ const DocumentDetail = () => {
                         ? "bg-amber-50 text-amber-700"
                         : "bg-muted/40 text-muted-foreground"
                   )}>
-                    <AiIcon size={18} />
+                    <AiMark size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -659,9 +662,9 @@ const DocumentDetail = () => {
                 </div>
 
                 {/* Linked summary */}
-                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
-                    <Link2 className="w-4 h-4" />
+                    <Link2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -677,9 +680,9 @@ const DocumentDetail = () => {
                 </div>
 
                 {/* Obligations summary */}
-                <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-muted/40 text-muted-foreground flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
@@ -699,7 +702,7 @@ const DocumentDetail = () => {
               <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <AiIcon size={14} />
+                  <AiMark size={16} />
                   AI findings
                   <span className="text-xs text-muted-foreground font-normal">({findings.length})</span>
                 </h3>
@@ -711,44 +714,41 @@ const DocumentDetail = () => {
                   disabled={isAnalysisRunning || doc.aiStatus === 'running'}
                 >
                   {(isAnalysisRunning || doc.aiStatus === 'running')
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running...</>
-                    : <><AiIcon size={14} /> Re-run analysis</>
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Running...</>
+                    : <><AiMark size={16} /> Re-run analysis</>
                   }
                 </Button>
               </div>
 
               {doc.aiStatus === 'running' && (
                 <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm font-normal">AI analysis is currently running...</span>
                 </div>
               )}
 
               {findingsLoading && doc.aiStatus !== 'running' && (
-                <AwesomeLoader message="Loading Findings" />
+                <AwesomeLoader message="Loading findings" />
               )}
 
               {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
-                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
-                    <AiIcon size={20} />
-                  </div>
-                  <div className="text-center px-4">
-                    <p className="text-sm font-medium text-foreground">No AI findings yet</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
-                      Run AI analysis to surface missing clauses, dates, or compliance issues in this document.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-                    onClick={() => runAnalysis()}
-                    disabled={isAnalysisRunning || doc.aiStatus === 'running'}
-                  >
-                    <AiIcon size={14} />
-                    <span className="ml-1.5">Run AI analysis</span>
-                  </Button>
-                </div>
+                <EmptyState
+                  size="sm"
+                  icon={AiMark as unknown as LucideIcon}
+                  title="No AI findings yet"
+                  description="Run an analysis to surface missing clauses, notice periods and compliance gaps in this document before they become disputes."
+                  action={
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                      onClick={() => runAnalysis()}
+                      disabled={isAnalysisRunning || doc.aiStatus === 'running'}
+                    >
+                      <AiMark size={16} />
+                      <span className="ml-1.5">Run AI analysis</span>
+                    </Button>
+                  }
+                />
               )}
 
               {findings.length > 0 && (
@@ -757,7 +757,7 @@ const DocumentDetail = () => {
                     <div
                       key={finding._id}
                       className={cn(
-                        "p-4 rounded-xl border bg-white transition-all",
+                        "p-4 rounded-xl border bg-card transition-all",
                         finding.isResolved
                           ? "border-border opacity-60"
                           : finding.severity === 'high'
@@ -819,7 +819,7 @@ const DocumentDetail = () => {
               <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Link2 className="w-3.5 h-3.5" />
+                  <Link2 className="h-4 w-4" />
                   Linked items
                   <span className="text-xs text-muted-foreground font-normal">({links.length})</span>
                 </h3>
@@ -829,42 +829,39 @@ const DocumentDetail = () => {
                   className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add link
+                  <Plus /> Add link
                 </Button>
               </div>
 
               {linksLoading ? (
-                <AwesomeLoader message="Loading Links" />
+                <AwesomeLoader message="Loading links" />
               ) : links.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
-                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
-                    <Link2 className="w-4 h-4" strokeWidth={1.5} />
-                  </div>
-                  <div className="text-center px-4">
-                    <p className="text-sm font-medium text-foreground">Nothing linked yet</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
-                      Connect this document to its parent task or related VO/RFI/SI for traceability.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-                    onClick={() => setIsLinkModalOpen(true)}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Link to a task
-                  </Button>
-                </div>
+                <EmptyState
+                  size="sm"
+                  icon={Link2}
+                  title="No linked records yet"
+                  description="Link this document to the site instruction, RFI or variation it relates to, so the paper trail holds together if the claim is ever tested."
+                  action={
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                      onClick={() => setIsLinkModalOpen(true)}
+                    >
+                      <Plus className="mr-1.5" /> Link to a task
+                    </Button>
+                  }
+                />
               ) : (
                 <div className="space-y-2">
                   {links.map((link: any) => (
                     <div
                       key={link._id}
                       onClick={() => link.taskId && navigate(`/tasks/${link.taskId}`)}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:border-primary/30 hover:bg-muted/20 transition-all group/link cursor-pointer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-primary/30 hover:bg-muted/20 transition-all group/link cursor-pointer"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-8 w-12 bg-primary/5 border border-primary/10 rounded-md flex items-center justify-center shrink-0">
-                          <span className="text-primary text-[10px] font-medium tracking-wide uppercase">{link.itemType}</span>
+                          <span className="text-primary text-xs font-medium tracking-wide uppercase">{link.itemType}</span>
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{link.itemReference}</p>
@@ -877,9 +874,9 @@ const DocumentDetail = () => {
                           className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/50 hover:text-red-500"
                           aria-label="Remove link"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/link:text-primary transition-colors" />
                       </div>
                     </div>
                   ))}
@@ -891,7 +888,7 @@ const DocumentDetail = () => {
               <section className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="h-4 w-4" />
                   Obligations
                   <span className="text-xs text-muted-foreground font-normal">({obligations.length})</span>
                 </h3>
@@ -905,7 +902,7 @@ const DocumentDetail = () => {
                     className="h-8 text-xs font-normal gap-1.5 border-border rounded-lg"
                     onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
                   >
-                    <Plus className="h-3.5 w-3.5" /> Add obligation
+                    <Plus className="h-4 w-4" /> Add obligation
                   </Button>
                 </div>
               </div>
@@ -954,7 +951,7 @@ const DocumentDetail = () => {
                         createObligation(data);
                       }}
                     >
-                      {isCreatingObligation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {isCreatingObligation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                       Create
                     </Button>
                   </div>
@@ -962,30 +959,27 @@ const DocumentDetail = () => {
               )}
 
               {obligationsLoading ? (
-                <AwesomeLoader message="Loading Obligations" />
+                <AwesomeLoader message="Loading obligations" />
               ) : obligations.length === 0 && !showObligationForm ? (
-                <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed border-border bg-muted/20">
-                  <div className="h-10 w-10 rounded-lg bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
-                    <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
-                  </div>
-                  <div className="text-center px-4">
-                    <p className="text-sm font-medium text-foreground">No obligations yet</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 max-w-[320px]">
-                      Add the action items this document creates — they'll auto-sync to the project Programme.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs rounded-lg bg-primary text-white hover:opacity-90"
-                    onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add an obligation
-                  </Button>
-                </div>
+                <EmptyState
+                  size="sm"
+                  icon={CheckCircle2}
+                  title="No obligations recorded yet"
+                  description="Record the duties this document imposes — notice periods, submissions, approvals — and they sync to the project programme with their due dates."
+                  action={
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                      onClick={() => { setShowObligationForm(true); setEditingObligation(null); setObligationTitle(''); setObligationDueDate(''); setObligationRole(''); }}
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" /> Add an obligation
+                    </Button>
+                  }
+                />
               ) : (
                 <div className="space-y-3">
                   {obligations.map((ob: any) => (
-                    <div key={ob._id} className="p-5 rounded-xl border border-border bg-white hover:shadow-sm transition-all">
+                    <div key={ob._id} className="p-5 rounded-xl border border-border bg-card hover:shadow-sm transition-all">
                       {editingObligation?._id === ob._id ? (
                         <div className="space-y-3">
                           <input
@@ -1029,12 +1023,12 @@ const DocumentDetail = () => {
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               {ob.dueDate && (
                                 <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" /> Due: {ob.dueDate}
+                                  <Calendar className="h-3 w-3" /> Due: {ob.dueDate}
                                 </span>
                               )}
                               {ob.responsibleRole && (
                                 <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" /> {ob.responsibleRole}
+                                  <User className="h-3 w-3" /> {ob.responsibleRole}
                                 </span>
                               )}
                               <Badge className={cn(
@@ -1077,7 +1071,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={!!linkToDelete} onOpenChange={(open) => !open && setLinkToDelete(null)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Link</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1091,7 +1085,7 @@ const DocumentDetail = () => {
               disabled={isDeleting}
               onClick={() => { if (linkToDelete) deleteLink(linkToDelete.id); }}
             >
-              {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Removing...</> : 'Remove'}
+              {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Removing...</> : 'Remove'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1123,7 +1117,7 @@ const DocumentDetail = () => {
       />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1137,7 +1131,7 @@ const DocumentDetail = () => {
               disabled={isDeletingDoc}
               onClick={() => deleteDocument()}
             >
-              {isDeletingDoc ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+              {isDeletingDoc ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -55,30 +55,30 @@ export const DocItemContextMenu: React.FC<{
           disabled={isContract}
           onSelect={() => copy(doc, tab)}
         >
-          <Copy className="w-3.5 h-3.5 mr-2" />
+          <Copy className="h-4 w-4 mr-2" />
           Copy
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => cut(doc, tab)}>
-          <Scissors className="w-3.5 h-3.5 mr-2" />
+          <Scissors className="h-4 w-4 mr-2" />
           Cut
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!canPaste}
           onSelect={() => pasteFolderId && paste(pasteFolderId, tab)}
         >
-          <ClipboardPaste className="w-3.5 h-3.5 mr-2" />
+          <ClipboardPaste className="h-4 w-4 mr-2" />
           Paste into this folder
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={handleCopyPath}>
-          <Link2 className="w-3.5 h-3.5 mr-2" />
+          <Link2 className="h-4 w-4 mr-2" />
           Copy path
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!canEdit || !onRename}
           onSelect={() => onRename?.(doc)}
         >
-          <Pencil className="w-3.5 h-3.5 mr-2" />
+          <Pencil className="h-4 w-4 mr-2" />
           Rename
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -87,7 +87,7 @@ export const DocItemContextMenu: React.FC<{
           onSelect={() => onDelete?.(doc)}
           className="text-red-600 focus:text-red-600"
         >
-          <Trash2 className="w-3.5 h-3.5 mr-2" />
+          <Trash2 className="h-4 w-4 mr-2" />
           Delete
         </ContextMenuItem>
       </ContextMenuContent>
@@ -115,7 +115,7 @@ export const FolderItemContextMenu: React.FC<{
           disabled={!canPaste}
           onSelect={() => paste(folderId, tab)}
         >
-          <ClipboardPaste className="w-3.5 h-3.5 mr-2" />
+          <ClipboardPaste className="h-4 w-4 mr-2" />
           Paste into this folder
         </ContextMenuItem>
       </ContextMenuContent>

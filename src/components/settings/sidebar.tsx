@@ -141,7 +141,7 @@ export function Sidebar() {
 
   return (
     <div
-      className={`border-r h-full flex flex-col border-border bg-white transition-all justify-between ${open ? "w-64" : "w-16"
+      className={`border-r h-full flex flex-col border-border bg-card transition-all justify-between ${open ? "w-64" : "w-16"
         }`}>
       <div className="header p-6 border-b border-border text-xl text-foreground">
         Project Settings

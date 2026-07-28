@@ -76,7 +76,7 @@ export function TaskOriginBanner({ entityType, entityId }: Props) {
     <Card className="p-0 bg-indigo-50/40 border-indigo-200 rounded-lg overflow-hidden mb-3">
       <div className="px-4 py-3 flex items-start gap-3">
         <div className="w-8 h-8 rounded-md bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
-          <Link2 className="w-4 h-4 text-indigo-700" />
+          <Link2 className="h-4 w-4 text-indigo-700" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-indigo-900">
@@ -87,7 +87,7 @@ export function TaskOriginBanner({ entityType, entityId }: Props) {
               className="font-medium underline decoration-indigo-400 underline-offset-2 hover:decoration-indigo-700 inline-flex items-center gap-0.5"
             >
               {autoOrigin.display}
-              <ArrowUpRight className="w-3 h-3" />
+              <ArrowUpRight className="h-4 w-4" />
             </button>
             .
           </p>

@@ -2,10 +2,14 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+// A Card is the CARD surface in the elevation model: white fill, hairline
+// border, 8px radius. It was `bg-sidebar` (a warm beige used for app chrome),
+// which is why hand-rolled white panels were used everywhere instead of this
+// primitive — the two never matched.
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('rounded-xl shadow-none border bg-sidebar text-card-foreground overflow-hidden', className)}
+    className={cn('rounded-xl shadow-none border border-border bg-card text-card-foreground overflow-hidden', className)}
     {...props}
   />
 ));

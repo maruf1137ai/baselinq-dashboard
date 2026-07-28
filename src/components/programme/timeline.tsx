@@ -2,6 +2,7 @@ import { Calendar, Plus } from "lucide-react";
 import React, { useMemo } from "react";
 import { parseISO, differenceInDays, format, addMonths, startOfMonth } from "date-fns";
 import { useMilestonePhaseCosts, MilestoneWithCost } from "@/hooks/useMilestones";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "#6B7280",
@@ -71,7 +72,7 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
   return (
     <div className="space-y-4">
       {/* Legend */}
-      <div className="p-4 border border-border rounded-lg">
+      <div className="p-4 bg-card border border-border rounded-xl">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs text-muted-foreground">Legend</span>
           {onAddMilestone && (
@@ -94,19 +95,18 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
       </div>
 
       {/* Gantt Chart */}
-      <div className="p-4 border border-border rounded-lg overflow-x-auto">
+      <div className="p-4 bg-card border border-border rounded-xl overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             Loading programme...
           </div>
         ) : milestones.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Calendar className="h-8 w-8 text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground">No phases added yet</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Add programme phases using the Milestones tab
-            </p>
-          </div>
+          <EmptyState
+            variant="plain"
+            icon={Calendar}
+            title="No programme phases yet"
+            description="Add phases on the Milestones tab and they'll plot here against the contract dates, so delay and extension-of-time claims can be measured against a baseline."
+          />
         ) : (
           <div style={{ minWidth: 600 }}>
             {/* Month headers */}
@@ -131,7 +131,7 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
                   {/* Name column */}
                   <div className="w-40 shrink-0 pr-2">
                     <p className="text-xs font-medium text-foreground truncate">{m.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {formatCost(m.contractCost, currency)}
                     </p>
                   </div>
@@ -142,7 +142,7 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
                       className="absolute top-1 h-5 rounded flex items-center px-2 overflow-hidden"
                       style={barStyle(m)}
                       title={`${m.name} — ${formatCost(m.contractCost, currency)}`}>
-                      <span className="text-[10px] text-white truncate font-medium">{m.name}</span>
+                      <span className="text-xs text-white truncate font-medium">{m.name}</span>
                     </div>
                   </div>
                 </div>

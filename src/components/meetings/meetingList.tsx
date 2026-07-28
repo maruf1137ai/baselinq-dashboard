@@ -5,6 +5,7 @@ import { Input } from "../ui/input";
 import { Link } from "react-router-dom";
 import useFetch from "@/hooks/useFetch";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatMeetingDateTime } from "@/lib/dateUtils";
 import { LifecycleBadge, ArtefactBadge } from "./MeetingStatusBadges";
 import type { LifecycleStatus, ArtefactStatus } from "./MeetingStatusBadges";
@@ -121,12 +122,12 @@ export default function MeetingsList() {
               className={`inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl border transition-colors ${
                 isActive
                   ? "bg-primary/10 text-primary border-primary/30"
-                  : "bg-white border-border text-muted-foreground hover:text-foreground hover:border-border"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-border"
               }`}
             >
               {label}
               {count > 0 && (
-                <span className={`text-[11px] tabular-nums ${isActive ? "text-primary/70" : "text-muted-foreground/60"}`}>
+                <span className={`text-xs tabular-nums ${isActive ? "text-primary/70" : "text-muted-foreground/60"}`}>
                   {count}
                 </span>
               )}
@@ -141,12 +142,12 @@ export default function MeetingsList() {
             placeholder="Search meetings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 pl-9 bg-white border-border placeholder:text-muted-foreground rounded-xl text-sm"
+            className="h-9 pl-9 bg-card border-border placeholder:text-muted-foreground rounded-xl text-sm"
           />
         </div>
       </div>
 
-      {isLoading && <AwesomeLoader message="Loading Meetings" />}
+      {isLoading && <AwesomeLoader message="Loading meetings" />}
 
       {!isLoading && (
         <>
@@ -191,9 +192,23 @@ export default function MeetingsList() {
           )}
 
           {isEmpty && (
-            <div className="text-center py-20 text-sm text-muted-foreground">
-              No meetings found
-            </div>
+            <EmptyState
+              icon={searchQuery ? Search : Calendar}
+              title={
+                searchQuery
+                  ? "No meetings match this search"
+                  : meetings.length > 0
+                    ? "No meetings match these filters"
+                    : "No meetings scheduled yet"
+              }
+              description={
+                searchQuery
+                  ? `Nothing matches “${searchQuery}”. Try the meeting title or an attendee's name.`
+                  : meetings.length > 0
+                    ? "There are meetings on this project, but none in the statuses you've selected. Widen the filters to see them."
+                    : "Site and progress meetings appear here once scheduled, with attendance and minutes kept against each one."
+              }
+            />
           )}
         </>
       )}
@@ -213,7 +228,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function RsvpBadge({ rsvp }: { rsvp: RsvpStatus | null }) {
   if (rsvp === "declined") {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-200 text-gray-500 shrink-0">
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-muted/50 border-border text-gray-500 shrink-0">
         <X className="h-3 w-3" /> Declined
       </span>
     );
@@ -238,8 +253,8 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
   return (
     <Link
       to={`/meetings/${item.id}`}
-      className={`block rounded-lg border px-4 py-3 hover:bg-sidebar transition-colors ${
-        isUnread ? "border-primary/40 bg-primary/5" : "border-border"
+      className={`block rounded-xl border px-4 py-3 hover:bg-muted/50 transition-colors ${
+        isUnread ? "border-primary/40 bg-primary/5" : "border-border bg-card"
       }`}
     >
       {/* Row: title + badges (left), date · location · attendees + rsvp (right) */}
@@ -268,7 +283,7 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
                     className="flex items-center gap-1.5 whitespace-nowrap cursor-help"
                     onClick={(e) => e.preventDefault()}
                   >
-                    <Users className="h-3.5 w-3.5" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
+                    <Users className="h-4 w-4" /> {totalAttendees} {totalAttendees === 1 ? "user" : "users"}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="end" className="max-w-[18rem]">
@@ -279,7 +294,7 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
                     ))}
                   </ul>
                   {(item.extra_attendees > 0 || item.attendees.length > 8) && (
-                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                    <p className="text-xs text-muted-foreground mt-1.5">
                       +{item.extra_attendees + Math.max(0, item.attendees.length - 8)} more — open meeting for full list
                     </p>
                   )}

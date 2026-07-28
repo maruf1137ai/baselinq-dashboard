@@ -49,9 +49,9 @@ function SectionCard({ title, subtitle, icon, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-6">
-      <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-slate-50/50">
-        <div className="w-10 h-10 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+    <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden mb-6">
+      <div className="flex items-center gap-4 px-6 py-5 border-b border-border bg-muted/50">
+        <div className="w-10 h-10 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
           {icon}
         </div>
         <div>
@@ -67,7 +67,7 @@ function SectionCard({ title, subtitle, icon, children }: {
 function Field({ label, children, colSpan }: { label: string; children: React.ReactNode; colSpan?: boolean }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground normal-case ml-0.5">
+      <label className="text-xs font-normal text-muted-foreground normal-case ml-0.5">
         {label}
       </label>
       {children}
@@ -75,7 +75,7 @@ function Field({ label, children, colSpan }: { label: string; children: React.Re
   );
 }
 
-const INPUT_CLS = "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
+const INPUT_CLS = "h-10 border border-border bg-card focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm";
 
 // ── Tab type ────────────────────────────────────────────────────────────────
 
@@ -221,22 +221,22 @@ const OnboardingDashboard = () => {
 
   if (userLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <AwesomeLoader message="Loading your workspace..." />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <AwesomeLoader message="Loading your workspace" />
       </div>
     );
   }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "project", label: "Select Project", icon: <FolderOpen className="w-4 h-4" /> },
-    { key: "profile", label: "Profile Details", icon: <UserIcon className="w-4 h-4" /> },
-    { key: "organization", label: "Organisation", icon: <Building2 className="w-4 h-4" /> },
+    { key: "project", label: "Select Project", icon: <FolderOpen className="h-4 w-4" /> },
+    { key: "profile", label: "Profile Details", icon: <UserIcon className="h-4 w-4" /> },
+    { key: "organization", label: "Organisation", icon: <Building2 className="h-4 w-4" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/30">
+    <div className="min-h-screen bg-background">
       {/* ── Top bar ── */}
-      <div className="bg-white border-b border-border px-8 py-4 flex items-center justify-between">
+      <div className="bg-card border-b border-border px-8 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-normal text-foreground tracking-tight">
             Welcome back, {user?.name?.split(" ")[0] || "there"} 👋
@@ -248,7 +248,7 @@ const OnboardingDashboard = () => {
             onClick={() => navigate("/create-project")}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Project
           </Button>
         )}
@@ -258,7 +258,7 @@ const OnboardingDashboard = () => {
             disabled={isSaving}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
         )}
@@ -268,13 +268,13 @@ const OnboardingDashboard = () => {
             disabled={isSaving}
             className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all flex items-center gap-2 font-normal text-sm"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
         )}
         {activeTab === "organization" && !canEditOrg && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs">
-            <Lock className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+            <Lock className="h-3.5 w-3.5" />
             <span>Read-only access</span>
           </div>
         )}
@@ -311,24 +311,24 @@ const OnboardingDashboard = () => {
 
             {projectsLoading ? (
               <div className="flex items-center justify-center py-20">
-                <AwesomeLoader message="Loading projects..." />
+                <AwesomeLoader message="Loading projects" />
               </div>
             ) : projects.length === 0 ? (
-              <div className="border border-border rounded-xl bg-white shadow-sm p-12 text-center flex flex-col items-center gap-4">
+              <div className="border border-border rounded-xl bg-card shadow-sm p-12 text-center flex flex-col items-center gap-4">
                 <div className="w-14 h-14 bg-[#f0edff] rounded-2xl flex items-center justify-center">
                   <FolderOpen className="w-7 h-7 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-base font-normal text-foreground">No projects yet</h3>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                    Create your first project to start managing tasks, documents, and your team.
+                    A project holds the contract, its instructions, variations and certificates — everything you'd need to defend a claim.
                   </p>
                 </div>
                 <Button
                   onClick={() => navigate("/create-project")}
                   className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="h-4 w-4" />
                   Create your first project
                 </Button>
               </div>
@@ -345,31 +345,31 @@ const OnboardingDashboard = () => {
                       key={pId}
                       onClick={() => handleSelectProject(project)}
                       className={cn(
-                        "group text-left border rounded-xl bg-white shadow-sm px-5 py-5 hover:border-primary/40 hover:shadow-md transition-all duration-200",
+                        "group text-left border rounded-xl bg-card shadow-sm px-5 py-5 hover:border-primary/40 hover:shadow-md transition-all duration-200",
                         isActive ? "border-primary/40 ring-1 ring-primary/20" : "border-border"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
-                            <FolderOpen className="w-5 h-5 text-primary" />
+                            <FolderOpen className="h-5 w-5 text-primary" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
                             {project.location && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
+                              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
                                 {project.location}
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-2">
                               {isDraft ? (
-                                <span className="text-[9px] font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
+                                <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
                               ) : (
-                                <span className="text-[9px] font-normal text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+                                <span className="text-xs font-normal text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
                               )}
                               {isActive && (
-                                <span className="text-[9px] font-normal text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
+                                <span className="text-xs font-normal text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
                               )}
                             </div>
                           </div>
@@ -378,9 +378,9 @@ const OnboardingDashboard = () => {
                           {healthDetail && <HealthBadge status={healthDetail.health} detail={healthDetail} />}
                           <div className={cn(
                             "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                            isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                            isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                           )}>
-                            {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            {isActive ? <Check className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </div>
                         </div>
                       </div>
@@ -398,7 +398,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Personal Information"
               subtitle="Your basic account identity and contact details"
-              icon={<UserIcon className="w-5 h-5" />}
+              icon={<UserIcon className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Full Name">
@@ -409,10 +409,10 @@ const OnboardingDashboard = () => {
                   />
                 </Field>
                 <Field label="Work Email Address">
-                  <div className="flex items-center gap-3 px-3.5 h-10 bg-slate-100/50 rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
-                    <Mail className="w-4 h-4" />
+                  <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
+                    <Mail className="h-4 w-4" />
                     {user?.email}
-                    <span className="ml-auto text-[10px] bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
+                    <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
                   </div>
                 </Field>
                 <Field label="Phone Number">
@@ -446,7 +446,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Professional Credentials"
               subtitle="Professional body registrations and discipline details"
-              icon={<Briefcase className="w-5 h-5" />}
+              icon={<Briefcase className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Primary Discipline / Role">
@@ -456,10 +456,10 @@ const OnboardingDashboard = () => {
                       onValueChange={(val) => setFormData({ ...formData, role: val })}
                       disabled={!isAdmin && !!user?.role?.code}
                     >
-                      <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-slate-100 cursor-not-allowed")}>
+                      <SelectTrigger className={cn(INPUT_CLS, (!isAdmin && !!user?.role?.code) && "bg-muted cursor-not-allowed")}>
                         <SelectValue placeholder="Select Discipline..." />
                       </SelectTrigger>
-                      <SelectContent className="bg-white">
+                      <SelectContent className="bg-card">
                         <SelectItem value="architect">Architect</SelectItem>
                         <SelectItem value="client">Client / Owner</SelectItem>
                         <SelectItem value="cpm">Client Project Manager</SelectItem>
@@ -472,7 +472,7 @@ const OnboardingDashboard = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Info className="w-4 h-4 text-muted-foreground cursor-help shrink-0" />
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help shrink-0" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs">Contact your administrator to change your primary role.</p>
@@ -513,7 +513,7 @@ const OnboardingDashboard = () => {
             <SectionCard
               title="Physical Address"
               subtitle="Registered entity or personal physical location"
-              icon={<MapPin className="w-5 h-5" />}
+              icon={<MapPin className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Street Address" colSpan>
@@ -555,7 +555,7 @@ const OnboardingDashboard = () => {
                   ? "Your company's bank account — shown on the invoices and payment certificates your company issues"
                   : "Your payment details for invoices and payment certificates"
               }
-              icon={<CreditCard className="w-5 h-5" />}
+              icon={<CreditCard className="h-5 w-5" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <Field label="Bank Name">
@@ -618,7 +618,7 @@ const OnboardingDashboard = () => {
               <SectionCard
                 title="Organisation & Entity Details"
                 subtitle="Corporate profile and registration information"
-                icon={<Building2 className="w-5 h-5" />}
+                icon={<Building2 className="h-5 w-5" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <Field label="Company / Entity Name">
@@ -626,7 +626,7 @@ const OnboardingDashboard = () => {
                       readOnly={!canEditOrg}
                       value={formData.organization.name}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, name: e.target.value } })}
-                      className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, "font-normal", !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="Company Registration No.">
@@ -634,7 +634,7 @@ const OnboardingDashboard = () => {
                       readOnly={!canEditOrg}
                       value={formData.organization.company_reg_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_reg_number: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="VAT Registration Number">
@@ -642,7 +642,7 @@ const OnboardingDashboard = () => {
                       readOnly={!canEditOrg}
                       value={formData.organization.vat_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, vat_number: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="CK Number">
@@ -650,7 +650,7 @@ const OnboardingDashboard = () => {
                       readOnly={!canEditOrg}
                       value={formData.organization.ck_number}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, ck_number: e.target.value } })}
-                      className={cn(INPUT_CLS, !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     />
                   </Field>
                   <Field label="Enterprise Size">
@@ -658,7 +658,7 @@ const OnboardingDashboard = () => {
                       disabled={!canEditOrg}
                       value={formData.organization.company_size}
                       onChange={e => setFormData({ ...formData, organization: { ...formData.organization, company_size: e.target.value } })}
-                      className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-slate-50 cursor-not-allowed")}
+                      className={cn(INPUT_CLS, "w-full outline-none px-3", !canEditOrg && "bg-muted/50 cursor-not-allowed")}
                     >
                       <option value="">Select Scale...</option>
                       <option value="1-10">Micro (1–10 people)</option>
@@ -671,9 +671,9 @@ const OnboardingDashboard = () => {
                 </div>
               </SectionCard>
             ) : (
-              <div className="border border-border rounded-xl bg-white shadow-sm p-10 text-center flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-muted-foreground" />
+              <div className="border border-border rounded-xl bg-card shadow-sm p-10 text-center flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Organisation details are only available for organisation accounts.

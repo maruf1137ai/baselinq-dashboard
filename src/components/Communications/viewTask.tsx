@@ -78,11 +78,11 @@ const ChecklistItem: React.FC<{
         className="sr-only peer"
       />
       {item.completed ? (
-        <div className="w-5 h-5 rounded bg-[#3A6FF7] flex items-center justify-center flex-shrink-0">
+        <div className="h-5 w-5 rounded bg-[#3A6FF7] flex items-center justify-center flex-shrink-0">
           <CircleCheck className="w-2.5 h-2.5 text-white" />
         </div>
       ) : (
-        <div className="w-5 h-5 border-2 border-gray-300 rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
+        <div className="h-5 w-5 border-2 border-border rounded-sm peer-focus:ring-2 peer-focus:ring-blue-300 group-hover:border-blue-500 transition-colors flex-shrink-0"></div>
       )}
       <span
         className={`text-gray-700 text-base ${
@@ -128,10 +128,10 @@ export default function RightSideDrawer() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 bg-white text-foreground shadow-xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
+      <DialogContent className="fixed right-0 top-0 !left-auto !translate-x-0 !translate-y-0 h-screen w-[500px] rounded-none border-0 text-foreground shadow-lg data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right">
         {/* Drawer header */}
-        {/* <DialogHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-3">
-          <DialogTitle className="text-lg font-medium">
+        {/* <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>
             Drawer Title
           </DialogTitle>
         </DialogHeader> */}
@@ -146,7 +146,7 @@ export default function RightSideDrawer() {
                 <div>
                   <p className="text-xs [#6B7280]">Assignee</p>
                   <div className="flex items-center space-x-3 mt-2">
-                    <div className="w-6 h-6 rounded-full bg-[#E8F1FF] flex items-center justify-center">
+                    <div className="h-6 w-6 rounded-full bg-[#E8F1FF] flex items-center justify-center">
                       <span className="text-[#3A6FF7] text-xs">
                         {task.assignee.initials}
                       </span>
@@ -159,7 +159,7 @@ export default function RightSideDrawer() {
                 <div>
                   <p className="text-xs [#6B7280]">Due Date</p>
                   <div className="flex items-center space-x-2 mt-2">
-                    <CalendarIcon className="w-4 h-4 text-red_dark" />
+                    <CalendarIcon className="h-4 w-4 text-red_dark" />
                     <span className="text-sm text-red_dark">
                       {task.dueDate}
                     </span>
@@ -168,7 +168,7 @@ export default function RightSideDrawer() {
               </div>
             </div>
 
-            <div className="border-t border-b border-gray-200 mt-6">
+            <div className="border-t border-b border-border mt-6">
               <div className="flex items-center flex-wrap py-[3px]">
                 {TABS.map((tab) => (
                   <button
@@ -176,7 +176,7 @@ export default function RightSideDrawer() {
                     onClick={() => setActiveTab(tab)}
                     className={`py-2.5 px-5 text-sm transition-colors rounded-md ${
                       activeTab === tab
-                        ? "bg-primary text-white rounded-t-lg"
+                        ? "bg-primary text-primary-foreground rounded-t-lg"
                         : "text-foreground hover:text-primary"
                     }`}
                     style={
@@ -239,7 +239,7 @@ export default function RightSideDrawer() {
                   <button
                     disabled={!isAllComplete}
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-base font-medium rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
-                    <CircleCheck className="w-5 h-5" />
+                    <CircleCheck className="h-4 w-4" />
                     Mark Complete
                   </button>
                 </div>
@@ -333,7 +333,7 @@ export default function RightSideDrawer() {
               {activeTab === "Audit Trail" && (
                 <div className="flex flex-col">
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -345,7 +345,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue
@@ -357,7 +357,7 @@ export default function RightSideDrawer() {
                     </div>
                   </div>
                   <div className="item flex gap-3 border-b border-border py-3">
-                    <div className="h-2 min-w-2 bg-[#6c5ce7] rounded-full mt-1.5"></div>
+                    <div className="h-2 min-w-2 bg-primary rounded-full mt-1.5"></div>
                     <div className="">
                       <div className="title text-sm text-foreground">
                         Status changed to Overdue

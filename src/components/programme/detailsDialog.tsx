@@ -81,9 +81,9 @@ export function ViewDetailsDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[650px] bg-white p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-base text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             M1 – Site Establishment
           </DialogTitle>
         </DialogHeader>
@@ -143,7 +143,7 @@ export function ViewDetailsDialog() {
                       <div className="text-muted-foreground text-sm">Progress</div>
                       <div className="text-foreground text-sm">100%</div>
                     </div>
-                    <div className="bar bg-gray-100 h-2 w-full rounded-full mt-2">
+                    <div className="bar bg-muted h-2 w-full rounded-full mt-2">
                       <div className="w-[100%] bg-primary h-full rounded-full"></div>
                     </div>
                   </div>

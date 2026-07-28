@@ -52,7 +52,7 @@ export const PrimaryContractAlert = ({
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/documents"); }}
     >
       <div className="shrink-0 w-9 h-9 rounded-lg bg-amber-200/60 flex items-center justify-center">
-        <AlertTriangle className="w-4 h-4 text-amber-700" />
+        <AlertTriangle className="h-4 w-4 text-amber-700" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-amber-900">
@@ -63,7 +63,7 @@ export const PrimaryContractAlert = ({
           Upload your signed JBCC / NEC / GCC agreement and mark it as the primary contract so retrieval anchors against it.
         </p>
       </div>
-      <ArrowRight className="w-4 h-4 text-amber-700 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+      <ArrowRight className="h-4 w-4 text-amber-700 shrink-0 group-hover:translate-x-0.5 transition-transform" />
     </div>
   );
 };

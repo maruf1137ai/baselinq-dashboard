@@ -26,6 +26,7 @@ interface CostLedgerTableProps {
 const PAGE_SIZE = 10;
 
 import { formatZAR } from '@/lib/formatCurrency';
+import { EmptyState } from "@/components/ui/empty-state";
 
 const formatCurrency = formatZAR;
 
@@ -44,8 +45,9 @@ const ActionsCell = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-            <MoreHorizontal className="w-5 h-5" />
+          <button
+            aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+            <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-40" align="end">
@@ -61,14 +63,14 @@ const ActionsCell = ({
       </DropdownMenu>
 
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-white">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Details for {entry.ref}</DialogTitle>
             <DialogDescription>
               Supplier: {entry.supplier} {entry.supplierShort}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 space-y-2 text-sm">
+          <div className="mt-4 space-y-2 text-sm tabular-nums">
             <p><strong>Date:</strong> {entry.date}</p>
             <p><strong>Period:</strong> {entry.period}</p>
             <p><strong>Net:</strong> {formatCurrency(entry.net)}</p>
@@ -78,7 +80,7 @@ const ActionsCell = ({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50">
+              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
                 Close
               </button>
             </DialogClose>
@@ -97,11 +99,11 @@ const categoryColors: Record<string, string> = {
   [Category?.ProfessionalFees]: "bg-purple-100 text-purple-800 border border-purple-200",
   [Category?.Preliminaries]: "bg-cyan-100 text-cyan-800 border border-cyan-200",
   [Category?.Contingency]: "bg-red-100 text-red-800 border border-red-200",
-  [Category?.Other]: "bg-gray-100 text-gray-700 border border-gray-200",
+  [Category?.Other]: "bg-muted text-gray-700 border border-border",
 };
 
 const CategoryBadge: React.FC<{ category: Category }> = ({ category }) => {
-  const colorClasses = categoryColors[category] || "bg-gray-100 text-gray-800 border border-gray-200";
+  const colorClasses = categoryColors[category] || "bg-muted text-gray-800 border border-border";
   return (
     <span className={`px-3 py-1 inline-flex text-xs leading-5 rounded-full ${colorClasses}`}>
       {category}
@@ -140,17 +142,17 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-border overflow-hidden">
+    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
       {/* Search */}
       <div className="px-4 pt-4 pb-2">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={handleSearch}
             placeholder="Search by supplier, ref, category..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>
@@ -169,18 +171,32 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-gray-200">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-sm text-gray-400">
-                  {search ? "No results match your search." : "No ledger entries found."}
+                <td colSpan={9}>
+                  {search ? (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No ledger entries match this search"
+                      description="Try a different supplier, reference or period, or clear the search to see the full cost ledger."
+                    />
+                  ) : (
+                    <EmptyState
+                      variant="plain"
+                      size="sm"
+                      title="No cost ledger entries yet"
+                      description="Committed and incurred cost is recorded here, linked to the variation orders and payment certificates it arises from."
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
               paginated.map((entry) => (
                 <tr
                   key={entry.id}
-                  className="hover:bg-gray-50/50 transition-colors duration-150 text-foreground">
+                  className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.date}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     <div>{entry.supplier}</div>
@@ -190,8 +206,8 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                     {entry.ref}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.period}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{formatCurrency(entry.net)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{formatCurrency(entry.total)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">{formatCurrency(entry.net)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">{formatCurrency(entry.total)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-primary hover:text-primary/80 cursor-pointer">
                     {entry.linkedVOOrPC || entry.linkedVO || "—"}
                   </td>
@@ -209,7 +225,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <p className="text-sm text-muted-foreground">
           {filtered.length === 0
             ? "No results"
@@ -217,10 +233,11 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
         </p>
         <div className="flex items-center gap-1">
           <button
+            aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft className="w-4 h-4" />
+            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
@@ -237,17 +254,18 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-[#6c5ce7] text-white" : "text-gray-600 hover:bg-gray-100"
+                    safePage === p ? "bg-primary text-primary-foreground" : "text-gray-600 hover:bg-muted"
                   }`}>
                   {p}
                 </button>
               )
             )}
           <button
+            aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight className="w-4 h-4" />
+            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

@@ -297,7 +297,7 @@ export default function HelpTasks() {
                 {s.description}
               </p>
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-white">
+              <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
@@ -331,11 +331,15 @@ export default function HelpTasks() {
         {/* Cross-cutting rules */}
         <section className="mt-12">
           <h2 className="text-lg font-normal text-foreground">Rules that apply to every task type</h2>
-          <ul className="mt-3 space-y-2.5 text-sm text-foreground leading-relaxed list-disc pl-5">
-            {GLOBAL_NOTES.map((n, i) => (
-              <li key={i}>{n}</li>
-            ))}
-          </ul>
+          {/* Same surface as the per-type tables above — this list was the one
+              block on the page floating loose on the page background. */}
+          <div className="mt-4 rounded-xl border border-border bg-card px-5 py-4">
+            <ul className="space-y-2.5 text-sm text-foreground leading-relaxed list-disc pl-5">
+              {GLOBAL_NOTES.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <p className="mt-12 text-xs text-muted-foreground">

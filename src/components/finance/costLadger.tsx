@@ -345,17 +345,17 @@ const CostLadger = () => {
               className="flex items-center space-x-2 h-10 px-4 rounded-lg text-sm text-white bg-primary hover:opacity-90 transition-all"
               onClick={handleCreateNew}
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="h-4 w-4" />
               <span>New Entry</span>
             </button>
           )}
 
           {/* View Fees Button */}
           <button
-            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-white text-foreground border border-border hover:bg-muted transition-all"
+            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
             onClick={() => setIsDrawerOpen(true)}
           >
-            <ExternalLinkIcon className="w-4 h-4" />
+            <ExternalLinkIcon className="h-4 w-4" />
             <span>Fee Schedule</span>
           </button>
 
@@ -364,18 +364,18 @@ const CostLadger = () => {
             <DropdownMenuTrigger asChild>
               <button
                 className={`flex items-center space-x-2 h-8 px-4 rounded-lg text-xs transition-all border ${activeFilterCount > 0
-                  ? 'bg-white text-foreground border-foreground'
-                  : 'bg-white text-foreground border-border hover:bg-muted'
+                  ? 'bg-card text-foreground border-foreground'
+                  : 'bg-card text-foreground border-border hover:bg-muted'
                   }`}
               >
-                <FilterIcon className="w-4 h-4" />
+                <FilterIcon className="h-4 w-4" />
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
                   <span className="bg-foreground text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">
                     {activeFilterCount}
                   </span>
                 )}
-                <ChevronDownIcon className="w-5 h-5 text-muted-foreground" />
+                <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-60" align="end">
@@ -407,9 +407,9 @@ const CostLadger = () => {
           {/* Export CSV Button */}
           <button
             onClick={exportToCSV}
-            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-white text-foreground border border-border hover:bg-muted transition-all"
+            className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
           >
-            <ExportIcon className="w-4 h-4" />
+            <ExportIcon className="h-4 w-4" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -422,21 +422,25 @@ const CostLadger = () => {
           </div>
         ) : isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <AwesomeLoader message="Processing Ledger Data" />
+            <AwesomeLoader message="Processing ledger data" />
           </div>
         ) : ledgerData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-sm rounded-lg border border-border bg-muted/50">
-            <p className="font-medium text-foreground">No cost ledger entries</p>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-sm rounded-xl bg-muted/50">
+            <p className="font-medium text-foreground">
+              {selectedCategories.length > 0
+                ? 'No ledger entries match these filters'
+                : 'No cost ledger entries yet'}
+            </p>
             <p className="mt-1 text-center max-w-md mx-auto">
               {selectedCategories.length > 0
-                ? 'No entries match the current filter.'
-                : 'Entries appear when Variation Orders are approved or Payment Certificates are created. You can also manually add entries.'}
+                ? 'Try clearing the category filters — the entry may be recorded under a different cost head.'
+                : 'Entries are created automatically when a variation order is approved or a payment certificate is issued, so committed cost stays reconciled with the contract record.'}
             </p>
             <button
               onClick={handleCreateNew}
               className="mt-4 text-primary hover:text-primary font-medium text-sm transition-colors"
             >
-              Add your first entry
+              Add an entry manually
             </button>
           </div>
         ) : (

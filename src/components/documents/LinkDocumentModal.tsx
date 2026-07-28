@@ -36,7 +36,7 @@ const typeColors: Record<string, string> = {
   SI: 'bg-amber-50 text-amber-700 border-amber-100',
   DC: 'bg-emerald-50 text-emerald-700 border-emerald-100',
   CPI: 'bg-rose-50 text-rose-700 border-rose-100',
-  GI: 'bg-gray-50 text-gray-700 border-gray-100',
+  GI: 'bg-muted/50 text-gray-700 border-border',
 };
 
 const FILTERS = ['All', 'VO', 'RFI', 'SI', 'DC', 'CPI'];
@@ -120,9 +120,9 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl bg-white flex flex-col max-h-[90vh]">
-        <DialogHeader className="px-8 py-6 border-b bg-gray-50/50">
-          <DialogTitle className="text-xl font-normal text-foreground">Link to Task</DialogTitle>
+      <DialogContent className="p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
+          <DialogTitle>Link to Task</DialogTitle>
         </DialogHeader>
 
         <div className="px-5 py-5 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
@@ -130,7 +130,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search by reference or title..."
-              className="pl-12 h-12 border-gray-200 rounded-xl focus:ring-primary/20 font-normal"
+              className="pl-12 h-12 border-border rounded-xl focus:ring-primary/20 font-normal"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -145,7 +145,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
                   'px-4 py-1.5 rounded-full text-xs transition-all border font-normal',
                   activeFilter === filter
                     ? 'bg-[#3A6FF7] text-white border-[#3A6FF7]'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                    : 'bg-card text-gray-500 border-border hover:border-border'
                 )}
               >
                 {filter}
@@ -161,11 +161,16 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
               </div>
             ) : filtered.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="h-12 w-12 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Search className="h-5 w-5 text-gray-400" />
                 </div>
                 <p className="text-sm text-gray-500 font-normal">
-                  {searchTerm ? `No tasks found matching "${searchTerm}"` : 'No open tasks found'}
+                  {searchTerm ? `No open items match "${searchTerm}"` : 'No open items to link to yet'}
+                </p>
+                <p className="text-xs text-gray-400 font-normal mt-1 max-w-xs mx-auto leading-relaxed">
+                  {searchTerm
+                    ? 'Try the reference number instead, or clear the search.'
+                    : 'Linking a document to an instruction, RFI or variation keeps the paper trail together.'}
                 </p>
               </div>
             ) : (
@@ -178,22 +183,22 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
                     key={task.id}
                     onClick={() => !isAlreadyLinked && toggleSelect(task.id)}
                     className={cn(
-                      'flex items-center justify-between p-4 rounded-2xl border transition-all select-none',
+                      'flex items-center justify-between p-4 rounded-xl border transition-all select-none',
                       isAlreadyLinked
-                        ? 'bg-gray-50 opacity-60 cursor-not-allowed border-gray-100'
-                        : 'bg-white cursor-pointer border-gray-100 hover:border-primary/30 hover:shadow-sm',
+                        ? 'bg-muted/50 opacity-60 cursor-not-allowed border-border'
+                        : 'bg-card cursor-pointer border-border hover:border-primary/30 hover:shadow-sm',
                       isSelected && 'border-primary/50 bg-primary/[0.02]'
                     )}
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         {isAlreadyLinked ? (
-                          <CheckCircle2 className="h-5 w-5 text-gray-400" />
+                          <CheckCircle2 className="h-4 w-4 text-gray-400" />
                         ) : (
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => toggleSelect(task.id)}
-                            className="rounded-md border-gray-300 data-[state=checked]:bg-[#3A6FF7] data-[state=checked]:border-[#3A6FF7]"
+                            className="rounded-md border-border data-[state=checked]:bg-[#3A6FF7] data-[state=checked]:border-[#3A6FF7]"
                           />
                         )}
                       </div>
@@ -236,7 +241,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="px-8 py-6 border-t bg-gray-50/50 flex items-center justify-between sm:justify-between">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 sm:justify-between">
           <div className="text-sm text-gray-500 font-normal">
             {selectedIds.length > 0 ? (
               <span className="text-primary">{selectedIds.length} selected</span>
@@ -245,7 +250,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
             )}
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleClose} className="font-normal h-11 border-gray-200 px-6 bg-white">
+            <Button variant="outline" onClick={handleClose} className="font-normal h-11 border-border px-6 bg-card">
               Cancel
             </Button>
             <Button

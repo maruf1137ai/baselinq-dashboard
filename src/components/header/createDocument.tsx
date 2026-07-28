@@ -165,9 +165,9 @@ export function CreateDocumentDialog() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DialogContent className="max-w-[650px] bg-white p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-lg text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             Create New {dialogTitle}
           </DialogTitle>
         </DialogHeader>
@@ -249,7 +249,7 @@ export function CreateDocumentDialog() {
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex justify-between items-center border p-2 rounded">
+                    className="flex justify-between items-center border border-border p-2 rounded-lg">
                     <span className="text-sm">{file.name}</span>
                     <button
                       type="button"

@@ -6,7 +6,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, MessageSquare, FileText } from "lucide-react";
+import { MessageSquare, FileText } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { VOAnalysis } from "./AIAnalysis/VOAnalysis";
 import { CPIAnalysis } from "./AIAnalysis/CPIAnalysis";
 import { DCAnalysis } from "./AIAnalysis/DCAnalysis";
@@ -88,10 +89,10 @@ export function AIAnalysisModal({
 
   return (<>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-white max-h-[85vh] overflow-y-auto font-sans">
+      <DialogContent size="xl" className="max-h-[85vh] overflow-y-auto font-sans">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg text-foreground">
-            <Zap className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2">
+            <AiMark size={20} className="text-primary" />
             AI Contract Analysis
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -115,11 +116,11 @@ export function AIAnalysisModal({
           ) : (
             <Tabs defaultValue="analysis" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted p-1 rounded-xl">
-                <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Contractual Analysis
                 </TabsTrigger>
-                <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm flex items-center gap-2">
+                <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   AI RAG Chat
                 </TabsTrigger>
@@ -134,7 +135,7 @@ export function AIAnalysisModal({
 
                 {/* Fallback for other types */}
                 {!["VO", "CPI", "DC", "RFI", "SI"].includes(taskType) && (
-                  <div className="p-6 bg-white border border-dashed border-gray-200 rounded-xl text-center text-gray-400">
+                  <div className="p-6 border border-dashed border-border rounded-xl text-center text-gray-400">
                     {taskType} Detailed Analysis Placeholder
                   </div>
                 )}

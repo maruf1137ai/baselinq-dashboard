@@ -83,11 +83,11 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
           <h3 className="text-sm text-gray2">Project Timeline</h3>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray2">
-          <span className="py-1 px-3 bg-white rounded-full">{progress}% Complete</span>
-          <span className="text-red_dark border border-red_light py-1 px-3 bg-white rounded-full">{daysStatus}</span>
+          <span className="py-1 px-3 bg-card rounded-full">{progress}% Complete</span>
+          <span className="text-red_dark border border-red_light py-1 px-3 bg-card rounded-full">{daysStatus}</span>
         </div>
       </CardHeader>
-      <CardContent className="bg-white p-2 mx-2 rounded-md">
+      <CardContent className="bg-card p-2 mx-2 rounded-md">
         <div className="flex flex-col justify-between p-4 relative">
           {/* Phase labels */}
           <div className="flex w-full mb-1">

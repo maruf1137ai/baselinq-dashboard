@@ -76,21 +76,21 @@ export function CreateTaskDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 !py-3 text-base font-normal">
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon />
           Create Task
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-[650px] bg-white p-0">
-        <DialogHeader className="py-[22px] px-6 border-b border-border">
-          <DialogTitle className="text-base text-foreground">
+      <DialogContent size="lg" className="p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>
             Create Task from Meeting
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 px-6 pb-6">
           <div className="space-y-5">
-            <div className="text-sm p-3 rounded-xl text-foreground bg-sidebar">
+            <div className="text-sm p-3 rounded-xl text-foreground bg-muted/50">
               From meeting: Site Coordination Meeting
             </div>
             {/* Document Title */}

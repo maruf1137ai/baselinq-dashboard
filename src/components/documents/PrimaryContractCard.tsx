@@ -101,8 +101,8 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
 
   if (isLoading) {
     return (
-      <div className="border border-border rounded-xl bg-white shadow-sm p-5 flex items-center gap-3 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" />
+      <div className="border border-border rounded-xl bg-card p-5 flex items-center gap-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
         Loading primary contract…
       </div>
     );
@@ -113,17 +113,17 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
   // ── EMPTY state — prominent CTA ─────────────────────────────────
   if (!filled) {
     return (
-      <div className="relative border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-2xl p-6 shadow-sm">
+      <div className="relative border border-dashed border-amber-300 bg-amber-50/50 rounded-xl p-6">
         <div className="flex items-start gap-4">
           <div className="shrink-0 w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-amber-700" />
+            <AlertTriangle className="h-5 w-5 text-amber-700" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-base font-medium text-amber-900">
                 Upload your project's official contract
               </h3>
-              <span className="text-[10px] uppercase tracking-wider text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded">
+              <span className="text-xs uppercase tracking-wider text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded">
                 Required for AI analysis
               </span>
             </div>
@@ -160,12 +160,12 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                       Uploading… {uploadProgress}%
                     </>
                   ) : (
                     <>
-                      <Upload className="w-3.5 h-3.5 mr-2" />
+                      <Upload className="mr-2" />
                       Upload primary contract (PDF)
                     </>
                   )}
@@ -186,32 +186,32 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
   const supportingCount = data?.supporting_documents?.length ?? 0;
 
   return (
-    <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-white rounded-2xl p-5 shadow-sm">
+    <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-card rounded-xl p-5">
       <div className="flex items-start gap-4">
         <div className="shrink-0 w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-          <ShieldCheck className="w-6 h-6 text-emerald-700" />
+          <ShieldCheck className="h-6 w-6 text-emerald-700" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">
+            <span className="text-xs uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">
               Primary Contract
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
               AI anchor
             </span>
             {supportingCount > 0 && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 · {supportingCount} supporting document{supportingCount !== 1 ? "s" : ""}
               </span>
             )}
           </div>
           <h3 className="text-base font-medium text-foreground flex items-center gap-2 truncate">
-            <FileCheck2 className="w-4 h-4 text-emerald-700 shrink-0" />
+            <FileCheck2 className="h-4 w-4 text-emerald-700 shrink-0" />
             <span className="truncate">{filled.name || filled.file_name}</span>
           </h3>
           {age && (
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" /> Uploaded {age}
+              <Calendar className="h-3 w-3" /> Uploaded {age}
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-2xl">
@@ -241,12 +241,12 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               >
                 {isUploading ? (
                   <>
-                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                     Replacing… {uploadProgress}%
                   </>
                 ) : (
                   <>
-                    <RefreshCcw className="w-3 h-3 mr-1.5" />
+                    <RefreshCcw className="mr-1.5" />
                     Replace
                   </>
                 )}

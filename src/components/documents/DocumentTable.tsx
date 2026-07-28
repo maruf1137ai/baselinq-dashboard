@@ -6,10 +6,12 @@ import {
   Eye,
   Trash2,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
@@ -79,7 +81,7 @@ interface DocumentTableProps {
 const DISCIPLINE_CHIP: Record<string, { bg: string; fg: string; border: string; dot: string }> = {
   Architectural:            { bg: 'bg-amber-50',   fg: 'text-amber-700',   border: 'border-amber-100',   dot: 'bg-amber-500' },
   Structural:               { bg: 'bg-blue-50',    fg: 'text-blue-700',    border: 'border-blue-100',    dot: 'bg-blue-500' },
-  Civil:                    { bg: 'bg-slate-50',   fg: 'text-slate-700',   border: 'border-slate-200',   dot: 'bg-slate-500' },
+  Civil:                    { bg: 'bg-muted/50',   fg: 'text-slate-700',   border: 'border-border',   dot: 'bg-slate-500' },
   'Mechanical (MEP)':       { bg: 'bg-emerald-50', fg: 'text-emerald-700', border: 'border-emerald-100', dot: 'bg-emerald-500' },
   'Electrical (MEP)':       { bg: 'bg-teal-50',    fg: 'text-teal-700',    border: 'border-teal-100',    dot: 'bg-teal-500' },
   'Plumbing (MEP)':         { bg: 'bg-cyan-50',    fg: 'text-cyan-700',    border: 'border-cyan-100',    dot: 'bg-cyan-500' },
@@ -95,11 +97,11 @@ const DISCIPLINE_CHIP: Record<string, { bg: string; fg: string; border: string; 
 };
 
 const getDisciplineChip = (d?: string) =>
-  DISCIPLINE_CHIP[d ?? ''] ?? { bg: 'bg-gray-50', fg: 'text-gray-700', border: 'border-gray-100', dot: 'bg-gray-400' };
+  DISCIPLINE_CHIP[d ?? ''] ?? { bg: 'bg-muted/50', fg: 'text-gray-700', border: 'border-border', dot: 'bg-gray-400' };
 
 const CATEGORY_CHIP: Record<string, { chip: string; dot: string }> = {
   Drawings:  { chip: 'bg-blue-50 text-blue-700 border-blue-100',     dot: 'bg-blue-500' },
-  Documents: { chip: 'bg-slate-50 text-slate-700 border-slate-200',  dot: 'bg-slate-500' },
+  Documents: { chip: 'bg-muted/50 text-slate-700 border-border',  dot: 'bg-slate-500' },
   Contracts: { chip: 'bg-amber-50 text-amber-700 border-amber-100',  dot: 'bg-amber-500' },
 };
 
@@ -133,7 +135,7 @@ function DocumentRow({
           {doc.name}
         </span>
         {isUnread && (
-          <span className="shrink-0 bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+          <span className="shrink-0 bg-primary/10 text-primary text-xs font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider">
             New
           </span>
         )}
@@ -149,7 +151,7 @@ function DocumentRow({
         <span
           className={cn(
             'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal leading-5',
-            CATEGORY_CHIP[category]?.chip || 'bg-gray-50 text-gray-700 border-gray-100'
+            CATEGORY_CHIP[category]?.chip || 'bg-muted/50 text-gray-700 border-border'
           )}
         >
           {category}
@@ -188,7 +190,7 @@ function DocumentRow({
       <span className="w-24 shrink-0">
         {doc.aiFlags > 0 ? (
           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-xs font-normal leading-5">
-            <AiIcon size={10} />
+            <AiMark size={12} />
             {doc.aiFlags}
           </span>
         ) : (
@@ -205,29 +207,30 @@ function DocumentRow({
       <div className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
-              <MoreVertical className="w-4 h-4 text-muted-foreground" />
+            <button
+              aria-label="More actions" className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => onRowClick(doc._id)} className="gap-2 text-sm font-normal">
-              <Eye className="w-4 h-4" /> View Details
+              <Eye className="h-4 w-4" /> View Details
             </DropdownMenuItem>
             {doc.downloadUrl && doc.userPermissions?.canDownload === true && (
               <DropdownMenuItem onClick={() => window.open(doc.downloadUrl, '_blank')} className="gap-2 text-sm font-normal">
-                <Download className="w-4 h-4" /> Download
+                <Download className="h-4 w-4" /> Download
               </DropdownMenuItem>
             )}
             {onVersionUpload && doc.userPermissions?.canUploadVersion === true && (
               <DropdownMenuItem onClick={() => onVersionUpload(doc)} className="gap-2 text-sm font-normal">
-                <Upload className="w-4 h-4" /> Upload Version
+                <Upload className="h-4 w-4" /> Upload Version
               </DropdownMenuItem>
             )}
             {onDelete && doc.userPermissions?.canDelete === true && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(doc)} className="gap-2 text-sm font-normal text-red-600 focus:text-red-600">
-                  <Trash2 className="w-4 h-4" /> Delete
+                  <Trash2 className="h-4 w-4" /> Delete
                 </DropdownMenuItem>
               </>
             )}
@@ -288,19 +291,24 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
   }, [documents, groupBy]);
 
   if (isLoading) {
-    return <AwesomeLoader message="Loading Documents" />;
+    return <AwesomeLoader message="Loading documents" />;
   }
 
   if (!isLoading && documents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-2 bg-white border border-border rounded-lg">
-        <p className="text-sm">No documents uploaded yet</p>
+      <div className="bg-card border border-border rounded-lg">
+        <EmptyState
+          variant="plain"
+          icon={FileText}
+          title="No documents uploaded yet"
+          description="Drawings, specifications and contract documents uploaded to this project appear here with their revision and discipline."
+        />
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Table header — matches finance table conventions: no uppercase, text-xs muted */}
       <div className="bg-muted/50 px-6 py-4 flex items-center text-xs text-muted-foreground font-normal border-b border-border">
         <span className="flex-1 min-w-0 pr-4">Name</span>
@@ -323,7 +331,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
             {groupBy !== 'none' && (
               <div
                 className={cn(
-                  "bg-sidebar/60 px-6 py-3 flex items-center justify-between cursor-pointer",
+                  "bg-muted/50 px-6 py-3 flex items-center justify-between cursor-pointer",
                   gi > 0 && "border-t border-border"
                 )}
                 onClick={() => toggle(group.key)}
@@ -337,7 +345,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                     {group.items.length}
                   </span>
                 </div>
-                <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isCollapsed && '-rotate-90')} />
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isCollapsed && '-rotate-90')} />
               </div>
             )}
 

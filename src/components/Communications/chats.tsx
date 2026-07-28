@@ -58,7 +58,7 @@ function FileIcon({ mime, name }) {
     );
   }
   return (
-    <div className="w-8 h-8 rounded-sm flex items-center justify-center bg-gray-100 text-gray-700 text-sm">
+    <div className="w-8 h-8 rounded-sm flex items-center justify-center bg-muted text-gray-700 text-sm">
       {ext.toUpperCase()}
     </div>
   );
@@ -119,7 +119,7 @@ export default function Chats() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex items-stretch">
+    <div className="h-screen bg-muted/50 flex items-stretch">
       {/* Chat window - flexible */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Messages list */}
@@ -128,10 +128,10 @@ export default function Chats() {
             {messages.map((m) => (
               <div
                 key={m.id}
-                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                className="bg-card border border-border rounded-xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
                       {m.author
                         .split(" ")
                         .map((s) => s[0])
@@ -157,7 +157,7 @@ export default function Chats() {
                         href={a.url || "#"}
                         target={a.url ? "_blank" : "_self"}
                         rel="noreferrer"
-                        className="flex items-center gap-3 border border-gray-100 rounded-md p-2 hover:shadow-sm">
+                        className="flex items-center gap-3 border border-border rounded-md p-2 hover:shadow-sm">
                         <FileIcon mime={a.type} name={a.name} />
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-800 truncate">
@@ -177,14 +177,14 @@ export default function Chats() {
         </section>
 
         {/* Composer */}
-        <footer className="bg-white border-t border-gray-200 p-4">
+        <footer className="bg-card border-t border-border p-4">
           <div className="max-w-3xl mx-auto">
             {files.length > 0 && (
               <div className="mb-3 flex gap-2">
                 {files.map((f, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 border border-gray-200 rounded-md px-2 py-1 bg-gray-50">
+                    className="flex items-center gap-2 border border-border rounded-md px-2 py-1 bg-muted/50">
                     <div className="text-xs font-medium">{f.file.name}</div>
                     <button
                       onClick={() => removePendingFile(i)}
@@ -199,7 +199,7 @@ export default function Chats() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+                className="p-2 rounded-md border border-border bg-card hover:bg-muted/50"
                 title="Attach files">
                 📎
               </button>
@@ -215,7 +215,7 @@ export default function Chats() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Type a message…"
-                className="flex-1 rounded-xl border border-gray-200 px-4 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-200 min-w-0"
+                className="flex-1 rounded-xl border border-border px-4 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-200 min-w-0"
               />
 
               <button

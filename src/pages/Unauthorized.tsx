@@ -4,7 +4,7 @@ import { ShieldOff, ArrowLeft } from "lucide-react";
 export default function Unauthorized() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center max-w-sm px-6">
         <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-5">
           <ShieldOff className="w-7 h-7 text-red-400" />
@@ -17,7 +17,7 @@ export default function Unauthorized() {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6c5ce7] text-white text-sm rounded-xl hover:bg-[#5a4bd1] transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Go back
         </button>
       </div>

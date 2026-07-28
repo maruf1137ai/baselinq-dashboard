@@ -168,7 +168,7 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="Select priority" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             <SelectItem value="Low">Low</SelectItem>
             <SelectItem value="Medium">Medium</SelectItem>
             <SelectItem value="High">High</SelectItem>
@@ -182,7 +182,7 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="Select discipline" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent className="bg-card">
             {DISCIPLINE_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
@@ -220,7 +220,7 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
       <S3AttachmentSection s3Upload={s3Upload} inputId="rfi-upload" label="Attachments" />
 
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}
