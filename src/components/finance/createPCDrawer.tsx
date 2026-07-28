@@ -17,7 +17,18 @@ interface WorkLineItem {
   id: string;
   description: string;
   contractValue: number;
-  previouslyCertified: number; // readonly — auto-pulled from prior PCs
+  /**
+   * NOT auto-pulled, unlike a VO line — and the comment here used to claim it
+   * was. A work item is free text with an id generated at the moment the row
+   * is added, so there is no stable key to match the same line of work across
+   * certificates. Until work items are linked records (a bill-of-quantities
+   * item, or a milestone), this has to be entered by the person preparing the
+   * valuation.
+   *
+   * VO lines DO carry a real history — they key on the VO number. See
+   * `certifiedByVo`.
+   */
+  previouslyCertified: number;
   thisPeriod: number; // key editable field
 }
 
@@ -25,9 +36,12 @@ interface VOLineItem {
   voNumber: string;
   description: string;
   approvedValue: number;
+  /** Summed from this project's earlier certificates, not assumed to be zero. */
   previouslyCertified: number;
   thisPeriod: number;
   included: boolean;
+  /** approvedValue − previouslyCertified, floored at zero. */
+  remainingValue?: number;
 }
 
 export interface PCFormData {
@@ -223,18 +237,63 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     { enabled: !!(isOpen && projectId) }
   );
 
+  // Every certificate already issued on this project. Needed for
+  // previouslyCertified — see below.
+  const { data: priorPCResponse } = useFetch<{ results: any[] }>(
+    isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
+    { enabled: !!(isOpen && projectId) }
+  );
+
+  /**
+   * How much of each VO has already been certified on earlier certificates.
+   *
+   * This was hardcoded to 0 while the type declared it "readonly — auto-pulled
+   * from prior PCs". It was not pulled from anything. Every certificate was
+   * therefore built from an empty history, so "Cumulative" and "% Complete"
+   * were wrong on every certificate after the first, and the same variation
+   * could be certified in full on PC-001, PC-002 and PC-003 with nothing
+   * anywhere noticing. The operator was shown a zero and told it came from
+   * history, which is worse than showing nothing.
+   */
+  const certifiedByVo = useMemo<Record<string, number>>(() => {
+    const totals: Record<string, number> = {};
+    for (const pc of priorPCResponse?.results || []) {
+      for (const row of pc?.voItems || pc?.vo_items || []) {
+        const ref = String(row?.voNumber ?? row?.vo_number ?? "").trim();
+        if (!ref) continue;
+        totals[ref] = (totals[ref] || 0) + (Number(row?.thisPeriod ?? row?.this_period) || 0);
+      }
+    }
+    return totals;
+  }, [priorPCResponse]);
+
   const approvedVOs = useMemo<VOLineItem[]>(() => {
     return (voResponse?.results || [])
-      .filter((item: any) => String(item.status || "").toLowerCase() === "approved")
-      .map((item: any) => ({
-        voNumber: item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`,
-        description: item.task?.title || "",
-        approvedValue: item.task?.grandTotal || 0,
-        previouslyCertified: 0,
-        thisPeriod: 0,
-        included: false,
-      }));
-  }, [voResponse]);
+      // The VO's OWN status lives on the nested entity. The top-level `status`
+      // on this payload is the KANBAN status, which is only ever
+      // todo | in review | done — so comparing it to "approved" never matched
+      // and this list was permanently empty. The whole VO-to-certificate link
+      // has never worked.
+      .filter((item: any) => String(item.task?.status || "").toLowerCase() === "approved")
+      .map((item: any) => {
+        const voNumber =
+          item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`;
+        const approvedValue = Number(item.task?.grandTotal) || 0;
+        const previouslyCertified = certifiedByVo[voNumber] || 0;
+        return {
+          voNumber,
+          description: item.task?.title || "",
+          approvedValue,
+          previouslyCertified,
+          thisPeriod: 0,
+          included: false,
+          // What is left to certify. Surfaced so an operator can see at a
+          // glance that a fully-certified variation has nothing remaining,
+          // rather than re-certifying it because the drawer showed zero.
+          remainingValue: Math.max(approvedValue - previouslyCertified, 0),
+        };
+      });
+  }, [voResponse, certifiedByVo]);
 
   // Sync the editable VO rows with the fetched register, preserving any
   // inclusion / amount the user has already entered for a given VO.
