@@ -49,6 +49,7 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: "viewDocuments" },
   { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
+  { title: "Project Health", url: "/project-health", icon: <Shield />, permission: "viewCompliance" },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ];
 
