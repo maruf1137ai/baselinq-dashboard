@@ -140,11 +140,19 @@ const StatCard: React.FC<{
   value: string;
   meta?: React.ReactNode;
 }> = ({ label, value, meta }) => (
-  <div className="bg-muted/50 rounded-xl p-2 min-w-0">
+  // h-full + flex so the shell fills the grid row, and the white well below
+  // grows to take whatever height is left. Each card carries a different
+  // amount of supporting text — two lines under the fee, none under VAT, a
+  // progress bar under the cap — and without this the four white wells size
+  // themselves independently and the row reads as ragged.
+  <div className="bg-muted/50 rounded-xl p-2 min-w-0 h-full flex flex-col">
     <p className="text-sm text-gray2 mb-2 px-0.5">{label}</p>
-    <div className="bg-card px-3 py-2.5 rounded-md">
+    <div className="bg-card px-3 py-2.5 rounded-md flex-1">
       <p className="text-2xl font-normal text-foreground tabular-nums">{value}</p>
-      {meta && <div className="text-xs text-muted-foreground mt-2">{meta}</div>}
+      {/* Reserved rather than conditional: the VAT card has no meta, and if
+          its slot collapses that card's figure sits at a different height
+          from the other three. */}
+      <div className="text-xs text-muted-foreground mt-2 min-h-[1rem]">{meta}</div>
     </div>
   </div>
 );
@@ -654,7 +662,7 @@ const PlatformFees: React.FC = () => {
       {/* Header stats. Four across only from xl: these values are full ZAR
           amounts, ~4x longer than the counts a summary row usually carries,
           and at the canonical text-3xl they need the width. */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 items-stretch">
         <StatCard
           label="Fee excluding VAT"
           value={formatZAR(totals.feeExVat)}
