@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { MoreIcon } from "../icons/icons";
-import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { UserChip } from "@/components/TaskComponents/UserChip";
 import {
   DropdownMenu,
@@ -19,7 +19,8 @@ interface VariationOrdersTableProps {
   onViewDetails?: (taskId: string) => void;
   onEdit?: (order: VariationOrder) => void;
   onDelete?: (order: VariationOrder) => void;
-  onNew?: () => void;
+  /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
+  search: string;
 }
 
 export enum OrderStatus {
@@ -77,10 +78,13 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   onViewDetails,
   onEdit,
   onDelete,
-  onNew,
+  search,
 }) => {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   const formatCurrency = (value: number) => `+ ${formatZAR(value)}`;
 
@@ -100,36 +104,8 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
-
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
-      {/* Search + New button */}
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={handleSearch}
-            placeholder="Search by VO #, title, requested by..."
-            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-        {onNew && (
-          <button
-            onClick={onNew}
-            className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            New Variation Order
-          </button>
-        )}
-      </div>
-
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full divide-y divide-border">
           <thead className="bg-muted/50">

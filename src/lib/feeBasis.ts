@@ -409,6 +409,99 @@ export function feeArithmetic(charge: {
   );
 }
 
+/**
+ * The derivation as a CALCULATION, not prose.
+ *
+ * The first version of this screen rendered the basis as paragraphs — "Certified
+ * value is the valuation claimed less retention held plus retention released:
+ * R 2 208 800,00 − R 110 440,00 + R 0,00 = R 2 098 360,00." It was accurate and
+ * unreadable: a wall of text where a quantity surveyor expects a statement.
+ *
+ * A fee derivation is arithmetic. It reads as aligned rows with operators and
+ * rules under the subtotals, the way a payment certificate or a bank statement
+ * does — scannable down the right-hand column, with the outcome standing out.
+ */
+export interface CalcLine {
+  label: string;
+  value: number;
+  /** Rendered as a leading − or + so the arithmetic is visible. */
+  op?: "minus" | "plus";
+  /** `subtotal` draws a rule above it; `total` is the outcome. */
+  kind?: "item" | "subtotal" | "total";
+  /** Small muted qualifier shown after the label. */
+  note?: string;
+}
+
+export function derivationLines(
+  detail: BasisDetail,
+  shape: BasisShape,
+  charge: { feeRatePct: number; vatRatePct: number }
+): CalcLine[] {
+  if (!detail || shape === "unknown" || shape === "reversal") return [];
+  const lines: CalcLine[] = [];
+
+  if (shape === "pc") {
+    lines.push({ label: "Valuation claimed", value: toNum(detail.claim_amount) });
+
+    const retention = toNum(detail.retention_amount);
+    if (retention)
+      lines.push({
+        label: "Retention held",
+        value: retention,
+        op: "minus",
+        note: `${pct(detail.retention_rate_pct)} of the full valuation`,
+      });
+
+    const released = toNum(detail.retention_release);
+    if (released) lines.push({ label: "Retention released", value: released, op: "plus" });
+
+    lines.push({
+      label: "Certified excluding VAT",
+      value: toNum(detail.net_excluding_vat),
+      kind: "subtotal",
+    });
+
+    // Each matched VO gets its own line. A single lumped "de-duplication"
+    // figure is the thing a client queries; naming the VO answers it up front.
+    const dedupe = detail.vo_deduplication as Record<string, unknown> | undefined;
+    const matched = Array.isArray(dedupe?.matched) ? (dedupe!.matched as any[]) : [];
+    for (const m of matched) {
+      lines.push({
+        label: String(m.voNumber ?? "Variation"),
+        value: toNum(m.thisPeriod),
+        op: "minus",
+        note: "already charged at approval",
+      });
+    }
+  } else {
+    // VO
+    lines.push({ label: "Variation sub-total", value: toNum(detail.sub_total) });
+    const approved = toNum(detail.approved_amount);
+    if (approved && approved !== toNum(detail.sub_total))
+      lines.push({ label: "Approved amount", value: approved, note: "apportioned pro rata" });
+  }
+
+  const base = toNum(detail.base);
+  lines.push({ label: "Fee base", value: base, kind: "subtotal" });
+  return lines;
+}
+
+/** The fee itself, as calculation rows continuing on from the base. */
+export function feeLines(charge: {
+  baseAmount: number;
+  feeRatePct: number;
+  feeAmount: number;
+  vatRatePct: number;
+  vatAmount: number;
+  totalAmount: number;
+}): CalcLine[] {
+  return [
+    { label: `Platform fee at ${pct(charge.feeRatePct)}`, value: charge.feeAmount },
+    { label: `VAT at ${pct(charge.vatRatePct)}`, value: charge.vatAmount, op: "plus" },
+    { label: "Total", value: charge.totalAmount, kind: "total" },
+  ];
+}
+
 /** "August 2026" — the statement period a charge falls in. */
 export function statementPeriod(createdAt: string | null | undefined): {
   key: string;

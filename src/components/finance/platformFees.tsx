@@ -32,21 +32,22 @@ import {
   Lock,
   Receipt,
   RotateCcw,
-  Search,
 } from "lucide-react";
+import { FinanceToolbar } from "./FinanceToolbar";
 
 import useFetch from "@/hooks/useFetch";
 import { usePermission } from "@/hooks/usePermission";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { formatZAR } from "@/lib/formatCurrency";
 import {
-  assumptionStatements,
-  baseNarrative,
   basisShape,
-  buildBasisFigures,
   capView,
+  derivationLines,
+  type CalcLine,
+  feeLines,
   dedupeView,
   feeArithmetic,
   money,
@@ -139,10 +140,10 @@ const StatCard: React.FC<{
   value: string;
   meta?: React.ReactNode;
 }> = ({ label, value, meta }) => (
-  <div className="bg-muted/50 rounded-xl p-2.5 min-w-0">
-    <p className="text-sm text-gray2 mb-4">{label}</p>
-    <div className="bg-card p-4 rounded-md">
-      <p className="text-3xl font-normal text-foreground tabular-nums">{value}</p>
+  <div className="bg-muted/50 rounded-xl p-2 min-w-0">
+    <p className="text-sm text-gray2 mb-2 px-0.5">{label}</p>
+    <div className="bg-card px-3 py-2.5 rounded-md">
+      <p className="text-2xl font-normal text-foreground tabular-nums">{value}</p>
       {meta && <div className="text-xs text-muted-foreground mt-2">{meta}</div>}
     </div>
   </div>
@@ -169,6 +170,50 @@ const FigureItem: React.FC<{ label: string; value: string; emphasis?: boolean }>
 const SectionHeading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <p className="text-sm font-medium text-foreground">{children}</p>
 );
+
+/**
+ * One line of the derivation: label left, figure right, operator on the figure.
+ *
+ * A subtotal takes a rule above it and a total takes a heavier one, so the eye
+ * can find the two outcomes — the fee base and the amount payable — without
+ * reading a word. The figure column is `tabular-nums` so digits align down the
+ * page; without it the decimal points wander and the block stops reading as a
+ * calculation.
+ */
+const CalcRow: React.FC<{ line: CalcLine }> = ({ line }) => {
+  const isSubtotal = line.kind === "subtotal";
+  const isTotal = line.kind === "total";
+  const sign = line.op === "minus" ? "−" : line.op === "plus" ? "+" : "";
+
+  return (
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-6 py-1.5",
+        isSubtotal && "border-t border-border mt-1.5 pt-2",
+        isTotal && "border-t-2 border-border mt-1.5 pt-2"
+      )}
+    >
+      <dt
+        className={cn(
+          "text-sm min-w-0",
+          isSubtotal || isTotal ? "font-medium text-foreground" : "text-muted-foreground"
+        )}
+      >
+        {line.label}
+        {line.note && <span className="text-xs text-muted-foreground"> — {line.note}</span>}
+      </dt>
+      <dd
+        className={cn(
+          "text-sm tabular-nums shrink-0",
+          isSubtotal || isTotal ? "font-medium text-foreground" : "text-foreground"
+        )}
+      >
+        {sign && <span className="text-muted-foreground">{sign} </span>}
+        {money(line.value)}
+      </dd>
+    </div>
+  );
+};
 
 /**
  * Recessed derivation block. `bg-muted/50`, no border — a well, not a card.
@@ -247,126 +292,62 @@ const BasisDetailView: React.FC<{
     );
   }
 
-  const figures = buildBasisFigures(detail);
-  const narrative = baseNarrative(detail, shape);
   const dedupe = shape === "pc" ? dedupeView(detail) : null;
   const cap = capView(detail);
-  const assumptions = assumptionStatements(detail);
   const strategy = strategyLabel(detail.strategy);
+  const calc = derivationLines(detail, shape, charge);
+  const fee = feeLines(charge);
 
   return (
-    <div className="space-y-5">
-      {/* 1 — how the base was reached */}
-      <div className="space-y-3">
+    <div className="space-y-4">
+      {/* The derivation as a statement, not prose. Label left, figure right,
+          rule above each subtotal — the shape a QS already reads on a payment
+          certificate. The previous version explained the same arithmetic in
+          paragraphs and was unreadable. */}
+      <div>
         <SectionHeading>
-          {shape === "pc" ? "How the certified value was reached" : "How the variation value was reached"}
+          {shape === "pc" ? "How the fee base was reached" : "How the variation value was reached"}
         </SectionHeading>
-        {narrative.map((line, i) => (
-          <p key={i} className="text-sm text-foreground leading-relaxed">
-            {line}
-          </p>
-        ))}
-        {figures.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 pt-1">
-            {figures.map((f) => (
-              <FigureItem key={f.key} label={f.label} value={f.value} emphasis={f.emphasis} />
-            ))}
-          </div>
-        )}
+        <dl className="mt-2">
+          {calc.map((l, i) => (
+            <CalcRow key={`c-${i}`} line={l} />
+          ))}
+        </dl>
       </div>
 
-      {/* 2 — de-duplication */}
-      {dedupe && (
-        <div className="space-y-3 border-t border-border pt-4">
-          <div className="flex items-baseline justify-between gap-4">
-            <SectionHeading>De-duplication against variation orders</SectionHeading>
-            <span className="text-sm text-foreground tabular-nums">
-              −{money(dedupe.deduction)}
-            </span>
-          </div>
-          {dedupe.why && (
-            <p className="text-sm text-foreground leading-relaxed">{dedupe.why}</p>
-          )}
+      <div>
+        <SectionHeading>Fee</SectionHeading>
+        <dl className="mt-2">
+          {fee.map((l, i) => (
+            <CalcRow key={`f-${i}`} line={l} />
+          ))}
+        </dl>
+      </div>
 
-          {dedupe.matched.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">
-                Already charged at approval — deducted from this certificate
-              </p>
-              {dedupe.matched.map((m) => (
-                <div
-                  key={`m-${m.voNumber}`}
-                  className="flex items-baseline justify-between gap-4 text-sm text-foreground"
-                >
-                  <span>{m.voNumber}</span>
-                  <span className="tabular-nums">−{money(m.thisPeriod)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {dedupe.unmatched.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">
-                Certified in this period but never charged at approval — no deduction, so these
-                attract fee here for the first time
-              </p>
-              {dedupe.unmatched.map((m) => (
-                <div
-                  key={`u-${m.voNumber}`}
-                  className="flex items-baseline justify-between gap-4 text-sm text-muted-foreground"
-                >
-                  <span>{m.voNumber}</span>
-                  <span className="tabular-nums">{money(m.thisPeriod)}</span>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Only shown when the cap actually bit. Four figures explaining a cap
+          that did nothing is noise on every other row. */}
+      {cap && cap.capAmount !== null && cap.chargedFee !== cap.uncappedFee && (
+        <div className="rounded-lg bg-muted/50 px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            Reduced by the project cap of {money(cap.capAmount)} — {money(cap.runningTotalBefore)}{" "}
+            had already been charged, so {money(cap.uncappedFee)} became {money(cap.chargedFee)}.
+          </p>
         </div>
       )}
 
-      {/* 3 — the fee, and the cap */}
-      <div className="space-y-3 border-t border-border pt-4">
-        <SectionHeading>Fee calculation</SectionHeading>
-        <p className="text-sm text-foreground tabular-nums leading-relaxed">
-          {feeArithmetic(charge)}
-        </p>
-        {cap && (
-          <>
-            <p className="text-sm text-foreground leading-relaxed">{cap.narrative}</p>
-            {cap.capAmount !== null && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3">
-                <FigureItem label="Fee cap" value={money(cap.capAmount)} />
-                <FigureItem label="Charged before this" value={money(cap.runningTotalBefore)} />
-                <FigureItem label="Fee before cap" value={money(cap.uncappedFee)} />
-                <FigureItem label="Fee charged" value={money(cap.chargedFee)} emphasis />
-              </div>
-            )}
-          </>
-        )}
-        {!nested && (
-          <p className="text-xs text-muted-foreground tabular-nums">
-            Running fee total after this charge: {money(charge.runningTotal)}
+      {dedupe && dedupe.unmatched.length > 0 && (
+        <div className="rounded-lg bg-muted/50 px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            {dedupe.unmatched.map((m) => m.voNumber).join(", ")} certified here but never charged at
+            approval, so {dedupe.unmatched.length === 1 ? "it attracts" : "they attract"} fee for the
+            first time — no deduction.
           </p>
-        )}
-      </div>
-
-      {/* 4 — the rules in force when this charge was raised */}
-      {(assumptions.length > 0 || strategy) && (
-        <div className="space-y-2 border-t border-border pt-4">
-          <SectionHeading>Rules applied when this charge was raised</SectionHeading>
-          {strategy && (
-            <p className="text-sm text-foreground leading-relaxed">Charged on: {strategy}.</p>
-          )}
-          <ul className="space-y-1">
-            {assumptions.map((a, i) => (
-              <li key={i} className="text-sm text-muted-foreground leading-relaxed">
-                {a}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
+
+      <p className="text-xs text-muted-foreground tabular-nums">
+        {strategy ? `${strategy}. ` : ""}Running total after this charge {money(charge.runningTotal)}.
+      </p>
     </div>
   );
 };
@@ -597,8 +578,8 @@ const PlatformFees: React.FC = () => {
 
   const toggle = (id: number) => setExpanded((cur) => (cur === id ? null : id));
 
-  const onSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
+  const onSearch = (value: string) => {
+    setSearch(value);
     setPage(1);
     setExpanded(null);
   };
@@ -607,7 +588,7 @@ const PlatformFees: React.FC = () => {
 
   if (!canView) {
     return (
-      <main className="pt-6">
+      <main className="pt-4">
         <EmptyState
           icon={Lock}
           title="Platform fees are not visible to your role"
@@ -619,7 +600,7 @@ const PlatformFees: React.FC = () => {
 
   if (!projectId) {
     return (
-      <main className="pt-6">
+      <main className="pt-4">
         <EmptyState
           icon={Receipt}
           title="No project selected"
@@ -631,7 +612,7 @@ const PlatformFees: React.FC = () => {
 
   if (isLoading) {
     return (
-      <main className="pt-6">
+      <main className="pt-4">
         <AwesomeLoader compact message="Totalling platform fees" />
       </main>
     );
@@ -639,7 +620,7 @@ const PlatformFees: React.FC = () => {
 
   if (isError || !data) {
     return (
-      <main className="pt-6">
+      <main className="pt-4">
         <EmptyState
           icon={Receipt}
           title="Platform fees could not be loaded"
@@ -653,7 +634,7 @@ const PlatformFees: React.FC = () => {
 
   if (!config.configured) {
     return (
-      <main className="pt-6">
+      <main className="pt-4">
         <EmptyState
           icon={Receipt}
           title="Billing is not enabled for this project"
@@ -669,7 +650,7 @@ const PlatformFees: React.FC = () => {
       : null;
 
   return (
-    <main className="pt-6 space-y-6">
+    <main className="pt-4 space-y-4">
       {/* Header stats. Four across only from xl: these values are full ZAR
           amounts, ~4x longer than the counts a summary row usually carries,
           and at the canonical text-3xl they need the width. */}
@@ -749,18 +730,13 @@ const PlatformFees: React.FC = () => {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={onSearch}
-            placeholder="Search by certificate, variation or period..."
-            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
+      {/* One toolbar row, shared with the other three finance tabs: search
+          grows on the left, the view switch sits right-aligned beside it. */}
+      <FinanceToolbar
+        search={search}
+        onSearchChange={onSearch}
+        placeholder="Search by certificate, variation or period..."
+      >
         {/* Page-level filter row: every control is 32px tall, same as the
             Cost Ledger toolbar and the Documents toolbar. */}
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50" role="tablist">
@@ -783,7 +759,7 @@ const PlatformFees: React.FC = () => {
             </button>
           ))}
         </div>
-      </div>
+      </FinanceToolbar>
 
       {/* Charges — flat, paginated */}
       {view === "charges" && (

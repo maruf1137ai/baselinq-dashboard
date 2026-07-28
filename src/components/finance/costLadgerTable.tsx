@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Category, LedgerEntry } from "./costLadger";
-import { MoreHorizontal, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +21,8 @@ interface CostLedgerTableProps {
   entries: LedgerEntry[];
   onEditEntry: (entry: LedgerEntry) => void;
   canEdit: boolean;
+  /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
+  search: string;
 }
 
 const PAGE_SIZE = 10;
@@ -207,9 +209,15 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
   entries,
   onEditEntry,
   canEdit,
+  search,
 }) => {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  // Search moved to the parent toolbar; the page reset it used to do inline
+  // happens here instead so paging behaviour is unchanged.
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -228,27 +236,8 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
-
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
-      {/* Search */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={handleSearch}
-            placeholder="Search by supplier, ref, category..."
-            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-      </div>
-
       <div className="overflow-x-auto no-scrollbar">
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/50">

@@ -57,8 +57,14 @@ export function ProjectStatusCard({
 
   return (
     <Card className={`${cardBg[badgeVariant]} !border-0 rounded-xl shadow-none ${cardClassName || ''}`}>
-      <CardContent className="p-2.5">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+      {/* Padding, not type size, is what made three of these dominate the
+          fold: a p-2.5 shell wrapping a p-4 well put 26px of chrome above and
+          below a single figure. p-2 outer / px-3 py-2.5 inner keeps the two
+          surfaces legibly distinct — the well still reads as raised — while
+          taking roughly a third off the card's height. Shape is unchanged, so
+          Home and Documents stay consistent with Finance. */}
+      <CardContent className="p-2">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2 px-0.5">
           <div className="flex items-center gap-2.5">
             {icon}
             <p className="text-sm text-gray2">{title}</p>
@@ -70,13 +76,18 @@ export function ProjectStatusCard({
           )}
         </div>
 
-        <div className="bg-card p-4 rounded-md">
+        <div className="bg-card px-3 py-2.5 rounded-md">
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <div className="flex items-baseline gap-2">
-              {/* text-3xl font-normal tabular-nums is THE stat-card value —
-                  same treatment as DocumentSummaryCards. tabular-nums so
-                  money lines up between cards in a row. */}
-              <h3 className={`text-3xl font-normal tabular-nums ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
+              {/* text-2xl font-normal tabular-nums is THE stat-card value.
+                  Was text-3xl (30px), which suits a short count like "12" but
+                  not a full ZAR string — "R 5 817 050,00" is fourteen
+                  characters, so at 30px the figure dominated the page and
+                  three of them side by side forced the grid wider than the
+                  viewport. 24px keeps it the largest thing on the card
+                  without shouting. tabular-nums so money lines up between
+                  cards in a row. */}
+              <h3 className={`text-2xl font-normal tabular-nums ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
               {trendIcon && <span className={`text-lg font-medium ${trendColor}`}>{trendIcon}</span>}
             </div>
             {subtitle && <p className="text-xs text-gray2 bg-muted/50 py-1.5 px-5 rounded">{subtitle}</p>}
@@ -95,7 +106,7 @@ export function ProjectStatusCard({
           )}
 
           {link && (
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-4">
               <a
                 href={actionHref}
                 className="inline-flex items-center text-xs text-black underline hover:text-primary transition-colors group"

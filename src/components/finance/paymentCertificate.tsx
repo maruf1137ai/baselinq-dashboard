@@ -6,7 +6,8 @@ import { postData } from "@/lib/Api";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { usePermission } from "@/hooks/usePermission";
 import { useNavigate } from "react-router-dom";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, Plus } from "lucide-react";
+import { FinanceToolbar } from "./FinanceToolbar";
 
 interface PCListResponse {
   count: number;
@@ -19,6 +20,9 @@ const PaymentCertificate = () => {
   const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Search sits in the parent toolbar alongside the action, same as the other
+  // three finance tabs.
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, refetch } = useFetch<PCListResponse>(
     projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
@@ -34,9 +38,9 @@ const PaymentCertificate = () => {
   return (
     // pt-6 only: the page already has DashboardLayout's p-6, so a p-6 here
     // inset this one tab from the other three.
-    <main className="pt-6 space-y-6">
+    <main className="pt-4 space-y-4">
       {/* Programme link banner */}
-      <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
+      <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-primary/20 bg-primary/5">
         <div className="flex items-center gap-2">
           <BarChart2 className="h-4 w-4 text-primary" />
           <span className="text-sm text-foreground">Payment certificates are linked to programme phases on the timeline.</span>
@@ -48,15 +52,28 @@ const PaymentCertificate = () => {
         </button>
       </div>
 
+      <FinanceToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Search by PC #, period, status..."
+      >
+        {canCreatePC && (
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            New Certificate
+          </button>
+        )}
+      </FinanceToolbar>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <AwesomeLoader message="Verifying certificates" />
         </div>
       ) : (
-        <PaymentCertificateTable
-          orders={certificates}
-          onNew={canCreatePC ? () => setIsCreateOpen(true) : undefined}
-        />
+        <PaymentCertificateTable orders={certificates} search={search} />
       )}
 
       <CreatePCDrawer

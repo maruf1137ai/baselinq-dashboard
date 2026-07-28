@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ProjectStatusCard } from '../ProjectStatusCard';
 
 import CostLedgerTable from './costLadgerTable';
+import { FinanceToolbar } from './FinanceToolbar';
 import { FilterIcon, ExportIcon, ChevronDownIcon } from '../icons/icons';
 import {
   DropdownMenu,
@@ -114,6 +115,9 @@ const CostLadger = () => {
   const canView = usePermission("finance.view", projectIdNum);
   const canExport = canView || canEdit;
 
+  // Search lives here, alongside the filter and the actions, so all three sit
+  // on one toolbar row above the table rather than in three stacked strips.
+  const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
@@ -200,8 +204,8 @@ const CostLadger = () => {
   const activeFilterCount = selectedCategories.length;
 
   return (
-    <main className="pt-6 space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <main className="pt-4 space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <ProjectStatusCard
           icon={<CashIcon />}
           title="Total Debits"
@@ -230,9 +234,14 @@ const CostLadger = () => {
         />
       </div>
 
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center">
-
-        <div className="flex items-center gap-2">
+      {/* One toolbar row: search grows on the left, filter and actions sit
+          right-aligned on the same line. */}
+      <FinanceToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Search by supplier, ref, category..."
+      >
+        <>
           {/* New Entry Button — visible to all project members */}
           {canCreate && (
             <button
@@ -299,8 +308,8 @@ const CostLadger = () => {
               <span>Export CSV</span>
             </button>
           )}
-        </div>
-      </header>
+        </>
+      </FinanceToolbar>
 
       <main>
         {!projectId ? (
@@ -340,6 +349,7 @@ const CostLadger = () => {
             entries={ledgerData}
             onEditEntry={handleEditEntry}
             canEdit={canEdit}
+            search={search}
           />
         )}
       </main>

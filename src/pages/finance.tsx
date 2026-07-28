@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
+import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
+import { Plus } from "lucide-react";
 
 const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
@@ -92,6 +94,7 @@ const Finance = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
+  const [voSearch, setVoSearch] = useState("");
 
   const projectId = localStorage.getItem("selectedProjectId") || "";
 
@@ -177,7 +180,7 @@ const Finance = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  className={`text-sm py-3 px-5 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
@@ -188,7 +191,25 @@ const Finance = () => {
           </header>
 
           {activeTab === "Variation Orders" && (
-            <main className="pt-6">
+            <main className="pt-4 space-y-4">
+              {/* One toolbar row, same shape as the other three finance tabs:
+                  search grows on the left, actions right-aligned beside it. */}
+              <FinanceToolbar
+                search={voSearch}
+                onSearchChange={setVoSearch}
+                placeholder="Search by VO #, title, requested by..."
+              >
+                {canEditVariationOrder && (
+                  <button
+                    onClick={() => setIsVOModalOpen(true)}
+                    className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Variation Order
+                  </button>
+                )}
+              </FinanceToolbar>
+
               {isLoadingVO ? (
                 <div className="flex items-center justify-center py-20">
                   <AwesomeLoader message="Pricing variation orders" />
@@ -196,10 +217,10 @@ const Finance = () => {
               ) : (
                 <VariationOrdersTable
                   orders={variationOrders}
+                  search={voSearch}
                   onViewDetails={(taskId) => navigate(`/tasks/${taskId}`)}
                   onEdit={canEditVariationOrder ? handleEdit : undefined}
                   onDelete={canEditVariationOrder ? handleDelete : undefined}
-                  onNew={canEditVariationOrder ? () => setIsVOModalOpen(true) : undefined}
                 />
               )}
             </main>
