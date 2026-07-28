@@ -35,7 +35,6 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
-import { Plus } from "lucide-react";
 
 const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
@@ -90,7 +89,6 @@ const Finance = () => {
 
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
-  const [isVOModalOpen, setIsVOModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
@@ -194,21 +192,30 @@ const Finance = () => {
             <main className="pt-4 space-y-4">
               {/* One toolbar row, same shape as the other three finance tabs:
                   search grows on the left, actions right-aligned beside it. */}
+              {/* No "New Variation Order" here, deliberately.
+
+                  A variation is a commercial decision, not a spreadsheet row.
+                  It has to originate as an item — normally escalated from a
+                  Site Instruction — so that it carries its originating RFI and
+                  SI, travels the approval flow, and is signed off. Finance is
+                  a READ-OUT of approved commercial flow, never an entry point
+                  for it: the cost-ledger debit and the 1% platform fee are
+                  consequences of that approval, created automatically.
+
+                  This button POSTed straight to tasks/variation-orders/ with
+                  title as the only required field, no basis, no clause
+                  reference, no originating instruction — and because VOForm's
+                  line-item block is commented out, every variation it produced
+                  was R0.00. That is precisely the "approved verbally, no legal
+                  standing" failure the product exists to prevent.
+
+                  Raise variations from the task board via + Action, or by
+                  escalating an SI. */}
               <FinanceToolbar
                 search={voSearch}
                 onSearchChange={setVoSearch}
                 placeholder="Search by VO #, title, requested by..."
-              >
-                {canEditVariationOrder && (
-                  <button
-                    onClick={() => setIsVOModalOpen(true)}
-                    className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Variation Order
-                  </button>
-                )}
-              </FinanceToolbar>
+              />
 
               {isLoadingVO ? (
                 <div className="flex items-center justify-center py-20">
@@ -232,17 +239,9 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* Create VO drawer */}
-      <Sheet open={canEditVariationOrder && isVOModalOpen} onOpenChange={setIsVOModalOpen}>
-        <SheetContent side="right" size="lg" className="p-0 flex flex-col">
-          <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
-            <SheetTitle>New Variation Order</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 flex flex-col overflow-hidden px-6">
-            <VOForm setOpen={setIsVOModalOpen} initialStatus="Draft" />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* The create-VO drawer is gone with its trigger — leaving a Sheet
+          mounted that nothing can open is the dead-UI pattern this page has
+          just been cleared of. Variations are raised from the task board. */}
 
       {/* Edit VO drawer */}
       <Sheet open={canEditVariationOrder && isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
