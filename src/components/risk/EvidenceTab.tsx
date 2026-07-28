@@ -137,19 +137,19 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
                     ))}
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground font-mono mt-2">
+                  <p className="text-xs text-muted-foreground font-mono mt-2">
                     {pack.manifest_hash.slice(0, 16)}…{pack.manifest_hash.slice(-8)}
                   </p>
                 </div>
 
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {pack.integrity_verified ? (
-                    <Badge variant="outline" className="text-[11px] border-emerald-200 text-emerald-700 gap-1">
+                    <Badge variant="outline" className="text-xs border-emerald-200 text-emerald-700 gap-1">
                       <ShieldCheck className="h-3 w-3" /> Verified
                     </Badge>
                   ) : (
                     // Loud on purpose: an unverified pack is worthless as evidence.
-                    <Badge variant="outline" className="text-[11px] border-red-200 text-red-700 gap-1">
+                    <Badge variant="outline" className="text-xs border-red-200 text-red-700 gap-1">
                       <ShieldX className="h-3 w-3" /> Integrity failed
                     </Badge>
                   )}

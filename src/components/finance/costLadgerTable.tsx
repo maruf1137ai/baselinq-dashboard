@@ -27,6 +27,7 @@ const PAGE_SIZE = 10;
 
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
 
 const formatCurrency = formatZAR;
 
@@ -46,7 +47,7 @@ const ActionsCell = ({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+            aria-label="More actions" className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
@@ -94,7 +95,7 @@ const LedgerDetailsDialog = ({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
+              <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
                 Close
               </button>
             </DialogClose>
@@ -117,15 +118,15 @@ const LedgerRow = ({
   const [showViewDialog, setShowViewDialog] = useState(false);
 
   return (
-    <tr className="hover:bg-muted/50 transition-colors duration-150 text-foreground">
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.date}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+    <tr className="hover:bg-muted/50 transition-colors text-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground tabular-nums">{entry.date}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
         <div>{entry.supplier}</div>
         {entry.supplierShort && (
-          <div className="font-normal text-muted-foreground">{entry.supplierShort}</div>
+          <div className="text-xs font-normal text-muted-foreground">{entry.supplierShort}</div>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <td className="px-4 py-3 whitespace-nowrap text-sm">
         <button
           type="button"
           onClick={() => setShowViewDialog(true)}
@@ -133,22 +134,22 @@ const LedgerRow = ({
           {entry.ref || "—"}
         </button>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{entry.period}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">{entry.period}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.net)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.total)}
       </td>
       {/* Plain text, not a link: the ledger payload carries the VO/PC number
           and its own primary key, neither of which resolves to a route. */}
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
         {entry.linkedVOOrPC || entry.linkedVO || "—"}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <td className="px-4 py-3 whitespace-nowrap text-sm">
         <CategoryBadge category={entry.category} />
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right">
         <ActionsCell
           entry={entry}
           onEdit={onEdit}
@@ -165,25 +166,42 @@ const LedgerRow = ({
   );
 };
 
+// The 50/700/200 intensity scale codified on the Badge primitive's semantic
+// variants (see ui/badge.tsx) — these were on the 100/800 scale, which read a
+// full step heavier than every other chip in the app.
 const categoryColors: Record<string, string> = {
-  [Category?.Subcontractor]: "bg-blue-100 text-blue-800 border border-blue-200",
-  [Category?.Materials]: "bg-amber-100 text-amber-800 border border-amber-200",
-  [Category?.PlantEquipment]: "bg-orange-100 text-orange-800 border border-orange-200",
-  [Category?.Labour]: "bg-green-100 text-green-800 border border-green-200",
-  [Category?.ProfessionalFees]: "bg-purple-100 text-purple-800 border border-purple-200",
-  [Category?.Preliminaries]: "bg-cyan-100 text-cyan-800 border border-cyan-200",
-  [Category?.Contingency]: "bg-red-100 text-red-800 border border-red-200",
-  [Category?.Other]: "bg-muted text-gray-700 border border-border",
+  [Category?.Subcontractor]: "bg-blue-50 text-blue-700 border-blue-200",
+  [Category?.Materials]: "bg-amber-50 text-amber-700 border-amber-200",
+  [Category?.PlantEquipment]: "bg-orange-50 text-orange-700 border-orange-200",
+  [Category?.Labour]: "bg-green-50 text-green-700 border-green-200",
+  [Category?.ProfessionalFees]: "bg-purple-50 text-purple-700 border-purple-200",
+  [Category?.Preliminaries]: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  [Category?.Contingency]: "bg-red-50 text-red-700 border-red-200",
+  [Category?.Other]: "bg-muted text-muted-foreground border-border",
 };
 
 const CategoryBadge: React.FC<{ category: Category }> = ({ category }) => {
-  const colorClasses = categoryColors[category] || "bg-muted text-gray-800 border border-border";
+  const colorClasses = categoryColors[category] || "bg-muted text-muted-foreground border-border";
   return (
-    <span className={`px-3 py-1 inline-flex text-xs leading-5 rounded-full ${colorClasses}`}>
+    <Badge variant="outline" className={`whitespace-nowrap ${colorClasses}`}>
       {category}
-    </span>
+    </Badge>
   );
 };
+
+/** Column headers. Sentence case, numerics right-aligned — same shape as the
+ *  other three finance tables so the four read as one register. */
+const HEADERS: { label: string; align?: "right" }[] = [
+  { label: "Date" },
+  { label: "Supplier" },
+  { label: "Ref" },
+  { label: "Period" },
+  { label: "Net", align: "right" },
+  { label: "Total", align: "right" },
+  { label: "Linked VO/PC" },
+  { label: "Category" },
+  { label: "Actions", align: "right" },
+];
 
 const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
   entries,
@@ -216,7 +234,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
   };
 
   return (
-    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Search */}
       <div className="px-4 pt-4 pb-2">
         <div className="relative max-w-sm">
@@ -226,26 +244,28 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
             value={search}
             onChange={handleSearch}
             placeholder="Search by supplier, ref, category..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>
 
       <div className="overflow-x-auto no-scrollbar">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/50">
             <tr>
-              {["Date", "Supplier", "Ref", "Period", "Net", "Total", "Linked VO/PC", "Category", "Actions"].map((header) => (
+              {HEADERS.map((h) => (
                 <th
-                  key={header}
+                  key={h.label}
                   scope="col"
-                  className={`px-6 py-4 text-left text-xs text-muted-foreground font-normal  ${header === "Actions" ? "text-center" : ""}`}>
-                  {header}
+                  className={`px-4 py-3 text-xs text-muted-foreground font-normal whitespace-nowrap ${
+                    h.align === "right" ? "text-right" : "text-left"
+                  }`}>
+                  {h.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-card divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
                 <td colSpan={9}>
@@ -292,7 +312,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
             aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -304,13 +324,13 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
             }, [])
             .map((p, i) =>
               p === "…" ? (
-                <span key={`ellipsis-${i}`} className="px-2 text-sm text-gray-400">…</span>
+                <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">…</span>
               ) : (
                 <button
                   key={p}
                   onClick={() => setPage(p as number)}
-                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-primary text-primary-foreground" : "text-gray-600 hover:bg-muted"
+                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm tabular-nums transition-colors ${
+                    safePage === p ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
                   }`}>
                   {p}
                 </button>
@@ -320,7 +340,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
             aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>

@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { useNavigate } from "react-router-dom";
+import { PageHeader } from "@/components/ui/page-header";
 
 const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
@@ -156,11 +157,11 @@ const Finance = () => {
 
   return (
     <DashboardLayout>
-      <div>
+      {/* DashboardLayout owns the p-6 page padding; a page is a plain
+          space-y-6 wrapper, same as Project Health. */}
+      <div className="space-y-6">
+        <PageHeader title="Finance" />
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-normal text-foreground tracking-tight">Finance</h1>
-          </div>
           <header className="border-b border-border">
             {/* role="tablist" + aria-selected so the tab strip is navigable and
                 announced as tabs rather than a row of unrelated buttons.
@@ -176,7 +177,7 @@ const Finance = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`text-sm py-4 px-6 border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>

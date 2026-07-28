@@ -144,13 +144,13 @@ function SignalRow({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="outline" className="text-[11px]">
+              <Badge variant="outline" className="text-xs">
                 {CATEGORY_LABEL[signal.category] ?? signal.category}
               </Badge>
               {/* Distinguishing a real contractual breach from a commercial
                   heuristic matters — see the risk rules' legal notes. */}
               {signal.is_contractual && (
-                <Badge variant="outline" className="text-[11px] border-red-200 text-red-700">
+                <Badge variant="outline" className="text-xs border-red-200 text-red-700">
                   Contractual
                 </Badge>
               )}
@@ -190,7 +190,7 @@ function SignalRow({
                 <div className="flex flex-wrap gap-x-8 gap-y-4 p-4">
                   {figures.map(f => (
                     <div key={f.key}>
-                      <p className="text-[11px] text-muted-foreground">{f.label}</p>
+                      <p className="text-xs text-muted-foreground">{f.label}</p>
                       <p className={cn(
                         "text-sm mt-0.5 tabular-nums",
                         f.emphasis ? "font-semibold text-foreground" : "text-foreground"
@@ -243,7 +243,7 @@ function SignalRow({
               )}
 
               <div className="px-4 py-2 border-t border-border">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Rule {signal.code}
                 </p>
               </div>
@@ -373,21 +373,26 @@ export default function ProjectHealth() {
         />
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-border">
+        {/* Same tab strip as Finance and Programme: text-sm py-4 px-6,
+            border-b-2 underline pulled onto the container's own hairline. */}
+        <div className="flex items-center gap-2 border-b border-border" role="tablist">
           {TABS.map(t => (
             <button
               key={t}
+              role="tab"
+              aria-selected={tab === t}
               onClick={() => setTab(t)}
               className={cn(
-                "text-sm py-2.5 px-4 border-b-2 transition-colors -mb-px",
+                "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
                 tab === t
-                  ? "border-primary text-foreground font-medium"
+                  ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
               {t}
               {t === "Risk signals" && counts.total > 0 && (
-                <span className="ml-1.5 text-[11px] text-muted-foreground">{counts.total}</span>
+                <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.total}</span>
               )}
             </button>
           ))}

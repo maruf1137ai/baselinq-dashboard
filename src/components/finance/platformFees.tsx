@@ -127,15 +127,24 @@ const EVENT_LABEL: Record<string, string> = {
 /* Small presentational pieces                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The app's stat card, as defined by ProjectStatusCard and
+ * DocumentSummaryCards: a `bg-muted/50` shell carrying the label, with the
+ * figure sitting in a raised `bg-card` well at text-3xl. This rolled its own
+ * shape — bordered card, text-xs label, text-2xl value — which made the
+ * Platform Fees row a different size from the Cost Ledger row one tab away.
+ */
 const StatCard: React.FC<{
   label: string;
   value: string;
   meta?: React.ReactNode;
 }> = ({ label, value, meta }) => (
-  <div className="bg-card border border-border rounded-xl p-4">
-    <p className="text-xs text-muted-foreground">{label}</p>
-    <p className="text-2xl font-normal text-foreground tabular-nums mt-1">{value}</p>
-    {meta && <div className="text-xs text-muted-foreground mt-2">{meta}</div>}
+  <div className="bg-muted/50 rounded-xl p-2.5 min-w-0">
+    <p className="text-sm text-gray2 mb-4">{label}</p>
+    <div className="bg-card p-4 rounded-md">
+      <p className="text-3xl font-normal text-foreground tabular-nums">{value}</p>
+      {meta && <div className="text-xs text-muted-foreground mt-2">{meta}</div>}
+    </div>
   </div>
 );
 
@@ -412,7 +421,9 @@ const ChargeRow: React.FC<{
             <span>{charge.sourceRef || "—"}</span>
             {isCredit && (
               <Badge variant="success" className="gap-1">
-                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                {/* h-3 w-3 is the in-badge icon size across the app
+                    (EvidenceTab, TimeBarsTab); h-4 overflowed the chip. */}
+                <RotateCcw className="h-3 w-3" aria-hidden="true" />
                 Credit
               </Badge>
             )}
@@ -659,8 +670,10 @@ const PlatformFees: React.FC = () => {
 
   return (
     <main className="pt-6 space-y-6">
-      {/* Header stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Header stats. Four across only from xl: these values are full ZAR
+          amounts, ~4x longer than the counts a summary row usually carries,
+          and at the canonical text-3xl they need the width. */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Fee excluding VAT"
           value={formatZAR(totals.feeExVat)}
@@ -745,10 +758,12 @@ const PlatformFees: React.FC = () => {
             value={search}
             onChange={onSearch}
             placeholder="Search by certificate, variation or period..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50" role="tablist">
+        {/* Page-level filter row: every control is 32px tall, same as the
+            Cost Ledger toolbar and the Documents toolbar. */}
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50" role="tablist">
           {(["charges", "statements"] as const).map((v) => (
             <button
               key={v}
@@ -758,7 +773,7 @@ const PlatformFees: React.FC = () => {
                 setView(v);
                 setExpanded(null);
               }}
-              className={`h-8 px-3 rounded-md text-sm transition-colors ${
+              className={`h-7 px-3 rounded-md text-xs transition-colors ${
                 view === v
                   ? "bg-card text-foreground border border-border"
                   : "text-muted-foreground hover:text-foreground"

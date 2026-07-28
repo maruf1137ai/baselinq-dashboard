@@ -2,7 +2,7 @@ import React from 'react';
 
 const CashIcon = () => {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M1.51367 10.125C3.16335 10.125 4.50068 11.4623 4.50068 13.112"
         stroke="#6B6B6B"

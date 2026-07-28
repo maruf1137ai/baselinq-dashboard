@@ -61,7 +61,7 @@ export function ProjectStatusCard({
         <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
           <div className="flex items-center gap-2.5">
             {icon}
-            <p className="text-sm text-gray2 mb-1">{title}</p>
+            <p className="text-sm text-gray2">{title}</p>
           </div>
           {badgeText && (
             <Badge variant="outline" className={`${badgeClasses[badgeVariant]} text-xs font-medium`}>
@@ -70,10 +70,13 @@ export function ProjectStatusCard({
           )}
         </div>
 
-        <div className="bg-card p-[14px] rounded-md">
+        <div className="bg-card p-4 rounded-md">
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <div className="flex items-baseline gap-2">
-              <h3 className={`text-3xl mt-5 ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
+              {/* text-3xl font-normal tabular-nums is THE stat-card value —
+                  same treatment as DocumentSummaryCards. tabular-nums so
+                  money lines up between cards in a row. */}
+              <h3 className={`text-3xl font-normal tabular-nums ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
               {trendIcon && <span className={`text-lg font-medium ${trendColor}`}>{trendIcon}</span>}
             </div>
             {subtitle && <p className="text-xs text-gray2 bg-muted/50 py-1.5 px-5 rounded">{subtitle}</p>}

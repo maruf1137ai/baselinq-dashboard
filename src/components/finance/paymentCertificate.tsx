@@ -32,9 +32,11 @@ const PaymentCertificate = () => {
   const canCreatePC = usePermission("finance.edit", projectIdNum);
 
   return (
-    <main className="p-6">
+    // pt-6 only: the page already has DashboardLayout's p-6, so a p-6 here
+    // inset this one tab from the other three.
+    <main className="pt-6 space-y-6">
       {/* Programme link banner */}
-      <div className="flex items-center justify-between mb-4 p-3 rounded-lg border border-primary/20 bg-primary/5">
+      <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
         <div className="flex items-center gap-2">
           <BarChart2 className="h-4 w-4 text-primary" />
           <span className="text-sm text-foreground">Payment certificates are linked to programme phases on the timeline.</span>

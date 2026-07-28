@@ -15,10 +15,11 @@ import {
 import { CostLedgerDrawer } from './costLedgerDrawer';
 import CashIcon from '../icons/CashIcon';
 import useFetch from '@/hooks/useFetch';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
 import { usePermission } from '@/hooks/usePermission';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export enum Category {
   Subcontractor = 'Subcontractor',
@@ -199,7 +200,7 @@ const CostLadger = () => {
   const activeFilterCount = selectedCategories.length;
 
   return (
-    <main className="pt-6">
+    <main className="pt-6 space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <ProjectStatusCard
           icon={<CashIcon />}
@@ -229,13 +230,13 @@ const CostLadger = () => {
         />
       </div>
 
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center mt-6 mb-6">
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center">
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           {/* New Entry Button — visible to all project members */}
           {canCreate && (
             <button
-              className="flex items-center space-x-2 h-10 px-4 rounded-lg text-sm text-white bg-primary hover:opacity-90 transition-all"
+              className="flex items-center gap-2 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all"
               onClick={handleCreateNew}
             >
               <PlusIcon className="h-4 w-4" />
@@ -247,7 +248,7 @@ const CostLadger = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex items-center space-x-2 h-8 px-4 rounded-lg text-xs transition-all border ${activeFilterCount > 0
+                className={`flex items-center gap-2 h-8 px-4 rounded-lg text-xs transition-all border ${activeFilterCount > 0
                   ? 'bg-card text-foreground border-foreground'
                   : 'bg-card text-foreground border-border hover:bg-muted'
                   }`}
@@ -255,7 +256,7 @@ const CostLadger = () => {
                 <FilterIcon className="h-4 w-4" />
                 <span>Filter</span>
                 {activeFilterCount > 0 && (
-                  <span className="bg-foreground text-white text-xs font-medium ml-1 px-2 py-0.5 rounded-full">
+                  <span className="bg-foreground text-background text-xs font-medium ml-1 px-2 py-0.5 rounded-full tabular-nums">
                     {activeFilterCount}
                   </span>
                 )}
@@ -292,7 +293,7 @@ const CostLadger = () => {
           {canExport && (
             <button
               onClick={exportToCSV}
-              className="flex items-center space-x-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
+              className="flex items-center gap-2 h-8 px-4 rounded-lg text-xs bg-card text-foreground border border-border hover:bg-muted transition-all"
             >
               <ExportIcon className="h-4 w-4" />
               <span>Export CSV</span>
@@ -303,32 +304,37 @@ const CostLadger = () => {
 
       <main>
         {!projectId ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-sm">
-            <p>Select a project to view the cost ledger.</p>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="No project selected"
+            description="Cost is recorded per project. Select a project to view its cost ledger."
+          />
         ) : isLoading ? (
           <div className="flex items-center justify-center py-20">
             <AwesomeLoader message="Processing ledger data" />
           </div>
         ) : ledgerData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-sm rounded-xl bg-muted/50">
-            <p className="font-medium text-foreground">
-              {selectedCategories.length > 0
+          <EmptyState
+            icon={Receipt}
+            title={
+              selectedCategories.length > 0
                 ? 'No ledger entries match these filters'
-                : 'No cost ledger entries yet'}
-            </p>
-            <p className="mt-1 text-center max-w-md mx-auto">
-              {selectedCategories.length > 0
+                : 'No cost ledger entries yet'
+            }
+            description={
+              selectedCategories.length > 0
                 ? 'Try clearing the category filters — the entry may be recorded under a different cost head.'
-                : 'Entries are created automatically when a variation order is approved or a payment certificate is issued, so committed cost stays reconciled with the contract record.'}
-            </p>
-            <button
-              onClick={handleCreateNew}
-              className="mt-4 text-primary hover:text-primary font-medium text-sm transition-colors"
-            >
-              Add an entry manually
-            </button>
-          </div>
+                : 'Entries are created automatically when a variation order is approved or a payment certificate is issued, so committed cost stays reconciled with the contract record.'
+            }
+            action={
+              <button
+                onClick={handleCreateNew}
+                className="text-primary hover:text-primary/80 font-medium text-sm transition-colors"
+              >
+                Add an entry manually
+              </button>
+            }
+          />
         ) : (
           <CostLedgerTable
             entries={ledgerData}

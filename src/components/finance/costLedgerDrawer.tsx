@@ -221,7 +221,7 @@ export function CostLedgerDrawer({
               <div className="space-y-2">
                 <Label htmlFor="net">Net Amount</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-500">R</span>
+                  <span className="absolute left-3 top-2.5 text-sm text-muted-foreground">R</span>
                   <Input
                     id="net"
                     type="number"
@@ -237,7 +237,7 @@ export function CostLedgerDrawer({
               <div className="space-y-2">
                 <Label htmlFor="total">Total Amount</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-sm text-gray-500">R</span>
+                  <span className="absolute left-3 top-2.5 text-sm text-muted-foreground">R</span>
                   <Input
                     id="total"
                     type="number"
@@ -306,7 +306,7 @@ export function CostLedgerDrawer({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">Only approved Variation Orders can be linked.</p>
+              <p className="text-xs text-muted-foreground">Only approved Variation Orders can be linked.</p>
             </div>
           </div>
 

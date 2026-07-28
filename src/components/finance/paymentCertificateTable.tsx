@@ -44,19 +44,18 @@ const formatCurrency = formatZAR;
 
 const formatDate = (iso: string) => formatDateCanonical(iso, "short", "—");
 
+// Status colour comes from the Badge primitive's semantic variants rather
+// than a local colour map, so a certified/pending/rejected chip here is the
+// same chip as everywhere else in the app.
 const ApprovalBadge = ({ status }: { status: string }) => {
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    approved: { bg: 'bg-green-50', text: 'text-green-700', label: 'Approved' },
-    pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Pending' },
-    rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rejected' },
-    draft: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'Draft' },
+  const config: Record<string, { variant: "success" | "warning" | "danger" | "neutral"; label: string }> = {
+    approved: { variant: 'success', label: 'Approved' },
+    pending: { variant: 'warning', label: 'Pending' },
+    rejected: { variant: 'danger', label: 'Rejected' },
+    draft: { variant: 'neutral', label: 'Draft' },
   };
   const c = config[status] || config.draft;
-  return (
-    <Badge className={`${c.bg} ${c.text} border-0 text-xs px-2 py-0.5 rounded-full font-normal`}>
-      {c.label}
-    </Badge>
-  );
+  return <Badge variant={c.variant}>{c.label}</Badge>;
 };
 
 const PCDetailsDialog = ({
@@ -76,7 +75,7 @@ const PCDetailsDialog = ({
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
             <DialogDescription>Period: {entry.period}</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 space-y-2 text-sm">
+          <div className="mt-4 space-y-2 text-sm tabular-nums">
             <p><span className="text-muted-foreground">Claim Amount:</span> {formatCurrency(entry.claimAmount)}</p>
             <p><span className="text-muted-foreground">Retention:</span> {formatCurrency(entry.retentionAmount)}</p>
             <p><span className="text-muted-foreground">Net Amount:</span> {formatCurrency(entry.netAmount)}</p>
@@ -85,7 +84,7 @@ const PCDetailsDialog = ({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="px-4 py-2 border border-border rounded-lg text-sm text-gray-700 bg-card hover:bg-muted/50">
+              <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
                 Close
               </button>
             </DialogClose>
@@ -100,8 +99,8 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
   const [showViewDialog, setShowViewDialog] = useState(false);
 
   return (
-    <tr>
-      <td className="px-6 py-4 whitespace-nowrap text-sm">
+    <tr className="hover:bg-muted/50 transition-colors">
+      <td className="px-4 py-3 whitespace-nowrap text-sm">
         <button
           type="button"
           onClick={() => setShowViewDialog(true)}
@@ -109,29 +108,29 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
           {entry.pcNumber}
         </button>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
         {entry.period}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.claimAmount)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground tabular-nums">
         {formatCurrency(entry.retentionAmount)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground tabular-nums">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.netAmount)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <td className="px-4 py-3 whitespace-nowrap text-sm">
         <ApprovalBadge status={entry.approvalStatus} />
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
         {formatDate(entry.updatedAt)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              aria-label="More actions" className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-muted">
+              aria-label="More actions" className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
@@ -150,6 +149,19 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
     </tr>
   );
 };
+
+/** Sentence case, numerics right-aligned — same shape as the other three
+ *  finance tables. */
+const HEADERS: { label: string; align?: "right" }[] = [
+  { label: "PC #" },
+  { label: "Period" },
+  { label: "Claim", align: "right" },
+  { label: "Retention", align: "right" },
+  { label: "Net", align: "right" },
+  { label: "Approvals" },
+  { label: "Updated" },
+  { label: "Actions", align: "right" },
+];
 
 export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({ orders, onNew }) => {
   const [search, setSearch] = useState("");
@@ -176,23 +188,23 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
   };
 
   return (
-    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={handleSearch}
             placeholder="Search by PC #, period, status..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
         {onNew && (
           <button
             onClick={onNew}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-white bg-primary hover:bg-primary transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
           >
             <Plus className="h-4 w-4" />
             New Certificate
@@ -201,20 +213,22 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
       </div>
 
       <div className="overflow-x-auto no-scrollbar">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/50">
             <tr>
-              {["PC #", "Period", "Claim", "Retention", "Net", "Approvals", "Updated", "Actions"].map((header) => (
+              {HEADERS.map((h) => (
                 <th
-                  key={header}
+                  key={h.label}
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-normal text-muted-foreground ">
-                  {header}
+                  className={`px-4 py-3 text-xs font-normal text-muted-foreground whitespace-nowrap ${
+                    h.align === "right" ? "text-right" : "text-left"
+                  }`}>
+                  {h.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-card divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
                 <td colSpan={8}>
@@ -244,7 +258,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {filtered.length === 0
             ? "No results"
             : `Showing ${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
@@ -254,7 +268,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             aria-label="Previous page"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronLeft className="h-4 w-4" />
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -266,13 +280,13 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             }, [])
             .map((p, i) =>
               p === "…" ? (
-                <span key={`ellipsis-${i}`} className="px-2 text-sm text-gray-400">…</span>
+                <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">…</span>
               ) : (
                 <button
                   key={p}
                   onClick={() => setPage(p as number)}
-                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${
-                    safePage === p ? "bg-primary text-primary-foreground" : "text-gray-600 hover:bg-muted"
+                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm tabular-nums transition-colors ${
+                    safePage === p ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
                   }`}>
                   {p}
                 </button>
@@ -282,7 +296,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
             aria-label="Next page"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>

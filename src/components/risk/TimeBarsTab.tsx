@@ -120,14 +120,14 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium text-foreground">{bar.label}</p>
                     {bar.clause_verified ? (
-                      <Badge variant="outline" className="text-[11px]">
+                      <Badge variant="outline" className="text-xs">
                         {bar.contract_form} {bar.clause_ref}
                       </Badge>
                     ) : (
                       // Never show a guessed clause number.
                       <Badge
                         variant="outline"
-                        className="text-[11px] text-muted-foreground gap-1"
+                        className="text-xs text-muted-foreground gap-1"
                         title="Clause could not be verified against the contract corpus"
                       >
                         <ShieldQuestion className="h-3 w-3" />

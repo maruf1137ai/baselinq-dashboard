@@ -148,11 +148,11 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
               <div key={t.id} className="flex items-center justify-between gap-4 px-5 py-3">
                 <div>
                   <p className="text-sm text-foreground">{t.insurer_name}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground font-mono">
                     {t.key_prefix}… · {t.last_used_at ? `last used ${new Date(t.last_used_at).toLocaleDateString()}` : "never used"}
                   </p>
                 </div>
-                <Badge variant="outline" className="text-[11px]">
+                <Badge variant="outline" className="text-xs">
                   {t.is_active ? "Active" : "Revoked"}
                 </Badge>
               </div>

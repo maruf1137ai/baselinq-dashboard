@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
@@ -43,44 +44,33 @@ export interface VariationOrder {
 
 const PAGE_SIZE = 10;
 
+// Both chips go through the Badge primitive's semantic variants. The
+// "In Review"/non-zero-impact case was three hardcoded hex values on the
+// amber ramp, off the 50/700/200 scale every other status chip uses.
 const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
-  const baseClasses = "px-3 py-1 text-xs rounded-full inline-block";
-  if (status === OrderStatus.Approved) {
-    return (
-      <span className={`${baseClasses} bg-green-50 text-green-700 border border-green-200`}>
-        {status}
-      </span>
-    );
-  }
-  if (status === OrderStatus.Open) {
-    return (
-      <span className={`${baseClasses} bg-muted text-muted-foreground border border-border`}>
-        {status}
-      </span>
-    );
-  }
-  return (
-    <span className={`${baseClasses} bg-[#FFF7ED] text-[#F59E0B] border border-[#FED7AA]`}>
-      {status}
-    </span>
-  );
+  if (status === OrderStatus.Approved) return <Badge variant="success">{status}</Badge>;
+  if (status === OrderStatus.Open) return <Badge variant="neutral">{status}</Badge>;
+  return <Badge variant="warning">{status}</Badge>;
 };
 
-const ImpactBadge: React.FC<{ days: number }> = ({ days }) => {
-  const baseClasses = "px-2.5 py-1 text-xs rounded-full inline-block";
-  if (days === 0) {
-    return (
-      <span className={`${baseClasses} bg-green-50 text-green-700 border border-green-200`}>
-        +0d
-      </span>
-    );
-  }
-  return (
-    <span className={`${baseClasses} bg-[#FFF7ED] text-[#F59E0B] border border-[#FED7AA]`}>
-      +{days}d
-    </span>
-  );
-};
+const ImpactBadge: React.FC<{ days: number }> = ({ days }) => (
+  <Badge variant={days === 0 ? "success" : "warning"} className="tabular-nums">
+    +{days}d
+  </Badge>
+);
+
+/** Sentence case, numerics right-aligned — same shape as the other three
+ *  finance tables. */
+const HEADERS: { label: string; align?: "right" }[] = [
+  { label: "VO #" },
+  { label: "Title" },
+  { label: "Value", align: "right" },
+  { label: "Status" },
+  { label: "Requested by" },
+  { label: "Updated" },
+  { label: "Impact" },
+  { label: "Actions", align: "right" },
+];
 
 export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   orders,
@@ -116,7 +106,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   };
 
   return (
-    <div className="bg-card shadow-sm rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Search + New button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="relative max-w-sm w-full">
@@ -126,13 +116,13 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
             value={search}
             onChange={handleSearch}
             placeholder="Search by VO #, title, requested by..."
-            className="w-full h-10 pl-9 pr-4 text-sm border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full h-8 pl-9 pr-4 text-xs border border-border rounded-lg bg-card placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
         {onNew && (
           <button
             onClick={onNew}
-            className="flex items-center gap-1.5 h-10 px-4 rounded-lg text-sm text-white bg-primary hover:opacity-90 transition-all shrink-0"
+            className="flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs text-primary-foreground bg-primary hover:opacity-90 transition-all shrink-0"
           >
             <Plus className="h-4 w-4" />
             New Variation Order
@@ -144,12 +134,14 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
         <table className="w-full divide-y divide-border">
           <thead className="bg-muted/50">
             <tr>
-              {["VO #", "Title", "Value", "Status", "Requested By", "Updated", "Impact", "Actions"].map((h) => (
+              {HEADERS.map((h) => (
                 <th
-                  key={h}
+                  key={h.label}
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-normal text-muted-foreground ">
-                  {h}
+                  className={`px-4 py-3 text-xs font-normal text-muted-foreground whitespace-nowrap ${
+                    h.align === "right" ? "text-right" : "text-left"
+                  }`}>
+                  {h.label}
                 </th>
               ))}
             </tr>
@@ -177,8 +169,8 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
               </tr>
             ) : (
               paginated.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <tr key={order.id} className="hover:bg-muted/50 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                     {onViewDetails ? (
                       <button
                         type="button"
@@ -190,33 +182,33 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                       <span className="text-foreground">{order.id}</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
                     {order.title}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium tabular-nums">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 font-medium tabular-nums">
                     {formatCurrency(order.value)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <StatusBadge status={order.status} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
                     {order.requestedBy ? (
                       <UserChip name={order.requestedBy.name} />
                     ) : (
                       <span className="text-xs text-muted-foreground">Unassigned</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground tabular-nums">
                     {order.updated}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {order.impact != null ? (
                       <ImpactBadge days={order.impact} />
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -274,8 +266,8 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                 <button
                   key={p}
                   onClick={() => setPage(p as number)}
-                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm transition-colors ${safePage === p
-                    ? "bg-[#6c5ce7] text-white"
+                  className={`min-w-[32px] h-8 px-2 rounded-md text-sm tabular-nums transition-colors ${safePage === p
+                    ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-muted"
                     }`}>
                   {p}
