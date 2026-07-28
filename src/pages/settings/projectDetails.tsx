@@ -19,7 +19,6 @@ import {
   FileText,
   Trash2,
   TriangleAlert,
-  ShieldCheck,
   Building2,
   ClipboardList,
   FolderOpen,
@@ -30,6 +29,7 @@ import {
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -60,11 +60,11 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-xl bg-white shadow-sm overflow-hidden mb-5">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-slate-50/50">
+    <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden mb-5">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
         <div className="flex items-center gap-4">
           {icon && (
-            <div className="w-9 h-9 rounded-lg bg-white border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-card border border-border shadow-sm flex items-center justify-center text-primary shrink-0">
               {icon}
             </div>
           )}
@@ -74,7 +74,7 @@ function SectionCard({
           </div>
         </div>
         {badge && (
-          <span className="text-[10px] font-normal text-muted-foreground bg-white border border-border px-2.5 py-1 rounded-full tracking-wider">
+          <span className="text-xs font-normal text-muted-foreground bg-card border border-border px-2.5 py-1 rounded-full tracking-wider">
             {badge}
           </span>
         )}
@@ -95,7 +95,7 @@ function Field({
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", colSpan && "md:col-span-2")}>
-      <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5">
+      <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5">
         {label}
       </label>
       {children}
@@ -118,7 +118,7 @@ function PersonnelCard({
   const hasData = name || email || phone;
 
   return (
-    <div className="rounded-lg border border-border p-4">
+    <div className="rounded-lg bg-muted/50 p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-muted-foreground">{label}</span>
         <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{role}</span>
@@ -130,20 +130,20 @@ function PersonnelCard({
           {phone && <p className="text-xs text-muted-foreground">{phone}</p>}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No users assigned</p>
+        <p className="text-xs text-muted-foreground">Nobody assigned to this role yet</p>
       )}
     </div>
   );
 }
 
 const INPUT_CLS =
-  "h-10 border border-border bg-white focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
+  "h-10 border border-border bg-card focus-visible:ring-primary/20 focus-visible:border-primary transition-all rounded-lg text-sm placeholder:text-sm placeholder:text-muted-foreground";
 
 const SELECT_CLS =
-  "h-10 w-full px-3 border border-border bg-white rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-sm";
+  "h-10 w-full px-3 border border-border bg-card rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-sm";
 
 const DATE_BTN_CLS =
-  "h-10 w-full flex items-center gap-2 px-3 border border-border bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-left";
+  "h-10 w-full flex items-center gap-2 px-3 border border-border bg-card rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-left";
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
@@ -315,7 +315,7 @@ const ProjectDetails = () => {
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-200px)] flex items-center justify-center">
-        <AwesomeLoader message="Fetching Project Details..." />
+        <AwesomeLoader message="Fetching project details" />
       </div>
     );
   }
@@ -367,15 +367,11 @@ const ProjectDetails = () => {
   const isSaving = updateProjectMutation.isPending;
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-5xl mx-auto p-6">
       <form onSubmit={handleSave}>
         {/* ── Page Header ── */}
-        <div className="flex items-start justify-between gap-4 mb-8">
+        <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-normal uppercase tracking-widest mb-3">
-              <ShieldCheck className="w-3 h-3" />
-              Project Settings
-            </div>
             <h2 className="text-2xl font-normal tracking-tight text-foreground">Project Details</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Configure basic project info, financials and legal framework.
@@ -385,18 +381,18 @@ const ProjectDetails = () => {
             <Button
               type="submit"
               disabled={isSaving}
-              className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0 mt-10"
+              className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 shrink-0"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
               )}
               {isSaving ? "Saving..." : "Save Details"}
             </Button>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-border text-muted-foreground text-xs mt-10">
-              <Lock className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+              <Lock className="h-3.5 w-3.5" />
               <span>Read-only access</span>
             </div>
           )}
@@ -406,7 +402,7 @@ const ProjectDetails = () => {
         <SectionCard
           title="Project Information"
           subtitle="Core details, dates, and financials"
-          icon={<FileText className="w-4 h-4" />}
+          icon={<FileText className="h-4 w-4" />}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <Field label="Project Name">
@@ -414,7 +410,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formData.name}
                 onChange={(e) => setField("name", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. Sandton Office Development"
               />
             </Field>
@@ -423,13 +419,13 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formData.project_number}
                 onChange={(e) => setField("project_number", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. PRJ-2024-001"
               />
             </Field>
             {/* Project Site Location map temporarily hidden
             <div className="md:col-span-2">
-              <label className="text-[11px] font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5">
+              <label className="text-xs font-normal text-muted-foreground tracking-wider ml-0.5 block mb-1.5">
                 Project Site Location
               </label>
               <LocationPickerMap
@@ -448,7 +444,7 @@ const ProjectDetails = () => {
                 disabled={!canEditProject}
                 value={formData.contract_type}
                 onChange={(e) => setField("contract_type", e.target.value)}
-                className={cn(SELECT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(SELECT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
               >
                 {CONTRACT_TYPES.map((ct) => (
                   <option key={ct} value={ct}>
@@ -463,15 +459,15 @@ const ProjectDetails = () => {
                   <button
                     type="button"
                     disabled={!canEditProject}
-                    className={cn(DATE_BTN_CLS, !formData.start_date && "text-muted-foreground", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(DATE_BTN_CLS, !formData.start_date && "text-muted-foreground", !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   >
-                    <CalendarIcon className="w-4 h-4 shrink-0" />
+                    <CalendarIcon className="h-4 w-4 shrink-0" />
                     {formData.start_date
                       ? format(parseISO(formData.start_date), "PPP")
                       : "Pick a date"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.start_date ? parseISO(formData.start_date) : undefined}
@@ -489,15 +485,15 @@ const ProjectDetails = () => {
                   <button
                     type="button"
                     disabled={!canEditProject}
-                    className={cn(DATE_BTN_CLS, !formData.end_date && "text-muted-foreground", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(DATE_BTN_CLS, !formData.end_date && "text-muted-foreground", !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   >
-                    <CalendarIcon className="w-4 h-4 shrink-0" />
+                    <CalendarIcon className="h-4 w-4 shrink-0" />
                     {formData.end_date
                       ? format(parseISO(formData.end_date), "PPP")
                       : "Pick a date"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.end_date ? parseISO(formData.end_date) : undefined}
@@ -516,7 +512,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formatWithCommas(formData.total_budget)}
                 onChange={(e) => handleNumericInput("total_budget", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. 5,000,000"
               />
             </Field>
@@ -527,7 +523,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formatWithCommas(formData.principal_agent_mandate)}
                 onChange={(e) => handleNumericInput("principal_agent_mandate", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. 50,000"
               />
             </Field>
@@ -536,7 +532,7 @@ const ProjectDetails = () => {
                 type="text"
                 readOnly
                 value={getContractValueDisplay(selectedProject)}
-                className={cn(INPUT_CLS, "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, "bg-muted/50 cursor-not-allowed")}
                 placeholder="Auto-updates from approved VOs"
               />
             </Field>
@@ -545,7 +541,7 @@ const ProjectDetails = () => {
                 type="text"
                 readOnly
                 value={getContractEndDateDisplay(selectedProject)}
-                className={cn(INPUT_CLS, "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, "bg-muted/50 cursor-not-allowed")}
                 placeholder="Auto-updates from approved VOs"
               />
             </Field>
@@ -554,7 +550,7 @@ const ProjectDetails = () => {
                 disabled={!canEditProject}
                 value={formData.currency}
                 onChange={(e) => setField("currency", e.target.value)}
-                className={cn(SELECT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(SELECT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
               >
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
@@ -570,7 +566,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formatWithCommas(formData.vat_rate)}
                 onChange={(e) => handleNumericInput("vat_rate", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. 15"
               />
             </Field>
@@ -581,7 +577,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formatWithCommas(formData.retention_rate)}
                 onChange={(e) => handleNumericInput("retention_rate", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="e.g. 5"
               />
             </Field>
@@ -590,7 +586,7 @@ const ProjectDetails = () => {
                 readOnly={!canEditProject}
                 value={formData.description}
                 onChange={(e) => setField("description", e.target.value)}
-                className={cn(INPUT_CLS, "resize-none h-24 py-3", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                className={cn(INPUT_CLS, "resize-none h-24 py-3", !canEditProject && "bg-muted/50 cursor-not-allowed")}
                 placeholder="Brief project description..."
               />
             </Field>
@@ -602,7 +598,7 @@ const ProjectDetails = () => {
           title="Client Details"
           subtitle="Company information and contacts"
           badge="Contracts & Invoicing"
-          icon={<Building2 className="w-4 h-4" />}
+          icon={<Building2 className="h-4 w-4" />}
         >
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -611,7 +607,7 @@ const ProjectDetails = () => {
                   readOnly={!canEditProject}
                   value={formData.client_details.company_name}
                   onChange={(e) => setClientField("company_name", e.target.value)}
-                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   placeholder="e.g. Acme Holdings (Pty) Ltd"
                 />
               </Field>
@@ -620,7 +616,7 @@ const ProjectDetails = () => {
                   readOnly={!canEditProject}
                   value={formData.client_details.company_registration}
                   onChange={(e) => setClientField("company_registration", e.target.value)}
-                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   placeholder="e.g. 2005/123456/07"
                 />
               </Field>
@@ -629,7 +625,7 @@ const ProjectDetails = () => {
                   readOnly={!canEditProject}
                   value={formData.client_details.vat_number}
                   onChange={(e) => setClientField("vat_number", e.target.value)}
-                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   placeholder="e.g. 4570123456"
                 />
               </Field>
@@ -638,7 +634,7 @@ const ProjectDetails = () => {
                   readOnly={!canEditProject}
                   value={formData.client_details.office_number}
                   onChange={(e) => setClientField("office_number", e.target.value)}
-                  className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                  className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   placeholder="+27 11 123 4567"
                 />
               </Field>
@@ -646,7 +642,7 @@ const ProjectDetails = () => {
 
             {/* Physical Address */}
             <div>
-              <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
+              <p className="text-xs font-normal text-muted-foreground tracking-wider mb-3">
                 Physical Address
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -657,7 +653,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("physical_address", "street", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                     placeholder="Building No., Street Name"
                   />
                 </Field>
@@ -668,7 +664,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("physical_address", "city", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Province">
@@ -678,7 +674,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("physical_address", "province", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Postal Code">
@@ -688,7 +684,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("physical_address", "postal_code", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
               </div>
@@ -696,7 +692,7 @@ const ProjectDetails = () => {
 
             {/* Postal Address */}
             <div>
-              <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
+              <p className="text-xs font-normal text-muted-foreground tracking-wider mb-3">
                 Postal Address
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -707,7 +703,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("postal_address", "street", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                     placeholder="Building No., Street Name"
                   />
                 </Field>
@@ -718,7 +714,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("postal_address", "city", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Province">
@@ -728,7 +724,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("postal_address", "province", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
                 <Field label="Postal Code">
@@ -738,7 +734,7 @@ const ProjectDetails = () => {
                     onChange={(e) =>
                       setAddressField("postal_address", "postal_code", e.target.value)
                     }
-                    className={cn(INPUT_CLS, !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+                    className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
                   />
                 </Field>
               </div>
@@ -747,7 +743,7 @@ const ProjectDetails = () => {
             {/* Assigned Personnel (read-only) */}
             {clientDetails && (clientDetails.client || clientDetails.client_representative) && (
               <div>
-                <p className="text-[11px] font-normal text-muted-foreground tracking-wider mb-3">
+                <p className="text-xs font-normal text-muted-foreground tracking-wider mb-3">
                   Project Users
                 </p>
                 <div className="grid grid-cols-2 gap-4">
@@ -771,14 +767,14 @@ const ProjectDetails = () => {
         <SectionCard
           title="Scope of Works"
           subtitle="Client brief and project requirements"
-          icon={<ClipboardList className="w-4 h-4" />}
+          icon={<ClipboardList className="h-4 w-4" />}
         >
           <Field label="Client Brief">
             <Textarea
               readOnly={!canEditProject}
               value={formData.task_order_brief}
               onChange={(e) => setField("task_order_brief", e.target.value)}
-              className={cn(INPUT_CLS, "resize-none h-36 py-3", !canEditProject && "bg-slate-50/50 cursor-not-allowed")}
+              className={cn(INPUT_CLS, "resize-none h-36 py-3", !canEditProject && "bg-muted/50 cursor-not-allowed")}
               placeholder="Describe the scope of works, client requirements, and deliverables..."
             />
           </Field>
@@ -792,17 +788,17 @@ const ProjectDetails = () => {
       <SectionCard
         title="Documents"
         badge={`${documents.length} file${documents.length !== 1 ? "s" : ""}`}
-        icon={<FolderOpen className="w-4 h-4" />}
+        icon={<FolderOpen className="h-4 w-4" />}
       >
         {documents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {documents.map((doc, i) => (
               <div
                 key={getDocId(doc) || i}
-                className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted hover:bg-muted/50 cursor-pointer transition-all"
+                className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-all"
                 onClick={() => setSelectedDocument(doc)}
               >
-                <div className="h-10 w-10 bg-muted rounded-lg flex items-center justify-center shrink-0 border border-border">
+                <div className="h-10 w-10 bg-card rounded-lg flex items-center justify-center shrink-0 border border-border">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="overflow-hidden flex-1 min-w-0">
@@ -818,18 +814,25 @@ const ProjectDetails = () => {
                 </div>
                 {canEditProject && (
                   <button
+                    aria-label="Delete document"
                     onClick={(e) => handleDeleteDocument(e, doc)}
                     className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
                     title="Delete document"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No documents found for this project.</p>
+          <EmptyState
+            variant="plain"
+            size="sm"
+            icon={FolderOpen}
+            title="No documents yet"
+            description="Contract documents, drawings and specifications attached to this project appear here with their revision history."
+          />
         )}
       </SectionCard>
 
@@ -844,10 +847,10 @@ const ProjectDetails = () => {
       />
 
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-[425px] bg-white">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <TriangleAlert className="w-4 h-4" />
+              <TriangleAlert className="h-4 w-4" />
               Confirm Deletion
             </DialogTitle>
           </DialogHeader>

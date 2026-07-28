@@ -128,7 +128,7 @@ export function TimePicker({
                 className="w-full text-left px-3 py-1.5 text-sm transition-colors tabular-nums flex items-center justify-between text-primary hover:bg-primary/5 border-b border-border"
               >
                 <span>{customTime}</span>
-                <span className="text-[10px] text-muted-foreground ml-2">custom</span>
+                <span className="text-xs text-muted-foreground ml-2">custom</span>
               </button>
             )}
 

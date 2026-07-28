@@ -16,7 +16,7 @@ const Billing = () => {
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
       <div className="border border-dashed border-border rounded-lg p-12 flex flex-col items-center justify-center text-center space-y-4">
         <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-          <CreditCard className="w-6 h-6 text-muted-foreground" />
+          <CreditCard className="h-6 w-6 text-muted-foreground" />
         </div>
         <div>
           <h3 className="text-sm font-normal text-foreground mb-1">Billing & Subscription</h3>

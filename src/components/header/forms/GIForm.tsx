@@ -179,7 +179,7 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
             <SelectTrigger className="mt-1">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-card">
               {GI_DIRECTION_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -187,7 +187,7 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
               ))}
             </SelectContent>
           </Select>
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             GI never crosses the professional / contractor boundary.
           </p>
         </div>
@@ -201,7 +201,7 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select discipline" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-card">
               {DISCIPLINE_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
@@ -228,7 +228,7 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
         {/* Werner rev H — Attachment upload (spec page 10). */}
         <S3AttachmentSection s3Upload={s3Upload} inputId="gi-upload" label="Attachments" />
       </div>
-      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-white">
+      <div className="flex justify-end gap-2 py-4 border-t shrink-0 bg-card">
         <Button
           variant="outline"
           onClick={() => { if (draftEnabled) clearTaskDraft(DRAFT_TYPE); setOpen(false); }}

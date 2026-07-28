@@ -92,7 +92,7 @@ export default function CertificatePage() {
 
   if (status === "not-found") {
     return (
-      <div className="mx-auto mt-24 max-w-md rounded-md border border-border bg-white p-8 text-center">
+      <div className="mx-auto mt-24 max-w-md rounded-xl border border-border bg-card p-8 text-center">
         <h1 className="text-lg font-normal text-foreground tracking-tight">Certificate not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This certificate link is invalid, has expired, or has been revoked.
@@ -103,7 +103,7 @@ export default function CertificatePage() {
 
   if (status === "error" || !cert) {
     return (
-      <div className="mx-auto mt-24 max-w-md rounded-md border border-border bg-white p-8 text-center">
+      <div className="mx-auto mt-24 max-w-md rounded-xl border border-border bg-card p-8 text-center">
         <h1 className="text-lg font-normal text-foreground tracking-tight">Something went wrong</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           We couldn't load this certificate. Please try again later.
@@ -141,7 +141,7 @@ export default function CertificatePage() {
         }
       `}</style>
 
-      <div className="cert-shell min-h-screen bg-[#f4f4f5] py-10 px-4">
+      <div className="cert-shell min-h-screen bg-background py-10 px-4">
         {/* Toolbar — copy + open-source + print. Sits above the card so
             it doesn't interrupt the email aesthetic; hidden when printing. */}
         <div className="no-print mx-auto mb-4 flex max-w-[640px] items-center justify-between">
@@ -152,7 +152,7 @@ export default function CertificatePage() {
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs text-foreground hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted"
             >
               <CopyIcon className="h-3.5 w-3.5" />
               {copied ? "Copied" : "Copy link"}
@@ -160,7 +160,7 @@ export default function CertificatePage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs text-foreground hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted"
             >
               <Printer className="h-3.5 w-3.5" />
               Print
@@ -170,10 +170,10 @@ export default function CertificatePage() {
 
         {/* Card: white, narrow column, subtle border + shadow — matches
             transactional-email layouts (Stripe, Linear, Vercel receipts). */}
-        <div className="cert-card mx-auto max-w-[640px] overflow-hidden rounded-lg border border-border bg-white shadow-sm">
+        <div className="cert-card mx-auto max-w-[640px] overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           {/* Header strip — soft tint, centered brand line + cert type. */}
-          <div className="border-b border-border bg-slate-50 px-8 py-6 text-center">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="border-b border-border bg-muted/50 px-8 py-6 text-center">
+            <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
               Baselinq
             </div>
             <div className="mt-3 text-xs uppercase tracking-widest text-muted-foreground">
@@ -258,7 +258,7 @@ export default function CertificatePage() {
 
           {cert.description && (
             <div className="border-t border-border px-8 py-5">
-              <div className="mb-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+              <div className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
                 Description
               </div>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
@@ -269,7 +269,7 @@ export default function CertificatePage() {
 
           {cert.audit_trail && cert.audit_trail.length > 0 && (
             <div className="border-t border-border px-8 py-5">
-              <div className="mb-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+              <div className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">
                 Audit trail
               </div>
               <ul className="space-y-2.5 text-sm">
@@ -291,11 +291,11 @@ export default function CertificatePage() {
           {/* Email-style footer — quiet, with the public URL printed as
               the only place the raw link appears (so a printed copy can
               still be re-typed if needed). */}
-          <div className="border-t border-border bg-slate-50 px-8 py-5 text-center">
+          <div className="border-t border-border bg-muted/50 px-8 py-5 text-center">
             <div className="text-xs text-muted-foreground">
               Generated by Baselinq · token-gated public read-only view
             </div>
-            <div className="mt-2 break-all font-mono text-[11px] text-muted-foreground">
+            <div className="mt-2 break-all font-mono text-xs text-muted-foreground">
               {url}
             </div>
             <div className="no-print mt-3">

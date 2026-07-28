@@ -25,8 +25,13 @@ export default {
         black3: "#0F172A",
         black4: "#111827",
         gray1: "#8B8B8B",
-        gray2: "#6B6B6B",
-        gray3: "#6F7372",
+        // Legacy secondary-text aliases. gray2 (#6B6B6B) was a dead-neutral
+        // grey and gray3 (#6F7372) a faintly GREEN grey (hue 165) — both sat
+        // outside the hue-220 neutral ramp while doing the same job as
+        // --muted-foreground. Repointed at the token rather than rewriting
+        // the ~30 call sites, so secondary text is one colour everywhere.
+        gray2: "hsl(var(--muted-foreground))",
+        gray3: "hsl(var(--muted-foreground))",
         gray4: "#6B7280",
         purple: "#6c5ce7",
         green_dark: "#10B981",
@@ -41,7 +46,10 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#6c5ce7",
+          // --primary is the exact HSL of the previous #6c5ce7 literal, so
+          // this is a zero-pixel change today. It also means a rebrand is
+          // one CSS variable rather than a find-and-replace.
+          DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -81,20 +89,30 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         sidebar: {
-          DEFAULT: "#f3f2f0",
+          // These three were hardcoded literals, which orphaned the
+          // --sidebar-* variables entirely. Values below are the exact HSL
+          // equivalents, so appearance is unchanged.
+          DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
-          primary: "#f3f2f0",
+          primary: "hsl(var(--sidebar-background))",
           "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "#E8E8E8",
+          accent: "hsl(var(--sidebar-accent))",
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        // The whole scale derives from --radius. Previously only sm/md/lg
+        // did, while xl (282 uses) and 2xl (50 uses) fell through to
+        // Tailwind's defaults of 12px/16px — so the radius token only
+        // controlled part of the app and cards were always rounder than
+        // buttons by accident rather than by intent.
+        sm: "calc(var(--radius) - 3px)",   // 3px — inline chips, small tags
+        md: "calc(var(--radius) - 2px)",   // 4px — badges, inputs, menu items
+        lg: "var(--radius)",               // 6px — buttons, form controls
+        xl: "calc(var(--radius) + 2px)",   // 8px — cards, panels, wells
+        "2xl": "calc(var(--radius) + 6px)", // 12px — modals, drawers, hero
       },
       keyframes: {
         "accordion-down": {

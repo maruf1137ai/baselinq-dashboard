@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { formatDate } from '@/lib/dateUtils';
-import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder as FolderIcon, FolderOpen, Upload, FileText, File } from 'lucide-react';
+import { AiMark } from '@/components/icons/AiMark';
 import { cn } from '@/lib/utils';
 import { useContractsFolders } from '@/hooks/useFolders';
 import type { Folder } from '@/types/folder';
@@ -16,6 +17,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /** Spring-load delay before an drag-hovered folder auto-expands (ms). */
 const SPRING_FOLDER_DELAY = 500;
@@ -94,7 +96,7 @@ function ContractDocumentRow({
         {...listeners}
         {...attributes}
         className={cn(
-          "flex items-center gap-3 py-2 pr-4 bg-white cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
+          "flex items-center gap-3 py-2 pr-4 bg-card cursor-pointer transition-colors group/doc relative hover:bg-primary/[0.03]",
           idx > 0 && "border-t border-border/40",
           isDragging && "opacity-40",
         )}
@@ -107,7 +109,7 @@ function ContractDocumentRow({
           style={{ left: `${depth * 16 + 8}px` }}
         />
         <div className="h-7 w-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/doc:bg-primary/15 transition-colors">
-          <FileText className="w-3.5 h-3.5 text-primary" />
+          <FileText className="h-4 w-4 text-primary" />
         </div>
         <p className="text-sm truncate flex-1 min-w-0">
           <span className="text-foreground group-hover/doc:text-primary transition-colors">{doc.name}</span>
@@ -118,11 +120,11 @@ function ContractDocumentRow({
           </span>
         </p>
         {doc.reference && (
-          <span className="font-mono text-[11px] px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
+          <span className="font-mono text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-md shrink-0">
             {doc.reference}
           </span>
         )}
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
     </DocItemContextMenu>
   );
@@ -163,10 +165,10 @@ function ContractsUnfiledRow({
           isDragging && "opacity-40",
         )}
       >
-        <File className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-7" />
+        <File className="h-4 w-4 text-muted-foreground/60 shrink-0 ml-7" />
         <span className="text-sm text-muted-foreground truncate flex-1">{doc.name}</span>
         {doc.reference && (
-          <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+          <span className="font-mono text-xs text-muted-foreground shrink-0">
             {doc.reference}
           </span>
         )}
@@ -262,8 +264,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
         isTopLevel ? "text-foreground" : "text-muted-foreground"
       )}>
         {isOpen
-          ? <ChevronDown className="w-4 h-4 transition-transform" />
-          : <ChevronRight className="w-4 h-4 transition-transform" />}
+          ? <ChevronDown className="h-4 w-4 transition-transform" />
+          : <ChevronRight className="h-4 w-4 transition-transform" />}
       </div>
 
       <div className={cn(
@@ -273,8 +275,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
             : "text-muted-foreground/70"
       )}>
         {isOpen
-          ? <FolderOpen className="w-3.5 h-3.5" />
-          : <FolderIcon className="w-3.5 h-3.5" />}
+          ? <FolderOpen className="h-4 w-4" />
+          : <FolderIcon className="h-4 w-4" />}
       </div>
 
       <span className={cn(
@@ -288,7 +290,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
 
       {hasAiFlags && (
         <span className="text-primary" title="Contains AI findings">
-          <Sparkles className="w-3 h-3" />
+          <AiMark />
         </span>
       )}
       {hasRecent && (
@@ -313,7 +315,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
             onClick={handleViewRegister}
             title="View Issue Register"
           >
-            <FileText className="w-3 h-3 mr-1" />
+            <FileText className="mr-1" />
             Register
           </Button>
           {canUploadDocument && (
@@ -324,7 +326,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
               onClick={handleUpload}
               title="Upload Document"
             >
-              <Upload className="w-3 h-3 mr-1" />
+              <Upload className="mr-1" />
               Upload
             </Button>
           )}
@@ -468,23 +470,16 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
   if (folders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <div className="text-center max-w-md">
-          <p className="text-sm font-medium text-foreground mb-2">
-            No contract folders available
-          </p>
-          <p className="text-xs text-muted-foreground">
-            You may not have permission to view contract folders, or they
-            haven't been created yet. Please contact your project
-            administrator if you believe you should have access.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={FolderIcon}
+        title="No contract folders yet"
+        description="Contract documents are filed here by folder. If you expect to see folders, your project administrator may not have granted you access to them."
+      />
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div>
         {folders.map((folder) => (
           <FolderNode
@@ -507,13 +502,13 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
 
       {/* Unfiled documents */}
       {(documents ?? []).some((d) => !d.folderId) && (
-        <div className="border-t-2 border-border bg-muted/10">
+        <div className="border-t border-border bg-muted/50">
           <div className="px-4 py-2.5 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-foreground">
                 Unfiled ({(documents ?? []).filter((d) => !d.folderId).length})
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Uploaded before folder structure was set up. Drag into a folder or re-upload to file it.
               </p>
             </div>

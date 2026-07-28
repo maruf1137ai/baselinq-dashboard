@@ -41,30 +41,30 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRoles } from "@/hooks/useRoles";
-import AiIcon from "@/components/icons/AiIcon";
+import { AiMark } from "@/components/icons/AiMark";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ROLES = [
-  { id: "architect", label: "Architect", icon: <Compass className="w-4 h-4" />, body: "SACAP" },
-  { id: "structural", label: "Structural Engineer", icon: <Layers className="w-4 h-4" />, body: "ECSA" },
-  { id: "civil", label: "Civil Engineer", icon: <Map className="w-4 h-4" />, body: "ECSA" },
-  { id: "mep", label: "MEP Engineer", icon: <Zap className="w-4 h-4" />, body: "ECSA" },
-  { id: "contractor", label: "Contractor", icon: <HardHat className="w-4 h-4" />, body: "CIDB" },
-  { id: "pm", label: "Project Manager", icon: <ClipboardList className="w-4 h-4" />, body: "SACPCMP" },
-  { id: "qs", label: "Quantity Surveyor", icon: <Calculator className="w-4 h-4" />, body: "ASAQS" },
-  { id: "client", label: "Client / Owner", icon: <Briefcase className="w-4 h-4" />, body: "" },
+  { id: "architect", label: "Architect", icon: <Compass className="h-4 w-4" />, body: "SACAP" },
+  { id: "structural", label: "Structural Engineer", icon: <Layers className="h-4 w-4" />, body: "ECSA" },
+  { id: "civil", label: "Civil Engineer", icon: <Map className="h-4 w-4" />, body: "ECSA" },
+  { id: "mep", label: "MEP Engineer", icon: <Zap className="h-4 w-4" />, body: "ECSA" },
+  { id: "contractor", label: "Contractor", icon: <HardHat className="h-4 w-4" />, body: "CIDB" },
+  { id: "pm", label: "Project Manager", icon: <ClipboardList className="h-4 w-4" />, body: "SACPCMP" },
+  { id: "qs", label: "Quantity Surveyor", icon: <Calculator className="h-4 w-4" />, body: "ASAQS" },
+  { id: "client", label: "Client / Owner", icon: <Briefcase className="h-4 w-4" />, body: "" },
 ];
 
 const ACCOUNT_TYPES = [
-  { id: "organisation" as const, label: "Organisation", desc: "A registered company, firm or practice", icon: <Building2 className="w-5 h-5" /> },
-  { id: "individual" as const, label: "Individual / Sole Proprietor", desc: "Working independently", icon: <User className="w-5 h-5" /> },
+  { id: "organisation" as const, label: "Organisation", desc: "A registered company, firm or practice", icon: <Building2 className="h-5 w-5" /> },
+  { id: "individual" as const, label: "Individual / Sole Proprietor", desc: "Working independently", icon: <User className="h-5 w-5" /> },
 ];
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 focus:bg-card transition-all";
 
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
@@ -265,22 +265,23 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
           {/* Logo + close */}
           <div className="px-10 pt-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0 border border-white/10">
+              <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
                 <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
               </div>
-              <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+              <span className="text-sm text-white/90 tracking-tight">baselinq</span>
             </div>
-            <button onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
-              <X className="w-5 h-5" />
+            <button
+              aria-label="Close" onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Headline + stepper */}
           <div className="flex-1 flex flex-col justify-center px-10">
-            <h1 className="text-[32px] font-normal text-white leading-tight tracking-tight">
+            <h1 className="text-3xl font-normal text-white leading-tight tracking-tight">
               Complete your<br />profile.
             </h1>
-            <p className="text-[14px] text-white/50 mt-3 leading-relaxed max-w-xs">
+            <p className="text-sm text-white/50 mt-3 leading-relaxed max-w-xs">
               A few more details so you can start creating and managing projects.
             </p>
 
@@ -294,18 +295,18 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                   <React.Fragment key={sId}>
                     <div className="flex items-center gap-3 py-2">
                       <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] transition-all duration-200",
-                        done || active ? "bg-[#6c5ce7] text-white" : "bg-white/10 text-white/40 border border-white/10"
+                        "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs transition-all duration-200",
+                        done || active ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/40 border border-white/10"
                       )}>
-                        {done ? <Check className="w-3.5 h-3.5" /> : sId}
+                        {done ? <Check className="h-3.5 w-3.5" /> : sId}
                       </div>
                       <p className={cn(
-                        "text-[13px] leading-tight transition-colors",
+                        "text-xs leading-tight transition-colors",
                         active ? "text-white" : done ? "text-white/70" : "text-white/35"
                       )}>
                         {label}
                       </p>
-                      {active && <ChevronRight className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 ml-auto" />}
+                      {active && <ChevronRight className="h-4 w-4 text-primary shrink-0 ml-auto" />}
                     </div>
                     {i < STEP_LABELS.length - 1 && (
                       <div style={{ marginLeft: "13px", paddingLeft: "10px", height: "12px", borderLeft: `2px solid ${done ? "#6c5ce7" : "rgba(255,255,255,0.1)"}` }} />
@@ -319,7 +320,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
           {/* Bottom */}
           <div className="px-10 pb-10">
             <div className="border-t border-white/10 pt-6">
-              <p className="text-[11px] text-white/25 leading-relaxed">
+              <p className="text-xs text-white/25 leading-relaxed">
                 Your details will auto-populate into contracts and appointment letters.
               </p>
             </div>
@@ -327,10 +328,10 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
         </aside>
 
         {/* ── Right white panel ── */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+        <div className="flex-1 flex flex-col bg-card overflow-hidden">
 
           {/* Mobile progress bar / header */}
-          <div className="lg:hidden border-b border-gray-100 px-6 py-4 shrink-0 bg-white">
+          <div className="lg:hidden border-b border-border px-6 py-4 shrink-0 bg-card">
             <div className="flex gap-1.5 mb-3">
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div
@@ -341,11 +342,12 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               ))}
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700">
                 Step {step} of {totalSteps}: {STEP_LABELS[step - 1]}
               </span>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
-                <X className="w-5 h-5" />
+              <button
+                aria-label="Close" onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -382,7 +384,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 {/* ── Step 1: Role ── */}
                 {step === 1 && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-5">Select your profession — we'll personalise your workspace around it.</p>
+                    <p className="text-xs text-gray-500 mb-5">Select your profession — we'll personalise your workspace around it.</p>
                     <div className="grid grid-cols-2 gap-2">
                       {ROLES.map((r) => (
                         <button
@@ -391,20 +393,20 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setRole(r.id)}
                           className={cn(
                             "flex items-center gap-3 px-3.5 py-3 rounded-xl border text-left transition-all group",
-                            role === r.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                            role === r.id ? "border-primary bg-primary/5" : "border-border hover:border-border hover:bg-muted/50"
                           )}
                         >
                           <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all",
-                            role === r.id ? "bg-[#6c5ce7] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                            role === r.id ? "bg-primary text-primary-foreground" : "bg-muted text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {r.icon}
                           </div>
-                          <span className={cn("text-[13px] flex-1 leading-snug", role === r.id ? "text-gray-800" : "text-gray-600")}>
+                          <span className={cn("text-xs flex-1 leading-snug", role === r.id ? "text-gray-800" : "text-gray-600")}>
                             {r.label}
                           </span>
                           {role === r.id && (
-                            <div className="w-4 h-4 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
+                            <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center shrink-0">
                               <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                           )}
@@ -417,7 +419,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 {/* ── Step 2: Account type ── */}
                 {step === 2 && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-5">This determines your entity's legal and billing structure.</p>
+                    <p className="text-xs text-gray-500 mb-5">This determines your entity's legal and billing structure.</p>
                     <div className="space-y-3">
                       {ACCOUNT_TYPES.map((type) => (
                         <button
@@ -426,22 +428,22 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           onClick={() => setAccountType(type.id)}
                           className={cn(
                             "w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition-all group",
-                            accountType === type.id ? "border-[#6c5ce7] bg-[#6c5ce7]/5" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                            accountType === type.id ? "border-primary bg-primary/5" : "border-border hover:border-border hover:bg-muted/50"
                           )}
                         >
                           <div className={cn(
                             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all",
-                            accountType === type.id ? "bg-[#6c5ce7] text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                            accountType === type.id ? "bg-primary text-primary-foreground" : "bg-muted text-gray-500 group-hover:bg-gray-200"
                           )}>
                             {type.icon}
                           </div>
                           <div className="flex-1">
-                            <p className="text-[14px] text-gray-800">{type.label}</p>
-                            <p className="text-[12px] text-gray-400 mt-0.5">{type.desc}</p>
+                            <p className="text-sm text-gray-800">{type.label}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{type.desc}</p>
                           </div>
                           {accountType === type.id && (
-                            <div className="w-5 h-5 rounded-full bg-[#6c5ce7] flex items-center justify-center shrink-0">
-                              <Check className="w-3 h-3 text-white" />
+                            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                              <Check className="h-3 w-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -487,8 +489,8 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                           </div>
                         </div>
                         <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-[#f0edff] border border-[#d6d3ff]">
-                          <Info className="w-3.5 h-3.5 text-[#6c5ce7] shrink-0 mt-0.5" />
-                          <p className="text-[12px] text-[#5b5bcc] leading-snug">These details will auto-populate into all contracts and appointment letters.</p>
+                          <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <p className="text-xs text-[#5b5bcc] leading-snug">These details will auto-populate into all contracts and appointment letters.</p>
                         </div>
                       </>
                     )}
@@ -504,9 +506,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                         the consultant). For organisations this is filed as the
                         company account; for individuals it stays on the user. */}
                     <div className="flex items-center gap-3 pt-1">
-                      <div className="h-px flex-1 bg-gray-100" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Banking Details</span>
-                      <div className="h-px flex-1 bg-gray-100" />
+                      <div className="h-px flex-1 bg-muted" />
+                      <span className="text-xs text-gray-400 uppercase tracking-widest">Banking Details</span>
+                      <div className="h-px flex-1 bg-muted" />
                     </div>
                     <div>
                       <label className={LABEL_CLS}>Bank Name <span className="text-gray-300">(optional)</span></label>
@@ -539,9 +541,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
 
                     {/* Address */}
                     <div className="flex items-center gap-3 pt-1">
-                      <div className="h-px flex-1 bg-gray-100" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Address & Contact</span>
-                      <div className="h-px flex-1 bg-gray-100" />
+                      <div className="h-px flex-1 bg-muted" />
+                      <span className="text-xs text-gray-400 uppercase tracking-widest">Address & Contact</span>
+                      <div className="h-px flex-1 bg-muted" />
                     </div>
 
                     <div>
@@ -571,9 +573,9 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
 
                     {/* Professional */}
                     <div className="flex items-center gap-3 pt-1">
-                      <div className="h-px flex-1 bg-gray-100" />
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">Professional Registration</span>
-                      <div className="h-px flex-1 bg-gray-100" />
+                      <div className="h-px flex-1 bg-muted" />
+                      <span className="text-xs text-gray-400 uppercase tracking-widest">Professional Registration</span>
+                      <div className="h-px flex-1 bg-muted" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -594,25 +596,26 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                     {accountType === "organisation" && (
                       <>
                         <div className="flex items-center gap-3 pt-1">
-                          <div className="h-px flex-1 bg-gray-100" />
-                          <span className="text-[10px] text-gray-400 uppercase tracking-widest">Insurance Certificate</span>
-                          <div className="h-px flex-1 bg-gray-100" />
+                          <div className="h-px flex-1 bg-muted" />
+                          <span className="text-xs text-gray-400 uppercase tracking-widest">Insurance Certificate</span>
+                          <div className="h-px flex-1 bg-muted" />
                         </div>
 
                         <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => setInsuranceCertificate(e.target.files?.[0] ?? null)} />
                         {insuranceCertificate ? (
-                          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50">
-                            <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
+                            <FileText className="h-4 w-4 text-gray-400 shrink-0" />
                             <span className="text-sm text-gray-700 flex-1 truncate">{insuranceCertificate.name}</span>
-                            <button type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                            <button
+                              aria-label="Remove certificate" type="button" onClick={() => setInsuranceCertificate(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
                           </div>
                         ) : (
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-[#6c5ce7]/40 hover:text-[#6c5ce7] transition-all"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-border text-sm text-gray-400 hover:border-primary/40 hover:text-primary transition-all"
                           >
-                            <Upload className="w-4 h-4" />
+                            <Upload className="h-4 w-4" />
                             Upload certificate, PDF or image (optional)
                           </button>
                         )}
@@ -623,7 +626,7 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             <PopoverTrigger asChild>
                               <button type="button" className={cn(INPUT_CLS, "flex items-center justify-between text-left", !insuranceExpiry && "text-gray-400")}>
                                 <span>{insuranceExpiry ? format(insuranceExpiry, "dd MMM yyyy") : "Pick a date"}</span>
-                                <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                                <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
                               </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -639,10 +642,10 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                 {/* ── Step 4: Invite team (org only) ── */}
                 {step === 4 && accountType === "organisation" && (
                   <div className="animate-in fade-in duration-200">
-                    <p className="text-[13px] text-gray-500 mb-4">Invite users, you can also do this later from settings.</p>
+                    <p className="text-xs text-gray-500 mb-4">Invite users, you can also do this later from settings.</p>
                     <div className="space-y-2">
                       {teamMembers.map((member) => (
-                        <div key={member.id} className="flex items-start gap-2 p-3 rounded-xl border border-gray-100 bg-gray-50/40">
+                        <div key={member.id} className="flex items-start gap-2 p-3 rounded-xl bg-muted/50">
                           <div className="flex-1 grid grid-cols-3 gap-2">
                             <input type="text" placeholder="Full name" value={member.name} onChange={(e) => setTeamMembers((p) => p.map((m) => m.id === member.id ? { ...m, name: e.target.value } : m))} className={INPUT_CLS} />
                             <input type="email" placeholder="Email address" value={member.email} onChange={(e) => setTeamMembers((p) => p.map((m) => m.id === member.id ? { ...m, email: e.target.value } : m))} className={INPUT_CLS} />
@@ -654,15 +657,16 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
                             </select>
                           </div>
                           {teamMembers.length > 1 && (
-                            <button type="button" onClick={() => setTeamMembers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
-                              <Trash2 className="w-4 h-4" />
+                            <button
+                              aria-label="Remove team member" type="button" onClick={() => setTeamMembers((p) => p.filter((m) => m.id !== member.id))} className="mt-2.5 text-gray-300 hover:text-red-400 transition-colors shrink-0">
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-[13px] text-[#6c5ce7] hover:text-[#6c6de9] transition-colors">
-                      <UserPlus className="w-3.5 h-3.5" />
+                    <button type="button" onClick={() => setTeamMembers((p) => [...p, { id: crypto.randomUUID(), name: "", email: "", position: "" }])} className="mt-3 flex items-center gap-2 text-xs text-primary hover:text-primary/90 transition-colors">
+                      <UserPlus className="h-4 w-4" />
                       Add another user
                     </button>
                   </div>
@@ -672,10 +676,10 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
           </div>{/* closes flex-1 overflow-y-auto scroll area */}
 
           {/* Footer */}
-          <div className="px-10 py-6 border-t border-gray-100 bg-slate-50/50 shrink-0">
+          <div className="px-10 py-6 border-t border-border bg-muted/50 shrink-0">
             <div className="max-w-[480px] mx-auto flex gap-3">
               {step > 1 && (
-                <button type="button" onClick={() => setStep((s) => (s - 1) as any)} className="py-2.5 px-5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+                <button type="button" onClick={() => setStep((s) => (s - 1) as any)} className="py-2.5 px-5 rounded-xl border border-border text-sm text-gray-500 hover:bg-muted/50 transition-all">
                   Back
                 </button>
               )}
@@ -683,16 +687,16 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {/* Step 1 → 2 */}
               {step === 1 && (
                 <button type="button" disabled={!role} onClick={() => setStep(2)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  Continue <ArrowRight className="h-4 w-4" />
                 </button>
               )}
 
               {/* Step 2 → 3 */}
               {step === 2 && (
                 <button type="button" disabled={!accountType} onClick={handleGoToDetails}
-                  className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  Continue <ArrowRight className="h-4 w-4" />
                 </button>
               )}
 
@@ -700,13 +704,13 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 3 && (
                 accountType === "organisation" ? (
                   <button type="button" disabled={!companyName} onClick={() => setStep(4)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    Continue <ArrowRight className="w-4 h-4" />
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    Continue <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="h-4 w-4" />}
                   </button>
                 )
               )}
@@ -715,17 +719,17 @@ function CompleteProfileModal({ onClose, onDone }: { onClose: () => void; onDone
               {step === 4 && (
                 <>
                   <button type="button" disabled={saving} onClick={handleSave}
-                    className="flex-1 py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="w-4 h-4" />}
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {saving ? "Saving..." : "Complete Profile"} {!saving && <Check className="h-4 w-4" />}
                   </button>
-                  <button type="button" disabled={saving} onClick={handleSave} className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
+                  <button type="button" disabled={saving} onClick={handleSave} className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 disabled:opacity-50">
                     Skip invites
                   </button>
                 </>
               )}
             </div>
           </div>{/* closes footer */}
-        </div>{/* closes flex-1 flex-col bg-white right panel */}
+        </div>{/* closes flex-1 flex-col bg-card right panel */}
       </div>{/* closes w-full h-full flex container */}
     </div>
   );
@@ -805,7 +809,7 @@ const SelectProject = () => {
   if (userLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <AwesomeLoader message="Loading..." />
+        <AwesomeLoader message="Loading" />
       </div>
     );
   }
@@ -819,9 +823,9 @@ const SelectProject = () => {
         <div className="max-w-4xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 rounded-2xl bg-[#f0edff] flex items-center justify-center mx-auto mb-5">
-              <SparkleIcon className="w-8 h-8 text-[#6c5ce7]" />
+              <SparkleIcon className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-[22px] font-normal tracking-tight text-foreground mb-2">
+            <h2 className="text-2xl font-normal tracking-tight text-foreground mb-2">
               Complete your profile first
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-8">
@@ -829,9 +833,9 @@ const SelectProject = () => {
             </p>
             <Button
               onClick={() => setShowModal(true)}
-              className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
+              className="h-10 px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2 mx-auto"
             >
-              <AiIcon size={16} className="text-white" />
+              <AiMark size={16} className="text-white" />
               Complete Profile
             </Button>
           </div>
@@ -860,24 +864,24 @@ const SelectProject = () => {
 
         {projectsLoading ? (
           <div className="flex items-center justify-center py-24">
-            <AwesomeLoader message="Loading projects..." />
+            <AwesomeLoader message="Loading projects" />
           </div>
         ) : projects.length === 0 ? (
-          <div className="border border-border rounded-xl bg-white shadow-sm p-14 flex flex-col items-center gap-4 text-center">
+          <div className="border border-border rounded-xl bg-card shadow-sm p-14 flex flex-col items-center gap-4 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#f0edff] flex items-center justify-center">
               <FolderOpen className="w-7 h-7 text-primary" />
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground">No projects yet</h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs leading-relaxed">
-                Create your first project to start managing tasks, documents, and your team.
+                A project holds the contract, its instructions, variations and certificates — everything you'd need to defend a claim.
               </p>
             </div>
             <Button
               onClick={() => navigate("/create-project")}
-              className="h-9 px-5 rounded-lg bg-primary text-white hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
+              className="h-9 px-5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-normal text-sm flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Create your first project
             </Button>
           </div>
@@ -898,30 +902,30 @@ const SelectProject = () => {
                     onClick={() => handleSelectProject(project)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectProject(project); }}
                     className={cn(
-                      "group text-left border rounded-xl bg-white shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer",
+                      "group text-left border rounded-xl bg-card shadow-sm px-5 py-4 hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer",
                       isActive ? "border-primary/40 ring-1 ring-primary/20" : "border-border"
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-[#f0edff] flex items-center justify-center shrink-0 mt-0.5">
-                          <FolderOpen className="w-4 h-4 text-primary" />
+                          <FolderOpen className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-normal text-foreground truncate">{project.name || "Untitled Project"}</p>
                           {project.location && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                               {project.location}
                             </p>
                           )}
                           <div className="flex items-center gap-2 mt-2">
                             {isDraft ? (
-                              <span className="text-[9px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
+                              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
                             ) : (
-                              <span className="text-[9px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+                              <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
                             )}
                             {isActive && (
-                              <span className="text-[9px] text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
+                              <span className="text-xs text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
                             )}
                           </div>
                         </div>
@@ -930,9 +934,9 @@ const SelectProject = () => {
                         {healthDetail && <HealthBadge status={healthDetail.health} detail={healthDetail} />}
                         <div className={cn(
                           "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                          isActive ? "bg-primary text-white" : "bg-slate-100 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                         )}>
-                          {isActive ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          {isActive ? <Check className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </div>
                         {project.canDelete && (
                           <button
@@ -943,7 +947,7 @@ const SelectProject = () => {
                             }}
                             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         )}
                       </div>
@@ -955,14 +959,14 @@ const SelectProject = () => {
 
             <button
               onClick={() => navigate("/create-project")}
-              className="w-full group border-2 border-dashed border-border rounded-xl bg-slate-50/50 px-6 py-8 hover:border-primary/40 hover:bg-white hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center text-center"
+              className="w-full group border-2 border-dashed border-border rounded-xl bg-muted/50 px-6 py-8 hover:border-primary/40 hover:bg-card hover:shadow-md transition-all duration-200 flex flex-col items-center justify-center text-center"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mb-3 group-hover:scale-110 transition-transform duration-200">
-                <Plus className="w-6 h-6 text-primary" />
+                <Plus className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-[15px] font-normal text-foreground">Create New Project</p>
-                <p className="text-[13px] text-muted-foreground mt-0.5">Start a new construction workspace</p>
+                <p className="text-sm font-normal text-foreground">Create New Project</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Start a new construction workspace</p>
               </div>
             </button>
           </div>
@@ -976,7 +980,7 @@ const SelectProject = () => {
         )}
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent className="bg-white">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Project</AlertDialogTitle>
               <AlertDialogDescription>

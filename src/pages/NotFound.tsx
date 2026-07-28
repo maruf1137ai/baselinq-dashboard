@@ -31,10 +31,10 @@ const NotFound = () => {
   }, [location.pathname, navigate]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-4 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
       <div className="relative mb-8">
         <div className="absolute inset-0 animate-ping rounded-full bg-red-100 opacity-20"></div>
-        <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-xl shadow-red-100/50">
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-card shadow-xl shadow-red-100/50">
           <AlertCircle className="h-12 w-12 text-destructive" strokeWidth={1.5} />
         </div>
       </div>
@@ -51,7 +51,7 @@ const NotFound = () => {
           <Button
             variant="outline"
             onClick={() => navigate(-1)}
-            className="group w-full border-border hover:bg-gray-50 sm:w-auto"
+            className="group w-full border-border hover:bg-muted/50 sm:w-auto"
           >
             <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
             Go Back

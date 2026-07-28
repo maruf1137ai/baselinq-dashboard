@@ -7,6 +7,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import {
   collectChannelAttachments,
@@ -25,10 +26,6 @@ interface ChannelAttachmentsPanelProps {
   onPreview: (file: PreviewFile) => void;
 }
 
-const EmptyState = ({ label }: { label: string }) => (
-  <div className="py-8 text-center text-xs text-gray-400">{label}</div>
-);
-
 const AttachmentRow = ({
   file,
   onPreview,
@@ -42,14 +39,14 @@ const AttachmentRow = ({
     <button
       type="button"
       onClick={() => onPreview({ name: file.name || "", url: file.url || "", type: file.type, streamUrl: file.streamUrl })}
-      className="w-full flex items-center gap-3 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+      className="w-full flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors text-left"
     >
       <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", meta.badgeClass)}>
         <Icon className={cn("h-4 w-4", meta.iconClass)} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-gray-900 truncate">{file.name || "Untitled"}</p>
-        <p className="text-[11px] text-gray-400 truncate">
+        <p className="text-xs text-gray-400 truncate">
           {meta.label}
           {formatFileSize(file.size) ? ` · ${formatFileSize(file.size)}` : ""}
         </p>
@@ -72,7 +69,7 @@ const MediaTile = ({
       <button
         type="button"
         onClick={open}
-        className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 group"
+        className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted/50 group"
       >
         <img
           src={file.url}
@@ -89,7 +86,7 @@ const MediaTile = ({
       <button
         type="button"
         onClick={open}
-        className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 bg-black group"
+        className="relative aspect-square rounded-lg overflow-hidden border border-border bg-black group"
       >
         <video
           src={videoFrameUrl(file.url)}
@@ -100,10 +97,10 @@ const MediaTile = ({
         />
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="h-7 w-7 rounded-full bg-black/55 flex items-center justify-center">
-            <Play className="h-3.5 w-3.5 text-white fill-white" />
+            <Play className="h-4 w-4 text-white fill-white" />
           </span>
         </span>
-        <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded bg-black/60 text-white">Video</span>
+        <span className="absolute bottom-1 left-1 text-xs px-1 rounded bg-black/60 text-white">Video</span>
       </button>
     );
   }
@@ -113,11 +110,11 @@ const MediaTile = ({
     <button
       type="button"
       onClick={() => file.url && window.open(file.url, "_blank")}
-      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 bg-purple-50 flex items-center justify-center group"
+      className="relative aspect-square rounded-lg overflow-hidden border border-border bg-purple-50 flex items-center justify-center group"
       title={file.name}
     >
       <FileAudio className="h-6 w-6 text-purple-500 group-hover:scale-110 transition-transform" />
-      <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded bg-black/50 text-white">Audio</span>
+      <span className="absolute bottom-1 left-1 text-xs px-1 rounded bg-black/50 text-white">Audio</span>
     </button>
   );
 };
@@ -127,9 +124,9 @@ const LinkRow = ({ href }: { href: string }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="w-full flex items-center gap-3 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+    className="w-full flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
   >
-    <div className="h-9 w-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
       <img
         src={faviconUrl(href)}
         alt=""
@@ -144,9 +141,9 @@ const LinkRow = ({ href }: { href: string }) => (
     </div>
     <div className="min-w-0 flex-1">
       <p className="text-sm text-gray-900 truncate">{linkHost(href)}</p>
-      <p className="text-[11px] text-gray-400 truncate">{href}</p>
+      <p className="text-xs text-gray-400 truncate">{href}</p>
     </div>
-    <ExternalLink className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+    <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
   </a>
 );
 
@@ -163,9 +160,9 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
         <AccordionItem value="shared" className="border-none">
           <AccordionTrigger className="py-2 text-sm font-normal text-gray-900 hover:no-underline">
             <span className="flex items-center gap-2">
-              <Paperclip className="w-4 h-4 text-gray-400" />
+              <Paperclip className="h-4 w-4 text-gray-400" />
               Shared Files
-              <span className="text-[10px] font-normal text-gray-500 bg-gray-100 rounded-full px-1.5 py-0.5">
+              <span className="text-xs font-normal text-gray-500 bg-muted rounded-full px-1.5 py-0.5">
                 {total}
               </span>
             </span>
@@ -186,7 +183,12 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
 
               <TabsContent value="attachments">
                 {attachments.length === 0 ? (
-                  <EmptyState label="No files shared yet" />
+                  <EmptyState
+                    variant="plain"
+                    size="sm"
+                    title="No files shared yet"
+                    description="Files attached to messages in this channel are collected here."
+                  />
                 ) : (
                   <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
                     {attachments.map((f, i) => (
@@ -198,7 +200,12 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
 
               <TabsContent value="media">
                 {media.length === 0 ? (
-                  <EmptyState label="No media shared yet" />
+                  <EmptyState
+                    variant="plain"
+                    size="sm"
+                    title="No photos or video shared yet"
+                    description="Site photos and video posted to this channel appear here."
+                  />
                 ) : (
                   <div className="max-h-72 overflow-y-auto pr-1 grid grid-cols-3 gap-2">
                     {media.map((f, i) => (
@@ -210,7 +217,12 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
 
               <TabsContent value="links">
                 {links.length === 0 ? (
-                  <EmptyState label="No links shared yet" />
+                  <EmptyState
+                    variant="plain"
+                    size="sm"
+                    title="No links shared yet"
+                    description="Links posted in this channel are gathered here for quick reference."
+                  />
                 ) : (
                   <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
                     {links.map((href, i) => (

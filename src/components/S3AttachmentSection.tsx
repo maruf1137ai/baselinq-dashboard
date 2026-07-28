@@ -51,7 +51,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
 
       {/* Drop zone */}
       <div
-        className="mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer hover:bg-muted/50 transition-colors"
+        className="mt-2 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl py-8 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -67,10 +67,10 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
       {s3Upload.entries.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">
           {s3Upload.entries.map((entry) => (
-            <div key={entry.id} className="border rounded p-2">
+            <div key={entry.id} className="bg-card border border-border rounded-xl p-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
                   <span className="text-sm truncate">{entry.file.name}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -84,6 +84,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
                     </button>
                   )}
                   <button
+                    aria-label="Remove attachment"
                     type="button"
                     onClick={() => s3Upload.removeEntry(entry.id)}
                     className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
@@ -96,7 +97,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
               {/* Progress bar */}
               {entry.status === "uploading" && (
                 <div className="mt-1.5">
-                  <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-300"
                       style={{ width: `${entry.progress}%` }}
@@ -108,7 +109,7 @@ export function S3AttachmentSection({ s3Upload, inputId, label = "Attachments" }
 
               {entry.status === "done" && (
                 <div className="mt-1 flex items-center gap-1">
-                  <Check className="w-3 h-3 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500" />
                   <span className="text-xs text-green-500">Uploaded</span>
                 </div>
               )}

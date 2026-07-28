@@ -37,7 +37,7 @@ const RiskHeader = ({ level, count }) => {
       colorClass = 'bg-green-50 text-green-700'; // light green
       break;
     default:
-      colorClass = 'bg-gray-100 text-gray-700 border-gray-200';
+      colorClass = 'bg-muted text-gray-700 border-border';
   }
 
   return (
@@ -51,7 +51,7 @@ const RiskHeader = ({ level, count }) => {
 // Example usage: <RiskItemCard name="Client Approval for VO-001" id="COMP-001" />
 const RiskItemCard = ({ name, id }) => {
   return (
-    <div className="bg-white p-3 rounded-xl  border border-gray-100 mb-4 cursor-pointer hover:shadow-md transition-shadow">
+    <div className="bg-card p-3 rounded-xl  border border-border mb-4 cursor-pointer hover:shadow-md transition-shadow">
       <p className="text-sm  text-foreground">{name}</p>
       <p className="text-xs text-muted-foreground mt-1">{id}</p>
     </div>
@@ -72,7 +72,7 @@ const RiskOverview = () => {
 
   return (
     <div className="">
-      <h1 className="text-base  text-foreground mb-6">Risk Overview</h1>
+      <h1 className="text-sm font-medium text-foreground mb-6">Risk Overview</h1>
 
       {riskLevels.map(level => {
         const items = groupedItems[level] || [];

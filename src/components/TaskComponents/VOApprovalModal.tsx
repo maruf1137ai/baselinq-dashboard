@@ -104,9 +104,9 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-white border-none shadow-2xl">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-normal">{title}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {vo.voNumber} — {vo.title}
           </DialogDescription>
@@ -146,7 +146,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
 
           {/* Financial summary */}
           <div className="space-y-2 pt-2">
-            <p className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest">
+            <p className="text-xs font-normal text-muted-foreground uppercase tracking-widest">
               Financial Summary
             </p>
             <div className="flex justify-between text-sm">
@@ -159,7 +159,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             </div>
             <Separator className="my-2" />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground uppercase tracking-wider text-[11px]">
+              <span className="text-muted-foreground uppercase tracking-wider text-xs">
                 TOTAL {mode === "approve" ? "APPROVED" : "RECOMMENDED"} AMOUNT
               </span>
               <span className="text-foreground">{fmt(vo.grandTotal, currency)}</span>
@@ -169,22 +169,22 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           {/* Time consequence */}
           {vo.timeExtensionDays != null && vo.timeExtensionDays > 0 && (
             <div className="space-y-1 pt-2">
-              <p className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest">
+              <p className="text-xs font-normal text-muted-foreground uppercase tracking-widest">
                 Time Consequence
               </p>
               <p className="text-sm text-foreground">
                 Extension of Time: {vo.timeExtensionDays}{" "}
                 {vo.timeExtensionDays === 1 ? "day" : "days"}
               </p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Revised Practical Completion date to be updated post-approval.
               </p>
             </div>
           )}
 
           {/* Warning banner */}
-          <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-[13px] text-amber-900 leading-relaxed translate-y-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+          <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-xs text-amber-900 leading-relaxed translate-y-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
             <span>
               Once {mode === "approve" ? "approved" : "recommended"}, this Variation Order becomes a
               binding contractual instruction. It cannot be amended without a further Variation Order.
@@ -208,7 +208,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
                 placeholder="••••"
                 className="w-full font-mono tracking-[0.6em] text-center text-lg border border-border rounded-md py-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Set or change your PIN in Settings → Security.
               </p>
             </div>
@@ -217,7 +217,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           {needsPinSetup && (
             <div className="pt-2">
               <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
                 <div className="space-y-2 text-amber-900">
                   <p className="font-normal">A signing PIN is required to approve this Variation Order.</p>
                   <p className="text-xs text-amber-800 leading-relaxed">
@@ -253,7 +253,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="pt-6 sm:justify-end gap-2">
+        <DialogFooter className="pt-4">
           <Button
             variant="outline"
             className="font-normal border-border/60 hover:bg-muted/50"
@@ -263,7 +263,7 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
             Cancel
           </Button>
           <Button
-            className="font-normal bg-primary text-white hover:bg-primary/90 px-6 disabled:bg-primary/40 disabled:cursor-not-allowed"
+            className="font-normal bg-primary text-primary-foreground hover:bg-primary/90 px-6 disabled:bg-primary/40 disabled:cursor-not-allowed"
             disabled={!canSubmit}
             onClick={handleConfirm}
           >

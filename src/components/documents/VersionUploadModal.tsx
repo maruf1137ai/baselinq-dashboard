@@ -104,14 +104,14 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-white rounded-2xl border-none shadow-2xl">
-        <DialogHeader className="px-8 py-6 border-b bg-gray-50/50">
+      <DialogContent className="p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
               <FileClock className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-normal text-foreground">Upload New Version</DialogTitle>
+              <DialogTitle>Upload New Version</DialogTitle>
               <p className="text-xs text-gray-500 mt-0.5">Updating: {doc.reference}</p>
             </div>
           </div>
@@ -121,7 +121,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
           <div className="space-y-4">
             {!entry ? (
               <div
-                className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50/30 hover:bg-gray-50/50 hover:border-primary/20 transition-all cursor-pointer group"
+                className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center bg-muted/50 hover:bg-muted/50 hover:border-primary/20 transition-all cursor-pointer group"
                 onClick={() => window.document.getElementById('version-file-upload')?.click()}
               >
                 <input
@@ -136,7 +136,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
                 <p className="text-xs text-gray-400 mt-1">PDF, XLSX, DOCX, DWG up to 20MB</p>
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm flex flex-col gap-3">
+              <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-purple-50 rounded-lg flex items-center justify-center">
@@ -156,7 +156,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
                   </div>
                   <button
                     onClick={() => { s3Upload.removeEntry(entry.id); }}
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                    className="p-2 hover:bg-muted rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -188,7 +188,7 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
                 value={changelog}
                 onChange={(e) => setChangelog(e.target.value)}
                 placeholder="What changed in this version? (e.g., Updated structural calculations...)"
-                className="min-h-[80px] border-gray-200 rounded-xl focus:ring-primary/20 p-3 text-sm"
+                className="min-h-[80px] border-border rounded-xl focus:ring-primary/20 p-3 text-sm"
               />
             </div>
 
@@ -202,8 +202,8 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
           </div>
         </div>
 
-        <DialogFooter className="px-8 py-6 border-t bg-gray-50/50 flex gap-3 shrink-0">
-          <Button variant="outline" onClick={handleClose} disabled={submitting} className="flex-1 font-normal h-11 border-gray-200 bg-white">Cancel</Button>
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/50 shrink-0">
+          <Button variant="outline" onClick={handleClose} disabled={submitting} className="flex-1 font-normal h-11 border-border bg-card">Cancel</Button>
           <Button
             onClick={handleSubmit}
             disabled={!entry || entry.status !== 'done' || submitting || !versionName.trim()}

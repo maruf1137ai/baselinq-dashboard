@@ -52,13 +52,13 @@ export const SIWorkflowStepper: React.FC<SIWorkflowStepperProps> = ({ currentDec
   // want to lie by showing green Verified.
   if (state.kind === 'closed') {
     return (
-      <div className="w-full bg-white border border-border rounded-lg p-4 mt-4">
+      <div className="w-full bg-card border border-border rounded-lg p-4 mt-4">
         <div className="flex items-center justify-between relative">
           <div className="absolute left-0 right-0 top-[18px] h-[2px] bg-muted z-0" />
           {SI_WORKFLOW_STAGES.map((stage) => (
             <div key={stage.key} className="flex flex-col items-center relative z-10 flex-1">
               <div className="w-9 h-9 rounded-full flex items-center justify-center bg-muted border-2 border-border">
-                <Circle className="w-5 h-5 text-muted-foreground" />
+                <Circle className="h-5 w-5 text-muted-foreground" />
               </div>
               <span className="text-xs mt-2 text-center text-muted-foreground line-through">
                 {stage.label}
@@ -67,7 +67,7 @@ export const SIWorkflowStepper: React.FC<SIWorkflowStepperProps> = ({ currentDec
           ))}
         </div>
         <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <XCircle className="w-3.5 h-3.5" />
+          <XCircle className="h-3.5 w-3.5" />
           <span>
             {state.reason} — this Site Instruction was closed without completing the verification flow.
           </span>
@@ -79,7 +79,7 @@ export const SIWorkflowStepper: React.FC<SIWorkflowStepperProps> = ({ currentDec
   const currentStageIndex = state.index;
 
   return (
-    <div className="w-full bg-white border border-border rounded-lg p-4 mt-4">
+    <div className="w-full bg-card border border-border rounded-lg p-4 mt-4">
       <div className="flex items-center justify-between relative">
         {/* Progress Line */}
         <div className="absolute left-0 right-0 top-[18px] h-[2px] bg-muted z-0">
@@ -106,9 +106,9 @@ export const SIWorkflowStepper: React.FC<SIWorkflowStepperProps> = ({ currentDec
                   isPending && "bg-muted border-2 border-border"
                 )}
               >
-                {isCompleted && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                {isCurrent && <Clock className="w-5 h-5 text-primary" />}
-                {isPending && <Circle className="w-5 h-5 text-muted-foreground" />}
+                {isCompleted && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                {isCurrent && <Clock className="h-5 w-5 text-primary" />}
+                {isPending && <Circle className="h-5 w-5 text-muted-foreground" />}
               </div>
 
               {/* Label */}

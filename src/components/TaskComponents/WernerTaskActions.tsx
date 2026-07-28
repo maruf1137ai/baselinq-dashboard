@@ -475,7 +475,7 @@ export function WernerTaskActions({
                   "text-xs px-2.5 py-1 rounded-full border transition-colors",
                   isActive
                     ? `bg-${colour}-600 text-white border-${colour}-600`
-                    : `bg-white text-${colour}-700 border-${colour}-300 hover:bg-${colour}-50`,
+                    : `bg-card text-${colour}-700 border-${colour}-300 hover:bg-${colour}-50`,
                 )}
               >
                 {lvl[0].toUpperCase() + lvl.slice(1)}
@@ -504,9 +504,9 @@ export function WernerTaskActions({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="font-normal bg-primary hover:bg-primary/90 text-white">
-              <Plus className="mr-1 h-3.5 w-3.5" />
+              <Plus className="mr-1" />
               Action
-              <ChevronDown className="ml-1 h-3.5 w-3.5" />
+              <ChevronDown className="ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -524,7 +524,7 @@ export function WernerTaskActions({
           className="font-normal text-green-700 border-green-300 hover:bg-green-50"
           onClick={openSignModal}
         >
-          <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+          <ShieldCheck className="mr-1" />
           Sign &amp; Issue
         </Button>
       )}
@@ -537,17 +537,17 @@ export function WernerTaskActions({
       {canCloseOut && (
         <Button
           variant="outline"
-          className="font-normal text-slate-700 border-slate-300 hover:bg-slate-50"
+          className="font-normal text-slate-700 border-border hover:bg-muted/50"
           onClick={openCloseModal}
         >
-          <Lock className="mr-1 h-3.5 w-3.5" />
+          <Lock className="mr-1" />
           Close out
         </Button>
       )}
 
       {/* Sign & Issue modal */}
       <Dialog open={signOpen} onOpenChange={setSignOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Sign &amp; Issue</DialogTitle>
             <DialogDescription>
@@ -560,7 +560,7 @@ export function WernerTaskActions({
           {signMethod === "click-confirm" && HIGH_STAKES_SIGN_TYPES.has(taskType) ? (
             <div className="py-2">
               <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-                <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
                 <div className="space-y-2 text-amber-900">
                   <p className="font-normal">A signing PIN is required to sign this document.</p>
                   <p className="text-xs text-amber-800 leading-relaxed">
@@ -639,7 +639,7 @@ export function WernerTaskActions({
           and Close out. Replaces the browser-native confirm dialog so
           the warning matches the rest of the app. */}
       <Dialog open={riskOpen} onOpenChange={(o) => { if (!settingRisk) setRiskOpen(o); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Set risk to HIGH</DialogTitle>
             <DialogDescription>
@@ -651,7 +651,7 @@ export function WernerTaskActions({
 
           <div className="py-2">
             <div className="flex gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
-              <ShieldAlert className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
               <div className="space-y-1 text-amber-900">
                 <p className="font-normal">This action sends an email.</p>
                 <p className="text-xs text-amber-800 leading-relaxed">
@@ -689,7 +689,7 @@ export function WernerTaskActions({
         open={mitigationOpen}
         onOpenChange={(o) => { if (!escalatingClaim) setMitigationOpen(o); }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Escalate to formal Claim</DialogTitle>
             <DialogDescription>
@@ -744,7 +744,7 @@ export function WernerTaskActions({
           two final actions feel consistent. Optional reason for the
           audit trail; backend stores it on the close-out audit row. */}
       <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Close out {taskType}</DialogTitle>
             <DialogDescription>

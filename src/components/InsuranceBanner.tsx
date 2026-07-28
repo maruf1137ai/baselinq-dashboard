@@ -53,9 +53,9 @@ export const InsuranceBanner = () => {
   };
 
   return (
-    <div className="p-4 rounded-2xl border bg-amber-50 border-amber-200 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+    <div className="p-4 rounded-xl border bg-amber-50 border-amber-200 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
       <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-        <Shield className="w-5 h-5" />
+        <Shield className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-normal text-amber-900 leading-tight">
@@ -67,10 +67,10 @@ export const InsuranceBanner = () => {
       </div>
       <Button
         onClick={handleClick}
-        className="bg-foreground text-white hover:bg-foreground/90 h-8 px-4 text-[11px] rounded-lg font-normal flex items-center gap-2 shrink-0"
+        className="bg-foreground text-white hover:bg-foreground/90 h-8 px-4 text-xs rounded-lg font-normal flex items-center gap-2 shrink-0"
       >
         Upload now
-        <ArrowRight className="w-3 h-3" />
+        <ArrowRight />
       </Button>
     </div>
   );

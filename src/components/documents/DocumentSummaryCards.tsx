@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, AlertCircle, Lock } from 'lucide-react';
-import AiIcon from '@/components/icons/AiIcon';
+import { AiMark } from "@/components/icons/AiMark";
 import { cn } from '@/lib/utils';
 import { mockDocuments } from '@/data/mockDocuments';
 
@@ -34,7 +34,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md border-0 bg-sidebar rounded-xl shadow-none overflow-hidden group",
+        "cursor-pointer transition-all hover:shadow-md border-0 bg-muted/50 rounded-xl shadow-none overflow-hidden group",
         className
       )}
       onClick={onClick}
@@ -53,7 +53,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
                 badge.variant === 'warning' && "bg-orange-50 text-orange-700 border-orange-200",
                 badge.variant === 'destructive' && "bg-red-50 text-red-700 border-red-200",
                 badge.variant === 'success' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                badge.variant === 'default' && "bg-gray-100 text-gray-700 border-gray-200"
+                badge.variant === 'default' && "bg-muted text-gray-700 border-border"
               )}
             >
               {badge.text}
@@ -61,7 +61,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
           )}
         </div>
 
-        <div className="bg-white p-4 rounded-md">
+        <div className="bg-card p-4 rounded-md">
           <div className="flex flex-col">
             <h3 className={cn(
               "text-3xl font-normal",
@@ -115,28 +115,28 @@ export const DocumentSummaryCards: React.FC = () => {
         value={String(total)}
         subtitle={`${total} documents across ${uniqueCategories} categories`}
         breakdown={breakdownParts.join(' · ')}
-        icon={<FileText className="w-4 h-4" />}
+        icon={<FileText className="h-4 w-4" />}
       />
       <SummaryCard
         title="With AI Flags"
         value={String(totalFlags)}
         subtitle={`${highFlags} high · ${mediumFlags} medium`}
         badge={{ text: `${flaggedDocs.length} flagged`, variant: 'warning' }}
-        icon={<AiIcon size={16} className="text-primary" />}
+        icon={<AiMark size={16} className="text-primary" />}
       />
       <SummaryCard
         title="Overdue Obligations"
         value="2"
         subtitle="Next due: March 15"
         badge={{ text: "2 Overdue", variant: 'destructive' }}
-        icon={<AlertCircle className="w-4 h-4 text-red-500" />}
+        icon={<AlertCircle className="h-4 w-4 text-red-500" />}
       />
       <SummaryCard
         title="Finance Gated"
         value={String(gatedDocs.length)}
         subtitle={`${gatedDocs.length} document${gatedDocs.length !== 1 ? 's' : ''} blocked`}
         breakdown={gatedDoc ? `${gatedDoc.reference}, awaiting TCC` : undefined}
-        icon={<Lock className="w-4 h-4 text-amber-500" />}
+        icon={<Lock className="h-4 w-4 text-amber-500" />}
         className="border-l-4 border-amber-400"
       />
     </div>

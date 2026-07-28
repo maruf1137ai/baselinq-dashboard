@@ -39,7 +39,7 @@ export function LocationMap({ coordinates, onLocationChange }: LocationMapProps)
   }, [coordinates]);
 
   return (
-    <div className="h-[400px] w-full rounded-lg overflow-hidden border border-border">
+    <div className="h-[400px] w-full rounded-xl overflow-hidden border border-border">
       <MapContainer
         center={[coordinates.lat, coordinates.lng]}
         zoom={13}

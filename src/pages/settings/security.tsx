@@ -143,11 +143,11 @@ const Security = () => {
       </div>
 
       {/* ── Signing PIN card ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <KeyRound className="w-4 h-4 text-muted-foreground" />
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground">Signing PIN</h3>
@@ -160,17 +160,17 @@ const Security = () => {
           <div className="shrink-0">
             {pinLoading ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Loading
               </span>
             ) : hasPin ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-xs text-green-700">
-                <ShieldCheck className="w-3 h-3" />
+                <ShieldCheck className="h-3 w-3" />
                 PIN set
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs text-amber-700">
-                <ShieldAlert className="w-3 h-3" />
+                <ShieldAlert className="h-3 w-3" />
                 Not set
               </span>
             )}
@@ -233,7 +233,7 @@ const Security = () => {
             )}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Tip: pick a PIN you don't use elsewhere. It only protects this app's signing
             action — not your login. You can change or clear it at any time.
           </p>
@@ -244,11 +244,11 @@ const Security = () => {
           Werner — when an Intention to Claim is filed against this user
           and the PM rates it HIGH risk, the broker entered here is the
           recipient of the automated warning email. */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Briefcase className="w-4 h-4 text-muted-foreground" />
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground">Insurance broker</h3>
@@ -262,17 +262,17 @@ const Security = () => {
           <div className="shrink-0">
             {profileLoading ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Loading
               </span>
             ) : hasBroker ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-xs text-green-700">
-                <ShieldCheck className="w-3 h-3" />
+                <ShieldCheck className="h-3 w-3" />
                 Contact set
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs text-amber-700">
-                <ShieldAlert className="w-3 h-3" />
+                <ShieldAlert className="h-3 w-3" />
                 Not set
               </span>
             )}
@@ -308,7 +308,7 @@ const Security = () => {
                 className={!brokerEmailValid ? "border-red-300 focus-visible:ring-red-200" : ""}
               />
               {!brokerEmailValid && (
-                <p className="text-[11px] text-red-600 mt-1">
+                <p className="text-xs text-red-600 mt-1">
                   Enter a valid email address.
                 </p>
               )}
@@ -337,7 +337,7 @@ const Security = () => {
             )}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Only used to send broker warnings when an IC against you reaches
             HIGH risk. Leave empty and you'll get an in-app reminder instead.
           </p>

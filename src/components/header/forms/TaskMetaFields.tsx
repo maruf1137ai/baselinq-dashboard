@@ -99,7 +99,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
         </PopoverTrigger>
 
         <PopoverContent
-          className="p-0 bg-white shadow-lg border border-border rounded-xl overflow-hidden"
+          className="p-0 bg-card shadow-lg border border-border rounded-xl overflow-hidden"
           style={{ width: "var(--radix-popover-trigger-width)" }}
           align="start"
         >
@@ -118,7 +118,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
           {/* List */}
           <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users found</li>
+              <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users match this search</li>
             )}
             {filtered.map((m) => {
               const selected_ = isSelected(m);
@@ -146,13 +146,13 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                   </div>
                   {/* Radio for single-select, checkbox circle for multi */}
                   <span
-                    className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    className={`flex-shrink-0 h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors ${
                       selected_
                         ? "border-primary bg-primary"
                         : "border-border bg-background"
                     }`}
                   >
-                    {selected_ && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {selected_ && <span className="w-1.5 h-1.5 rounded-full bg-card" />}
                   </span>
                 </li>
               );
@@ -174,6 +174,7 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
                 <span className="text-muted-foreground">— {u.role}</span>
               )}
               <button
+                aria-label="Remove user"
                 type="button"
                 onClick={() => onRemove(u.userId || u.id)}
                 className="hover:bg-border rounded"
@@ -296,7 +297,7 @@ export function TaskMetaFields({
                   : "Pick a date"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={value.dateRequired ? parseISO(value.dateRequired) : undefined}

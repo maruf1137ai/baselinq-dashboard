@@ -39,10 +39,10 @@ export function ProjectStatusCard({
   };
 
   const cardBg = {
-    default: 'bg-sidebar',
-    destructive: 'bg-red-50/80 border border-red-200/50',
-    success: 'bg-emerald-50/60 border border-emerald-200/40',
-    warning: 'bg-orange-50/60 border border-orange-200/40',
+    default: 'bg-muted/50',
+    destructive: 'bg-red-50/80',
+    success: 'bg-emerald-50/60',
+    warning: 'bg-orange-50/60',
   };
 
   const valueColor = {
@@ -70,19 +70,19 @@ export function ProjectStatusCard({
           )}
         </div>
 
-        <div className="bg-white p-[14px] rounded-md">
+        <div className="bg-card p-[14px] rounded-md">
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <div className="flex items-baseline gap-2">
               <h3 className={`text-3xl mt-5 ${valueClassName || valueColor[badgeVariant]}`}>{value}</h3>
               {trendIcon && <span className={`text-lg font-medium ${trendColor}`}>{trendIcon}</span>}
             </div>
-            {subtitle && <p className="text-xs text-gray2 bg-sidebar py-1.5 px-5 rounded">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-gray2 bg-muted/50 py-1.5 px-5 rounded">{subtitle}</p>}
           </div>
 
           {/* Progress arc for visual weight */}
           {(badgeVariant === 'destructive' || badgeVariant === 'success') && (
             <div className="mt-3">
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${badgeVariant === 'destructive' ? 'bg-red-400' : 'bg-emerald-400'}`}
                   style={{ width: `${Math.min(parseInt(value) || 50, 100)}%` }}

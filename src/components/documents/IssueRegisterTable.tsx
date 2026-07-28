@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, FileText } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { format } from 'date-fns';
 
 export interface IssueRegisterRow {
@@ -74,10 +75,10 @@ export function IssueRegisterTable({ folderId, projectId }: IssueRegisterTablePr
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30" />;
-    if (sortDirection === 'asc') return <ArrowUp className="ml-1 h-3 w-3 text-primary" />;
-    if (sortDirection === 'desc') return <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
-    return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30" />;
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-30" />;
+    if (sortDirection === 'asc') return <ArrowUp className="ml-1 h-3.5 w-3.5 text-primary" />;
+    if (sortDirection === 'desc') return <ArrowDown className="ml-1 h-3.5 w-3.5 text-primary" />;
+    return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-30" />;
   };
 
   const sortedRows = rows ? [...rows].sort((a, b) => {
@@ -131,15 +132,16 @@ export function IssueRegisterTable({ folderId, projectId }: IssueRegisterTablePr
 
   if (!rows || rows.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p className="text-sm">No documents found in this folder.</p>
-        <p className="text-xs mt-1">Upload documents to see them in the register.</p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No documents in this folder yet"
+        description="The issue register tracks each revision issued and to whom, so you can prove what was in circulation on any date."
+      />
     );
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -222,7 +224,7 @@ export function IssueRegisterTable({ folderId, projectId }: IssueRegisterTablePr
         </TableBody>
       </Table>
 
-      <div className="px-4 py-3 border-t bg-muted/20 text-xs text-muted-foreground">
+      <div className="px-4 py-3 border-t border-border bg-muted/50 text-xs text-muted-foreground">
         Showing {sortedRows.length} document{sortedRows.length !== 1 ? 's' : ''}
       </div>
     </div>

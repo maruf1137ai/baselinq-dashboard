@@ -347,34 +347,34 @@ export default function AuditPage() {
         <div className="px-8 py-[17px]">
           <div className="mb-1">
             <p className="text-base text-gray3 mb-1">Dashboard</p>
-            <h1 className="text-3xl tracking-tight text-foreground">Audit & Compliance</h1>
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">Audit & Compliance</h1>
           </div>
 
           <Tabs defaultValue="overview" className="mt-6">
-            <TabsList className="bg-[#F3F2F0] p-1 rounded-[10px] h-auto">
+            <TabsList className="bg-muted/50 p-1 rounded-lg h-auto">
               <TabsTrigger
                 value="overview"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
-                <BarChart3 className="w-4 h-4 mr-2" />
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                <BarChart3 className="h-4 w-4 mr-2" />
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="audit-trail"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
-                <Activity className="w-4 h-4 mr-2" />
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                <Activity className="h-4 w-4 mr-2" />
                 Audit Trail
               </TabsTrigger>
               <TabsTrigger
                 value="deadlines"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
-                <Clock className="w-4 h-4 mr-2" />
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                <Clock className="h-4 w-4 mr-2" />
                 Deadline Tracker
               </TabsTrigger>
               {accessLevel === "full" && (
                 <TabsTrigger
                   value="export"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-[8px] px-4 py-2 text-sm">
-                  <Download className="w-4 h-4 mr-2" />
+                  className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                  <Download className="h-4 w-4 mr-2" />
                   Export & Reports
                 </TabsTrigger>
               )}
@@ -384,13 +384,13 @@ export default function AuditPage() {
             <TabsContent value="overview" className="mt-6">
               {/* Stat Cards */}
               <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-[#F3F2F0] !border-0 rounded-[13px] shadow-none">
+                <Card className="bg-muted/50 !border-0 rounded-xl shadow-none">
                   <CardContent className="p-2.5">
                     <div className="flex items-center gap-2.5 mb-2">
                       <CashIcon />
                       <p className="text-sm text-gray2 mb-1">Compliance Score</p>
                     </div>
-                    <div className="bg-white py-[6px] px-[14px] rounded-[6px]">
+                    <div className="bg-card py-[6px] px-[14px] rounded-lg">
                       <h3 className="text-2xl text-[#0F172A]">{complianceData.score}%</h3>
                       <Progress value={complianceData.score} className="h-[8px] my-2.5" />
                       <p className="text-xs text-[#717784]">
@@ -404,13 +404,13 @@ export default function AuditPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
                   <CardContent className="p-2.5 flex-1 flex flex-col">
                     <div className="flex items-center gap-2.5 mb-2">
                       <CashIcon />
                       <p className="text-sm text-gray2 mb-1">Pending Deadlines</p>
                     </div>
-                    <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                       <h3 className="text-2xl text-[#0F172A]">{complianceData.pendingDeadlines}</h3>
                       <p className="text-xs text-[#717784]">
                         {complianceData.pendingDeadlines > 0
@@ -421,13 +421,13 @@ export default function AuditPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
                   <CardContent className="p-2.5 flex-1 flex flex-col">
                     <div className="flex items-center gap-2.5 mb-2">
                       <CashIcon />
                       <p className="text-sm text-gray2 mb-1">Overdue Items</p>
                     </div>
-                    <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                       <h3 className="text-2xl text-[#0F172A]">
                         <span className={complianceData.overdueItems > 0 ? "text-[#DC2626]" : ""}>
                           {complianceData.overdueItems}
@@ -442,13 +442,13 @@ export default function AuditPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#F3F2F0] !border-0 flex flex-col rounded-[13px] shadow-none">
+                <Card className="bg-muted/50 !border-0 flex flex-col rounded-xl shadow-none">
                   <CardContent className="p-2.5 flex-1 flex flex-col">
                     <div className="flex items-center gap-2.5 mb-2">
                       <Asterisk />
                       <p className="text-sm text-gray2 mb-1">Risk Level</p>
                     </div>
-                    <div className="bg-white flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-[6px]">
+                    <div className="bg-card flex flex-col justify-between flex-1 py-[10px] px-[14px] rounded-lg">
                       <Badge className={`${riskColors[complianceData.riskLevel]} border w-fit text-sm`}>
                         {complianceData.riskLevel}
                       </Badge>
@@ -461,13 +461,13 @@ export default function AuditPage() {
               </div>
 
               {/* Compliance by Task Type */}
-              <div className="mt-6 bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#E5E7EB]">
+              <div className="mt-6 bg-card rounded-xl border border-border overflow-hidden">
+                <div className="px-6 py-4 border-b border-border">
                   <h3 className="text-sm font-medium text-[#1A1A1A]">Compliance by Document Type</h3>
                 </div>
                 <Table>
-                  <TableHeader className="bg-[#FAFAFA]">
-                    <TableRow className="hover:bg-[#FAFAFA]">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-muted/50">
                       <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Document Type</TableHead>
                       <TableHead className="text-[#6B7280] font-normal">Total</TableHead>
                       <TableHead className="text-[#6B7280] font-normal">Compliant</TableHead>
@@ -481,10 +481,10 @@ export default function AuditPage() {
                       Object.entries(complianceData.byType).map(([type, data]) => {
                         const pct = data.total > 0 ? Math.round((data.compliant / data.total) * 100) : 0;
                         return (
-                          <TableRow key={type} className="hover:bg-gray-50 border-b border-[#E5E7EB] last:border-0">
+                          <TableRow key={type} className="hover:bg-muted/50 border-b border-border last:border-0">
                             <TableCell className="pl-6 py-4">
                               <div className="flex items-center gap-2">
-                                <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs font-medium">
+                                <Badge className="bg-muted text-[#1A1A1A] border-none text-xs font-medium">
                                   {type}
                                 </Badge>
                                 <span className="text-sm text-[#6B7280]">{TASK_TYPE_LABELS[type] || type}</span>
@@ -512,9 +512,9 @@ export default function AuditPage() {
                         <TableCell colSpan={6} className="text-center py-8 text-[#6B7280] text-sm">
                           {isLoading ? (
                             <div className="flex justify-center p-4">
-                              <AwesomeLoader message="Analyzing Compliance" />
+                              <AwesomeLoader message="Analyzing compliance" />
                             </div>
-                          ) : "No task data available"}
+                          ) : "No records to assess yet — compliance is scored once instructions, RFIs and variations are raised on this project."}
                         </TableCell>
                       </TableRow>
                     )}
@@ -532,7 +532,7 @@ export default function AuditPage() {
                   <span className="text-sm">Filter by type:</span>
                 </div>
                 <Select value={auditTypeFilter} onValueChange={setAuditTypeFilter}>
-                  <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
+                  <SelectTrigger className="w-[160px] bg-card border-border">
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -548,13 +548,13 @@ export default function AuditPage() {
               </div>
 
               {/* Timeline */}
-              <div className="bg-white rounded-[10px] border border-[#E5E7EB] p-6">
+              <div className="bg-card rounded-xl border border-border p-6">
                 <h3 className="text-sm font-medium text-[#1A1A1A] mb-6">Compliance Activity Timeline</h3>
-                <div className="relative border-l-2 border-gray-200 ml-4 space-y-8 pb-4">
+                <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
                   {auditTrail.length > 0 ? (
                     auditTrail.slice(0, 50).map((log: any, i: number) => (
                       <div key={i} className="relative pl-8">
-                        <div className={`absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
+                        <div className={`absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 rounded-full z-10 ${(log.action || "").toLowerCase().includes("completed") || (log.action || "").toLowerCase().includes("approved")
                           ? "border-green-600"
                           : (log.action || "").toLowerCase().includes("overdue") || (log.action || "").toLowerCase().includes("rejected")
                             ? "border-red-600"
@@ -564,17 +564,17 @@ export default function AuditPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-xs font-medium text-gray-900">{log.action || "Status Change"}</p>
                             {log.taskType && (
-                              <Badge className="bg-[#F3F4F6] text-[#6B7280] border-none text-[10px]">
+                              <Badge className="bg-muted text-[#6B7280] border-none text-xs">
                                 {log.taskType}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-[10px] text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 mt-1">
                             {formatDate(log.created_at || log.createdAt)}{" "}
                             &middot; {log.createdByName || "System"}
                           </p>
                           {log.description && (
-                            <p className="mt-1 text-[11px] text-gray-600 line-clamp-2">
+                            <p className="mt-1 text-xs text-gray-600 line-clamp-2">
                               {log.description}
                             </p>
                           )}
@@ -583,11 +583,11 @@ export default function AuditPage() {
                     ))
                   ) : (
                     <div className="relative pl-8">
-                      <div className="absolute -left-[9px] top-1 w-4 h-4 bg-white border-2 border-gray-300 rounded-full z-10" />
+                      <div className="absolute -left-[9px] top-1 h-4 w-4 bg-card border-2 border-border rounded-full z-10" />
                       <p className="text-xs text-gray-400">
                         {isLoading ? (
-                          <AwesomeLoader message="Compiling Audit Trail" />
-                        ) : "No audit activity recorded yet"}
+                          <AwesomeLoader message="Compiling audit trail" />
+                        ) : "No audit activity recorded yet — every action taken on this project is logged here with its author and timestamp."}
                       </p>
                     </div>
                   )}
@@ -604,7 +604,7 @@ export default function AuditPage() {
                   <span className="text-sm">Filters:</span>
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
+                  <SelectTrigger className="w-[160px] bg-card border-border">
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -618,7 +618,7 @@ export default function AuditPage() {
                   </SelectContent>
                 </Select>
                 <Select value={deadlineFilter} onValueChange={setDeadlineFilter}>
-                  <SelectTrigger className="w-[160px] bg-white border-[#E5E7EB]">
+                  <SelectTrigger className="w-[160px] bg-card border-border">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -633,9 +633,9 @@ export default function AuditPage() {
 
               {/* Deadline Summary Cards */}
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <Card className="bg-red-50 border-red-200 shadow-none rounded-[10px]">
+                <Card className="bg-red-50 border-red-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
                     <div>
                       <p className="text-2xl font-medium text-red-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining < 0 && !d.isCompleted).length}
@@ -644,9 +644,9 @@ export default function AuditPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-amber-50 border-amber-200 shadow-none rounded-[10px]">
+                <Card className="bg-amber-50 border-amber-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-amber-600" />
+                    <Clock className="h-5 w-5 text-amber-600" />
                     <div>
                       <p className="text-2xl font-medium text-amber-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining >= 0 && d.daysRemaining <= 3 && !d.isCompleted).length}
@@ -655,9 +655,9 @@ export default function AuditPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-green-50 border-green-200 shadow-none rounded-[10px]">
+                <Card className="bg-green-50 border-green-200 shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-2xl font-medium text-green-900">
                         {complianceData.deadlines.filter((d) => d.daysRemaining > 3 && !d.isCompleted).length}
@@ -669,10 +669,10 @@ export default function AuditPage() {
               </div>
 
               {/* Deadline Table */}
-              <div className="bg-white rounded-[10px] border border-[#E5E7EB] overflow-hidden">
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-[#FAFAFA]">
-                    <TableRow className="hover:bg-[#FAFAFA]">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-muted/50">
                       <TableHead className="pl-6 h-12 text-[#6B7280] font-normal">Task #</TableHead>
                       <TableHead className="text-[#6B7280] font-normal">Type</TableHead>
                       <TableHead className="text-[#6B7280] font-normal">JBCC Clause</TableHead>
@@ -686,12 +686,12 @@ export default function AuditPage() {
                   <TableBody>
                     {filteredDeadlines.length > 0 ? (
                       filteredDeadlines.map((d, i) => (
-                        <TableRow key={i} className="hover:bg-gray-50 border-b border-[#E5E7EB] last:border-0">
+                        <TableRow key={i} className="hover:bg-muted/50 border-b border-border last:border-0">
                           <TableCell className="pl-6 py-4 text-sm font-medium text-[#1A1A1A]">
                             {d.taskNumber}
                           </TableCell>
                           <TableCell className="py-4">
-                            <Badge className="bg-[#F3F4F6] text-[#1A1A1A] border-none text-xs">
+                            <Badge className="bg-muted text-[#1A1A1A] border-none text-xs">
                               {d.taskType}
                             </Badge>
                           </TableCell>
@@ -742,11 +742,11 @@ export default function AuditPage() {
               <TabsContent value="export" className="mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Export CSV */}
-                  <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
+                  <Card className="bg-card border border-border shadow-none rounded-xl">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-600" />
+                          <FileText className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Export CSV</h3>
@@ -761,18 +761,18 @@ export default function AuditPage() {
                         className="w-full"
                         variant="outline"
                         onClick={exportCSV}>
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="h-4 w-4 mr-2" />
                         Download CSV
                       </Button>
                     </CardContent>
                   </Card>
 
                   {/* Print Report */}
-                  <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
+                  <Card className="bg-card border border-border shadow-none rounded-xl">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                          <Printer className="w-5 h-5 text-green-600" />
+                          <Printer className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Print Report</h3>
@@ -787,18 +787,18 @@ export default function AuditPage() {
                         className="w-full"
                         variant="outline"
                         onClick={() => window.print()}>
-                        <Printer className="w-4 h-4 mr-2" />
+                        <Printer className="h-4 w-4 mr-2" />
                         Print Report
                       </Button>
                     </CardContent>
                   </Card>
 
                   {/* Summary Stats */}
-                  <Card className="bg-white border border-[#E5E7EB] shadow-none rounded-[10px]">
+                  <Card className="bg-card border border-border shadow-none rounded-xl">
                     <CardContent className="p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-purple-600" />
+                          <TrendingUp className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-[#1A1A1A]">Report Summary</h3>
@@ -822,7 +822,7 @@ export default function AuditPage() {
                           <span className="text-xs text-[#6B7280]">Compliance Score</span>
                           <span className="text-sm font-medium text-[#1A1A1A]">{complianceData.score}%</span>
                         </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-[#E5E7EB]">
+                        <div className="flex justify-between items-center pt-2 border-t border-border">
                           <span className="text-xs text-[#6B7280]">Risk Level</span>
                           <Badge className={`${riskColors[complianceData.riskLevel]} border text-xs`}>
                             {complianceData.riskLevel}

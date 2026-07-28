@@ -21,7 +21,7 @@ import { postData } from "@/lib/Api";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
-  "w-full px-4 py-3 bg-[#f5f5f8] border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-white transition-all";
+  "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
 const LABEL_CLS = "block text-xs text-gray-500 mb-1.5";
 
 const FEATURES = [
@@ -151,7 +151,7 @@ export default function ForgotPassword() {
 
   // ── render ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f5f7]">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* ── Left panel (matches login.tsx / signup.tsx) ── */}
       <aside
         className="hidden lg:flex w-[45%] shrink-0 flex-col h-full"
@@ -159,28 +159,28 @@ export default function ForgotPassword() {
       >
         <div className="px-10 pt-10">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-white/10 rounded-[10px] flex items-center justify-center shrink-0 border border-white/10">
+            <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/10">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[15px] text-white/90 tracking-tight">baselinq</span>
+            <span className="text-sm text-white/90 tracking-tight">baselinq</span>
           </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-center px-10">
-          <h1 className="text-[36px] font-normal text-white leading-tight tracking-tight">
+          <h1 className="text-3xl font-normal text-white leading-tight tracking-tight">
             Forgot your password?
           </h1>
-          <p className="text-[14px] text-white/50 mt-3 leading-relaxed max-w-xs">
+          <p className="text-sm text-white/50 mt-3 leading-relaxed max-w-xs">
             No worries — we'll send a six-digit code to your email to verify it's you, then you can set a new password.
           </p>
 
           <div className="mt-10 space-y-4">
             {FEATURES.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-[#6c5ce7]" />
+                <div className="h-5 w-5 rounded-full bg-[#6c5ce7]/20 border border-[#6c5ce7]/30 flex items-center justify-center shrink-0">
+                  <Check className="h-3 w-3 text-[#6c5ce7]" />
                 </div>
-                <p className="text-[13px] text-white/60 leading-snug">{feature}</p>
+                <p className="text-xs text-white/60 leading-snug">{feature}</p>
               </div>
             ))}
           </div>
@@ -188,13 +188,13 @@ export default function ForgotPassword() {
 
         <div className="px-10 pb-10 mt-auto">
           <div className="border-t border-white/10 pt-6 space-y-3">
-            <p className="text-[13px] text-white/50">
+            <p className="text-xs text-white/50">
               Remembered it?{" "}
               <button onClick={() => navigate("/login")} className="text-[#6c5ce7] hover:underline">
                 Back to sign in
               </button>
             </p>
-            <p className="text-[11px] text-white/25 leading-relaxed">
+            <p className="text-xs text-white/25 leading-relaxed">
               By continuing you agree to our{" "}
               <span className="underline cursor-pointer hover:text-white/40 transition-colors">Terms of Service</span>
               {" "}and{" "}
@@ -205,16 +205,16 @@ export default function ForgotPassword() {
       </aside>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-white">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-card">
         <div className="flex items-center justify-between px-8 pt-5 pb-3 shrink-0">
           <div className="lg:hidden flex items-center gap-2.5">
-            <div className="h-8 w-8 bg-[#121212] rounded-[10px] flex items-center justify-center shrink-0">
+            <div className="h-8 w-8 bg-[#121212] rounded-lg flex items-center justify-center shrink-0">
               <img src="/LOGO-ai.png" alt="Baselinq" className="w-full h-full object-contain" />
             </div>
-            <span className="text-[14px] text-[#121212] tracking-tight">baselinq</span>
+            <span className="text-sm text-[#121212] tracking-tight">baselinq</span>
           </div>
           <div className="hidden lg:block" />
-          <Link to="/login" className="text-[12px] text-[#6c5ce7] hover:underline">
+          <Link to="/login" className="text-xs text-[#6c5ce7] hover:underline">
             Back to sign in
           </Link>
         </div>
@@ -231,7 +231,7 @@ export default function ForgotPassword() {
                 }}
                 className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="h-4 w-4" />
                 Back
               </button>
             )}
@@ -289,7 +289,7 @@ export default function ForgotPassword() {
 function StepHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="mb-8">
-      <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">{title}</h2>
+      <h2 className="text-2xl font-normal text-[#101828] tracking-tight">{title}</h2>
       <p className="text-sm text-gray-400 mt-1">{subtitle}</p>
     </div>
   );
@@ -492,11 +492,12 @@ function ResetStep({
               className={cn(INPUT_CLS, "pr-10")}
             />
             <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
         </div>
@@ -529,9 +530,9 @@ function DoneStep({ onContinue }: { onContinue: () => void }) {
     <div>
       <div className="mb-8">
         <div className="w-12 h-12 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-4">
-          <Check className="w-6 h-6 text-green-600" />
+          <Check className="h-6 w-6 text-green-600" />
         </div>
-        <h2 className="text-[22px] font-normal text-[#101828] tracking-tight">
+        <h2 className="text-2xl font-normal text-[#101828] tracking-tight">
           Password reset
         </h2>
         <p className="text-sm text-gray-400 mt-1">

@@ -1,4 +1,5 @@
-import { FileText, TrendingUp, Shield, Clock, AlertTriangle, Zap } from "lucide-react";
+import { FileText, TrendingUp, Shield, Clock, AlertTriangle } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 import { StatusHeader, sectionClass } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,7 +15,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
       />
 
       <div className={sectionClass(visibleSections, 1)}>
-        <div className="p-6 bg-sidebar rounded-xl">
+        <div className="p-6 bg-muted/50 rounded-xl">
           <h4 className="text-base text-foreground mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />Critical Path Summary
           </h4>
@@ -24,13 +25,13 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
       {data.cpi_categorization && (
         <div className={sectionClass(visibleSections, 2)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />Programme Categorization
             </h4>
             <div className="grid grid-cols-2 gap-4">
               {Object.entries(data.cpi_categorization).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">
                     {key.replace(/_/g, " ")}
                   </p>
@@ -49,13 +50,13 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
       {data.contract_compliance && (
         <div className={sectionClass(visibleSections, 3)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />Programme Compliance
             </h4>
             <div className="space-y-4">
               {Object.entries(data.contract_compliance).map(([key, value]: [string, any]) => (
-                <div key={key} className="p-4 bg-sidebar rounded-lg">
+                <div key={key} className="p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground normal-case">{key.replace(/_/g, " ")}</span>
                     <Badge variant="outline" className={`${value.status === "COMPLIANT" ? "text-green_dark border-green-200" : "text-warning border-warning/30"}`}>{value.status}</Badge>
@@ -84,7 +85,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
               <Clock className="h-4 w-4 text-indigo-600" />EOT & Delay Assessment
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-white rounded-lg border border-indigo-100">
+              <div className="p-4 bg-card rounded-lg">
                 <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Entitlement</p>
                 <Badge className={`${data.extension_of_time_analysis.eot_entitlement.entitled === 'yes' ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'}`}>
                   {data.extension_of_time_analysis.eot_entitlement.entitled.toUpperCase()}
@@ -95,7 +96,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 <p className="text-xs text-indigo-600 mt-2 font-medium">{data.extension_of_time_analysis.eot_entitlement.grounds}</p>
                 <p className="text-xs text-gray-500 mt-1 italic">{data.extension_of_time_analysis.eot_entitlement.finding}</p>
               </div>
-              <div className="p-4 bg-white rounded-lg border border-indigo-100">
+              <div className="p-4 bg-card rounded-lg">
                 <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Notice Requirements</p>
                 <p className="text-sm font-medium text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
                 {data.extension_of_time_analysis.notice_requirements.clause_reference && (
@@ -111,12 +112,12 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
       {data.potential_implications && (
         <div className={sectionClass(visibleSections, 5)}>
-          <div className="p-6 bg-white border border-border rounded-xl">
+          <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />Potential Implications
+              <AiMark className="text-primary" />Potential Implications
             </h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+              <div className="p-4 bg-red-50 rounded-lg">
                 <p className="text-xs font-medium text-red-700 normal-case mb-2">LD Exposure</p>
                 <Badge className="bg-red-600 text-white mb-2">{data.potential_implications.liquidated_damages.exposure ? 'YES' : 'NO'}</Badge>
                 {data.potential_implications.liquidated_damages.clause_reference && (
@@ -124,7 +125,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 )}
                 <p className="text-xs text-red-600">{data.potential_implications.liquidated_damages.assessment}</p>
               </div>
-              <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <div className="p-4 bg-indigo-50 rounded-lg">
                 <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Acceleration</p>
                 <Badge className="bg-indigo-600 text-white mb-2">{data.potential_implications.acceleration.applicable ? 'APPLICABLE' : 'N/A'}</Badge>
                 <p className="text-xs text-indigo-600">{data.potential_implications.acceleration.assessment}</p>
@@ -132,7 +133,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             </div>
 
             {data.potential_implications.resource_implications && (
-              <div className="mt-4 p-4 bg-sidebar rounded-lg">
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
                 <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Resource Needs</p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {data.potential_implications.resource_implications.key_resources.map((res: string, i: number) => (
@@ -144,7 +145,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
             )}
 
             {data.potential_implications.knock_on_effects && (
-              <div className="mt-4 p-4 border border-warning/20 bg-amber-50/30 rounded-lg">
+              <div className="mt-4 p-4 bg-amber-50/30 rounded-lg">
                 <p className="text-xs font-medium text-warning normal-case mb-2">Knock-on Effects</p>
                 <ul className="text-sm text-gray-600 space-y-1">
                   {data.potential_implications.knock_on_effects.successor_activities_affected.map((act: string, i: number) => (
