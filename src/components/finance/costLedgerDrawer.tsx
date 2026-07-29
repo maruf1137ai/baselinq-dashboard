@@ -65,12 +65,24 @@ export function CostLedgerDrawer({
     linkedVOId: "none" as string | number,
   });
 
-  // Fetch approved VOs for the project
+  // Fetch approved VOs for the project. `status=approved` is not a
+  // server-side filter this endpoint understands — the VO's own status
+  // lives nested under `item.task.status` (the top-level `status` is the
+  // kanban status: todo | in review | done), so filtering has to happen
+  // here, client-side, same as createPCDrawer.tsx's approvedVOs.
   const { data: voResponse } = useFetch<{ results: any[] }>(
-    projectId ? `tasks/tasks/?taskType=VO&project=${projectId}&status=approved` : ""
+    projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : ""
   );
 
-  const approvedVOs = voResponse?.results || [];
+  const approvedVOs = (voResponse?.results || [])
+    // "closed" included alongside "approved" — see createPCDrawer.tsx's
+    // approvedVOs for why (Closed is completion, not cancellation).
+    .filter((item: any) => ["approved", "closed"].includes(String(item.task?.status || "").toLowerCase()))
+    .map((item: any) => ({
+      id: item.task?._id,
+      vo_number: item.task?.voNumber,
+      title: item.task?.title,
+    }));
 
   useEffect(() => {
     if (editEntry) {

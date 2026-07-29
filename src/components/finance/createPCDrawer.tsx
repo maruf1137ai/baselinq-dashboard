@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import useFetch from "@/hooks/useFetch";
+import { useProject } from "@/hooks/useProjects";
 import { CloseIcon } from "../icons/icons";
 import { Plus, Trash2, Paperclip, X, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -237,6 +238,19 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     { enabled: !!(isOpen && projectId) }
   );
 
+  // Retention/VAT rates were hardcoded here (5% / 15%) regardless of the
+  // project's own project.retention_rate / vat_rate — correct for the
+  // seeded demo project, wrong for any project on different terms. Read the
+  // real rates, falling back to 5/15 only while the project hasn't loaded yet
+  // (matches the same fallback used in CreateProject.tsx / EditProject.tsx).
+  const { data: projectDetail } = useProject(isOpen ? projectId ?? undefined : undefined);
+  const retentionRatePct = Number(
+    (projectDetail as any)?.retentionRate ?? (projectDetail as any)?.retention_rate ?? 5
+  );
+  const vatRatePct = Number(
+    (projectDetail as any)?.vatRate ?? (projectDetail as any)?.vat_rate ?? 15
+  );
+
   // Every certificate already issued on this project. Needed for
   // previouslyCertified — see below.
   const { data: priorPCResponse } = useFetch<{ results: any[] }>(
@@ -274,7 +288,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       // todo | in review | done — so comparing it to "approved" never matched
       // and this list was permanently empty. The whole VO-to-certificate link
       // has never worked.
-      .filter((item: any) => String(item.task?.status || "").toLowerCase() === "approved")
+      //
+      // "closed" is included alongside "approved": Closed is a VO's normal
+      // end-of-life status after successful completion (not a cancellation —
+      // see billing/accrual.py's vo_status_reverses_charge, which treats
+      // Closed the same as Approved for fee purposes). A VO that's been
+      // approved and then closed still represents real, certifiable value.
+      .filter((item: any) => ["approved", "closed"].includes(String(item.task?.status || "").toLowerCase()))
       .map((item: any) => {
         const voNumber =
           item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`;
@@ -332,10 +352,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     const grossValuationAdjusted = grossValuation - penalties - advanceRecovery;
     // "Net Valuation This Period" = Claim column
     const netValuationThisPeriod = grossValuationAdjusted;
-    // Retention @ 5%
-    const retention = netValuationThisPeriod * 0.05;
+    const retention = netValuationThisPeriod * (retentionRatePct / 100);
     const subtotal = netValuationThisPeriod - retention + retentionRelease;
-    const vat = subtotal * 0.15;
+    const vat = subtotal * (vatRatePct / 100);
     // Amount Due = Net column
     const amountDue = subtotal + vat;
 
@@ -357,6 +376,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     penalties,
     advanceRecovery,
     retentionRelease,
+    retentionRatePct,
+    vatRatePct,
   ]);
 
   // ─── Work item helpers ──────────────────────────────────────────────────────
@@ -563,7 +584,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               New Payment Certificate
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {pcNumber} · Draft — approvals triggered on submission
+              {pcNumber} · Creates as Draft — submit for certification afterwards from the table
             </p>
           </div>
           <button
@@ -1005,7 +1026,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 <div className="border-t border-border mt-2 pt-3 space-y-2">
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">
-                      Less: Retention @ 5%
+                      Less: Retention @ {retentionRatePct}%
                     </span>
                     <span className="text-sm text-red-500">
                       - {fmt(calc.retention)}
@@ -1032,7 +1053,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     bold
                   />
                   <SummaryLine
-                    label="Plus: VAT @ 15%"
+                    label={`Plus: VAT @ ${vatRatePct}%`}
                     value={calc.vat}
                     indent
                     addition
@@ -1057,7 +1078,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   <span className="text-sm text-foreground tabular-nums">{fmtCard(calc.netValuationThisPeriod)}</span>
                 </div>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
-                  <span className="text-xs text-muted-foreground">Retention @ 5%</span>
+                  <span className="text-xs text-muted-foreground">Retention @ {retentionRatePct}%</span>
                   <span className="text-sm text-foreground tabular-nums">{fmtCard(calc.retention)}</span>
                 </div>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3 bg-primary/10">
@@ -1146,8 +1167,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         {/* ── Footer ─────────────────────────────────────────────────────────── */}
         <footer className="flex items-center justify-between px-6 py-4 border-t border-border bg-card shrink-0">
           <p className="text-xs text-muted-foreground max-w-xs">
-            Submitting will trigger the QS → PA → Employer approval chain.
-            Status and dates are system-managed.
+            Creates the certificate as Draft. Submit it for certification
+            (QS → Client → Post) from the Payment Certificates table afterwards.
           </p>
           <div className="flex items-center gap-3">
             <button
@@ -1162,7 +1183,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               title={!projectId ? "Select a project first" : undefined}
               className="h-10 px-5 text-sm text-primary-foreground bg-primary rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Submit Certificate
+              Create Certificate
             </button>
           </div>
         </footer>

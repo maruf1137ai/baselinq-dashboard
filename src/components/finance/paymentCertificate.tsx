@@ -30,10 +30,14 @@ const PaymentCertificate = () => {
 
   const certificates: PCEntry[] = data?.results ?? [];
 
-  // Drafting a certificate is an edit action. `finance.approve_payment` is the
-  // separate final sign-off and must not double as permission to create.
+  // Matches the backend's own check (_can_create_payment_certificate in
+  // tasks/views.py): drafting a certificate requires finance.approve_payment,
+  // not finance.edit. This used to check finance.edit, which meant a
+  // Construction Manager (finance.edit, no approve_payment) saw this button
+  // and got a silent 403, while a QS (approve_payment, no finance.edit) —
+  // the role that actually drafts certificates — never saw it at all.
   const projectIdNum = parseInt(projectId) || null;
-  const canCreatePC = usePermission("finance.edit", projectIdNum);
+  const canCreatePC = usePermission("finance.approve_payment", projectIdNum);
 
   return (
     // pt-6 only: the page already has DashboardLayout's p-6, so a p-6 here

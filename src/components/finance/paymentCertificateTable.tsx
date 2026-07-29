@@ -1,10 +1,15 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
+import useFetch from "@/hooks/useFetch";
+import { postData } from "@/lib/Api";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
 import {
   Dialog,
@@ -15,7 +20,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
-import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,9 +34,33 @@ export interface PCEntry {
   retentionAmount: number;
   netAmount: number;
   approvalStatus: string;
+  workflowState?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+// Human labels for the certification-chain transitions the backend exposes
+// (tasks/views_pc_workflow.py) — there was previously no UI at all for
+// submit/qs-approve/client-approve/post, so a certificate could only ever
+// sit in Draft. "post" is called out specially: it's the commercial moment
+// that accrues the platform fee.
+const TRANSITION_LABELS: Record<string, string> = {
+  submit: "Submit for Certification",
+  qs_approve: "QS Approve",
+  client_approve: "Client Approve",
+  post: "Post Certificate",
+  reject: "Reject",
+  cancel: "Cancel",
+};
+
+const TRANSITION_URL_PATH: Record<string, string> = {
+  submit: "submit",
+  qs_approve: "qs-approve",
+  client_approve: "client-approve",
+  post: "post",
+  reject: "reject",
+  cancel: "cancel",
+};
 
 interface PaymentCertificateTableProps {
   orders: PCEntry[];
@@ -98,6 +127,50 @@ const PCDetailsDialog = ({
 
 const PCRow = ({ entry }: { entry: PCEntry }) => {
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [actingOn, setActingOn] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetched lazily (only once the row's menu is opened) rather than for
+  // every row on page load — availableTransitions is already permission-
+  // filtered server-side for the current user, so the buttons shown here
+  // can never offer an action that would 403.
+  const { data: workflow, isLoading: workflowLoading } = useFetch<{
+    availableTransitions: string[];
+    workflowState: string;
+  }>(`tasks/payment-certificates/${entry.id}/workflow/`, { enabled: menuOpen });
+
+  const runTransition = async (transition: string) => {
+    setActingOn(transition);
+    try {
+      const requiresReason = transition === "reject" || transition === "cancel";
+      const reason = requiresReason
+        ? window.prompt(`Reason for ${TRANSITION_LABELS[transition].toLowerCase()}:`) || ""
+        : undefined;
+      if (requiresReason && !reason) {
+        setActingOn(null);
+        return;
+      }
+      await postData({
+        url: `tasks/payment-certificates/${entry.id}/${TRANSITION_URL_PATH[transition]}/`,
+        data: reason !== undefined ? { reason } : {},
+      });
+      toast.success(`${entry.pcNumber}: ${TRANSITION_LABELS[transition]} done.`);
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          typeof query.queryKey[0] === "string" &&
+          (query.queryKey[0].startsWith("tasks/payment-certificates") ||
+            query.queryKey[0].startsWith("cost-ledger")),
+      });
+      setMenuOpen(false);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.error || err?.message || "Action failed.";
+      toast.error(message);
+    } finally {
+      setActingOn(null);
+    }
+  };
 
   return (
     <tr className="hover:bg-muted/50 transition-colors">
@@ -128,17 +201,47 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
         {formatDate(entry.updatedAt)}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground">
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
               aria-label="More actions" className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-40" align="end">
+          <DropdownMenuContent className="w-52" align="end">
             <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
               View Details
             </DropdownMenuItem>
+            {menuOpen && (workflowLoading || (workflow?.availableTransitions?.length ?? 0) > 0) && (
+              <>
+                <DropdownMenuSeparator />
+                {workflowLoading ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Checking available actions…
+                  </div>
+                ) : (
+                  workflow?.availableTransitions?.map((t) => (
+                    <DropdownMenuItem
+                      key={t}
+                      disabled={actingOn !== null}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        runTransition(t);
+                      }}
+                      className={t === "reject" || t === "cancel" ? "text-destructive" : undefined}
+                    >
+                      {actingOn === t ? (
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" /> {TRANSITION_LABELS[t]}…
+                        </span>
+                      ) : (
+                        TRANSITION_LABELS[t] || t
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         <PCDetailsDialog
