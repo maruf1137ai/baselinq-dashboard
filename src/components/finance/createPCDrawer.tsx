@@ -419,11 +419,25 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     );
   };
 
+  // Clamped to what is actually left on the variation.
+  //
+  // `remainingValue` was computed and displayed but never enforced, so nothing
+  // stopped the same variation being certified in full on two certificates —
+  // the employer paying twice for the same work. The server now refuses that
+  // outright (tasks/pc_integrity.py); this clamp exists so the operator is
+  // stopped at the input rather than at a save that fails, and so the two
+  // never disagree about what is allowed.
+  //
+  // Negative entries pass through: correcting an earlier certificate is
+  // legitimate, and the server treats it as a warning rather than an error.
   const updateVOThisPeriod = (voNumber: string, value: number) => {
     setVoItems((items) =>
-      items.map((v) =>
-        v.voNumber === voNumber ? { ...v, thisPeriod: value } : v
-      )
+      items.map((v) => {
+        if (v.voNumber !== voNumber) return v;
+        const remaining = v.remainingValue ?? Infinity;
+        const clamped = value > 0 ? Math.min(value, remaining) : value;
+        return { ...v, thisPeriod: clamped };
+      })
     );
   };
 
@@ -531,6 +545,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       advanceRecovery,
       retentionRelease,
       notes,
+      // Sent for display continuity only. The server recomputes every one of
+      // these from the components above plus the project's own retention and
+      // VAT rates, and ignores what arrives here — see
+      // PaymentCertificateSerializer.validate(). Previously these were stored
+      // verbatim, which is how a hardcoded 5%/15% in this file ended up
+      // deciding what a certificate said.
       claim: calc.netValuationThisPeriod,
       retention: calc.retention,
       net: calc.amountDue,
