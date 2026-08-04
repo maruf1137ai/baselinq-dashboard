@@ -1,6 +1,6 @@
 import { FileText, Shield, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
-import { StatusHeader, sectionClass } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -12,6 +12,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
         id={data.si_id}
         visibleSections={visibleSections}
       />
+      <CitationValidationBanner validation={data.validation} visibleSections={visibleSections} index={0} />
 
       <div className={sectionClass(visibleSections, 1)}>
         <div className="p-6 bg-muted/50 rounded-xl">

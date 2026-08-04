@@ -1023,6 +1023,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                           <div className="relative text-[#101828] text-base">
                             <p className="leading-[26px] whitespace-pre-wrap">
                               {msg.content}
+                              {msg.is_edited && (
+                                <span className="text-xs text-muted-foreground ml-1.5 align-middle">(edited)</span>
+                              )}
                             </p>
                           </div>
                           {/* Files */}
@@ -1116,6 +1119,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                               <div className="relative text-foreground text-base">
                                 <p className="leading-[26px] whitespace-pre-wrap">
                                   {msg.content}
+                                  {msg.is_edited && (
+                                    <span className="text-xs text-muted-foreground ml-1.5 align-middle">(edited)</span>
+                                  )}
                                 </p>
                               </div>
                               {/* Files */}

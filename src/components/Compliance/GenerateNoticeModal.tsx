@@ -1,41 +1,37 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { useGenerateObligationNotice } from '@/hooks/useCompliance';
+import { toast } from 'sonner';
+import type { ComplianceObligation } from '@/hooks/useCompliance';
 
 interface GenerateNoticeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId: string | number | null;
+  obligation: ComplianceObligation | null;
 }
 
-const GenerateNoticeModal: React.FC<GenerateNoticeModalProps> = ({ isOpen, onClose }) => {
-  const [recipients, setRecipients] = useState<string[]>(['client@project.com']);
-  const [newRecipient, setNewRecipient] = useState('');
-  const [noticeContent, setNoticeContent] = useState(`RE: Client Approval for VO-001
+const GenerateNoticeModal: React.FC<GenerateNoticeModalProps> = ({ isOpen, onClose, projectId, obligation }) => {
+  const [noticeContent, setNoticeContent] = useState('');
+  const { mutateAsync: generateNotice, isPending } = useGenerateObligationNotice(projectId);
 
-Dear Client,
-
-In accordance with JBCC 13.3, we hereby provide notice regarding Client Approval for VO-001.
-
-This matter requires your immediate attention as it blocks payment.
-
-2 days until penalty clause applies`);
-
-  const handleAddRecipient = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newRecipient.trim()) {
-      e.preventDefault();
-      if (!recipients.includes(newRecipient.trim())) {
-        setRecipients([...recipients, newRecipient.trim()]);
-      }
-      setNewRecipient('');
+  useEffect(() => {
+    if (isOpen) {
+      setNoticeContent(obligation?.noticeContent || '');
     }
-  };
+  }, [isOpen, obligation]);
 
-  const removeRecipient = (recipientToRemove: string) => {
-    setRecipients(recipients.filter(r => r !== recipientToRemove));
+  const handleGenerate = async () => {
+    if (!obligation) return;
+    try {
+      const result = await generateNotice(obligation._id);
+      setNoticeContent(result.noticeContent);
+      toast.success('Notice drafted');
+    } catch {
+      toast.error('Failed to generate notice');
+    }
   };
 
   return (
@@ -44,43 +40,29 @@ This matter requires your immediate attention as it blocks payment.
         <DialogHeader className="px-6 py-4 border-b border-border">
           <DialogTitle>Generate Notice</DialogTitle>
         </DialogHeader>
-        
+
         <div className="p-6 space-y-6">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground font-normal">Compliance Item</label>
             <div className="bg-muted/50 border border-border py-[9px] px-[17px] rounded-xl text-muted-foreground text-base">
-              Client Approval for VO-001
-            </div> 
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground font-normal">Recipients</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {recipients.map((recipient) => (
-                <Badge key={recipient} variant="secondary" className="bg-[#E8F1FF] rounded-xl text-[#3A6FF7] hover:bg-blue-100 gap-1 pl-2 pr-1 py-1 font-normal">
-                  {recipient}
-                  <button aria-label={`Remove ${recipient}`} onClick={() => removeRecipient(recipient)} className="hover:bg-primary/10 rounded-full p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
+              {obligation?.title || '—'}
             </div>
-            <Input 
-              placeholder="Add recipient email..." 
-              value={newRecipient}
-              onChange={(e) => setNewRecipient(e.target.value)}
-              onKeyDown={handleAddRecipient}
-              className="bg-card"
-            />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground font-normal">Notice Content</label>
-            <Textarea 
-              value={noticeContent}
-              onChange={(e) => setNoticeContent(e.target.value)}
-              className="min-h-[200px] font-sans text-base leading-relaxed resize-none"
-            />
+            <label className="text-sm text-muted-foreground font-normal">Drafted Notice</label>
+            {noticeContent ? (
+              <Textarea
+                value={noticeContent}
+                onChange={(e) => setNoticeContent(e.target.value)}
+                className="min-h-[200px] font-sans text-base leading-relaxed resize-none"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic py-4">
+                No notice drafted yet. Click "Generate" below to draft one from this obligation's
+                real details — Baselinq drafts a notice, it never serves one on your behalf.
+              </p>
+            )}
           </div>
         </div>
 
@@ -88,8 +70,12 @@ This matter requires your immediate attention as it blocks payment.
           <Button variant="outline" onClick={onClose} className="bg-card">
             Cancel
           </Button>
-          <Button className="bg-primary hover:bg-primary text-primary-foreground">
-            Generate & Link to Task
+          <Button
+            variant="outline"
+            onClick={handleGenerate}
+            disabled={isPending || !obligation}
+          >
+            {isPending ? 'Generating...' : 'Generate'}
           </Button>
         </DialogFooter>
       </DialogContent>

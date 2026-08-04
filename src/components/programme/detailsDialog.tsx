@@ -1,91 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { format, parseISO } from "date-fns";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { CalendarIcon, PlusIcon, TriangleAlert } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Calendar } from "../ui/calendar";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Title } from "@radix-ui/react-toast";
 import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
+import type { Milestone as MilestoneType } from "@/hooks/useMilestones";
 
-const users = [
-  {
-    id: "1",
-    name: "John Doe",
-    avatar: "https://i.pravatar.cc/150?img=1",
-  },
-  {
-    id: "2",
-    name: "Sarah Kim",
-    avatar: "https://i.pravatar.cc/150?img=2",
-  },
-  {
-    id: "3",
-    name: "Michael Smith",
-    avatar: "https://i.pravatar.cc/150?img=3",
-  },
-];
+const STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  in_progress: "In Progress",
+  completed: "Completed",
+  delayed: "Delayed",
+};
 
-const priorityBtns = [
-  {
-    id: 1,
-    title: "Low",
-  },
-  {
-    id: 2,
-    title: "Medium",
-  },
-  {
-    id: 3,
-    title: "High",
-  },
-];
+const STATUS_BADGE: Record<string, string> = {
+  planned: "text-gray-600 bg-muted border-border",
+  in_progress: "text-purple-700 bg-purple-50 border-purple-200",
+  completed: "text-green-600 bg-green-50 border-green-200",
+  delayed: "text-red-600 bg-red-50 border-red-200",
+};
 
-export function ViewDetailsDialog() {
+function formatDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  try {
+    return format(parseISO(iso), "dd MMM yyyy");
+  } catch {
+    return "—";
+  }
+}
+
+interface ViewDetailsDialogProps {
+  milestone: MilestoneType;
+  onEdit?: () => void;
+  /** Custom trigger element. Defaults to a "View Full Details" button. */
+  trigger?: ReactNode;
+}
+
+export function ViewDetailsDialog({ milestone, onEdit, trigger }: ViewDetailsDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isOn, setIsOn] = useState(false);
-  const [date, setDate] = useState<Date>();
-  const [priorityBtn, setPriorityBtn] = useState("Low");
 
-  const toggleSwitch = () => {
-    setIsOn(!isOn);
-  };
+  const pct = milestone.percentComplete;
+  const hasBaseline = Boolean(milestone.baselineStart && milestone.baselineEnd);
+  const startSlipped = hasBaseline && milestone.baselineStart !== milestone.startDate;
+  const endSlipped = hasBaseline && milestone.baselineEnd !== milestone.endDate;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-transparent border border-border hover:bg-primary text-foreground hover:text-white transition-all">
-          View Full Details
-        </Button>
+        {trigger ?? (
+          <Button className="bg-transparent border border-border hover:bg-primary text-foreground hover:text-white transition-all">
+            View Full Details
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent size="lg" className="p-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
-          <DialogTitle>
-            M1 – Site Establishment
-          </DialogTitle>
+          <DialogTitle>{milestone.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 px-6 pb-6">
@@ -93,17 +73,19 @@ export function ViewDetailsDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div className="item p-4 rounded-lg bg-muted">
                 <div className="text-sm text-muted-foreground mb-2">Status</div>
-                <Badge
-                  variant="outline"
-                  className={`text-sm text-green-500 bg-green-50 border border-green-200`}>
-                  Completed
+                <Badge variant="outline" className={cn("text-sm", STATUS_BADGE[milestone.status])}>
+                  {STATUS_LABELS[milestone.status] ?? milestone.status}
                 </Badge>
               </div>
               <div className="item p-4 rounded-lg bg-muted">
-                <div className="text-sm text-muted-foreground mb-2">Risk Score</div>
+                <div className="text-sm text-muted-foreground mb-2">Physical Progress</div>
                 <div className="flex items-center gap-2">
-                  <TriangleAlert className="h-5 w-5 text-green-500" />
-                  <span className="text-xl text-foreground">1</span>
+                  {milestone.status === "delayed" && (
+                    <TriangleAlert className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="text-xl text-foreground">
+                    {pct !== null && pct !== undefined ? `${pct}%` : "Not tracked"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -112,39 +94,66 @@ export function ViewDetailsDialog() {
               <div className="p-6 flex gap-3">
                 <div className="w-full">
                   <div className="title flex items-center gap-4 justify-between w-full">
-                    <div className="flex items-center gap-4 text-base">
-                      Timeline
-                    </div>
+                    <div className="flex items-center gap-4 text-base">Timeline</div>
+                    {!hasBaseline && (
+                      <span className="text-xs text-muted-foreground">
+                        Not yet baselined — accept a programme to freeze these dates
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-5 mt-5">
                     <div className="item">
-                      <div className="text-sm text-muted-foreground mb-1">Planned</div>
-                      <div className="text-base text-foreground">
-                        Oct 15, 2024
+                      <div className="text-sm text-muted-foreground mb-1">Baseline Start</div>
+                      <div
+                        className={cn(
+                          "text-base",
+                          startSlipped ? "text-amber-600" : "text-foreground"
+                        )}>
+                        {hasBaseline ? formatDate(milestone.baselineStart) : "—"}
                       </div>
                     </div>
                     <div className="item">
-                      <div className="text-sm text-muted-foreground mb-1">
-                        Forecast
+                      <div className="text-sm text-muted-foreground mb-1">Baseline End</div>
+                      <div
+                        className={cn(
+                          "text-base",
+                          endSlipped ? "text-amber-600" : "text-foreground"
+                        )}>
+                        {hasBaseline ? formatDate(milestone.baselineEnd) : "—"}
                       </div>
-                      <div className="text-base text-foreground">
-                        Oct 15, 2024
-                      </div>
+                    </div>
+                    <div className="item">
+                      <div className="text-sm text-muted-foreground mb-1">Live Start</div>
+                      <div className="text-base text-foreground">{formatDate(milestone.startDate)}</div>
+                    </div>
+                    <div className="item">
+                      <div className="text-sm text-muted-foreground mb-1">Live End</div>
+                      <div className="text-base text-foreground">{formatDate(milestone.endDate)}</div>
+                    </div>
+                    <div className="item">
+                      <div className="text-sm text-muted-foreground mb-1">Actual Completion</div>
+                      <div className="text-base text-foreground">{formatDate(milestone.actualEnd)}</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
             <div className="item border border-border rounded-lg mt-4">
               <div className="p-6 flex gap-3">
                 <div className="w-full">
                   <div className="progress">
                     <div className="flex justify-between items-center">
-                      <div className="text-muted-foreground text-sm">Progress</div>
-                      <div className="text-foreground text-sm">100%</div>
+                      <div className="text-muted-foreground text-sm">Physical Progress</div>
+                      <div className="text-foreground text-sm">
+                        {pct !== null && pct !== undefined ? `${pct}%` : "Not tracked"}
+                      </div>
                     </div>
                     <div className="bar bg-muted h-2 w-full rounded-full mt-2">
-                      <div className="w-[100%] bg-primary h-full rounded-full"></div>
+                      <div
+                        className="bg-primary h-full rounded-full transition-all"
+                        style={{ width: `${pct ?? 0}%` }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -153,55 +162,18 @@ export function ViewDetailsDialog() {
           </div>
 
           <div className="flex items-end justify-end border-t pt-4 mt-4">
-            <div className="flex gap-2  w-full ">
-              <Button className="w-full">Edit Milestone</Button>
-              <button className="generate-ai-btn w-full flex items-center gap-2 text-white text-base py-2 px-4 relative overflow-hidden border-b-2 border-black">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M6.62455 10.3333C6.56503 10.1026 6.44477 9.89206 6.27629 9.72358C6.10781 9.5551 5.89726 9.43485 5.66655 9.37533L1.57655 8.32066C1.50677 8.30085 1.44535 8.25883 1.40162 8.20096C1.35789 8.14309 1.33423 8.07253 1.33423 7.99999C1.33423 7.92746 1.35789 7.8569 1.40162 7.79903C1.44535 7.74116 1.50677 7.69913 1.57655 7.67933L5.66655 6.62399C5.89718 6.56453 6.10767 6.44438 6.27615 6.27602C6.44462 6.10766 6.56492 5.89725 6.62455 5.66666L7.67921 1.57666C7.69882 1.50661 7.7408 1.44489 7.79876 1.40092C7.85672 1.35696 7.92747 1.33316 8.00021 1.33316C8.07296 1.33316 8.14371 1.35696 8.20166 1.40092C8.25962 1.44489 8.30161 1.50661 8.32121 1.57666L9.37521 5.66666C9.43473 5.89737 9.55499 6.10792 9.72347 6.27641C9.89195 6.44489 10.1025 6.56514 10.3332 6.62466L14.4232 7.67866C14.4935 7.69806 14.5556 7.74 14.5998 7.79804C14.644 7.85609 14.6679 7.92703 14.6679 7.99999C14.6679 8.07295 14.644 8.1439 14.5998 8.20194C14.5556 8.25999 14.4935 8.30193 14.4232 8.32133L10.3332 9.37533C10.1025 9.43485 9.89195 9.5551 9.72347 9.72358C9.55499 9.89206 9.43473 10.1026 9.37521 10.3333L8.32055 14.4233C8.30094 14.4934 8.25896 14.5551 8.201 14.5991C8.14304 14.643 8.07229 14.6668 7.99955 14.6668C7.9268 14.6668 7.85605 14.643 7.79809 14.5991C7.74013 14.5551 7.69815 14.4934 7.67855 14.4233L6.62455 10.3333Z"
-                    stroke="white"
-                    stroke-width="1.33333"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M13.3333 2V4.66667"
-                    stroke="white"
-                    stroke-width="1.33333"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M14.6667 3.33333H12"
-                    stroke="white"
-                    stroke-width="1.33333"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M2.66675 11.3333V12.6667"
-                    stroke="white"
-                    stroke-width="1.33333"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M3.33333 12H2"
-                    stroke="white"
-                    stroke-width="1.33333"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Generate AI Notes
-                <div className="w-full h-6 layer absolute -bottom-2 left-0"></div>
-              </button>
-              <Button variant="outline">Cancel</Button>
+            <div className="flex gap-2 w-full">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setOpen(false);
+                  onEdit?.();
+                }}>
+                Edit Milestone
+              </Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
             </div>
           </div>
         </div>

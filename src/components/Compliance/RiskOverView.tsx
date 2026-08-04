@@ -1,30 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import type { ComplianceObligation } from '@/hooks/useCompliance';
 
-const riskItems = [
-  {
-    id: 'COMP-001',
-    name: 'Client Approval for VO-001',
-    risk: 'HIGH',
-  },
-  {
-    id: 'COMP-002',
-    name: 'Environmental Permit',
-    risk: 'MEDIUM',
-  },
-  {
-    id: 'COMP-003',
-    name: 'Extension Request',
-    risk: 'MEDIUM',
-  },
-  {
-    id: 'COMP-004',
-    name: 'HSE Induction',
-    risk: 'PROTECTED',
-  },
-];
+type RiskLevel = 'HIGH' | 'MEDIUM' | 'PROTECTED';
+
+interface RiskOverviewProps {
+  obligations: ComplianceObligation[];
+  onSelect: (obligation: ComplianceObligation) => void;
+}
 
 // Example usage: <RiskHeader level="HIGH" count={1} />
-const RiskHeader = ({ level, count }) => {
+const RiskHeader = ({ level, count }: { level: RiskLevel; count: number }) => {
   let colorClass = '';
   switch (level) {
     case 'HIGH':
@@ -48,44 +33,57 @@ const RiskHeader = ({ level, count }) => {
   );
 };
 
-// Example usage: <RiskItemCard name="Client Approval for VO-001" id="COMP-001" />
-const RiskItemCard = ({ name, id }) => {
+// Example usage: <RiskItemCard obligation={item} onSelect={onSelect} />
+const RiskItemCard = ({ obligation, onSelect }: { obligation: ComplianceObligation; onSelect: (obligation: ComplianceObligation) => void }) => {
   return (
-    <div className="bg-card p-3 rounded-xl  border border-border mb-4 cursor-pointer hover:shadow-md transition-shadow">
-      <p className="text-sm  text-foreground">{name}</p>
-      <p className="text-xs text-muted-foreground mt-1">{id}</p>
+    <div
+      onClick={() => onSelect(obligation)}
+      className="bg-card p-3 rounded-xl  border border-border mb-4 cursor-pointer hover:shadow-md transition-shadow"
+    >
+      <p className="text-sm  text-foreground">{obligation.title}</p>
+      <p className="text-xs text-muted-foreground mt-1">{obligation.documentReference}</p>
     </div>
   );
 };
 
-// Assuming riskItems is defined as above
-const RiskOverview = () => {
-  // 1. Group the items by risk level
-  const groupedItems = riskItems.reduce((acc, item) => {
-    acc[item.risk] = acc[item.risk] || [];
-    acc[item.risk].push(item);
-    return acc;
-  }, {});
+const RiskOverview: React.FC<RiskOverviewProps> = ({ obligations, onSelect }) => {
+  const groupedItems = useMemo(() => {
+    const groups: Record<RiskLevel, ComplianceObligation[]> = { HIGH: [], MEDIUM: [], PROTECTED: [] };
+    for (const item of obligations) {
+      if (item.isOverdue) {
+        groups.HIGH.push(item);
+      } else if (item.status === 'Completed') {
+        groups.PROTECTED.push(item);
+      } else if (item.daysUntilDue !== null && item.daysUntilDue <= 7) {
+        groups.MEDIUM.push(item);
+      }
+    }
+    return groups;
+  }, [obligations]);
 
-  // Define the order of appearance
-  const riskLevels = ['HIGH', 'MEDIUM', 'PROTECTED'];
+  const riskLevels: RiskLevel[] = ['HIGH', 'MEDIUM', 'PROTECTED'];
+  const hasAnyRisk = riskLevels.some((level) => groupedItems[level].length > 0);
 
   return (
     <div className="">
       <h1 className="text-sm font-medium text-foreground mb-6">Risk Overview</h1>
 
+      {!hasAnyRisk && (
+        <p className="text-sm text-muted-foreground">No compliance risks right now.</p>
+      )}
+
       {riskLevels.map(level => {
-        const items = groupedItems[level] || [];
+        const items = groupedItems[level];
         if (items.length === 0) return null; // Skip if no items for this level
 
         return (
           <div key={level}>
-            {/* 2. Render the Header */}
+            {/* Render the Header */}
             <RiskHeader level={level} count={items.length} />
 
-            {/* 3. Render the Cards for this level */}
+            {/* Render the Cards for this level */}
             {items.map(item => (
-              <RiskItemCard key={item.id} name={item.name} id={item.id} />
+              <RiskItemCard key={item._id} obligation={item} onSelect={onSelect} />
             ))}
           </div>
         );

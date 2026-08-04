@@ -51,6 +51,7 @@ import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
 import { EditDocumentModal } from '@/components/documents/EditDocumentModal';
 import { DocumentPreviewCard } from '@/components/documents/DocumentPreviewCard';
 import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
+import { ContractTermsPanel } from '@/components/documents/ContractTermsPanel';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData, patchData, deleteData } from '@/lib/Api';
 import type { LinkItem } from '@/components/documents/LinkDocumentModal';
@@ -157,6 +158,42 @@ const DocumentDetail = () => {
   });
 
   const obligations = obligationsData ?? [];
+
+  // Same query key/fn as ContractTermsPanel — TanStack Query dedupes this
+  // against that panel's own fetch, so mounting both costs one request, not
+  // two. Only CONFIRMED terms feed the Key Dates card below: an unconfirmed
+  // AI extraction is not a fact yet, per this product's own discipline
+  // (mirrors why the time-bar engine never guesses a clause reference).
+  const { data: contractTermsData } = useQuery<{
+    status: string;
+    terms: { termType: string; rawValue: string; editedValue: string; parsedValueDate: string | null; unit: string; status: string }[];
+  }>({
+    queryKey: ['contract-terms', docId, projectId],
+    queryFn: () => fetchData(`documents/${docId}/contract-terms/?project_id=${projectId}`),
+    enabled: !!docId && !!projectId,
+    refetchOnWindowFocus: false,
+  });
+
+  const confirmedTerms = (contractTermsData?.terms ?? []).filter((t) => t.status === 'confirmed');
+  const getConfirmedTerm = (termType: string) => confirmedTerms.find((t) => t.termType === termType);
+
+  const commencementTerm = getConfirmedTerm('commencement_date');
+  const practicalCompletionTerm = getConfirmedTerm('practical_completion_date');
+  const defectsLiabilityTerm = getConfirmedTerm('defects_liability_period');
+
+  const defectsLiabilityValue = defectsLiabilityTerm
+    ? `${defectsLiabilityTerm.editedValue || defectsLiabilityTerm.rawValue}${defectsLiabilityTerm.unit ? ` ${defectsLiabilityTerm.unit}` : ''}`.trim()
+    : null;
+
+  // Earliest upcoming (not overdue) obligation — an overdue one shown under
+  // a "next due" label would read as if it were still ahead of you.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextObligationDue = obligations
+    .filter((o: any) => (o.status === 'Pending' || o.status === 'In Progress') && o.dueDate)
+    .map((o: any) => ({ ...o, _dueDateObj: new Date(o.dueDate) }))
+    .filter((o: any) => o._dueDateObj >= today)
+    .sort((a: any, b: any) => a._dueDateObj.getTime() - b._dueDateObj.getTime())[0] ?? null;
 
   const { mutate: runAnalysis, isPending: isAnalysisRunning } = useMutation({
     mutationFn: () => postData({ url: `documents/${docId}/analyze/?project_id=${projectId}`, data: {} }),
@@ -607,11 +644,25 @@ const DocumentDetail = () => {
                       <h3 className="text-sm font-medium text-foreground">Key dates</h3>
                     </div>
                     <div className="space-y-1">
+                      {/* "Executed" has no corresponding extracted term type
+                          today (no commencement/practical-completion-style
+                          field for a contract's signing date) — left as-is
+                          rather than fabricated. See plan doc for why. */}
                       <DetailItem label="Executed" value={null} />
-                      <DetailItem label="Commencement" value={null} />
-                      <DetailItem label="Practical completion" value={null} />
-                      <DetailItem label="Defects liability" value={null} />
-                      <DetailItem label="Next obligation due" value={null} isActionable />
+                      <DetailItem
+                        label="Commencement"
+                        value={commencementTerm?.parsedValueDate ? formatDate(commencementTerm.parsedValueDate) : null}
+                      />
+                      <DetailItem
+                        label="Practical completion"
+                        value={practicalCompletionTerm?.parsedValueDate ? formatDate(practicalCompletionTerm.parsedValueDate) : null}
+                      />
+                      <DetailItem label="Defects liability" value={defectsLiabilityValue} />
+                      <DetailItem
+                        label="Next obligation due"
+                        value={nextObligationDue ? `${nextObligationDue.title} — ${formatDate(nextObligationDue.dueDate)}` : null}
+                        isActionable
+                      />
                       <DetailItem label="Last updated" value={doc.updatedAt ? formatDate(doc.updatedAt) : null} />
                     </div>
                   </div>
@@ -1057,6 +1108,8 @@ const DocumentDetail = () => {
                 </div>
               )}
               </section>
+
+              <ContractTermsPanel docId={docId!} projectId={projectId} />
             </TabsContent>
           </Tabs>
         </div>
