@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import useFetch from "@/hooks/useFetch";
 import { useProject } from "@/hooks/useProjects";
 import { CloseIcon } from "../icons/icons";
-import { Plus, Trash2, Paperclip, X, CalendarIcon } from "lucide-react";
+import { AlertTriangle, CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -11,6 +11,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoneyInput, parseMoneyInput } from "@/lib/money";
+import { clampToRemaining, sumCertifiedByVo } from "@/lib/pcHistory";
+import {
+  describePCSubmitError,
+  extractPCIntegrityError,
+  groupIntegrityIssues,
+  type PCIntegrityError,
+} from "@/lib/pcIntegrity";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +64,6 @@ export interface PCFormData {
   advanceRecovery: number;
   retentionRelease: number;
   notes: string;
-  attachments: File[];
   // Computed fields (for saving to table)
   claim: number; // Net Valuation This Period
   retention: number;
@@ -85,6 +92,13 @@ interface CreatePCDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string | null;
+  /**
+   * Must resolve once the certificate exists and must reject when it does not.
+   * The drawer awaits this: it stays open, with every line item intact, on a
+   * rejection. It previously called this without awaiting and closed
+   * regardless, so a certificate refused for over-certifying a variation
+   * destroyed the user's work and told them nothing.
+   */
   onSubmit?: (payload: CreatePCApiPayload) => void | Promise<void>;
 }
 
@@ -94,17 +108,16 @@ interface CreatePCDrawerProps {
 // were `Intl.NumberFormat("en-US")`, which renders South African rands in US
 // convention — "R 1,377,500.00" instead of "R 1 377 500,00" — so the drawer
 // disagreed with every table it feeds.
-const fmt = (v: number) => formatZAR(Math.abs(v));
+//
+// The `Math.abs` that used to sit here rendered a negative amount as a
+// positive one, so a sign error on a certificate was invisible. formatZAR
+// carries the sign itself.
+const fmt = (v: number) => formatZAR(v);
 
 const pct = (v: number) =>
   isNaN(v) || !isFinite(v) ? "0.0%" : `${Math.min(v, 999).toFixed(1)}%`;
 
-const fmtCard = (v: number) => formatZAR(Math.abs(v));
-
-/** Thousands grouping for the raw amount inside a currency input: same
- *  non-breaking space separator formatZAR uses, without the R prefix. */
-const groupDigits = (v: number) =>
-  String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const fmtCard = (v: number) => formatZAR(v);
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -114,57 +127,107 @@ const SectionHeader: React.FC<{ children: React.ReactNode }> = ({
   <h3 className="text-sm font-medium text-foreground mb-3">{children}</h3>
 );
 
+/**
+ * A money field that reads what the user typed.
+ *
+ * The previous implementation stripped every non-digit, so a decimal
+ * separator and a minus sign were deleted rather than read: pasting
+ * "1,250,000.00" out of a valuation stored 125 000 000, and "-5000" became
+ * +5000. See `@/lib/money` for the parsing and the cases it covers.
+ *
+ * Two behaviours matter beyond parsing:
+ *  • Unreadable text is not converted. The stored value is left alone and the
+ *    field is marked, rather than a guess being written behind the user.
+ *  • When the parent changes the value — the variation clamp does — the field
+ *    re-renders it immediately, even while focused. It used to keep its own
+ *    `raw` string, so the input read "250,000" while the summary below it read
+ *    "R 0", and flipped to "0" on blur with no explanation.
+ */
 const CurrencyInput: React.FC<{
   value: number;
   onChange: (v: number) => void;
   disabled?: boolean;
   className?: string;
-}> = ({ value, onChange, disabled = false, className = "" }) => {
-  const [focused, setFocused] = React.useState(false);
-  const [raw, setRaw] = React.useState(value === 0 ? "" : String(value));
+  "aria-label"?: string;
+  invalid?: boolean;
+}> = ({
+  value,
+  onChange,
+  disabled = false,
+  className = "",
+  invalid = false,
+  "aria-label": ariaLabel,
+}) => {
+    const [focused, setFocused] = React.useState(false);
+    const [raw, setRaw] = React.useState(() => (value === 0 ? "" : formatMoneyInput(value)));
+    const [unreadable, setUnreadable] = React.useState(false);
 
-  const formatted =
-    !focused && value !== 0
-      ? groupDigits(value)
-      : raw;
+    // Follow the parent whenever it disagrees with what is on screen — a
+    // clamped entry has to be visible the moment it happens.
+    React.useEffect(() => {
+      const shown = parseMoneyInput(raw);
+      if (shown !== null && shown !== value) {
+        setRaw(value === 0 ? "" : formatMoneyInput(value));
+        setUnreadable(false);
+      }
+      // `raw` is deliberately not a dependency: this reacts to the parent, not
+      // to typing.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value]);
 
-  const handleFocus = () => {
-    setFocused(true);
-    setRaw(value === 0 ? "" : String(value));
+    const handleFocus = () => {
+      setFocused(true);
+      setRaw(value === 0 ? "" : formatMoneyInput(value));
+      setUnreadable(false);
+    };
+
+    const handleBlur = () => {
+      setFocused(false);
+      // Settle on the stored value so what is shown is what will be submitted.
+      setRaw(value === 0 ? "" : formatMoneyInput(value));
+      setUnreadable(false);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const next = e.target.value;
+      setRaw(next);
+      const parsed = parseMoneyInput(next);
+      if (parsed === null) {
+        setUnreadable(true);
+        return; // keep the stored value; do not invent one
+      }
+      setUnreadable(false);
+      onChange(parsed);
+    };
+
+    const showInvalid = invalid || unreadable;
+
+    return (
+      <div
+        className={`flex items-center border rounded-md overflow-hidden bg-card focus-within:ring-1 ${showInvalid
+          ? "border-red-300 focus-within:ring-red-400 focus-within:border-red-400"
+          : "border-border focus-within:ring-primary focus-within:border-primary"
+          } ${disabled ? "bg-muted/50" : ""} ${className}`}
+      >
+        <span className="px-2.5 py-1.5 text-sm text-muted-foreground bg-muted/50 border-r border-border select-none">
+          R
+        </span>
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label={ariaLabel}
+          aria-invalid={showInvalid || undefined}
+          value={focused ? raw : value === 0 ? "" : formatMoneyInput(value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onChange={handleChange}
+          disabled={disabled}
+          className="flex-1 px-2.5 py-1.5 text-sm text-foreground focus:outline-none bg-transparent disabled:bg-muted/50 disabled:text-muted-foreground w-full tabular-nums"
+          placeholder="0,00"
+        />
+      </div>
+    );
   };
-
-  const handleBlur = () => {
-    setFocused(false);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/[^0-9]/g, "");
-    setRaw(digits);
-    onChange(digits === "" ? 0 : Number(digits));
-  };
-
-  return (
-    <div
-      className={`flex items-center border border-border rounded-md overflow-hidden bg-card focus-within:ring-1 focus-within:ring-primary focus-within:border-primary ${disabled ? "bg-muted/50" : ""
-        } ${className}`}
-    >
-      <span className="px-2.5 py-1.5 text-sm text-muted-foreground bg-muted/50 border-r border-border select-none">
-        R
-      </span>
-      <input
-        type="text"
-        inputMode="numeric"
-        value={focused ? raw : formatted}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onChange={handleChange}
-        disabled={disabled}
-        className="flex-1 px-2.5 py-1.5 text-sm text-foreground focus:outline-none bg-transparent disabled:bg-muted/50 disabled:text-muted-foreground w-full"
-        placeholder="0"
-      />
-    </div>
-  );
-};
 
 interface SummaryLineProps {
   label: string;
@@ -175,6 +238,8 @@ interface SummaryLineProps {
   indent?: boolean;
   border?: boolean;
   doubleBorder?: boolean;
+  /** Renders "—" instead of a figure — used while a rate is still unknown. */
+  pending?: boolean;
 }
 
 const SummaryLine: React.FC<SummaryLineProps> = ({
@@ -186,6 +251,7 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
   indent,
   border,
   doubleBorder,
+  pending,
 }) => (
   <div
     className={`flex justify-between items-center py-2 ${doubleBorder
@@ -204,7 +270,13 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
       className={`text-sm tabular-nums ${deduction ? "text-red-500" : addition ? "text-green-600" : "text-foreground"
         }`}
     >
-      {deduction ? `- ${fmt(value)}` : addition ? `+ ${fmt(value)}` : fmt(value)}
+      {pending
+        ? "—"
+        : deduction
+          ? `- ${fmt(value)}`
+          : addition
+            ? `+ ${fmt(value)}`
+            : fmt(value)}
     </span>
   </div>
 );
@@ -239,17 +311,31 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   );
 
   // Retention/VAT rates were hardcoded here (5% / 15%) regardless of the
-  // project's own project.retention_rate / vat_rate — correct for the
-  // seeded demo project, wrong for any project on different terms. Read the
-  // real rates, falling back to 5/15 only while the project hasn't loaded yet
-  // (matches the same fallback used in CreateProject.tsx / EditProject.tsx).
-  const { data: projectDetail } = useProject(isOpen ? projectId ?? undefined : undefined);
-  const retentionRatePct = Number(
-    (projectDetail as any)?.retentionRate ?? (projectDetail as any)?.retention_rate ?? 5
+  // project's own project.retention_rate / vat_rate — correct for the seeded
+  // demo project, wrong for any project on different terms.
+  //
+  // They then fell back to 5/15 *while the project was still loading*, and the
+  // drawer was submittable before it resolved. On a 10%-retention project the
+  // operator could read "Retention @ 5%", press Create, and have something
+  // else stored. Nothing is now computed or submitted against a placeholder:
+  // until the real rates arrive the retention and VAT lines read "—" and the
+  // submit button is held.
+  const { data: projectDetail, isLoading: isLoadingProject } = useProject(
+    isOpen ? projectId ?? undefined : undefined
   );
-  const vatRatePct = Number(
-    (projectDetail as any)?.vatRate ?? (projectDetail as any)?.vat_rate ?? 15
-  );
+  const rawRetentionRate =
+    (projectDetail as any)?.retentionRate ?? (projectDetail as any)?.retention_rate;
+  const rawVatRate = (projectDetail as any)?.vatRate ?? (projectDetail as any)?.vat_rate;
+  const retentionRatePct = Number(rawRetentionRate);
+  const vatRatePct = Number(rawVatRate);
+  const ratesReady =
+    !isLoadingProject &&
+    rawRetentionRate !== undefined &&
+    rawRetentionRate !== null &&
+    rawVatRate !== undefined &&
+    rawVatRate !== null &&
+    Number.isFinite(retentionRatePct) &&
+    Number.isFinite(vatRatePct);
 
   // Every certificate already issued on this project. Needed for
   // previouslyCertified — see below.
@@ -268,18 +354,16 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * could be certified in full on PC-001, PC-002 and PC-003 with nothing
    * anywhere noticing. The operator was shown a zero and told it came from
    * history, which is worse than showing nothing.
+   *
+   * It then summed *every* prior certificate regardless of status, so a draft
+   * that was never issued, or one that was rejected, ate the remainder and the
+   * clamp below forced the entry to zero. `sumCertifiedByVo` counts only the
+   * certificates that took effect — see `@/lib/pcHistory`.
    */
-  const certifiedByVo = useMemo<Record<string, number>>(() => {
-    const totals: Record<string, number> = {};
-    for (const pc of priorPCResponse?.results || []) {
-      for (const row of pc?.voItems || pc?.vo_items || []) {
-        const ref = String(row?.voNumber ?? row?.vo_number ?? "").trim();
-        if (!ref) continue;
-        totals[ref] = (totals[ref] || 0) + (Number(row?.thisPeriod ?? row?.this_period) || 0);
-      }
-    }
-    return totals;
-  }, [priorPCResponse]);
+  const certifiedByVo = useMemo<Record<string, number>>(
+    () => sumCertifiedByVo(priorPCResponse?.results),
+    [priorPCResponse]
+  );
 
   const approvedVOs = useMemo<VOLineItem[]>(() => {
     return (voResponse?.results || [])
@@ -336,10 +420,28 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // Retention Release (editable)
   const [retentionRelease, setRetentionRelease] = useState(0);
 
-  // Notes & Attachments
+  // Notes
+  //
+  // The "Supporting Documents" dropzone that used to sit beside this has been
+  // removed rather than repaired. It collected files into state that
+  // `handleSubmit` never referenced, so delivery notes substantiating a
+  // valuation were silently discarded on every create. There is no payment-
+  // certificate attachment route to send them to either: the attachment API
+  // (`uploadTaskAttachment` in @/lib/Api) enumerates its segments — variation
+  // orders, site instructions, RFIs, delay claims, critical-path items — and
+  // payment certificates are not among them, and the create endpoint's payload
+  // (`CreatePCApiPayload`) has no attachment field. A control that cannot do
+  // what it says is worse than no control; substantiation goes on the
+  // document record until the backend grows a route.
   const [notes, setNotes] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Per-variation feedback when an entry was held back to the remainder.
+  const [voNotes, setVoNotes] = useState<Record<string, string>>({});
+
+  // Submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [integrity, setIntegrity] = useState<PCIntegrityError | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // ─── Auto-calculations ──────────────────────────────────────────────────────
 
@@ -352,9 +454,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     const grossValuationAdjusted = grossValuation - penalties - advanceRecovery;
     // "Net Valuation This Period" = Claim column
     const netValuationThisPeriod = grossValuationAdjusted;
-    const retention = netValuationThisPeriod * (retentionRatePct / 100);
+    // Zero, not 5/15, while the project's real rates are still in flight. The
+    // rate-dependent lines render "—" until `ratesReady`, so no placeholder
+    // figure is ever shown as if it were the certificate's.
+    const retention = netValuationThisPeriod * ((ratesReady ? retentionRatePct : 0) / 100);
     const subtotal = netValuationThisPeriod - retention + retentionRelease;
-    const vat = subtotal * (vatRatePct / 100);
+    const vat = subtotal * ((ratesReady ? vatRatePct : 0) / 100);
     // Amount Due = Net column
     const amountDue = subtotal + vat;
 
@@ -378,6 +483,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     retentionRelease,
     retentionRatePct,
     vatRatePct,
+    ratesReady,
   ]);
 
   // ─── Work item helpers ──────────────────────────────────────────────────────
@@ -428,29 +534,31 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // stopped at the input rather than at a save that fails, and so the two
   // never disagree about what is allowed.
   //
+  // It used to do that silently. A typed figure was replaced by a smaller one —
+  // or by zero — with no feedback of any kind. `clampToRemaining` returns the
+  // reason, which is shown against the row.
+  //
   // Negative entries pass through: correcting an earlier certificate is
   // legitimate, and the server treats it as a warning rather than an error.
+  // With the input layer now reading a minus sign, that is finally true.
   const updateVOThisPeriod = (voNumber: string, value: number) => {
-    setVoItems((items) =>
-      items.map((v) => {
-        if (v.voNumber !== voNumber) return v;
-        const remaining = v.remainingValue ?? Infinity;
-        const clamped = value > 0 ? Math.min(value, remaining) : value;
-        return { ...v, thisPeriod: clamped };
-      })
+    const row = voItems.find((v) => v.voNumber === voNumber);
+    const { value: next, note } = clampToRemaining(
+      voNumber,
+      value,
+      row?.remainingValue
     );
-  };
-
-  // ─── File helpers ────────────────────────────────────────────────────────────
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments((prev) => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setVoItems((items) =>
+      items.map((v) => (v.voNumber === voNumber ? { ...v, thisPeriod: next } : v))
+    );
+    setVoNotes((prev) => {
+      if (!note) {
+        if (!prev[voNumber]) return prev;
+        const { [voNumber]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [voNumber]: note };
+    });
   };
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
@@ -523,15 +631,25 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   //   "advanceRecovery": 0,
   //   "retentionRelease": 0,
   //   "notes": "",
-  //   "attachments": [],
   //   "claim": 3465000,
   //   "retention": 173250,
   //   "net": 3785512.5
   // }
   // API payload = above + projectId (see CreatePCApiPayload). Backend stores full structure.
 
-  const handleSubmit = () => {
-    if (!projectId) {
+  /**
+   * Awaits the create and only closes once the certificate exists.
+   *
+   * The previous version fired `onSubmit` without awaiting it and then called
+   * `onClose()` unconditionally, while the parent caught the failure into a
+   * `console.error`. So a certificate refused for over-certifying a variation
+   * closed the drawer, changed nothing in the table, discarded every line item
+   * and showed the user no message at all. The server's own explanation —
+   * which names the variation and states the arithmetic — was in the response
+   * body the whole time.
+   */
+  const handleSubmit = async () => {
+    if (!projectId || isSubmitting || !ratesReady) {
       return;
     }
     const payload: CreatePCApiPayload = {
@@ -556,8 +674,125 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       net: calc.amountDue,
       approvalStatus: "pending",
     };
-    onSubmit?.(payload);
-    onClose();
+
+    setIsSubmitting(true);
+    setIntegrity(null);
+    setSubmitError(null);
+    try {
+      await onSubmit?.(payload);
+      onClose();
+    } catch (err) {
+      // Stay open. Every line item, note and VO amount is still on screen.
+      const found = extractPCIntegrityError(err);
+      if (found) setIntegrity(found);
+      else setSubmitError(describePCSubmitError(err));
+      bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ─── Open / close lifecycle ─────────────────────────────────────────────────
+
+  /**
+   * The drawer used to stay mounted at all times, hidden only by
+   * `translate-x-full`. Every input inside it was therefore in the tab order
+   * while closed, and `aria-modal="true"` was never removed, so the whole page
+   * was announced as behind a modal that was not on screen. It is now mounted
+   * only while open (or sliding out), which also gives the reset below
+   * something to hang off.
+   */
+  const [mounted, setMounted] = useState(isOpen);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      // A frame at translate-x-full before sliding in, or it appears instantly.
+      const frame = requestAnimationFrame(() => setShown(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setShown(false);
+    const timer = setTimeout(() => setMounted(false), 300); // matches duration-300
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  /**
+   * Everything the form holds, cleared on each open.
+   *
+   * There was no reset at all. Reopening the drawer pre-filled the previous
+   * certificate's line items, notes and variation amounts — and the VO resync
+   * above deliberately preserves them — so issuing the same certificate twice
+   * was one click away.
+   */
+  const resetForm = useCallback(() => {
+    setValuationPeriod(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    setCertificateDate(new Date());
+    setWorkItems([]);
+    setMaterialsOnSite(0);
+    setPenalties(0);
+    setAdvanceRecovery(0);
+    setRetentionRelease(0);
+    setNotes("");
+    setVoNotes({});
+    setIntegrity(null);
+    setSubmitError(null);
+    setIsSubmitting(false);
+  }, []);
+
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpen.current) {
+      wasOpen.current = true;
+      resetForm();
+      // Fresh copies, so a previous session's inclusions and amounts cannot
+      // survive into this one via the resync effect's `prev`.
+      setVoItems(approvedVOs.map((vo) => ({ ...vo })));
+    } else if (!isOpen) {
+      wasOpen.current = false;
+    }
+  }, [isOpen, approvedVOs, resetForm]);
+
+  // Escape, a focus trap and focus restore — none of which existed.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const restoreFocusTo = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    // `mounted` is in the deps because the panel is not in the DOM on the
+    // render that opens it — without this the initial focus lands nowhere.
+    if (!isOpen || !mounted) return;
+    if (!panelRef.current?.contains(document.activeElement)) {
+      restoreFocusTo.current = document.activeElement as HTMLElement | null;
+    }
+    panelRef.current?.focus();
+    return () => {
+      restoreFocusTo.current?.focus?.();
+    };
+  }, [isOpen, mounted]);
+
+  const FOCUSABLE =
+    'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      if (!isSubmitting) onClose();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const nodes = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+    if (!nodes || nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === panelRef.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
   };
 
   // ─── Derived totals for work table footer ────────────────────────────────────
@@ -575,20 +810,32 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     ),
   };
 
+  // Issues the server raised against a specific variation, keyed by VO number,
+  // so the message sits beside the field the operator has to change.
+  const grouped = useMemo(
+    () => groupIntegrityIssues(integrity?.issues ?? [], voItems.map((v) => v.voNumber)),
+    [integrity, voItems]
+  );
+
   // ─── JSX ─────────────────────────────────────────────────────────────────────
+
+  if (!mounted) return null;
 
   return (
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
-        onClick={onClose}
+        onClick={() => !isSubmitting && onClose()}
       />
 
       {/* Drawer panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-card shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
+        ref={panelRef}
+        tabIndex={-1}
+        onKeyDown={handlePanelKeyDown}
+        className={`fixed top-0 right-0 h-full w-full max-w-5xl bg-card shadow-xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out focus:outline-none ${shown ? "translate-x-0" : "translate-x-full"
           }`}
         role="dialog"
         aria-modal="true"
@@ -609,7 +856,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            disabled={isSubmitting}
+            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <CloseIcon className="h-4 w-4" />
             <span className="sr-only">Close</span>
@@ -617,8 +865,44 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         </header>
 
         {/* ── Scrollable body ─────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={bodyRef} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-8">
+            {/* ── The server's verdict on the last attempt ────────────────────── */}
+            {(integrity || submitError) && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="text-sm font-medium text-red-700">
+                      {integrity
+                        ? "The certificate was refused — nothing was saved"
+                        : "The certificate could not be created"}
+                    </p>
+                    {integrity?.messages.map((m, i) => (
+                      <p key={`msg-${i}`} className="text-sm text-red-700">
+                        {m}
+                      </p>
+                    ))}
+                    {grouped.general.map((d, i) => (
+                      <p key={`gen-${i}`} className="text-sm text-red-700">
+                        {d}
+                      </p>
+                    ))}
+                    {submitError && (
+                      <p className="text-sm text-red-700">{submitError}</p>
+                    )}
+                    <p className="text-xs text-red-700/80">
+                      Your line items are still here. Correct the amounts below and
+                      create it again.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── 1. Certificate Information ──────────────────────────────────── */}
             <section>
               <SectionHeader>Certificate Information</SectionHeader>
@@ -775,10 +1059,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                               }
                               className="w-full text-sm text-foreground focus:outline-none bg-transparent border-b border-transparent focus:border-primary py-0.5 min-w-[130px]"
                               placeholder="Description"
+                              aria-label="Work item description"
                             />
                           </td>
                           <td className="px-3 py-2 w-36">
                             <CurrencyInput
+                              aria-label="Contract value"
                               value={item.contractValue}
                               onChange={(v) =>
                                 updateWorkItem(item.id, "contractValue", v)
@@ -790,6 +1076,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           </td>
                           <td className="px-3 py-2 w-36">
                             <CurrencyInput
+                              aria-label="Amount certified this period"
                               value={item.thisPeriod}
                               onChange={(v) =>
                                 updateWorkItem(item.id, "thisPeriod", v)
@@ -888,52 +1175,77 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         </td>
                       </tr>
                     )}
-                    {voItems.map((vo) => (
-                      <tr
-                        key={vo.voNumber}
-                        className={`transition-colors ${vo.included
-                          ? "bg-primary/5"
-                          : "hover:bg-muted/50"
-                          }`}
-                      >
-                        <td className="px-3 py-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={vo.included}
-                            onChange={() => toggleVO(vo.voNumber)}
-                            className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-                          />
-                        </td>
-                        <td className="px-3 py-3 text-primary text-sm">
-                          {vo.voNumber}
-                        </td>
-                        <td className="px-3 py-3 text-foreground text-sm max-w-[220px] truncate">
-                          {vo.description}
-                        </td>
-                        <td className="px-3 py-3 text-right text-sm text-foreground tabular-nums">
-                          {fmt(vo.approvedValue)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-sm text-muted-foreground tabular-nums">
-                          {fmt(vo.previouslyCertified)}
-                        </td>
-                        <td className="px-3 py-3 w-36">
-                          <div className="flex justify-end">
-                            {vo.included ? (
-                              <CurrencyInput
-                                value={vo.thisPeriod}
-                                onChange={(v) =>
-                                  updateVOThisPeriod(vo.voNumber, v)
-                                }
-                              />
-                            ) : (
-                              <span className="text-sm text-muted-foreground pr-2">
-                                —
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {voItems.map((vo) => {
+                      const clampNote = voNotes[vo.voNumber];
+                      const voIssues = grouped.byVo[vo.voNumber] ?? [];
+                      return (
+                        <tr
+                          key={vo.voNumber}
+                          className={`transition-colors ${vo.included
+                            ? "bg-primary/5"
+                            : "hover:bg-muted/50"
+                            }`}
+                        >
+                          <td className="px-3 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={vo.included}
+                              onChange={() => toggleVO(vo.voNumber)}
+                              aria-label={`Include ${vo.voNumber} in this certificate`}
+                              className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-primary text-sm">
+                            {vo.voNumber}
+                          </td>
+                          <td className="px-3 py-3 text-foreground text-sm max-w-[220px] truncate">
+                            {vo.description}
+                          </td>
+                          <td className="px-3 py-3 text-right text-sm text-foreground tabular-nums">
+                            {fmt(vo.approvedValue)}
+                          </td>
+                          <td className="px-3 py-3 text-right text-sm text-muted-foreground tabular-nums">
+                            {fmt(vo.previouslyCertified)}
+                          </td>
+                          <td className="px-3 py-3 w-36">
+                            <div className="flex flex-col items-end gap-1">
+                              {vo.included ? (
+                                <CurrencyInput
+                                  aria-label={`Amount certified this period for ${vo.voNumber}`}
+                                  value={vo.thisPeriod}
+                                  invalid={voIssues.length > 0}
+                                  onChange={(v) =>
+                                    updateVOThisPeriod(vo.voNumber, v)
+                                  }
+                                />
+                              ) : (
+                                <span className="text-sm text-muted-foreground pr-2">
+                                  —
+                                </span>
+                              )}
+                              {vo.included && (
+                                <span className="text-xs text-muted-foreground text-right">
+                                  {fmt(vo.remainingValue ?? 0)} remaining
+                                </span>
+                              )}
+                              {clampNote && (
+                                <span className="text-xs text-amber-700 text-right">
+                                  {clampNote}
+                                </span>
+                              )}
+                              {voIssues.map((detail, i) => (
+                                <span
+                                  key={i}
+                                  className="text-xs text-red-600 text-right"
+                                >
+                                  {detail}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -952,6 +1264,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   Unfixed materials delivered but not yet incorporated
                 </label>
                 <CurrencyInput
+                  aria-label="Unfixed materials delivered but not yet incorporated"
                   value={materialsOnSite}
                   onChange={setMaterialsOnSite}
                 />
@@ -966,6 +1279,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       Contractual Penalties / Deductions
                     </label>
                     <CurrencyInput
+                      aria-label="Contractual penalties / deductions"
                       value={penalties}
                       onChange={setPenalties}
                     />
@@ -975,6 +1289,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       Advance Payment Recovery
                     </label>
                     <CurrencyInput
+                      aria-label="Advance payment recovery"
                       value={advanceRecovery}
                       onChange={setAdvanceRecovery}
                     />
@@ -1046,10 +1361,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 <div className="border-t border-border mt-2 pt-3 space-y-2">
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">
-                      Less: Retention @ {retentionRatePct}%
+                      {ratesReady
+                        ? `Less: Retention @ ${retentionRatePct}%`
+                        : "Less: Retention"}
                     </span>
                     <span className="text-sm text-red-500">
-                      - {fmt(calc.retention)}
+                      {ratesReady ? `- ${fmt(calc.retention)}` : "—"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-1">
@@ -1058,6 +1375,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </span>
                     <div className="w-36">
                       <CurrencyInput
+                        aria-label="Retention release"
                         value={retentionRelease}
                         onChange={setRetentionRelease}
                       />
@@ -1071,12 +1389,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     label="Subtotal (ex VAT)"
                     value={calc.subtotal}
                     bold
+                    pending={!ratesReady}
                   />
                   <SummaryLine
-                    label={`Plus: VAT @ ${vatRatePct}%`}
+                    label={ratesReady ? `Plus: VAT @ ${vatRatePct}%` : "Plus: VAT"}
                     value={calc.vat}
                     indent
                     addition
+                    pending={!ratesReady}
                   />
                 </div>
 
@@ -1086,9 +1406,18 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     Amount Due to Contractor
                   </span>
                   <span className="text-sm text-primary">
-                    {fmt(calc.amountDue)}
+                    {ratesReady ? fmt(calc.amountDue) : "\u2014"}
                   </span>
                 </div>
+
+                {!ratesReady && (
+                  <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Reading this project\u2019s retention and VAT rates. Retention, VAT
+                    and the amount due stay blank until they arrive \u2014 they are not
+                    assumed.
+                  </p>
+                )}
               </div>
 
               {/* Quick reference — 3 inline cards */}
@@ -1098,87 +1427,44 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   <span className="text-sm text-foreground tabular-nums">{fmtCard(calc.netValuationThisPeriod)}</span>
                 </div>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
-                  <span className="text-xs text-muted-foreground">Retention @ {retentionRatePct}%</span>
-                  <span className="text-sm text-foreground tabular-nums">{fmtCard(calc.retention)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {ratesReady ? `Retention @ ${retentionRatePct}%` : "Retention"}
+                  </span>
+                  <span className="text-sm text-foreground tabular-nums">
+                    {ratesReady ? fmtCard(calc.retention) : "\u2014"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3 bg-primary/10">
                   <span className="text-xs text-muted-foreground">Net (Amount Due)</span>
-                  <span className="text-sm text-primary tabular-nums">{fmtCard(calc.amountDue)}</span>
+                  <span className="text-sm text-primary tabular-nums">
+                    {ratesReady ? fmtCard(calc.amountDue) : "\u2014"}
+                  </span>
                 </div>
               </div>
             </section>
 
-            {/* ── 7. Notes & Attachments ───────────────────────────────────────── */}
+            {/* ── 7. Notes ──────────────────────────────────────────── */}
             <section>
-              <SectionHeader>Notes & Attachments</SectionHeader>
-              <div className="space-y-4">
-                {/* QS Notes */}
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1.5">
-                    QS Notes
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2.5 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder:text-muted-foreground"
-                    placeholder="Add valuation methodology, site notes, or special instructions…"
-                  />
-                </div>
-
-                {/* File upload */}
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1.5">
-                    Supporting Documents
-                  </label>
-                  <div
-                    onClick={() => fileRef.current?.click()}
-                    className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-                  >
-                    <Paperclip className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to upload valuations, site photos, delivery notes
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      PDF, PNG, JPG, XLSX
-                    </p>
-                  </div>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  {attachments.length > 0 && (
-                    <ul className="mt-2 space-y-1.5">
-                      {attachments.map((file, i) => (
-                        <li
-                          key={i}
-                          className="flex items-center justify-between px-3 py-2 bg-muted/50 border border-border rounded-md"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="text-sm text-foreground truncate">
-                              {file.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              ({(file.size / 1024).toFixed(0)} KB)
-                            </span>
-                          </div>
-                          <button
-                            aria-label="Remove attachment"
-                            onClick={() => removeAttachment(i)}
-                            className="text-muted-foreground hover:text-red-600 ml-2 shrink-0 transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+              <SectionHeader>Notes</SectionHeader>
+              <div>
+                <label
+                  htmlFor="create-pc-notes"
+                  className="block text-xs text-muted-foreground mb-1.5"
+                >
+                  QS Notes
+                </label>
+                <textarea
+                  id="create-pc-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2.5 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder:text-muted-foreground"
+                  placeholder="Add valuation methodology, site notes, or special instructions\u2026"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Supporting files attach to the document record on this project.
+                  A certificate carries no attachments of its own.
+                </p>
               </div>
             </section>
           </div>
@@ -1193,17 +1479,34 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="h-10 px-4 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted/50 transition-colors"
+              disabled={isSubmitting}
+              className="h-10 px-4 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
+            {/* Held until the project's real rates are known, and while a
+                create is in flight — the button used to check only `projectId`,
+                so a double-click posted the certificate twice. */}
             <button
               onClick={handleSubmit}
-              disabled={!projectId}
-              title={!projectId ? "Select a project first" : undefined}
+              disabled={!projectId || !ratesReady || isSubmitting}
+              title={
+                !projectId
+                  ? "Select a project first"
+                  : !ratesReady
+                    ? "Waiting for this project's retention and VAT rates"
+                    : undefined
+              }
               className="h-10 px-5 text-sm text-primary-foreground bg-primary rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Certificate
+              {isSubmitting ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                "Create Certificate"
+              )}
             </button>
           </div>
         </footer>
