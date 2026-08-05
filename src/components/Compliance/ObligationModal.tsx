@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface ObligationDraft {
   title: string;
@@ -54,6 +55,11 @@ export default function ObligationModal({
   const [draft, setDraft] = useState<ObligationDraft>(EMPTY);
   const [documentId, setDocumentId] = useState("");
 
+  // Both instances of this dialog are mounted by the Compliance page at once.
+  // Only the open one renders (Radix portals the content), but scoping the
+  // field ids by mode keeps them unique whatever the dialog is nested in.
+  const fieldId = (name: string) => `obligation-${mode}-${name}`;
+
   useEffect(() => {
     if (!isOpen) return;
     setDraft({ ...EMPTY, ...initial });
@@ -75,9 +81,11 @@ export default function ObligationModal({
         <div className="space-y-4">
           {mode === "create" && (
             <div>
-              <label className="text-sm text-foreground">Document</label>
+              <Label htmlFor={fieldId("document")} className="text-sm text-foreground">
+                Document
+              </Label>
               <Select value={documentId} onValueChange={setDocumentId}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger id={fieldId("document")} className="mt-1.5">
                   <SelectValue placeholder="Select the document that creates it" />
                 </SelectTrigger>
                 <SelectContent>
@@ -96,8 +104,11 @@ export default function ObligationModal({
           )}
 
           <div>
-            <label className="text-sm text-foreground">Obligation</label>
+            <Label htmlFor={fieldId("title")} className="text-sm text-foreground">
+              Obligation
+            </Label>
             <Input
+              id={fieldId("title")}
               className="mt-1.5"
               value={draft.title}
               placeholder="e.g. Issue revised programme within 14 days"
@@ -106,8 +117,11 @@ export default function ObligationModal({
           </div>
 
           <div>
-            <label className="text-sm text-foreground">Due date</label>
+            <Label htmlFor={fieldId("due-date")} className="text-sm text-foreground">
+              Due date
+            </Label>
             <Input
+              id={fieldId("due-date")}
               type="date"
               className="mt-1.5"
               value={draft.dueDate}
@@ -120,8 +134,11 @@ export default function ObligationModal({
           </div>
 
           <div>
-            <label className="text-sm text-foreground">Responsible role</label>
+            <Label htmlFor={fieldId("responsible-role")} className="text-sm text-foreground">
+              Responsible role
+            </Label>
             <Input
+              id={fieldId("responsible-role")}
               className="mt-1.5"
               value={draft.responsibleRole}
               placeholder="e.g. Contractor"
