@@ -7,6 +7,8 @@ import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { usePermission } from "@/hooks/usePermission";
 import { useNavigate } from "react-router-dom";
 import { BarChart2, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { formatZAR } from "@/lib/formatCurrency";
 import { FinanceToolbar } from "./FinanceToolbar";
 
 interface PCListResponse {
@@ -84,16 +86,35 @@ const PaymentCertificate = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         projectId={projectId}
+        // The failure is rethrown, not swallowed. It used to be caught into a
+        // `console.error` while the drawer closed regardless, so a certificate
+        // the server refused — for over-certifying a variation, say — looked
+        // to the user exactly like one that had been created, minus the row.
+        // The drawer now stays open on a rejection and renders the server's
+        // integrity messages against the variations they came from.
         onSubmit={async (payload: CreatePCApiPayload) => {
-          try {
-            await postData({
-              url: "tasks/payment-certificates/",
-              data: payload,
-            });
-            refetch();
-          } catch (err) {
-            console.error("Failed to create payment certificate:", err);
-          }
+          const created: any = await postData({
+            url: "tasks/payment-certificates/",
+            data: payload,
+          });
+          refetch();
+          const warnings: string[] = Array.isArray(created?.integrityWarnings)
+            ? created.integrityWarnings
+            : Array.isArray(created?.integrity_warnings)
+              ? created.integrity_warnings
+              : [];
+          const net = created?.totalPayable ?? created?.total_payable ?? created?.netAmount;
+          toast.success(
+            created?.pcNumber
+              ? `${created.pcNumber} created${
+                  typeof net === "number" ? ` — ${formatZAR(net)} payable` : ""
+                }.`
+              : "Payment certificate created.",
+          );
+          // Accepted, but the server flagged something about it — a certificate
+          // that takes the project past its contract sum is allowed through
+          // with a warning, and used to render as an ordinary row.
+          for (const w of warnings) toast.warning(w);
         }}
       />
     </main>
