@@ -52,6 +52,7 @@ import { EditDocumentModal } from '@/components/documents/EditDocumentModal';
 import { DocumentPreviewCard } from '@/components/documents/DocumentPreviewCard';
 import { AskRegulationsDrawer } from '@/components/documents/AskRegulationsDrawer';
 import { ContractTermsPanel } from '@/components/documents/ContractTermsPanel';
+import { DocumentVersionSelect } from '@/components/documents/DocumentVersionSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData, patchData, deleteData } from '@/lib/Api';
 import type { LinkItem } from '@/components/documents/LinkDocumentModal';
@@ -70,6 +71,8 @@ const DocumentDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; ref: string } | null>(null);
   const [previewFile, setPreviewFile] = useState<{ name: string; url: string; streamUrl?: string } | null>(null);
+  // null means "track whichever version is current" — see effectiveVersionId below.
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Obligation state
   const [showObligationForm, setShowObligationForm] = useState(false);
@@ -120,16 +123,6 @@ const DocumentDetail = () => {
     }
   }, [docId, projectId]);
 
-  const { data: findingsData, isLoading: findingsLoading } = useQuery({
-    queryKey: ['findings', docId, projectId],
-    queryFn: () => fetchData(`documents/${docId}/findings/?project_id=${projectId}`),
-    enabled: !!docId && !!doc && !!projectId,
-    refetchOnWindowFocus: false,
-    select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
-  });
-
-  const findings = findingsData ?? [];
-
   const { data: versionsData, isLoading: versionsLoading } = useQuery({
     queryKey: ['versions', docId, projectId],
     queryFn: () => fetchData(`documents/${docId}/versions/?project_id=${projectId}`),
@@ -140,9 +133,28 @@ const DocumentDetail = () => {
 
   const versions = versionsData ?? [];
 
+  // Auto-follows whichever version is current unless the user has explicitly
+  // picked an older one from a DocumentVersionSelect dropdown.
+  const currentVersion = versions.find((v: any) => v.isCurrent);
+  const effectiveVersionId = selectedVersionId ?? currentVersion?._id ?? null;
+  const versionQuerySuffix = effectiveVersionId ? `&version_id=${effectiveVersionId}` : '';
+  // The version whose own file/uploader/date the preview + header should
+  // reflect. null when nothing's resolved yet (versions still loading).
+  const selectedVersion = versions.find((v: any) => v._id === effectiveVersionId) ?? null;
+
+  const { data: findingsData, isLoading: findingsLoading } = useQuery({
+    queryKey: ['findings', docId, projectId, effectiveVersionId],
+    queryFn: () => fetchData(`documents/${docId}/findings/?project_id=${projectId}${versionQuerySuffix}`),
+    enabled: !!docId && !!doc && !!projectId,
+    refetchOnWindowFocus: false,
+    select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
+  });
+
+  const findings = findingsData ?? [];
+
   const { data: linksData, isLoading: linksLoading } = useQuery({
-    queryKey: ['links', docId, projectId],
-    queryFn: () => fetchData(`documents/${docId}/links/?project_id=${projectId}`),
+    queryKey: ['links', docId, projectId, effectiveVersionId],
+    queryFn: () => fetchData(`documents/${docId}/links/?project_id=${projectId}${versionQuerySuffix}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
   });
@@ -150,8 +162,8 @@ const DocumentDetail = () => {
   const links = Array.isArray(linksData) ? linksData : linksData?.results ?? [];
 
   const { data: obligationsData, isLoading: obligationsLoading } = useQuery({
-    queryKey: ['obligations', docId, projectId],
-    queryFn: () => fetchData(`documents/${docId}/obligations/?project_id=${projectId}`),
+    queryKey: ['obligations', docId, projectId, effectiveVersionId],
+    queryFn: () => fetchData(`documents/${docId}/obligations/?project_id=${projectId}${versionQuerySuffix}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
     select: (data) => (Array.isArray(data) ? data : data?.results ?? []),
@@ -168,8 +180,8 @@ const DocumentDetail = () => {
     status: string;
     terms: { termType: string; rawValue: string; editedValue: string; parsedValueDate: string | null; unit: string; status: string }[];
   }>({
-    queryKey: ['contract-terms', docId, projectId],
-    queryFn: () => fetchData(`documents/${docId}/contract-terms/?project_id=${projectId}`),
+    queryKey: ['contract-terms', docId, projectId, effectiveVersionId],
+    queryFn: () => fetchData(`documents/${docId}/contract-terms/?project_id=${projectId}${versionQuerySuffix}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
   });
@@ -196,7 +208,7 @@ const DocumentDetail = () => {
     .sort((a: any, b: any) => a._dueDateObj.getTime() - b._dueDateObj.getTime())[0] ?? null;
 
   const { mutate: runAnalysis, isPending: isAnalysisRunning } = useMutation({
-    mutationFn: () => postData({ url: `documents/${docId}/analyze/?project_id=${projectId}`, data: {} }),
+    mutationFn: () => postData({ url: `documents/${docId}/analyze/?project_id=${projectId}`, data: { version_id: effectiveVersionId } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document', docId] });
       queryClient.invalidateQueries({ queryKey: ['findings', docId] });
@@ -317,8 +329,13 @@ const DocumentDetail = () => {
     );
   }
 
-  const uploadedAgo = doc.createdAt
-    ? formatDistanceToNow(new Date(doc.createdAt), { addSuffix: true }).replace('about ', '')
+  // Selected version's own upload date/uploader when one resolved, so the
+  // header matches whichever version's file is actually being previewed
+  // below instead of always showing the current version's.
+  const displayCreatedAt = selectedVersion?.createdAt ?? doc.createdAt;
+  const displayUploadedBy = selectedVersion?.uploadedBy ?? doc.uploadedBy;
+  const uploadedAgo = displayCreatedAt
+    ? formatDistanceToNow(new Date(displayCreatedAt), { addSuffix: true }).replace('about ', '')
     : null;
   const fileSizeMB = doc.fileSize ? `${(doc.fileSize / (1024 * 1024)).toFixed(2)} MB` : null;
 
@@ -373,13 +390,13 @@ const DocumentDetail = () => {
               <span aria-hidden>·</span>
               <span className="font-mono text-foreground">{doc.reference || '—'}</span>
               <span aria-hidden>·</span>
-              <span className="text-foreground font-medium">{doc.currentVersion}</span>
-              {doc.uploadedBy && (
+              <span className="text-foreground font-medium">{selectedVersion?.versionName ?? doc.currentVersion}</span>
+              {displayUploadedBy && (
                 <>
                   <span aria-hidden>·</span>
                   <span>{uploadedAgo || 'recently'}</span>
                   <span aria-hidden>·</span>
-                  <span>by {doc.uploadedBy.name}</span>
+                  <span>by {displayUploadedBy.name}</span>
                 </>
               )}
               <span aria-hidden className="mx-1">·</span>
@@ -424,11 +441,13 @@ const DocumentDetail = () => {
                 className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
                 onClick={() => {
                   // Cert link-docs have no file — open the rendered certificate
-                  // page instead of the (empty) S3 download URL.
-                  const target = doc.certificateUrl || doc.downloadUrl;
+                  // page instead of the (empty) S3 download URL. Certificates
+                  // aren't per-version, but a real file download should target
+                  // whichever version is currently selected.
+                  const target = doc.certificateUrl || selectedVersion?.downloadUrl || doc.downloadUrl;
                   if (target) window.open(target, '_blank');
                 }}
-                disabled={!doc.downloadUrl && !doc.certificateUrl}
+                disabled={!selectedVersion?.downloadUrl && !doc.downloadUrl && !doc.certificateUrl}
               >
                 {doc.certificateUrl ? (
                   <><ExternalLink className="h-4 w-4 mr-1.5" /> Open certificate</>
@@ -485,6 +504,7 @@ const DocumentDetail = () => {
             rest of the app. */}
         <div className="border-t border-border pt-2">
           <Tabs defaultValue="overview" className="w-full">
+            <div className="flex items-center justify-between">
             <TabsList className="bg-transparent h-auto p-0 gap-8 border-b-0">
               {/* 5 tabs -> 2. AI / Linked / Obligations / Versions are now
                   stacked sections inside the single Activity tab — one
@@ -525,6 +545,12 @@ const DocumentDetail = () => {
                 </TabsTrigger>
               ))}
             </TabsList>
+            {/* Single shared version control — drives AI findings, Linked
+                items, Obligations, and Contract Terms together, wherever
+                they're rendered below, instead of one dropdown per
+                section. */}
+            <DocumentVersionSelect versions={versions} value={effectiveVersionId} onChange={setSelectedVersionId} />
+            </div>
 
             {/* Overview — Procore / ClickUp split. Wider right rail
                 (40%) so the Description has room to breathe instead of
@@ -533,7 +559,15 @@ const DocumentDetail = () => {
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
                 {/* LEFT (60%): preview */}
                 <div className="lg:col-span-3">
-                  <DocumentPreviewCard doc={doc} onPreview={(file) => setPreviewFile(file)} />
+                  <DocumentPreviewCard
+                    doc={{
+                      ...doc,
+                      fileName: selectedVersion?.fileName ?? doc.fileName,
+                      fileSize: selectedVersion?.fileSize ?? doc.fileSize,
+                      downloadUrl: selectedVersion?.downloadUrl ?? doc.downloadUrl,
+                    }}
+                    onPreview={(file) => setPreviewFile(file)}
+                  />
                 </div>
 
                 {/* RIGHT (40%): three stacked cards. Version history sits
@@ -1016,7 +1050,7 @@ const DocumentDetail = () => {
                   size="sm"
                   icon={CheckCircle2}
                   title="No obligations recorded yet"
-                  description="Record the duties this document imposes — notice periods, submissions, approvals — and they sync to the project programme with their due dates."
+                  description="Obligations are extracted automatically when this version is analyzed, or you can record one manually — notice periods, submissions, approvals — and they sync to the project programme with their due dates."
                   action={
                     <Button
                       size="sm"
@@ -1109,7 +1143,11 @@ const DocumentDetail = () => {
               )}
               </section>
 
-              <ContractTermsPanel docId={docId!} projectId={projectId} />
+              <ContractTermsPanel
+                docId={docId!}
+                projectId={projectId}
+                versionId={effectiveVersionId}
+              />
             </TabsContent>
           </Tabs>
         </div>

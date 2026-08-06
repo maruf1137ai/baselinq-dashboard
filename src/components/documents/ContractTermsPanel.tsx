@@ -52,14 +52,22 @@ const TERM_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
-export function ContractTermsPanel({ docId, projectId }: { docId: string; projectId: string | null }) {
+export function ContractTermsPanel({
+  docId,
+  projectId,
+  versionId = null,
+}: {
+  docId: string;
+  projectId: string | null;
+  versionId?: string | null;
+}) {
   const queryClient = useQueryClient();
   const [editingTermId, setEditingTermId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
 
   const { data, isLoading } = useQuery<ContractTermExtraction>({
-    queryKey: ['contract-terms', docId, projectId],
-    queryFn: () => fetchData(`documents/${docId}/contract-terms/?project_id=${projectId}`),
+    queryKey: ['contract-terms', docId, projectId, versionId],
+    queryFn: () => fetchData(`documents/${docId}/contract-terms/?project_id=${projectId}${versionId ? `&version_id=${versionId}` : ''}`),
     enabled: !!docId && !!projectId,
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
@@ -73,7 +81,7 @@ export function ContractTermsPanel({ docId, projectId }: { docId: string; projec
   const isRunning = extraction?.status === 'pending' || extraction?.status === 'running';
 
   const { mutate: extractTerms, isPending: isTriggering } = useMutation({
-    mutationFn: () => postData({ url: `documents/${docId}/extract-contract-terms/?project_id=${projectId}`, data: {} }),
+    mutationFn: () => postData({ url: `documents/${docId}/extract-contract-terms/?project_id=${projectId}`, data: { version_id: versionId } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contract-terms', docId] });
     },
