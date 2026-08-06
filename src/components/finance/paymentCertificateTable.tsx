@@ -20,7 +20,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
-import { MoreHorizontal, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { AlertTriangle, MoreHorizontal, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,7 +37,38 @@ export interface PCEntry {
   workflowState?: string;
   createdAt: string;
   updatedAt: string;
+  // ── Server-computed fields ────────────────────────────────────────────────
+  // The API returns these and nothing in the app read any of them. The
+  // operator signs off the total payable, not the net, and a certificate that
+  // takes the project past its contract sum is accepted *with a warning* —
+  // which rendered as an ordinary row indistinguishable from a clean one.
+  /** VAT the server calculated at the project's own rate. */
+  vatAmount?: number;
+  /** What is actually payable — the figure being certified. */
+  totalPayable?: number;
+  /** False when the stored figures are as submitted rather than recomputed. */
+  serverComputed?: boolean;
+  /** Accepted, but flagged. Never hidden. */
+  integrityWarnings?: string[];
 }
+
+/** Server fields also arrive snake_cased depending on the endpoint. */
+const serverNumber = (entry: PCEntry, camel: string, snake: string): number | null => {
+  const v = (entry as any)[camel] ?? (entry as any)[snake];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+};
+
+const warningsOf = (entry: PCEntry): string[] => {
+  const raw = entry.integrityWarnings ?? (entry as any).integrity_warnings;
+  return Array.isArray(raw) ? raw.filter((w) => typeof w === "string" && w.trim()) : [];
+};
+
+const isServerComputed = (entry: PCEntry): boolean | null => {
+  const v = entry.serverComputed ?? (entry as any).server_computed;
+  return typeof v === "boolean" ? v : null;
+};
+
+const money = (v: number | null) => (v === null ? "—" : formatZAR(v));
 
 // Human labels for the certification-chain transitions the backend exposes
 // (tasks/views_pc_workflow.py) — there was previously no UI at all for
@@ -109,9 +140,30 @@ const PCDetailsDialog = ({
             <p><span className="text-muted-foreground">Claim Amount:</span> {formatCurrency(entry.claimAmount)}</p>
             <p><span className="text-muted-foreground">Retention:</span> {formatCurrency(entry.retentionAmount)}</p>
             <p><span className="text-muted-foreground">Net Amount:</span> {formatCurrency(entry.netAmount)}</p>
+            <p><span className="text-muted-foreground">VAT:</span> {money(serverNumber(entry, "vatAmount", "vat_amount"))}</p>
+            <p><span className="text-muted-foreground">Total Payable:</span> {money(serverNumber(entry, "totalPayable", "total_payable"))}</p>
             <p><span className="text-muted-foreground">Status:</span> {entry.approvalStatus}</p>
             <p><span className="text-muted-foreground">Updated:</span> {formatDate(entry.updatedAt)}</p>
+            {isServerComputed(entry) === false && (
+              <p className="text-amber-700">
+                These figures were stored as submitted — the server did not
+                recompute them from the project's retention and VAT rates.
+              </p>
+            )}
           </div>
+          {warningsOf(entry).length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <p className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Accepted with warnings
+              </p>
+              <ul className="mt-1.5 space-y-1">
+                {warningsOf(entry).map((w, i) => (
+                  <li key={i} className="text-sm text-amber-700">{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <DialogFooter>
             <DialogClose asChild>
               <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
@@ -126,6 +178,7 @@ const PCDetailsDialog = ({
 };
 
 const PCRow = ({ entry }: { entry: PCEntry }) => {
+  const warnings = warningsOf(entry);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
@@ -194,8 +247,22 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.netAmount)}
       </td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground tabular-nums">
+        {money(serverNumber(entry, "vatAmount", "vat_amount"))}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
+        {money(serverNumber(entry, "totalPayable", "total_payable"))}
+      </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm">
-        <ApprovalBadge status={entry.approvalStatus} />
+        <div className="flex items-center gap-1.5">
+          <ApprovalBadge status={entry.approvalStatus} />
+          {warnings.length > 0 && (
+            <Badge variant="warning" title={warnings.join("\n")}>
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {warnings.length === 1 ? "1 warning" : `${warnings.length} warnings`}
+            </Badge>
+          )}
+        </div>
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
         {formatDate(entry.updatedAt)}
@@ -262,6 +329,8 @@ const HEADERS: { label: string; align?: "right" }[] = [
   { label: "Claim", align: "right" },
   { label: "Retention", align: "right" },
   { label: "Net", align: "right" },
+  { label: "VAT", align: "right" },
+  { label: "Total Payable", align: "right" },
   { label: "Approvals" },
   { label: "Updated" },
   { label: "Actions", align: "right" },
@@ -310,7 +379,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
           <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={HEADERS.length}>
                   {search ? (
                     <EmptyState
                       variant="plain"
