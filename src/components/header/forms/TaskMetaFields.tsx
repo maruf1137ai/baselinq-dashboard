@@ -116,7 +116,18 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
           </div>
 
           {/* List */}
-          <ul className="max-h-64 overflow-y-auto py-1">
+          {/* onWheel/onTouchMove stopPropagation: this popover is opened from
+              inside a Sheet (Radix Dialog primitive), which applies a
+              document-level scroll lock while open. Without stopping
+              propagation here, that lock swallows wheel/touch scroll
+              gestures over this list even though overflow-y-auto is set
+              correctly — the list is scrollable, the gesture just never
+              reaches it. */}
+          <ul
+            className="max-h-64 overflow-y-auto py-1"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {filtered.length === 0 && (
               <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users match this search</li>
             )}
