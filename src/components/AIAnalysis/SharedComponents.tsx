@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertTriangle, XCircle, Lightbulb } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Lightbulb, ShieldCheck, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const sectionClass = (visibleSections: number, index: number) =>
@@ -68,6 +68,77 @@ export const StatusHeader = ({
     </div>
   </div>
 );
+
+/**
+ * Surfaces the backend's own hallucination check (rag_engine/analysis_engine.py
+ * CitationValidator) — it already computes and persists this for every
+ * analysis, but until now nothing in the UI read it, so an analysis the
+ * backend knew contained a fabricated clause rendered identically to a
+ * clean one. Renders nothing if `validation` is absent (older cached
+ * analyses, or a shape without citation data).
+ */
+export const CitationValidationBanner = ({
+  validation,
+  visibleSections,
+  index = 0,
+}: {
+  validation?: {
+    valid?: boolean;
+    total_citations?: number;
+    invalid_citations?: string[];
+    error?: string;
+  } | null;
+  visibleSections: number;
+  index?: number;
+}) => {
+  if (!validation) return null;
+
+  const invalidCitations = Array.isArray(validation.invalid_citations) ? validation.invalid_citations : [];
+  const totalCitations = validation.total_citations;
+
+  if (invalidCitations.length > 0) {
+    return (
+      <div className={sectionClass(visibleSections, index)}>
+        <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs space-y-1">
+          <div className="flex items-center gap-2 font-medium">
+            <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+            <span>
+              {invalidCitations.length} of {totalCitations ?? invalidCitations.length} clause citation
+              {invalidCitations.length === 1 ? "" : "s"} could not be verified against the indexed contract.
+            </span>
+          </div>
+          <p className="pl-6">Unverified: {invalidCitations.join(", ")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (validation.valid === false) {
+    return (
+      <div className={sectionClass(visibleSections, index)}>
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs">
+          <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+          <span>Citation validation unavailable{validation.error ? `: ${validation.error}` : "."}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (typeof totalCitations === "number" && totalCitations > 0) {
+    return (
+      <div className={sectionClass(visibleSections, index)}>
+        <div className="flex items-center gap-2 p-3 rounded-xl border border-green-200 bg-green-50 text-green-700 text-xs">
+          <ShieldCheck className="h-4 w-4 flex-shrink-0" />
+          <span>
+            {totalCitations} clause citation{totalCitations === 1 ? "" : "s"} verified against the indexed contract.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export const CommonSections = ({ data, visibleSections, startSelector }: { data: any, visibleSections: number, startSelector: number }) => {
   return (

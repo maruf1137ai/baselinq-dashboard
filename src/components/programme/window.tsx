@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Timeline from "./timeline";
 import Milestone from "./milestone";
 import { AddPhaseDialog } from "./AddPhaseDialog";
+import { AcceptBaselineDialog } from "./AcceptBaselineDialog";
 import { useRiskForecast, Severity } from "@/hooks/useRiskForecast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -49,7 +50,12 @@ const Window = () => {
           />
         )}
         {activeTab === "Milestones" && (
-          <Milestone projectId={projectId} onAddMilestone={() => setAddDialogOpen(true)} />
+          <div className="space-y-3">
+            <div className="flex justify-end">
+              <AcceptBaselineDialog projectId={projectId} />
+            </div>
+            <Milestone projectId={projectId} onAddMilestone={() => setAddDialogOpen(true)} />
+          </div>
         )}
         {activeTab === "Risk Forecast" && <RiskForecast projectId={projectId} />}
       </div>

@@ -2,13 +2,26 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2, AlertCircle, RotateCw } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import { toast } from "sonner";
-import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
+import { fetchData, postData, deleteData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
+import { EditMessageDialog } from "./EditMessageDialog";
+import { MessageHistoryDialog } from "./MessageHistoryDialog";
+import { MessageContextMenu } from "./MessageContextMenu";
 import { MAX_UPLOAD_BYTES, formatFileSize } from "./attachmentUtils";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "../ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -62,6 +75,25 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ name: string; url: string; type?: string; streamUrl?: string } | null>(null);
+  const [editingMessage, setEditingMessage] = useState<any | null>(null);
+  const [historyMessage, setHistoryMessage] = useState<any | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState<any | null>(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+
+  const handleDeleteMessage = async () => {
+    if (!deletingMessage || !channel?.id) return;
+    setIsDeletingMessage(true);
+    try {
+      await deleteData({ url: `channels/${channel.id}/messages/${deletingMessage.id}/`, data: undefined });
+      applyMessages((prev) => prev.filter((m) => m.id !== deletingMessage.id));
+      toast.success("Message deleted");
+      setDeletingMessage(null);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to delete message.");
+    } finally {
+      setIsDeletingMessage(false);
+    }
+  };
 
   // @mention state
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
@@ -329,6 +361,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
           is_urgent: msg.is_urgent,
           message_type: msg.message_type,
           is_system: msg.is_system,
+          is_edited: msg.is_edited,
+          edited_at: msg.edited_at,
+          edit_history: msg.edit_history || [],
         }));
 
         // Nothing actually changed → don't touch state. The presigned `url`
@@ -1013,12 +1048,22 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                   // Detect AI-generated messages
                   const isAI = msg.sender_name?.toLowerCase() === 'ai' || msg.sender_name?.toLowerCase() === 'baselinq ai' || msg.sender_name?.toLowerCase() === 'system' || msg.message_type === 'ai_generated' || msg.message_type === 'auto_reply';
 
+                  const isOwnMessage = isCurrentUser && !msg.is_system && !msg.pending && !msg.failed;
+
                   return (
                     <div
                       key={msg.id}
-                      className={`relative max-w-[85%] ${isCurrentUser ? "" : "self-start"}`}>
+                      className={`relative max-w-[85%] group ${isCurrentUser ? "" : "self-start"}`}>
                       {isCurrentUser ? (
                         // Current User Message (right side)
+                        <>
+                        <MessageContextMenu
+                          message={msg}
+                          isOwnMessage={isOwnMessage}
+                          onEdit={() => setEditingMessage(msg)}
+                          onDelete={() => setDeletingMessage(msg)}
+                          onViewHistory={() => setHistoryMessage(msg)}
+                        >
                         <div className={`relative rounded-lg bg-muted/50 py-2.5 px-4 ${msg.pending ? "opacity-70" : ""}`}>
                           <div className="relative text-[#101828] text-base">
                             <p className="leading-[26px] whitespace-pre-wrap">
@@ -1094,6 +1139,16 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                             </div>
                           )}
                         </div>
+                        </MessageContextMenu>
+                        {msg.is_edited && (
+                          <button
+                            type="button"
+                            onClick={() => setHistoryMessage(msg)}
+                            className="block w-full text-right text-xs text-muted-foreground mt-1 hover:underline">
+                            (edited)
+                          </button>
+                        )}
+                        </>
                       ) : (
                         // Other User Message (left side with avatar)
                         <div className="flex gap-3 items-start">
@@ -1112,6 +1167,13 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                               {isAI && <span className="text-primary text-xs font-normal">AI</span>}
                             </p>
                             {/* Message Box */}
+                            <MessageContextMenu
+                              message={msg}
+                              isOwnMessage={false}
+                              onEdit={() => setEditingMessage(msg)}
+                              onDelete={() => setDeletingMessage(msg)}
+                              onViewHistory={() => setHistoryMessage(msg)}
+                            >
                             <div className={`relative rounded-xl py-2.5 px-4 ${isAI ? 'bg-primary/5 border-l-2 border-primary/30' : 'bg-sidebar'}`}>
                               <div className="relative text-foreground text-base">
                                 <p className="leading-[26px] whitespace-pre-wrap">
@@ -1156,6 +1218,15 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                                 </div>
                               )}
                             </div>
+                            </MessageContextMenu>
+                            {msg.is_edited && (
+                              <button
+                                type="button"
+                                onClick={() => setHistoryMessage(msg)}
+                                className="text-xs text-muted-foreground mt-1 hover:underline">
+                                (edited)
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1372,6 +1443,41 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
         onOpenChange={(open) => !open && setPreviewFile(null)}
         file={previewFile ? { name: previewFile.name, url: previewFile.url, fileType: previewFile.type, streamUrl: previewFile.streamUrl } : null}
       />
+
+      <EditMessageDialog
+        isOpen={!!editingMessage}
+        onClose={() => setEditingMessage(null)}
+        channelId={channel?.id ?? null}
+        message={editingMessage}
+        onSaved={() => fetchMessages(false)}
+      />
+
+      <MessageHistoryDialog
+        isOpen={!!historyMessage}
+        onClose={() => setHistoryMessage(null)}
+        message={historyMessage}
+      />
+
+      <AlertDialog open={!!deletingMessage} onOpenChange={(open) => !open && setDeletingMessage(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this message. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingMessage}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={isDeletingMessage}
+              onClick={handleDeleteMessage}
+            >
+              {isDeletingMessage ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

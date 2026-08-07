@@ -31,6 +31,8 @@ import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaF
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskDrafts";
+import { useMilestones } from "@/hooks/useMilestones";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const DRAFT_TYPE = "DC";
 
@@ -66,6 +68,13 @@ export default function DCForm({ setOpen, initialStatus, initialData, taskId }: 
   const queryClient = useQueryClient();
   const { mutateAsync: postRequest } = usePost();
   const { mutateAsync: patchRequest } = usePatch();
+
+  // Programme Phase 2 — which activities this delay affected, and the
+  // claimed days against each. Keyed by milestone _id; a milestone with no
+  // entry (or "0"/empty) is not linked to this claim.
+  const currentProjectId = localStorage.getItem("selectedProjectId");
+  const { data: milestones = [] } = useMilestones(currentProjectId);
+  const [claimedDaysByMilestone, setClaimedDaysByMilestone] = useState<Record<string, string>>({});
 
   const registerAttachments = async (dcId: string | number) => {
     if (!s3Upload.entries.length) return;
@@ -103,6 +112,12 @@ export default function DCForm({ setOpen, initialStatus, initialData, taskId }: 
     const user = localStorage.getItem("user");
     const parsedUser = user ? JSON.parse(user) : null;
 
+    // Programme Phase 2 — activities affected, with claimed days per
+    // activity. Only milestones with a positive claimed-days entry are sent.
+    const milestoneDays = Object.entries(claimedDaysByMilestone)
+      .filter(([, days]) => days && Number(days) > 0)
+      .map(([milestoneId, days]) => ({ milestone_id: milestoneId, claimed_days: Number(days) }));
+
     // Construct payload matching Django DC API requirements
     const payload = {
       project: parseInt(projectId),
@@ -114,6 +129,7 @@ export default function DCForm({ setOpen, initialStatus, initialData, taskId }: 
       requested_extension_days: requestedExtension ? parseInt(requestedExtension) : undefined,
       taskStatus: initialStatus || "Draft",
       submitted_by: parsedUser?.id || undefined,
+      milestoneDays: milestoneDays.length > 0 ? milestoneDays : undefined,
     };
 
     const handleSuccess = async (result: any) => {
@@ -251,6 +267,50 @@ export default function DCForm({ setOpen, initialStatus, initialData, taskId }: 
           onChange={(e) => setRequestedExtension(e.target.value)}
         />
       </div>
+
+      {milestones.length > 0 && (
+        <div>
+          <Label>Activities Affected</Label>
+          <p className="text-xs text-muted-foreground mt-1 mb-2">
+            Select the programme phases this delay affects, and the days claimed against each.
+          </p>
+          <div className="space-y-2">
+            {milestones.map((m) => {
+              const checked = m._id in claimedDaysByMilestone;
+              return (
+                <div key={m._id} className="flex items-center gap-3">
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(value) => {
+                      setClaimedDaysByMilestone((prev) => {
+                        const next = { ...prev };
+                        if (value) {
+                          next[m._id] = requestedExtension || "1";
+                        } else {
+                          delete next[m._id];
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                  <span className="flex-1 text-sm text-foreground">{m.name}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    disabled={!checked}
+                    className="w-24"
+                    placeholder="Days"
+                    value={claimedDaysByMilestone[m._id] || ""}
+                    onChange={(e) =>
+                      setClaimedDaysByMilestone((prev) => ({ ...prev, [m._id]: e.target.value }))
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <S3AttachmentSection s3Upload={s3Upload} inputId="dc-upload" label="Attachments" />
 
