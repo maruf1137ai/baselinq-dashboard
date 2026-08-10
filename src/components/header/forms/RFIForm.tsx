@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
 import { usePatch } from "@/hooks/usePatch";
 import {
   Select,
@@ -31,7 +32,7 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
   const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
 
   const [subject, setSubject] = useState(draft?.subject || "");
-  const [discipline, setDiscipline] = useState(draft?.discipline || "");
+  const [discipline, setDiscipline] = useState(draft?.discipline || DISCIPLINE_OPTIONS[0]);
   const [question, setQuestion] = useState(draft?.question || "");
   const [description, setDescription] = useState(draft?.description || "");
   const [priority, setPriority] = useState(draft?.priority || "Medium");
@@ -193,7 +194,15 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
       </div>
 
       {/* Werner spec rev H — To / CC / Date Required (shared component). */}
-      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (recipient)" />
+      <TaskMetaFields
+        value={meta}
+        onChange={setMeta}
+        toLabel="To (recipient)"
+        toRoleFilter={TASK_TYPE_ROLE_RULES.rfi.toRoleFilter}
+        ccAutoRoles={TASK_TYPE_ROLE_RULES.rfi.ccAutoRoles}
+        defaultDueDays={3}
+        discipline={discipline}
+      />
 
       <div>
         <Label>Question</Label>

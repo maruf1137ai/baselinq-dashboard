@@ -1,6 +1,6 @@
 import { FileText, TrendingUp, Shield, Clock, AlertTriangle } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
-import { StatusHeader, sectionClass } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -13,6 +13,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
         id={data.cpi_id}
         visibleSections={visibleSections}
       />
+      <CitationValidationBanner validation={data.validation} visibleSections={visibleSections} index={0} />
 
       <div className={sectionClass(visibleSections, 1)}>
         <div className="p-6 bg-muted/50 rounded-xl">

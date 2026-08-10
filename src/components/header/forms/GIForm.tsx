@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { TASK_TYPE_ROLE_RULES, CONTRACTOR_CODES } from "@/lib/roleGroups";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
@@ -36,7 +37,7 @@ const GI_DIRECTION_OPTIONS = [
 
 const initialValues = {
   title: "",
-  discipline: "",
+  discipline: DISCIPLINE_OPTIONS[0] as string,
   instruction: "",
   direction: "prof_to_prof" as (typeof GI_DIRECTION_OPTIONS)[number]["value"],
 };
@@ -211,8 +212,25 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
           </Select>
         </div>
 
-        {/* Werner spec rev H — To / CC / Date Required pickers. */}
-        <TaskMetaFields value={meta} onChange={setMeta} toLabel="To" />
+        {/* Werner spec rev H — To / CC / Date Required pickers.
+            "To" follows whichever side of the boundary Direction picked —
+            GI never crosses prof/contractor, so the recipient pool
+            shouldn't either. CC (close authority) stays professionals-
+            only regardless of Direction — that's a fixed backend rule
+            (views_werner.py's close-action role table), not something
+            that varies with which lane this GI is in. */}
+        <TaskMetaFields
+          value={meta}
+          onChange={setMeta}
+          toLabel="To"
+          toRoleFilter={
+            formData.direction === "contractor_to_subcontractor"
+              ? CONTRACTOR_CODES
+              : TASK_TYPE_ROLE_RULES.gi.toRoleFilter
+          }
+          ccAutoRoles={TASK_TYPE_ROLE_RULES.gi.ccAutoRoles}
+          defaultDueDays={7}
+        />
 
         <div>
           <Label>Instruction</Label>

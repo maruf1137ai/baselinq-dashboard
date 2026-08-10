@@ -33,6 +33,16 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
   // Normalize task data across types
   const task = taskDetails?.task || channelTask;
   const taskType = taskDetails?.taskType || channelTask?.taskType;
+  // The entity's own id (RFI/SI/VO/etc pk) — distinct from taskId above,
+  // which is the generic Task wrapper's pk. RequestInfoDialog's replies
+  // fetch needs this one; using taskId there would query the wrong
+  // table's row. Same derivation TaskDetails.tsx uses for this response
+  // shape.
+  const entityId =
+    (taskDetails as any)?.task?.objectId ??
+    (taskDetails as any)?.objectId ??
+    (taskDetails as any)?.object_id ??
+    (taskDetails as any)?.task?.id;
 
   // Helper to extract common fields based on type
   const getTaskFields = () => {
@@ -125,30 +135,47 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
               {channelTask.members?.length || 0} Users
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <TooltipProvider delayDuration={0}>
-              <div className="flex -space-x-2 overflow-hidden transition-all">
-                {(channelTask.members || []).map((member: any, index: number) => {
-                  const name = member.user_name || member.user?.name || member.name || member.user_email || member.user?.email || "User";
-                  const initial = name.charAt(0).toUpperCase();
-                  return (
-                    <Tooltip key={member.id || index}>
-                      <TooltipTrigger asChild>
-                        <div
-                          className="h-8 w-8 rounded-full bg-primary border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer shadow-sm"
-                        >
-                          {initial}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">{name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-          </div>
+          {(() => {
+            const allMembers = channelTask.members || [];
+            const toMembers = allMembers.filter((m: any) => m.role === "to");
+            const ccMembers = allMembers.filter((m: any) => m.role !== "to");
+            const groups = [
+              { label: "To", members: toMembers },
+              { label: "CC", members: ccMembers },
+            ].filter((g) => g.members.length > 0);
+
+            return (
+              <TooltipProvider delayDuration={0}>
+                <div className="space-y-2">
+                  {groups.map((group) => (
+                    <div key={group.label} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-6 shrink-0">{group.label}</span>
+                      <div className="flex -space-x-2 overflow-hidden transition-all">
+                        {group.members.map((member: any, index: number) => {
+                          const name = member.user_name || member.user?.name || member.name || member.user_email || member.user?.email || "User";
+                          const initial = name.charAt(0).toUpperCase();
+                          return (
+                            <Tooltip key={member.id || index}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="h-8 w-8 rounded-full bg-primary border-2 border-white flex items-center justify-center text-white text-xs font-normal cursor-pointer shadow-sm"
+                                >
+                                  {initial}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">{name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TooltipProvider>
+            );
+          })()}
         </div>
 
         {/* Core Fields Grid - only show for tasks */}
@@ -249,7 +276,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
               <ExternalLink className="mr-2 h-4 w-4" /> View Full Task
             </Button>
             {/* Request Info Dialog kept as is */}
-            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId} wFull />
+            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId} entityId={entityId} wFull />
           </div>
         )}
       </div>

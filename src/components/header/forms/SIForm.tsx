@@ -19,11 +19,13 @@ import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import useFetch from "@/hooks/useFetch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
 import { registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronsUpDown, Link2, Search, X } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Info, Link2, Search, X } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -37,10 +39,10 @@ const DRAFT_TYPE = "SI";
 
 const initialValues = {
   title: "",
-  discipline: "",
+  discipline: DISCIPLINE_OPTIONS[0] as string,
   instruction: "",
   location: "",
-  urgency: "",
+  urgency: "Normal",
   dueDate: undefined as Date | undefined,
   // Werner — link this SI to another doc on the project (RFI, VO, IC,
   // claim, GI). Field used to be a free-text "VO Reference" — now it's a
@@ -55,12 +57,20 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
   const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
 
   const [formData, setFormData] = useState(() => {
-    if (!draft?.formData) return initialValues;
+    // Computed fresh per mount, not baked into the module-level
+    // initialValues — a Date literal there would be fixed at whatever
+    // moment the app bundle first loaded, going stale over a long-lived
+    // session. SI's own backend SLA is 5 days (tasks/views.py sla_days),
+    // so that's the default here too.
+    const defaultDueDate = new Date();
+    defaultDueDate.setDate(defaultDueDate.getDate() + 5);
+
+    if (!draft?.formData) return { ...initialValues, dueDate: defaultDueDate };
     return {
       ...initialValues,
       ...draft.formData,
       // dueDate serialises to an ISO string — restore it as a Date.
-      dueDate: draft.formData.dueDate ? new Date(draft.formData.dueDate) : undefined,
+      dueDate: draft.formData.dueDate ? new Date(draft.formData.dueDate) : defaultDueDate,
     };
   });
   // Werner spec rev H — shared To / CC meta. Date Required is already
@@ -288,10 +298,28 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
       </div>
 
       <div>
-        <Label>Location</Label>
+        <div className="flex items-center justify-between">
+          <Label>Location</Label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="What this field is for"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="end" className="max-w-xs text-xs">
+              Where on the site this instruction applies — not the project's
+              address. Helps the contractor find the right spot and becomes
+              part of the record if this instruction is ever disputed later.
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <Input
           className="mt-1"
-          placeholder="Location"
+          placeholder="e.g. Block A, 3rd floor, Grid B4–B6"
           value={formData.location}
           onChange={(e) => handleChange("location", e.target.value)}
         />
@@ -321,6 +349,8 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
         onChange={setMeta}
         toLabel="To (contractor)"
         showDateRequired={false}
+        toRoleFilter={TASK_TYPE_ROLE_RULES.si.toRoleFilter}
+        ccAutoRoles={TASK_TYPE_ROLE_RULES.si.ccAutoRoles}
       />
 
       <div>
@@ -433,7 +463,17 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
             </div>
 
             {/* Task list */}
-            <div className="mt-3 max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5">
+            {/* onWheel/onTouchMove stopPropagation: this form is opened inside a
+                Sheet (Radix Dialog), which applies a document-level scroll lock
+                while open. Without stopping propagation here, that lock swallows
+                wheel/touch scroll gestures over this list even though
+                overflow-y-auto is set correctly — see the same fix in
+                TaskMetaFields.tsx's UserPicker. */}
+            <div
+              className="mt-3 max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5"
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+            >
               {filteredTaskOptions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   {taskOptions.length === 0

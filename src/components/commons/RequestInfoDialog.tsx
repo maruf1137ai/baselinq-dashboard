@@ -53,12 +53,21 @@ interface ProjectUsersResponse {
 interface RequestInfoDialogProps {
   wFull?: boolean;
   taskType: string;
+  /** The generic Task wrapper's own ID — used for the request-task-info
+   * submission below. NOT the same as the underlying RFI/SI/VO/etc
+   * entity's own ID; see entityId. */
   taskId: string | number;
+  /** The underlying entity's own ID (e.g. the RFI's pk), distinct from
+   * taskId above. Needed to fetch this task's replies — the Reply API
+   * is keyed by entity_type + the entity's own id, not the wrapper
+   * Task's id. Optional so existing callers that don't pass it just
+   * skip the reply-based recipient pre-fill (falls back to assignees). */
+  entityId?: string | number;
   assignedTo?: { userId: string; role: string; name: string }[];
   onSuccess?: () => void;
 }
 
-export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], onSuccess }: RequestInfoDialogProps) {
+export function RequestInfoDialog({ wFull, taskType, taskId, entityId, assignedTo = [], onSuccess }: RequestInfoDialogProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>();
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
@@ -73,28 +82,66 @@ export function RequestInfoDialog({ wFull, taskType, taskId, assignedTo = [], on
   const availableUsers = usersData?.teamMembers || [];
   const { data: currentUser } = useCurrentUser();
 
-  // Werner spec — on RFI, pre-fill all current assignees (the
-  // professional team) as recipients. Submitting still produces ONE
-  // RequestTaskInfo row with the full list; any recipient can respond.
-  // Contractor can edit / remove / add anyone.
+  // Who's already replied on this task — the obvious people to send a
+  // follow-up info request to. Must use entityId (the RFI/SI/VO/etc's
+  // own pk), NOT taskId (the generic Task wrapper's pk) — ReplyViewSet
+  // is keyed by the entity's own id, and the two ids come from separate
+  // tables with separate pk sequences, so using taskId here would
+  // silently query the wrong record (or a coincidentally-numbered one).
+  // Path is tasks/replies/ — the router is mounted under tasks/ inside
+  // tasks/urls.py (path("tasks/", include(router.urls))), so bare
+  // replies/ 404s despite what ReplyViewSet's own docstring claims.
+  // TaskDetails.tsx already posts new replies to this same tasks/replies/
+  // path elsewhere in the app — this just mirrors that.
+  const { data: repliesData } = useFetch<any>(
+    open && taskType && entityId ? `tasks/replies/?entity_type=${taskType.toLowerCase()}&entity_id=${entityId}` : "",
+    { enabled: open && !!taskType && !!entityId },
+  );
+  const replies: any[] = Array.isArray(repliesData) ? repliesData : (repliesData?.results || []);
+
+  // Pre-fill recipients from two sources, merged: everyone who's already
+  // replied on this task, plus its current assignees — regardless of
+  // task type, both are "already engaged with this task" and obvious
+  // people to send a follow-up info request to. If nobody's replied
+  // yet, this falls back cleanly to just the assignees. Only fires once
+  // nothing's been manually selected yet; the user can still edit /
+  // remove / add anyone before sending.
+  //
+  // Due date defaults to today + 3 days, same convention as an RFI's
+  // own SLA — a follow-up info request is asking a question the same
+  // way an RFI does. Set once, doesn't touch date the user has since
+  // changed (separate useState from recipients, so no shared-object
+  // race between the two here).
   useEffect(() => {
     if (!open) return;
-    if (taskType !== "RFI") return;
+    if (!date) {
+      const due = new Date();
+      due.setDate(due.getDate() + 3);
+      setDate(due);
+    }
+
     if (selectedRecipients.length > 0) return;
-    if (assignedTo.length === 0 || availableUsers.length === 0) return;
+    if (availableUsers.length === 0) return;
 
     const selfId = String((currentUser as any)?.id ?? "");
+
+    const replierIds = replies
+      .map((r) => String(r.sender ?? ""))
+      .filter((id) => id && id !== selfId);
+
     const assigneeIds = assignedTo
       .map((a) => String(a.userId))
       .filter((id) => id && id !== selfId);
-    if (assigneeIds.length === 0) return;
+
+    const wantedIds = new Set([...replierIds, ...assigneeIds]);
+    if (wantedIds.size === 0) return;
 
     const matches = availableUsers.filter((m: any) =>
-      assigneeIds.includes(String(m.user?.id ?? m.userId ?? m._id)),
+      wantedIds.has(String(m.user?.id ?? m.userId ?? m._id)),
     );
     if (matches.length > 0) setSelectedRecipients(matches);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, taskType, availableUsers.length, assignedTo.length, (currentUser as any)?.id]);
+  }, [open, taskType, availableUsers.length, assignedTo.length, replies.length, (currentUser as any)?.id]);
 
   const toggleRecipient = (member: any) => {
     setSelectedRecipients((prev: any[]) => {

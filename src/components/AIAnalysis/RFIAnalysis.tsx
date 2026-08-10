@@ -20,7 +20,7 @@ import {
   Link2,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
-import { sectionClass } from "./SharedComponents";
+import { sectionClass, CitationValidationBanner } from "./SharedComponents";
 
 // ─── Status helpers ───
 const statusColor = (status: string) => {
@@ -229,6 +229,10 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mt-3">
+        <CitationValidationBanner validation={data.validation} visibleSections={visibleSections} index={0} />
       </div>
 
       {/* ─── Tabs ─── */}

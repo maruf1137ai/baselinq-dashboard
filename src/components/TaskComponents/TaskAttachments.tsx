@@ -46,7 +46,7 @@ export const TaskAttachments: React.FC<TaskAttachmentsProps> = ({
 
   return (
     <>
-      <Card className="pt-4 bg-card shadow-none border-0">
+      <Card className="p-4 bg-card shadow-none border-0">
         <h3 className="text-xs text-muted-foreground mb-3">
           Attachments
         </h3>

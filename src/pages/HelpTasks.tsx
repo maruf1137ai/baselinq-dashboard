@@ -120,7 +120,7 @@ const SECTIONS: DocSection[] = [
       {
         action: "Approve and sign",
         who:
-          "If the VO is within the PA's mandate: Project Manager, Client Project Manager, Principal Project Manager or Principal Agent signs. If it was Recommended (over the mandate): Client or Client Project Manager does the final sign-off.",
+          "If it was Recommended (over the mandate): Client or Client Project Manager does the final sign-off.",
         when: "VO is Priced (within mandate) or Recommended (over mandate).",
         note: "Signing requires a 4-digit PIN if set. Once signed, the contract value and end date on the project are updated automatically.",
       },
