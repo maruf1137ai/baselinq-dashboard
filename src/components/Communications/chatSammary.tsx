@@ -33,6 +33,16 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
   // Normalize task data across types
   const task = taskDetails?.task || channelTask;
   const taskType = taskDetails?.taskType || channelTask?.taskType;
+  // The entity's own id (RFI/SI/VO/etc pk) — distinct from taskId above,
+  // which is the generic Task wrapper's pk. RequestInfoDialog's replies
+  // fetch needs this one; using taskId there would query the wrong
+  // table's row. Same derivation TaskDetails.tsx uses for this response
+  // shape.
+  const entityId =
+    (taskDetails as any)?.task?.objectId ??
+    (taskDetails as any)?.objectId ??
+    (taskDetails as any)?.object_id ??
+    (taskDetails as any)?.task?.id;
 
   // Helper to extract common fields based on type
   const getTaskFields = () => {
@@ -249,7 +259,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
               <ExternalLink className="mr-2 h-4 w-4" /> View Full Task
             </Button>
             {/* Request Info Dialog kept as is */}
-            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId} wFull />
+            <RequestInfoDialog taskType={taskType || 'RFI'} taskId={taskId} entityId={entityId} wFull />
           </div>
         )}
       </div>

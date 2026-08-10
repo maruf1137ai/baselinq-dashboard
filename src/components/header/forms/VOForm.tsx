@@ -19,6 +19,7 @@ import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { patchData, registerS3TaskAttachment } from "@/lib/Api";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
@@ -36,14 +37,17 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
   const draft = draftEnabled ? loadTaskDraft(DRAFT_TYPE) : null;
 
   const [title, setTitle] = useState(initialData?.title || draft?.title || "");
-  const [discipline, setDiscipline] = useState(initialData?.discipline || draft?.discipline || "");
+  const [discipline, setDiscipline] = useState(initialData?.discipline || draft?.discipline || DISCIPLINE_OPTIONS[0]);
   const [description, setDescription] = useState(initialData?.description || draft?.description || "");
   const [dateInstructed, setDateInstructed] = useState<Date | undefined>(
     initialData?.dateInstructed
       ? new Date(initialData.dateInstructed)
       : draft?.dateInstructed
         ? new Date(draft.dateInstructed)
-        : undefined
+        // Default to today — most VOs are logged the same day the
+        // instruction was actually given. Still freely editable/
+        // backdatable for the verbal-instruction-logged-later case.
+        : new Date()
   );
   const [items, setItems] = useState(
     initialData?.lineItems?.length
@@ -242,7 +246,15 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       </div>
 
       {/* Werner spec rev H — To / CC / Date Required. */}
-      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (contractor)" />
+      <TaskMetaFields
+        value={meta}
+        onChange={setMeta}
+        toLabel="To (contractor)"
+        toRoleFilter={TASK_TYPE_ROLE_RULES.vo.toRoleFilter}
+        ccAutoRoles={TASK_TYPE_ROLE_RULES.vo.ccAutoRoles}
+        defaultDueDays={7}
+        discipline={discipline}
+      />
 
       <div>
         <Label className="block mb-1">Date of Instruction</Label>

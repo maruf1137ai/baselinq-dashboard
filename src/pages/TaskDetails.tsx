@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapUnderline from "@tiptap/extension-underline";
@@ -87,6 +87,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
@@ -298,6 +299,21 @@ export default function TaskDetails() {
     { enabled: !!taskId && !!projectId }
   );
 
+  // "New reply" highlighting — there's no backend read-tracking for
+  // Replies (unlike Channel Messages, which have MessageReadReceipt),
+  // so this is a lightweight, per-browser marker: remember when this
+  // task's replies were last viewed, and highlight anything newer than
+  // that. Captured once per page load, BEFORE we overwrite it, so
+  // replies that arrive during this same visit stay highlighted for
+  // the whole visit rather than flipping to "seen" mid-session. Known
+  // limitation: doesn't sync across devices/browsers (localStorage
+  // only) — a real fix would mirror MessageReadReceipt for replies.
+  const repliesSeenAtRef = useRef<string | null>(null);
+  const hasStampedRepliesSeenRef = useRef(false);
+  if (repliesSeenAtRef.current === null && taskId) {
+    repliesSeenAtRef.current = localStorage.getItem(`task_${taskId}_replies_seen_at`) || "";
+  }
+
   // Werner spec rev H — implementation note (May 8 2026):
   //   The Werner spec PDF is a UX/workflow spec for what FIELDS, BUTTONS
   //   and AUTO-REFERENCES each task doc must have. It is NOT a visual
@@ -330,28 +346,21 @@ export default function TaskDetails() {
     try {
       if (!taskId) return;
       const payload = { ...data };
-      if (payload.status) {
-        // Mirror backend TERMINAL_STATUSES (tasks/views.py). Werner SI flow:
-        // Draft → Issued → Acknowledged → Actioned → Verified — so
-        // "Acknowledged" is mid-flow, NOT terminal. Only the final state
-        // of each workflow lands in the Done column on the task board.
-        const lowerStatus = payload.status.toLowerCase();
-        const DONE_STATUSES = [
-          'approved', 'rejected', 'closed', 'completed',
-          'eot awarded', 'verified', 'answered',
-        ];
-        const TODO_STATUSES = [
-          'todo', 'draft', 'pending', 'not started', 'delay identified',
-        ];
-        if (DONE_STATUSES.includes(lowerStatus)) {
-          payload.taskStatus = 'done';
-        } else if (TODO_STATUSES.includes(lowerStatus)) {
-          payload.taskStatus = 'todo';
-        } else {
-          payload.taskStatus = 'in review';
-        }
-      }
-
+      // Deliberately NOT sending taskStatus here. This used to guess the
+      // kanban bucket from a generic todo/done/else->"in review" heuristic
+      // and send it explicitly — but the backend already has a correct,
+      // per-entity-type mapping (tasks/task_status.py's
+      // sync_task_status_for_entity, run automatically by update-entity
+      // whenever `status` is in the payload) that knows each doc type's
+      // real status enum. An explicit taskStatus here takes effect FIRST
+      // and unconditionally (tasks/views.py update_entity, step 1), before
+      // that correct mapping even runs — so this crude guess was winning
+      // over the real one. Concretely: VO's "Priced" isn't review-worthy
+      // yet (the contractor priced it, the professional hasn't looked),
+      // but this heuristic's else-branch forced it to "in review" anyway,
+      // because "priced" wasn't on its DONE/TODO lists. Omitting the field
+      // entirely lets the backend's own mapping be the only source of
+      // truth for every doc type, not just VO.
       const updatedTask = await patchData({
         url: `tasks/tasks/${taskId}/update-entity/`,
         data: payload
@@ -669,7 +678,15 @@ export default function TaskDetails() {
         const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
         const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
 
-        if (['draft', 'open', 'todo', '', 'pending', 'submitted'].includes(currentStatusNorm) && !isCreator) {
+        // Matches VariationOrder.Status in tasks/models.py exactly:
+        // Draft, Submitted, Under Review, Priced, Recommended, Approved,
+        // Rejected, Closed. The previous list here ('open', 'todo',
+        // 'pending', '') didn't correspond to any real VO status, and
+        // was missing 'underreview' — a VO replied to while genuinely
+        // Under Review never transitioned to Priced at all, silently
+        // blocking every downstream approval step (including the
+        // Approve & Sign button) regardless of who was checking it.
+        if (['draft', 'submitted', 'underreview'].includes(currentStatusNorm) && !isCreator) {
           // Builder submits pricing → Priced
           updateData.status = "Priced";
           updateData.statusCause = "VO Priced by Builder";
@@ -1473,6 +1490,15 @@ export default function TaskDetails() {
     ? (transformTaskData(currentTask, requestInfoResponse?.results) as any)
     : null;
 
+  // Stamp "seen" once replies have actually loaded for this visit — see
+  // repliesSeenAtRef above for why this only fires once per page load.
+  useEffect(() => {
+    if (!taskId || hasStampedRepliesSeenRef.current) return;
+    if (!displayTask?.responses) return;
+    hasStampedRepliesSeenRef.current = true;
+    localStorage.setItem(`task_${taskId}_replies_seen_at`, new Date().toISOString());
+  }, [taskId, displayTask?.responses]);
+
 
   // Map API statuses that don't directly match timeline stage names
   const statusToStageMap: Record<string, string> = {
@@ -1512,9 +1538,23 @@ export default function TaskDetails() {
       )
     : false;
 
+  // See canApprove's VO branch below — project-scoped role, same as
+  // WernerTaskActions.tsx's userRoleCode.
+  const projectIdNum = projectId ? Number(projectId) : null;
+  const { data: effectivePerms } = useEffectivePermissions(projectIdNum);
+
   const canApprove = !!user && !!displayTask && (() => {
     if (displayTask.type === "VO") {
-      const userCode = resolvePermissionCode(user.role?.name || userRole || "");
+      // Prefer the project-resolved role (ProjectTeamMember → backbone
+      // code, via permissions/effective/) over the user's bare global
+      // role — same fix as WernerTaskActions.tsx's userRoleCode, and for
+      // the same reason: a PM is usually assigned at the project level,
+      // not on the User record itself. Checking only user.role?.name
+      // meant this button could stay hidden even after Priced, for any
+      // user whose project-level role differs from their global one.
+      const userCode = resolvePermissionCode(
+        effectivePerms?.roleCode || user.role?.code || user.role?.name || userRole || "",
+      );
       // Mirrors backend SIGNING_ROLES["vo"] in views_signing.py — only the
       // PM / Principal Agent roles may approve & sign a VO (it's a contract
       // amendment). Architect / QS / CQS were here previously but the
@@ -1522,7 +1562,18 @@ export default function TaskDetails() {
       const paRoles = ["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"];
       // Client final sign-off when status = Recommended (over-mandate VOs).
       const clientRoles = ["CLIENT", "CPM"];
-      if (displayTask.status === "Priced" && paRoles.includes(userCode)) return true;
+      // "Priced" AND "Under Review" both count as "the PM still owes a
+      // decision" — Under Review is a real Werner stage (see the
+      // timeline.stages order below: Draft → Priced → Under Review →
+      // Recommended → Approved), entered automatically the moment the
+      // creator/PM leaves a reply while Priced (a few lines up in
+      // handleSubmitResponse). That auto-transition is intentional and
+      // legitimate — but this check previously only recognized "Priced",
+      // so the Approve/Recommend button vanished the instant the PM so
+      // much as replied, and only came back once the contractor re-priced.
+      // The button must stay available through the whole review window,
+      // not just its first moment.
+      if (["Priced", "Under Review"].includes(displayTask.status) && paRoles.includes(userCode)) return true;
       if (displayTask.status === "Recommended" && clientRoles.includes(userCode)) return true;
       return false;
     }
@@ -2249,12 +2300,26 @@ export default function TaskDetails() {
                           comment block above and making the conversation
                           read backwards in production. */}
                       {displayTask.responses
-                        .slice().map((resp: any) => (
+                        .slice().map((resp: any) => {
+                          // See repliesSeenAtRef above — highlights any
+                          // reply added since this task was last viewed
+                          // in this browser.
+                          const isNew =
+                            !!repliesSeenAtRef.current &&
+                            !!resp.date &&
+                            new Date(resp.date) > new Date(repliesSeenAtRef.current);
+                          return (
                           <Card
                             key={resp.id}
-                            className="p-0 bg-card border border-border overflow-hidden shadow-none"
+                            className={cn(
+                              "p-0 bg-card border overflow-hidden shadow-none",
+                              isNew ? "border-primary ring-1 ring-primary/30" : "border-border",
+                            )}
                           >
-                            <div className="bg-muted/50 px-5 py-3 border-b border-border flex items-center justify-between">
+                            <div className={cn(
+                              "px-5 py-3 border-b border-border flex items-center justify-between",
+                              isNew ? "bg-primary/5" : "bg-muted/50",
+                            )}>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-7 w-7 border border-primary/20">
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
@@ -2268,6 +2333,11 @@ export default function TaskDetails() {
                                 <span className="text-sm text-foreground">
                                   {resp.sender}
                                 </span>
+                                {isNew && (
+                                  <span className="text-[10px] font-medium uppercase tracking-wide bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                                    New
+                                  </span>
+                                )}
                               </div>
                               <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
@@ -2333,7 +2403,8 @@ export default function TaskDetails() {
                               )}
                             </div>
                           </Card>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
@@ -2362,12 +2433,18 @@ export default function TaskDetails() {
                         key={idx}
                         className="overflow-hidden border-border bg-card shadow-sm hover:border-primary/50 transition-all cursor-pointer"
                         onClick={() => {
-                          const isCreator = String(displayTask.creator?.id) === String(user?.id);
-                          const currentStatusNorm = (displayTask.timeline?.current || '').toLowerCase().replace(/\s+/g, '');
-                          if (isCreator && (currentStatusNorm === 'submitted' || currentStatusNorm === 'priced')) {
-                            const creatorName = user?.name || user?.email?.split("@")[0] || "Unknown";
-                            updateTask({ status: "Under Review", statusCause: `Response reviewed by ${creatorName}` });
-                          }
+                          // Deliberately no status change here. This used to
+                          // move the VO to "Under Review" the moment the
+                          // creator/PM clicked a round just to view its
+                          // pricing details — but viewing isn't a decision,
+                          // and canApprove only shows Approve & Sign at
+                          // "Priced" (within mandate) or "Recommended". The
+                          // natural first step before approving R5,750 worth
+                          // of pricing is to look at it — and that alone was
+                          // silently knocking the VO out of the one status
+                          // that made the button visible. Status should only
+                          // change on an actual decision (counter-reply,
+                          // recommend, approve), not a click-to-view.
                           setSelectedResponse(round);
                           setIsResponseModalOpen(true);
                         }}
@@ -3317,6 +3394,7 @@ export default function TaskDetails() {
                         wFull={true}
                         taskType={displayTask.type}
                         taskId={taskId || ''}
+                        entityId={entityId}
                         assignedTo={currentTask?.assignedTo || []}
                         onSuccess={async () => {
                           // RFI: requesting info → Further Info Required

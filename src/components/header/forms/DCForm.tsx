@@ -242,7 +242,7 @@ export default function DCForm({ setOpen, initialStatus, initialData, taskId }: 
       </div>
 
       {/* Werner spec rev H — To / CC / Date Required. */}
-      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (PM)" />
+      <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (PM)" defaultDueDays={14} />
 
       <div>
         <Label>Description</Label>
