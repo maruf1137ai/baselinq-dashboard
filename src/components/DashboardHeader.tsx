@@ -26,6 +26,20 @@ import { useMeetingRsvp } from "@/hooks/useMeetingRsvp";
 import useFetch from "@/hooks/useFetch";
 import { toast } from "sonner";
 
+// The backend prefixes every notification title with "[Project · Number]"
+// (see notification/services.py::create_notification — Werner rev H p.21
+// requires the project be surfaced up-front so a user with multiple
+// projects open can disambiguate). Rendered inline that read as one run-on
+// string, so pull it out and show it as a small separate label instead of
+// stripping it — the project context still matters, it just shouldn't be
+// competing with the actual notification text for attention.
+const PROJECT_PREFIX = /^\[([^\]]+)\]\s*/;
+function splitNotificationTitle(title: string): { projectLabel: string | null; mainTitle: string } {
+  const match = PROJECT_PREFIX.exec(title || "");
+  if (!match) return { projectLabel: null, mainTitle: title || "" };
+  return { projectLabel: match[1], mainTitle: title.slice(match[0].length) };
+}
+
 function MeetingRsvpButtons({ meetingId }: { meetingId: number }) {
   const { mutate, isPending } = useMeetingRsvp(meetingId);
   return (
@@ -81,6 +95,7 @@ function NotificationItem({
   // Hide buttons once the user has responded (fetched from server, survives panel close/reopen)
   const alreadyRsvpd = meetingData?.my_rsvp === "accepted" || meetingData?.my_rsvp === "declined";
   const showRsvp = isMeetingInvite && !alreadyRsvpd;
+  const { projectLabel, mainTitle } = splitNotificationTitle(item.title);
 
   return (
     <div
@@ -95,9 +110,16 @@ function NotificationItem({
             <div className="h-2 w-2 bg-primary rounded-full mt-1.5 shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-foreground">{item.title}</p>
-            <p className="text-xs text-muted-foreground mt-1">{item.body}</p>
-            <p className="text-xs text-muted-foreground mt-2">
+            {projectLabel && (
+              <span className="inline-block text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded mb-1 truncate max-w-full">
+                {projectLabel}
+              </span>
+            )}
+            <p className="text-sm font-medium text-foreground leading-snug">{mainTitle}</p>
+            {item.body && (
+              <p className="text-xs text-muted-foreground mt-0.5">{item.body}</p>
+            )}
+            <p className="text-[11px] text-muted-foreground/70 mt-1.5">
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
             </p>
             {showRsvp && (

@@ -10,12 +10,13 @@
  *   cc:           user[]  — cc'd users (multi-select)
  *   dateRequired: ISO yyyy-mm-dd string
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, ChevronsUpDown, Search, X } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Info, Search, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import useFetch from "@/hooks/useFetch";
@@ -32,6 +33,35 @@ interface Props {
   onChange: (v: TaskMetaValue) => void;
   toLabel?: string;
   showDateRequired?: boolean;
+  /** Restrict the "To" picker's candidate list to members whose role code
+   * (member.roleCode, from orgRoleInfo.code) is in this set, AND
+   * auto-select into "To" once the team list loads. When more than one
+   * candidate matches and `discipline` is given, prefers whoever's own
+   * discipline tag (their ProjectTeamMember.discipline — e.g. "this
+   * architect is our Fire & Safety consultant") matches it, mirroring
+   * the backend's own get_project_users_by_discipline logic. Falls back
+   * to the first role-matching candidate otherwise. Undefined = show
+   * everyone, no auto-select, unchanged from before this existed. */
+  toRoleFilter?: string[];
+  /** Auto-check every project member whose role code is in this set into
+   * CC, once, when the team-members list first loads — these are the
+   * people with escalate/sign/close authority on this entity type, per
+   * src/lib/roleGroups.ts. Additive: never removes a manual pick, and
+   * never re-adds someone the user has deliberately removed afterward. */
+  ccAutoRoles?: string[];
+  /** The form's selected discipline (e.g. "Fire & Safety"), if it has
+   * one — see toRoleFilter above for how it's used. */
+  discipline?: string;
+  /** SLA days for this entity type — mirrors the sla_days table in
+   * tasks/views.py::create_task_for_entity (RFI 3, SI 5, VO 7, DC 14,
+   * CPI 10, fallback 7 for anything else e.g. GI/IC). When set, "Date
+   * Required" is pre-filled with today + this many days as soon as the
+   * form loads, so what's shown here always matches the real deadline
+   * that gets saved — previously the field showed an empty "Pick a
+   * date" while this same default applied silently on the backend if
+   * left untouched. Only sets it once, at mount; never overwrites a
+   * date the user has since picked or changed. */
+  defaultDueDays?: number;
 }
 
 function getInitial(name: string) {
@@ -54,9 +84,12 @@ interface PickerProps {
   onSelect: (user: any) => void;
   onRemove: (userId: string) => void;
   placeholder: string;
+  /** Shown next to the label behind a hover-triggered info icon, e.g.
+   * explaining why this field came pre-filled. Omit to show no icon. */
+  helpText?: string;
 }
 
-function UserPicker({ label, selected, members, multi = false, onSelect, onRemove, placeholder }: PickerProps) {
+function UserPicker({ label, selected, members, multi = false, onSelect, onRemove, placeholder, helpText }: PickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -84,7 +117,25 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
 
   return (
     <div>
-      <Label className="text-sm font-normal">{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-normal">{label}</Label>
+        {helpText && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Why these users are pre-selected for ${label}`}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="end" className="max-w-xs text-xs">
+              {helpText}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
       <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch(""); }}>
         <PopoverTrigger asChild>
           <button
@@ -116,7 +167,18 @@ function UserPicker({ label, selected, members, multi = false, onSelect, onRemov
           </div>
 
           {/* List */}
-          <ul className="max-h-64 overflow-y-auto py-1">
+          {/* onWheel/onTouchMove stopPropagation: this popover is opened from
+              inside a Sheet (Radix Dialog primitive), which applies a
+              document-level scroll lock while open. Without stopping
+              propagation here, that lock swallows wheel/touch scroll
+              gestures over this list even though overflow-y-auto is set
+              correctly — the list is scrollable, the gesture just never
+              reaches it. */}
+          <ul
+            className="max-h-64 overflow-y-auto py-1"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {filtered.length === 0 && (
               <li className="px-4 py-3 text-sm text-muted-foreground text-center">No users match this search</li>
             )}
@@ -194,6 +256,10 @@ export function TaskMetaFields({
   onChange,
   toLabel = "To (recipient)",
   showDateRequired = true,
+  toRoleFilter,
+  ccAutoRoles,
+  discipline,
+  defaultDueDays,
 }: Props) {
   const projectId =
     typeof window !== "undefined"
@@ -220,24 +286,132 @@ export function TaskMetaFields({
       m.role ||
       m.role_info?.name ||
       "",
+    // Backbone role code (e.g. "ARCH", "PM", "CQS") — from the user's
+    // system Role, not the free-text project position label above. This
+    // is what toRoleFilter / ccAutoRoles actually match against.
+    roleCode: (m.orgRoleInfo?.code || m.user?.role?.code || "").toUpperCase(),
+    // ProjectTeamMember.discipline — the specialist tag (e.g. "Fire &
+    // Safety"), distinct from roleCode above.
+    discipline: m.discipline || "",
   }));
 
-  const handleToSelect = (user: any) => {
-    // single-select — replace To, and auto-append the same user to CC
-    // if they aren't already there. The user can still remove them from
-    // CC manually if they don't want the duplicate notification.
-    const userKey = String(user.userId || user.id);
-    const alreadyInCc = value.cc.some(
-      (u) => String(u.userId || u.id) === userKey,
-    );
+  // "To" candidates are filtered to the roles who can legitimately fill
+  // that slot for this entity type (e.g. only professionals for an RFI),
+  // and exclude the current user — you can't address the request to
+  // yourself. No filter provided = unchanged behavior, show everyone
+  // (still excluding self, matching CC's existing rule below).
+  const toMembers = (toRoleFilter
+    ? members.filter((m) => toRoleFilter.includes(m.roleCode))
+    : members
+  ).filter((m) => !currentUserId || String(m.userId) !== currentUserId);
+
+  // Auto-populate "To" and CC together, in ONE effect with ONE onChange
+  // call. They used to be two separate effects, each reading `value`
+  // from the same stale render and calling onChange independently —
+  // whichever one committed second silently discarded the other's
+  // update, because neither closure had seen the other's change yet.
+  // Computing both fields' next values first and writing them in a
+  // single onChange avoids that race entirely.
+  //
+  // "To" (single-select): prefers whoever's discipline tag matches the
+  // form's selected discipline, else the first role-matching candidate.
+  // Reactive to discipline changes (re-picks as it changes) until the
+  // user manually touches "To" — toManuallySetRef makes that permanent.
+  //
+  // CC (multi-select, additive): every member matching ccAutoRoles,
+  // excluding whoever ends up in "To" and excluding the current user
+  // (you don't CC yourself, you're the creator). Fires once ever
+  // (ccAutoAppliedRef) — never re-adds someone deliberately removed
+  // afterward.
+  //
+  // Date Required: pre-filled with today + defaultDueDays, once, the
+  // real SLA default so what's shown always matches what actually gets
+  // saved if left untouched. Doesn't depend on members, so it applies
+  // even before the team list has loaded.
+  const toManuallySetRef = useRef(false);
+  const ccAutoAppliedRef = useRef(false);
+  const dateAutoAppliedRef = useRef(false);
+  useEffect(() => {
+    let nextTo = value.to;
+    let nextCc = value.cc;
+    let nextDate = value.dateRequired;
+
+    if (members.length > 0) {
+      if (!toManuallySetRef.current && toRoleFilter && toRoleFilter.length > 0 && toMembers.length > 0) {
+        const disciplineMatch = discipline
+          ? toMembers.find(
+              (m) => (m.discipline || "").toLowerCase() === discipline.toLowerCase(),
+            )
+          : undefined;
+        const best = disciplineMatch || toMembers[0];
+        const currentId = value.to[0] && String(value.to[0].userId || value.to[0].id);
+        if (currentId !== String(best.userId)) nextTo = [best];
+      }
+
+      if (!ccAutoAppliedRef.current && ccAutoRoles && ccAutoRoles.length > 0) {
+        const toIds = new Set(nextTo.map((u) => String(u.userId || u.id)));
+        const matches = members.filter(
+          (m) =>
+            ccAutoRoles.includes(m.roleCode) &&
+            !toIds.has(String(m.userId)) &&
+            (!currentUserId || String(m.userId) !== currentUserId),
+        );
+        if (matches.length > 0) {
+          ccAutoAppliedRef.current = true;
+          const existingIds = new Set(value.cc.map((u) => String(u.userId || u.id)));
+          const toAdd = matches.filter((m) => !existingIds.has(String(m.userId)));
+          if (toAdd.length > 0) nextCc = [...value.cc, ...toAdd];
+        }
+      }
+    }
+
+    if (!dateAutoAppliedRef.current && showDateRequired && defaultDueDays && !value.dateRequired) {
+      dateAutoAppliedRef.current = true;
+      const due = new Date();
+      due.setDate(due.getDate() + defaultDueDays);
+      nextDate = format(due, "yyyy-MM-dd");
+    }
+
+    if (nextTo !== value.to || nextCc !== value.cc || nextDate !== value.dateRequired) {
+      onChange({ ...value, to: nextTo, cc: nextCc, dateRequired: nextDate });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members.length, toMembers.length, toRoleFilter, ccAutoRoles, discipline, showDateRequired, defaultDueDays]);
+
+  // Mutual exclusivity — whoever is in "To" must never also sit in CC.
+  // Runs whenever "To" changes for any reason (manual pick, auto-select
+  // above, or a clear), and strips that same user out of CC if they're
+  // there. This is the one place that enforces the rule, rather than
+  // trying to prevent every possible path that could add a duplicate —
+  // simpler and correct regardless of which effect/handler fired first.
+  useEffect(() => {
+    if (value.to.length === 0) return;
+    const toIds = new Set(value.to.map((u) => String(u.userId || u.id)));
+    const hasOverlap = value.cc.some((u) => toIds.has(String(u.userId || u.id)));
+    if (!hasOverlap) return;
     onChange({
       ...value,
-      to: [user],
-      cc: alreadyInCc ? value.cc : [...value.cc, user],
+      cc: value.cc.filter((u) => !toIds.has(String(u.userId || u.id))),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.to]);
+
+  // CC candidates exclude the current user and whoever's currently in
+  // "To" — so the To recipient can't be manually re-added to CC either
+  // while they're still the "To" recipient.
+  const ccMembers = members.filter(
+    (m) =>
+      (!currentUserId || String(m.userId) !== currentUserId) &&
+      !value.to.some((u) => String(u.userId || u.id) === String(m.userId)),
+  );
+
+  const handleToSelect = (user: any) => {
+    toManuallySetRef.current = true;
+    onChange({ ...value, to: [user] });
   };
 
   const handleToRemove = () => {
+    toManuallySetRef.current = true;
     onChange({ ...value, to: [] });
   };
 
@@ -259,23 +433,31 @@ export function TaskMetaFields({
       <UserPicker
         label={toLabel}
         selected={value.to}
-        members={members}
+        members={toMembers}
         multi={false}
         onSelect={handleToSelect}
         onRemove={handleToRemove}
         placeholder="Select a user..."
+        helpText={
+          toRoleFilter
+            ? "Pre-filled automatically based on role — this is who's expected to respond. Change it if a different person should reply."
+            : undefined
+        }
       />
 
       <UserPicker
         label="CC"
         selected={value.cc}
-        members={members.filter(
-          (m) => !currentUserId || String(m.userId) !== currentUserId,
-        )}
+        members={ccMembers}
         multi={true}
         onSelect={handleCcSelect}
         onRemove={handleCcRemove}
         placeholder="Select a user..."
+        helpText={
+          ccAutoRoles
+            ? "Added automatically because their role gives them authority to act on this item (e.g. approve, escalate, or close it). Remove anyone who doesn't need to be included."
+            : undefined
+        }
       />
 
       {showDateRequired && (

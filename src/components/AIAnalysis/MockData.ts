@@ -356,11 +356,11 @@ export const CPI_MOCK_DATA = [{
       ]
     },
     "validation": {
-      "valid": true,
+      "valid": false,
       "total_citations": 11,
-      "invalid_citations": [],
-      "validation_errors": [],
-      "accuracy_rate": 1
+      "invalid_citations": ["99.9"],
+      "validation_errors": ["Invalid citation: Clause 99.9 not found in contract"],
+      "accuracy_rate": 10 / 11
     },
     "retrieved_chunks_count": 50
   },

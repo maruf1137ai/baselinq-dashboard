@@ -1,5 +1,5 @@
 import { FileText, Shield, Scale, Clock, AlertTriangle, Package, Cloud } from "lucide-react";
-import { StatusHeader, sectionClass } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -23,6 +23,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
         id={data.vo_id}
         visibleSections={visibleSections}
       />
+      <CitationValidationBanner validation={data.validation} visibleSections={visibleSections} index={0} />
 
       {/* Overdue warning banner — rendered inside section 1 timing */}
       {isOverdue && (

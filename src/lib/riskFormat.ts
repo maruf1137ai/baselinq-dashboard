@@ -102,6 +102,7 @@ const HIDDEN_KEYS = new Set([
   "threshold_pct",
   "milestone_id",
   "status",
+  "compared_against",     // already stated in plain language in the evidence line
 ]);
 
 /**

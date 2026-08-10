@@ -1,4 +1,4 @@
-import { CircleCheck, CalendarIcon, Pencil, Plus, Trash2 } from "lucide-react";
+import { CircleCheck, CalendarIcon, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,7 @@ import {
   Milestone as MilestoneType,
 } from "@/hooks/useMilestones";
 import { toast } from "sonner";
+import { ViewDetailsDialog } from "./detailsDialog";
 
 const STATUS_LABELS: Record<string, string> = {
   planned: "Planned",
@@ -269,7 +270,18 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
                   {STATUS_LABELS[m.status]}
                 </span>
               </span>
-              <div className="w-16 shrink-0 flex items-center justify-end gap-2">
+              <div className="w-24 shrink-0 flex items-center justify-end gap-2">
+                <ViewDetailsDialog
+                  milestone={m}
+                  onEdit={() => openEdit(m)}
+                  trigger={
+                    <button
+                      aria-label="View milestone details"
+                      className="text-muted-foreground hover:text-foreground transition-colors">
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  }
+                />
                 <button
                   aria-label="Edit milestone"
                   onClick={() => openEdit(m)}

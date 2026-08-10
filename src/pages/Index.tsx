@@ -254,7 +254,8 @@ const Index = () => {
     .filter((m: any) => m.status !== "cancelled" && !isMeetingPast(m.date, m.time))
     .sort((a: any, b: any) => new Date(a.date_time || a.date).getTime() - new Date(b.date_time || b.date).getTime())
     .slice(0, 5);
-  const { data: currentUser } = useCurrentUser();
+  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
+  const currentUserId = currentUser?.id ? String(currentUser.id) : undefined;
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
   const { canEditProject: canEditByRole } = usePermissions();
@@ -300,6 +301,23 @@ const Index = () => {
       created_at: item.created_at || item.task?.createdAt,
       updated_at: item.task?.updatedAt || item.created_at || item.task?.createdAt,
       assignedBy: item.assignedBy,
+      // Werner To/CC — assignedTo is "the ball is in this person's court",
+      // responseBy is "CC'd, watching only". Needed to personalize My
+      // Actions instead of showing every open task on the project to
+      // everyone (see Aug 6 meeting notes: David-as-contractor had no way
+      // to tell a VO had come back to him — the dashboard never filtered
+      // by who the task was actually assigned to).
+      assignedToIds: (item.assignedTo || []).map((u: any) => String(u.userId)),
+      responseByIds: (item.responseBy || []).map((u: any) => String(u.userId)),
+      // Single source of truth for "this needs the current user's action" —
+      // shared by both My Actions (filter) and Activity Feed (highlight),
+      // so the two sections never disagree about what's actionable.
+      needsAction: (() => {
+        const s = (item.status || item.task?.status || "todo").toLowerCase();
+        if (s === "done" || s === "closed") return false;
+        if (!currentUserId) return false;
+        return (item.assignedTo || []).some((u: any) => String(u.userId) === currentUserId);
+      })(),
     };
   });
 
@@ -310,10 +328,11 @@ const Index = () => {
   // truth, and the fallbacks above already cover the empty-project
   // demo case.
 
-  const myActions = taskList.filter((t: any) => {
-    const s = t.status?.toLowerCase();
-    return s !== "done" && s !== "closed";
-  });
+  // Personalized: only tasks where the ball is actually in the current
+  // user's court (they're in assignedTo, the Werner "To"), not every open
+  // task on the project. A task you're only CC'd on (responseBy) belongs
+  // in the Activity Feed as an FYI, not here demanding action.
+  const myActions = taskList.filter((t: any) => t.needsAction);
 
   // Sort actions by date: overdue first, then by due date ascending
   const sortedActions = useMemo(() => {
@@ -665,7 +684,7 @@ const Index = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 bg-card p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
-              {loadingTasks ? (
+              {loadingTasks || loadingCurrentUser ? (
                 <AwesomeLoader message="Loading tasks" />
               ) : sortedActions.length > 0 ? (
                 <>
@@ -730,6 +749,7 @@ const Index = () => {
                       status={displayStatus}
                       author={actorName}
                       timeAgo={task.updated_at || task.created_at ? formatDate(task.updated_at || task.created_at) : "Just now"}
+                      needsAction={task.needsAction}
                     />
                   );
                 })

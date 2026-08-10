@@ -1,28 +1,25 @@
 /**
  * Compliance — contractual obligations and notice deadlines for the selected project.
  *
- * Everything on this page is live. Two backends feed it:
- *   • `documents/{id}/obligations/` — DocumentObligation rows, per document
- *   • `projects/{id}/time-bars/`    — TimeBarClock rows, per project
+ * Two real, populated sources feed this page:
+ *   • `documents/obligations/?project_id=` — a project-level aggregate of
+ *     DocumentObligation rows (one request, not one per document — see
+ *     `src/hooks/useCompliance.ts`). No aggregate route existed when this page
+ *     was first rebuilt off hardcoded data; it does now.
+ *   • `projects/{id}/time-bars/` — TimeBarClock rows, per project.
  *
- * There is no project-level obligations endpoint yet, so obligations are
- * gathered document by document. That is an N+1 and it is deliberate: the
- * alternative was leaving the page on fabricated data until the backend grows
- * an aggregate route. The page no longer waits for it — the two project-level
- * fetches render the page and the obligation rows stream in behind them.
+ * Per-obligation evidence upload and notice drafting are real: DocumentObligation
+ * now has an evidence relation and a notice-generation endpoint, neither of
+ * which existed when this page was first rebuilt — see AddEvidenceModal.tsx,
+ * GenerateNoticeModal.tsx and ComplianceDetailModal.tsx.
  *
- * The other consequence of that shape is that the page can be partly blind: a
- * failed request, or a second page of documents we never asked about, both
- * produce a short list that looks complete. Anything missing is named on the
- * page rather than absorbed into the counts.
- *
- * Deliberately absent: an evidence-completeness bar and a compliance score.
- * Neither has a data source — obligations carry no evidence relation and
- * nothing on the server scores compliance — so showing either would be a
- * number we made up about whether a claim is safe.
+ * Deliberately absent: an invented compliance score. The counts below are a
+ * direct tally of overdue / due-soon / no-date / on-track / closed rows —
+ * never a single percentage standing in for all of it, so a project with
+ * everything overdue can't report a friendly-looking 60%.
  */
 import { useMemo, useState } from "react";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -36,6 +33,9 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import ObligationModal, {
   type ObligationDraft,
 } from "@/components/Compliance/ObligationModal";
+import AddEvidenceModal from "@/components/Compliance/AddEvidenceModal";
+import GenerateNoticeModal from "@/components/Compliance/GenerateNoticeModal";
+import ComplianceDetailModal from "@/components/Compliance/ComplianceDetailModal";
 import { fetchData } from "@/lib/Api";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
@@ -43,22 +43,27 @@ import { cn } from "@/lib/utils";
 import type { ApiDocument } from "@/components/documents/DocumentTable";
 import { formatDate } from "@/lib/dateUtils";
 import {
-  buildObligationRows,
+  useComplianceObligations,
+  type ComplianceObligation,
+} from "@/hooks/useCompliance";
+import {
   buildTimeBarRows,
+  deriveUrgency,
   filterComplianceRows,
+  isObligationClosed,
   parseDueDate,
   sortComplianceRows,
   summariseCompliance,
   summariseLoadIssues,
   urgencyLabel,
-  type ApiObligation,
   type ApiTimeBar,
   type ComplianceRow,
   type ComplianceUrgency,
 } from "@/lib/compliance";
 import {
-  CalendarClock, CalendarOff, FileText, Search, Shield, ShieldAlert, ShieldQuestion,
+  CalendarClock, CalendarOff, FileText, Paperclip, Search, Shield, ShieldAlert, ShieldQuestion,
 } from "lucide-react";
+import { AiMark } from "@/components/icons/AiMark";
 
 /**
  * The app's canonical "01 Jun 2026" format. The date is resolved to a local
@@ -79,6 +84,35 @@ const URGENCY_STYLES: Record<ComplianceUrgency, string> = {
   closed: "bg-muted text-muted-foreground border-border",
 };
 
+/** Builds display rows from the aggregate obligations response, reusing the
+ *  same tested urgency rules the rest of this page relies on rather than
+ *  trusting a second, server-computed notion of "overdue". */
+function buildObligationRowsFromAggregate(
+  obligations: ComplianceObligation[],
+  today: Date,
+): ComplianceRow[] {
+  return obligations.map(o => {
+    const { urgency, daysFromDue } = deriveUrgency(
+      o.dueDate,
+      isObligationClosed(o.status),
+      today,
+    );
+    return {
+      key: `obligation-${o._id}`,
+      source: "obligation" as const,
+      title: o.title,
+      context: o.documentName,
+      dueDate: o.dueDate,
+      status: o.status,
+      urgency,
+      daysFromDue,
+      responsibleRole: o.responsibleRole || undefined,
+      documentId: o.documentId,
+      obligationId: o._id,
+    };
+  });
+}
+
 const Compliance = () => {
   const projectId = localStorage.getItem("selectedProjectId");
   const navigate = useNavigate();
@@ -87,44 +121,24 @@ const Compliance = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<ComplianceRow | null>(null);
+  const [evidenceObligation, setEvidenceObligation] = useState<ComplianceObligation | null>(null);
+  const [noticeObligation, setNoticeObligation] = useState<ComplianceObligation | null>(null);
+  const [detailObligation, setDetailObligation] = useState<ComplianceObligation | null>(null);
 
   const { mutateAsync: post, isPending: isCreating } = usePost();
   const { mutateAsync: patch, isPending: isPatching } = usePatch();
 
   const {
-    data: docsData,
-    isLoading: docsLoading,
-    isError: docsError,
-    refetch: refetchDocuments,
-  } = useQuery({
-    queryKey: ["documents", projectId, "compliance"],
-    queryFn: () => fetchData(`documents/?project_id=${projectId}`),
-    enabled: !!projectId,
-  });
-  const documents: ApiDocument[] = useMemo(() => docsData?.results ?? [], [docsData]);
-
-  // The documents endpoint is DRF-paginated and the rest of the app reads
-  // `results` off page one only (see Documents.tsx). We follow that rather
-  // than inventing a page-walk here — but where the app can afford to show a
-  // short list, this page cannot: an obligation we never asked about looks
-  // identical to an obligation that is not due. So compare `count` against
-  // what arrived and say plainly how many documents were not covered.
-  const undeliveredDocuments = useMemo(() => {
-    const total = typeof docsData?.count === "number" ? docsData.count : null;
-    if (total === null) return 0;
-    return Math.max(0, total - documents.length);
-  }, [docsData, documents.length]);
-
-  const obligationQueries = useQueries({
-    queries: documents.map(doc => ({
-      queryKey: ["obligations", doc._id, projectId],
-      queryFn: () =>
-        fetchData(`documents/${doc._id}/obligations/?project_id=${projectId}`),
-      enabled: !!projectId,
-      select: (data: ApiObligation[] | { results?: ApiObligation[] }): ApiObligation[] =>
-        Array.isArray(data) ? data : data?.results ?? [],
-    })),
-  });
+    data: obligationsData,
+    isLoading: obligationsLoading,
+    isError: obligationsError,
+    refetch: refetchObligations,
+  } = useComplianceObligations(projectId);
+  const obligations: ComplianceObligation[] = obligationsData?.obligations ?? [];
+  const obligationsById = useMemo(
+    () => new Map(obligations.map(o => [o._id, o])),
+    [obligations],
+  );
 
   const {
     data: timeBarData,
@@ -137,51 +151,42 @@ const Compliance = () => {
     enabled: !!projectId,
   });
 
-  // Only the two project-level fetches gate the page. The per-document
-  // obligation requests are an N+1 — on a fifty-document project that is fifty
-  // round trips, and holding the whole screen behind the slowest of them made
-  // the page feel broken. They stream in instead, with a count of what is
-  // still outstanding so a short list is never mistaken for a complete one.
-  const isLoading = docsLoading || timeBarsLoading;
-  const obligationsPending = obligationQueries.filter(q => q.isPending).length;
-  const failedObligationDocuments = obligationQueries.filter(q => q.isError).length;
+  // Fetched only to populate the document picker on "Track obligation" — the
+  // obligation list itself no longer depends on this (see useComplianceObligations
+  // above), so a failure here degrades the create dropdown, not the page.
+  const { data: docsData } = useQuery({
+    queryKey: ["documents", projectId, "compliance-picker"],
+    queryFn: () => fetchData(`documents/?project_id=${projectId}`),
+    enabled: !!projectId,
+  });
+  const documents: ApiDocument[] = useMemo(() => docsData?.results ?? [], [docsData]);
+  const documentOptions = useMemo(
+    () => documents.map(d => ({ id: String(d._id), name: d.name })),
+    [documents],
+  );
+
+  const isLoading = obligationsLoading || timeBarsLoading;
 
   const loadIssue = summariseLoadIssues({
-    documentsFailed: docsError,
+    documentsFailed: obligationsError,
     timeBarsFailed: timeBarsError,
-    failedObligationDocuments,
-    totalObligationDocuments: obligationQueries.length,
-    undeliveredDocuments,
   });
 
-  const canRetry = docsError || timeBarsError || failedObligationDocuments > 0;
+  const canRetry = obligationsError || timeBarsError;
 
   const retryFailed = () => {
-    if (docsError) refetchDocuments();
+    if (obligationsError) refetchObligations();
     if (timeBarsError) refetchTimeBars();
-    obligationQueries.forEach(q => {
-      if (q.isError) q.refetch();
-    });
   };
 
   const rows = useMemo(() => {
     const today = new Date();
-    const obligationRows = documents.flatMap((doc, i) =>
-      buildObligationRows(
-        String(doc._id),
-        doc.name,
-        (obligationQueries[i]?.data as ApiObligation[]) ?? [],
-        today,
-      ),
-    );
     const bars: ApiTimeBar[] = timeBarData?.time_bars ?? [];
     return sortComplianceRows([
-      ...obligationRows,
+      ...buildObligationRowsFromAggregate(obligations, today),
       ...buildTimeBarRows(bars, today),
     ]);
-    // `obligationQueries` is a fresh array each render; its data is what matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documents, timeBarData, obligationQueries.map(q => q.dataUpdatedAt).join()]);
+  }, [obligations, timeBarData]);
 
   const counts = useMemo(() => summariseCompliance(rows), [rows]);
   const visibleRows = useMemo(
@@ -199,13 +204,8 @@ const Compliance = () => {
     [editing],
   );
 
-  const documentOptions = useMemo(
-    () => documents.map(d => ({ id: String(d._id), name: d.name })),
-    [documents],
-  );
-
   const invalidateObligations = () =>
-    queryClient.invalidateQueries({ queryKey: ["obligations"] });
+    queryClient.invalidateQueries({ queryKey: ["compliance-obligations", projectId] });
 
   const createObligation = async (draft: ObligationDraft, documentId: string | null) => {
     if (!documentId) return;
@@ -258,6 +258,14 @@ const Compliance = () => {
     }
   };
 
+  // Not a claim that AI analysis runs on this page — it doesn't, there's no
+  // project-level analysis endpoint. This just points at where obligations
+  // actually come from, honestly.
+  const handleAnalyseWithAI = () => {
+    toast.info("Select a document to run AI analysis and extract obligations.");
+    navigate(`/documents${projectId ? `?project_id=${projectId}` : ""}`);
+  };
+
   if (!projectId) {
     return (
       <DashboardLayout>
@@ -301,9 +309,19 @@ const Compliance = () => {
           title="Compliance"
           description="Obligations extracted from this project's documents, and the notice deadlines being tracked against it."
           actions={
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              Track obligation
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-foreground hover:bg-muted"
+                onClick={handleAnalyseWithAI}
+              >
+                <AiMark className="mr-1.5" /> Analyse with AI
+              </Button>
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                Track obligation
+              </Button>
+            </div>
           }
         />
 
@@ -359,16 +377,6 @@ const Compliance = () => {
           />
         </div>
 
-        {/* Obligations arrive one document at a time. Quiet line rather than a
-            spinner over the page — the rows already on screen are real. */}
-        {!isLoading && obligationsPending > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Still loading obligations for {obligationsPending} of{" "}
-            {obligationQueries.length} document
-            {obligationQueries.length === 1 ? "" : "s"}.
-          </p>
-        )}
-
         {isLoading ? (
           <AwesomeLoader />
         ) : visibleRows.length === 0 ? (
@@ -376,22 +384,18 @@ const Compliance = () => {
             <EmptyState
               icon={Search}
               title="No obligations match this search"
-              description={`Nothing matches “${searchTerm}”. Try the document name or the clause reference instead.`}
+              description={`Nothing matches "${searchTerm}". Try the document name or the clause reference instead.`}
               action={
                 <Button variant="outline" size="sm" onClick={() => setSearchTerm("")}>
                   Clear search
                 </Button>
               }
             />
-          ) : obligationsPending > 0 ? (
-            // Documents are still being asked about — "nothing tracked yet" is
-            // not a conclusion we can draw yet. The line above says so.
-            null
           ) : (
             <EmptyState
               icon={Shield}
               title="No contractual obligations tracked yet"
-              description="Obligations appear here with the document that creates them and the date they fall due. Missing one can forfeit a claim or hold up a payment certificate."
+              description="Obligations appear here once extracted from a document or added manually — with the date they fall due. Missing one can forfeit a claim or hold up a payment certificate."
               action={
                 <Button size="sm" onClick={() => setCreateOpen(true)}>
                   Track obligation
@@ -401,98 +405,143 @@ const Compliance = () => {
           )
         ) : (
           <div className="space-y-3">
-            {visibleRows.map(row => (
-              <div key={row.key} className="bg-card border border-border rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-foreground">{row.title}</p>
-                      {row.source === "time-bar" ? (
-                        row.clauseVerified ? (
-                          <Badge variant="outline" className="text-xs">
-                            {row.context} {row.clauseRef}
-                          </Badge>
+            {visibleRows.map(row => {
+              const raw = row.source === "obligation" && row.obligationId
+                ? obligationsById.get(row.obligationId)
+                : undefined;
+              return (
+                <div
+                  key={row.key}
+                  className={cn(
+                    "bg-card border border-border rounded-xl p-4",
+                    raw && "cursor-pointer hover:bg-muted/30",
+                  )}
+                  onClick={raw ? () => setDetailObligation(raw) : undefined}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-foreground">{row.title}</p>
+                        {row.source === "time-bar" ? (
+                          row.clauseVerified ? (
+                            <Badge variant="outline" className="text-xs">
+                              {row.context} {row.clauseRef}
+                            </Badge>
+                          ) : (
+                            // Never show a clause number we could not verify.
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-muted-foreground gap-1"
+                              title="Clause could not be verified against the contract corpus"
+                            >
+                              <ShieldQuestion className="h-3 w-3" />
+                              {row.context} · clause unverified
+                            </Badge>
+                          )
                         ) : (
-                          // Never show a clause number we could not verify.
-                          <Badge
-                            variant="outline"
-                            className="text-xs text-muted-foreground gap-1"
-                            title="Clause could not be verified against the contract corpus"
-                          >
-                            <ShieldQuestion className="h-3 w-3" />
-                            {row.context} · clause unverified
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <FileText className="h-3 w-3" />
+                            {row.context}
                           </Badge>
-                        )
-                      ) : (
-                        <Badge variant="outline" className="text-xs gap-1">
-                          <FileText className="h-3 w-3" />
-                          {row.context}
-                        </Badge>
-                      )}
+                        )}
+                        {raw?.noticeGeneratedAt && (
+                          <Badge className="bg-primary/10 text-primary border-0 text-xs px-2 py-0.5 rounded-full">
+                            Notice drafted
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+                        {row.dueDate ? (
+                          <>
+                            <CalendarClock className="h-3 w-3" />
+                            Due {formatDueDate(row.dueDate)}
+                          </>
+                        ) : (
+                          <>
+                            <CalendarOff className="h-3 w-3" />
+                            No due date recorded
+                          </>
+                        )}
+                        {row.responsibleRole && <span>· {row.responsibleRole}</span>}
+                        {row.source === "time-bar" && <span>· notice deadline</span>}
+                        {raw && (
+                          <span className="flex items-center gap-1">
+                            · <Paperclip className="h-3 w-3" />
+                            {raw.evidenceCount} evidence file{raw.evidenceCount === 1 ? "" : "s"}
+                          </span>
+                        )}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-                      {row.dueDate ? (
-                        <>
-                          <CalendarClock className="h-3 w-3" />
-                          Due {formatDueDate(row.dueDate)}
-                        </>
-                      ) : (
-                        <>
-                          <CalendarOff className="h-3 w-3" />
-                          No due date recorded
-                        </>
-                      )}
-                      {row.responsibleRole && <span>· {row.responsibleRole}</span>}
-                      {row.source === "time-bar" && <span>· notice deadline</span>}
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={cn(
-                        "px-2.5 py-1 rounded-md border text-xs font-medium whitespace-nowrap",
-                        URGENCY_STYLES[row.urgency],
-                      )}
-                    >
-                      {urgencyLabel(row)}
-                    </span>
-                    {row.source === "obligation" ? (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => setEditing(row)}>
-                          {row.dueDate ? "Amend" : "Set due date"}
-                        </Button>
-                        {row.urgency !== "closed" && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={cn(
+                          "px-2.5 py-1 rounded-md border text-xs font-medium whitespace-nowrap",
+                          URGENCY_STYLES[row.urgency],
+                        )}
+                      >
+                        {urgencyLabel(row)}
+                      </span>
+                      {row.source === "obligation" ? (
+                        <>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => completeObligation(row)}
+                            onClick={(e) => { e.stopPropagation(); setEditing(row); }}
                           >
-                            Mark complete
+                            {row.dueDate ? "Amend" : "Set due date"}
                           </Button>
-                        )}
+                          {row.urgency !== "closed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); completeObligation(row); }}
+                            >
+                              Mark complete
+                            </Button>
+                          )}
+                          {raw && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); setNoticeObligation(raw); }}
+                              >
+                                Generate & Link Notice
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); setEvidenceObligation(raw); }}
+                              >
+                                Add Evidence
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/documents/${row.documentId}`); }}
+                          >
+                            Document
+                          </Button>
+                        </>
+                      ) : (
+                        // Time bars are served and closed on Project Health, where
+                        // the awareness-date caveats sit. One place, not two.
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/documents/${row.documentId}`)}
+                          onClick={(e) => { e.stopPropagation(); navigate("/project-health"); }}
                         >
-                          Document
+                          Project Health
                         </Button>
-                      </>
-                    ) : (
-                      // Time bars are served and closed on Project Health, where
-                      // the awareness-date caveats sit. One place, not two.
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/project-health")}
-                      >
-                        Project Health
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -512,6 +561,24 @@ const Compliance = () => {
         initial={editingDraft}
         onSubmit={saveObligation}
         isSaving={isPatching}
+      />
+      <GenerateNoticeModal
+        isOpen={!!noticeObligation}
+        onClose={() => setNoticeObligation(null)}
+        projectId={projectId}
+        obligation={noticeObligation}
+      />
+      <AddEvidenceModal
+        isOpen={!!evidenceObligation}
+        onClose={() => setEvidenceObligation(null)}
+        projectId={projectId}
+        obligation={evidenceObligation}
+      />
+      <ComplianceDetailModal
+        isOpen={!!detailObligation}
+        onClose={() => setDetailObligation(null)}
+        projectId={projectId}
+        obligation={detailObligation}
       />
     </DashboardLayout>
   );

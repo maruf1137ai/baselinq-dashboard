@@ -122,14 +122,25 @@ const ESCALATION_TARGETS: Partial<Record<TaskType, { type: string; label: string
 // Excluded VO here so only the contextual Approve & Sign renders.
 // SI, DC, and Claim still use this top-bar Sign & Issue (their
 // signing isn't tied to a pricing-response review step).
-const SIGNABLE_TYPES = new Set<string>(["SI", "VO", "DC", "CLAIM"]);
+//
+// This set previously still listed "VO" despite the comment above,
+// which meant this top-bar button rendered for VO too — with no status
+// check at all (canSignThisType only checked isPM), so it showed up
+// even before the VO had been priced. The contextual Approve & Sign
+// button already gates correctly on status ("Priced"/"Recommended");
+// this one had no such gate. Removed VO so the comment's intent above
+// actually holds.
+const SIGNABLE_TYPES = new Set<string>(["SI", "DC", "CLAIM"]);
 
 // Werner spec — high-stakes signs (contract amendment, claim
 // determination) MUST require a PIN. The click-confirm fallback is
 // allowed only for SI (lower stakes — contractual but no money). For
 // these types, if the user hasn't set a PIN, we block signing and link
 // them to the Security settings page.
-const HIGH_STAKES_SIGN_TYPES = new Set<string>(["VO", "DC", "CLAIM"]);
+//
+// VO removed — VO no longer reaches this modal at all (SIGNABLE_TYPES
+// above), so keeping it here would just be dead weight.
+const HIGH_STAKES_SIGN_TYPES = new Set<string>(["DC", "CLAIM"]);
 
 export function WernerTaskActions({
   taskType,
@@ -214,13 +225,13 @@ export function WernerTaskActions({
   const escalation = canEscalateFromHere && !isLocked ? rawEscalation : undefined;
 
   // Sign & Issue per Werner spec: SI=Architect/Engineer (narrow set —
-  // see SI_SIGN_ROLES above), VO/Claim=PM. Uses SI_SIGN_ROLES instead
-  // of the broader PROFESSIONAL_ROLES so users like QS / CivilEng / PM
-  // don't see a button they'll get 403 on.
+  // see SI_SIGN_ROLES above), DC/Claim=PM. VO has its own dedicated
+  // signing surface (see SIGNABLE_TYPES above) so it's not listed here.
+  // Uses SI_SIGN_ROLES instead of the broader PROFESSIONAL_ROLES so
+  // users like QS / CivilEng / PM don't see a button they'll get 403 on.
   const canSignSI = SI_SIGN_ROLES.has(userRoleCode);
   const canSignThisType =
     taskType === "SI"    ? canSignSI :
-    taskType === "VO"    ? isPM :
     taskType === "DC"    ? isPM :
     taskType === "CLAIM" ? isPM :
     false;

@@ -2353,6 +2353,40 @@ export default function CreateProject() {
                           </div>
                         </div>
 
+                        {/* Row 2: Retention Rate + FX Rate — these were being
+                            silently defaulted (5% / 1.0) and submitted with no
+                            input ever rendered for them. */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
+                              Retention Rate (%)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min={0}
+                              max={100}
+                              className={inputCls()}
+                              value={form.retention_rate}
+                              onChange={(e) => setField("retention_rate", e.target.value)}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-normal text-[#374151] mb-1.5">
+                              FX Rate (to ZAR)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              min={0}
+                              className={inputCls()}
+                              value={form.fx_rate}
+                              onChange={(e) => setField("fx_rate", e.target.value)}
+                            />
+                          </div>
+                        </div>
+
                         {/* Live financial summary */}
                         <div
                           className="mt-5 rounded-xl p-4 border"

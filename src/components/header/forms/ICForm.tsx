@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
+import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
@@ -42,7 +43,15 @@ export default function ICForm({ setOpen, initialStatus, initialData, taskId }: 
 
   const [subject, setSubject] = useState(draft?.subject || "");
   const [description, setDescription] = useState(draft?.description || "");
-  const [dateRequired, setDateRequired] = useState(draft?.dateRequired || "");
+  const [dateRequired, setDateRequired] = useState(() => {
+    if (draft?.dateRequired) return draft.dateRequired;
+    // Computed fresh per mount, not a module-level literal — see
+    // SIForm.tsx's identical comment for why. IC's own fallback SLA is
+    // 7 days (tasks/views.py sla_days default for non-listed types).
+    const due = new Date();
+    due.setDate(due.getDate() + 7);
+    return format(due, "yyyy-MM-dd");
+  });
 
   // Werner spec rev H — shared To / CC / Date Required strip.
   const [meta, setMeta] = useState<TaskMetaValue>(
@@ -154,8 +163,18 @@ export default function ICForm({ setOpen, initialStatus, initialData, taskId }: 
           />
         </div>
 
-        {/* Werner spec rev H — To / CC / Date Required pickers. */}
-        <TaskMetaFields value={meta} onChange={setMeta} toLabel="To (PM)" />
+        {/* Werner spec rev H — To / CC pickers. Date Required is hidden
+            here — IC has its own standalone "Deadline / Date Required"
+            field below (the one actually submitted, see date_required
+            in the payload), so showing both was a duplicate/dead field. */}
+        <TaskMetaFields
+          value={meta}
+          onChange={setMeta}
+          toLabel="To (PM)"
+          showDateRequired={false}
+          toRoleFilter={TASK_TYPE_ROLE_RULES.ic.toRoleFilter}
+          ccAutoRoles={TASK_TYPE_ROLE_RULES.ic.ccAutoRoles}
+        />
 
         <div>
           <Label>Deadline / Date Required</Label>
