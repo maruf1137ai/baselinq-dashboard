@@ -17,7 +17,23 @@ export const PROFESSIONAL_CODES = [
 
 export const PM_CODES = ["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"];
 
-export const CONTRACTOR_CODES = ["CONTRACTS_MGR", "CM", "FOREMAN", "SS", "CONTRACTOR"];
+// MC (Main Contractor) and SE (Site Engineer) are real seeded system roles
+// (see Role table / user/constants.py's CONTRACTOR_ROLES and the grants in
+// user/migrations/0030_backfill_contractor_and_vo_perms.py) that were
+// missing here — a user with either role was silently invisible to every
+// To/assign picker that filters against this set, with no error, just an
+// absent option.
+//
+// CIDB is the BIG one: user/serializers.py's ROLE_MAP (the signup-time
+// role resolver) maps the "Contractor" signup option AND the "General
+// Contractor" company type to code "CIDB", not "CONTRACTOR" — there's
+// even a comment there admitting "ROLE_MAP and the seeded DB roles can
+// drift apart". So most real contractor signups in production carry
+// role code CIDB, and every one of them was invisible here. SM (Site
+// Manager) is grouped with CM/SS/FOREMAN under both the "General
+// Contractor" and "Construction Management" disciplines in
+// roleUtils.ts's DISCIPLINE_ROLE_MAP, so it belongs in this set too.
+export const CONTRACTOR_CODES = ["CONTRACTS_MGR", "CM", "FOREMAN", "SS", "CONTRACTOR", "MC", "SE", "CIDB", "SM"];
 
 // VO Sign & Issue authority (views_signing.py SIGNING_ROLES["vo"]) — the
 // closest VO equivalent to "escalate authority" since a VO is terminal,

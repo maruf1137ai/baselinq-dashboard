@@ -721,7 +721,9 @@ export default function CreateProject() {
   const { data: user } = useCurrentUser();
   const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
   const orgUsers: OrgUser[] = orgUsersData?.results || [];
-  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
+  // CIDB is the role code real "Contractor" signups actually get (see
+  // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
+  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(user?.role?.code ?? '');
 
   const STEPS = STEPS_BASE.map(s =>

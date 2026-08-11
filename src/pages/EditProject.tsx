@@ -785,7 +785,9 @@ export default function EditProject() {
   const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
 
   const { data: user } = useCurrentUser();
-  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
+  // CIDB is the role code real "Contractor" signups actually get (see
+  // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
+  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(user?.role?.code ?? '');
 
   const [showTaskOrderBrief, setShowTaskOrderBrief] = useState(false);
