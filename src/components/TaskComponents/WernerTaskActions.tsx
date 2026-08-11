@@ -40,13 +40,21 @@ import { usePost } from "@/hooks/usePost";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { cn } from "@/lib/utils";
+import { CONTRACTOR_CODES } from "@/lib/roleGroups";
 
 type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPATHITEM" | string;
 
 // Werner rev H — role buckets used to gate every action below. Match the
 // backend's role-code sets in views_werner.py / views_signing.py so the
 // frontend hides what the backend would reject anyway.
-const CONTRACTOR_ROLES = new Set(["CONTRACTS_MGR", "CM", "FOREMAN", "SS", "CONTRACTOR"]);
+//
+// Previously a separate hardcoded copy of the contractor role set lived
+// here, independent from roleGroups.ts's CONTRACTOR_CODES — the two drifted
+// (this one never had MC, SE, CIDB, or SM), so a Main Contractor / Site
+// Engineer / CIDB-registered contractor couldn't see their own Close-out
+// button or escalate their own IC to a Claim. Importing the shared array
+// instead of re-declaring it means the two can't drift apart again.
+const CONTRACTOR_ROLES = new Set(CONTRACTOR_CODES);
 
 // "Professional" — broad set used for ESCALATION visibility (RFI→SI).
 // Matches the backend's PROFESSIONAL_CODES in views_werner.py.
