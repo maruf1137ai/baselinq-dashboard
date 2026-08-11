@@ -60,6 +60,8 @@ interface FormState {
   startDate: Date | undefined;
   endDate: Date | undefined;
   status: string;
+  percentComplete: string;
+  actualEnd: Date | undefined;
 }
 
 const EMPTY_FORM: FormState = {
@@ -67,6 +69,8 @@ const EMPTY_FORM: FormState = {
   startDate: undefined,
   endDate: undefined,
   status: "planned",
+  percentComplete: "",
+  actualEnd: undefined,
 };
 
 // Reusable date picker field
@@ -136,6 +140,8 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
       startDate: m.startDate ? parseISO(m.startDate) : undefined,
       endDate: m.endDate ? parseISO(m.endDate) : undefined,
       status: m.status,
+      percentComplete: m.percentComplete != null ? String(m.percentComplete) : "",
+      actualEnd: m.actualEnd ? parseISO(m.actualEnd) : undefined,
     });
     setDialogOpen(true);
   }
@@ -156,6 +162,11 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
       startDate: format(form.startDate, "yyyy-MM-dd"),
       endDate: format(form.endDate, "yyyy-MM-dd"),
       status: form.status,
+      // Programme Phase 3 — real progress, not just dates. percentComplete/
+      // actualEnd are nullable on the model; an empty input clears them
+      // rather than being coerced into 0 / today.
+      percentComplete: form.percentComplete === "" ? null : Number(form.percentComplete),
+      actualEnd: form.actualEnd ? format(form.actualEnd, "yyyy-MM-dd") : null,
     };
 
     try {
@@ -353,6 +364,29 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Programme Phase 3 — real progress, recorded by a human, not
+                inferred from the calendar. Nullable: leave blank if not yet
+                known. */}
+            <div className="space-y-1.5">
+              <Label htmlFor="phase-percent-complete">Physical Progress (%)</Label>
+              <Input
+                id="phase-percent-complete"
+                type="number"
+                min={0}
+                max={100}
+                placeholder="Not tracked"
+                value={form.percentComplete}
+                onChange={(e) => setForm({ ...form, percentComplete: e.target.value })}
+              />
+            </div>
+
+            <DatePickerField
+              label="Actual Completion Date"
+              value={form.actualEnd}
+              onChange={(date) => setForm({ ...form, actualEnd: date })}
+              placeholder="Not yet completed"
+            />
 
             <DialogFooter className="pt-4">
               <Button

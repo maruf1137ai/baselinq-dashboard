@@ -1288,6 +1288,7 @@ export default function TaskDetails() {
           task_code: task.dcNumber || task.dc_number || `DC-${task._id}`,
           dueDate: "No Date",
           formFields: {
+            entityId: task._id,
             title: task.title,
             causeCategory: task.causeCategory,
             costImpact: task.estimatedCostImpact?.amount
@@ -1295,6 +1296,10 @@ export default function TaskDetails() {
               : "",
             description: task.description,
             requestedExtension: task.requestedExtensionDays?.toString() || "",
+            // Programme Phase 2 — only ever set via the issue-notice action below.
+            noticeDate: task.noticeDate,
+            clauseReference: task.clauseReference,
+            clauseReferenceVerified: task.clauseReferenceVerified,
           },
           question: {
             text: task.description || "",

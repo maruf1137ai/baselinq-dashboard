@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import useFetch from "@/hooks/useFetch";
 import { useProject } from "@/hooks/useProjects";
+import { useMilestones } from "@/hooks/useMilestones";
 import { CloseIcon } from "../icons/icons";
 import { AlertTriangle, CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -86,6 +88,11 @@ export interface CreatePCApiPayload {
   retention: number;
   net: number;
   approvalStatus?: "pending" | "partial" | "approved";
+  // Programme Phase 3 — which milestones this claim is measured against, so
+  // risk.gates.evaluate_pc_gate has something to cross-check work_items
+  // against. Undefined when nothing was linked (leaves existing links, if
+  // any, untouched on an update).
+  milestoneLinks?: { milestoneId: string; claimedPct: number }[];
 }
 
 interface CreatePCDrawerProps {
@@ -304,6 +311,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   // Variation Orders — populated from the project's approved VOs, never seeded.
   const [voItems, setVoItems] = useState<VOLineItem[]>([]);
+
+  // Programme Phase 3 — which milestones this certificate's claim is
+  // measured against. Keyed by milestone _id; a milestone with no entry is
+  // not linked. Optional — omitting this section entirely still creates a
+  // valid certificate, same as before this existed.
+  const { data: milestones = [] } = useMilestones(isOpen ? projectId : null);
+  const [claimedPctByMilestone, setClaimedPctByMilestone] = useState<Record<string, string>>({});
 
   const { data: voResponse, isLoading: isLoadingVOs } = useFetch<{ results: any[] }>(
     isOpen && projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
@@ -652,12 +666,17 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     if (!projectId || isSubmitting || !ratesReady) {
       return;
     }
+    const milestoneLinks = Object.entries(claimedPctByMilestone)
+      .filter(([, p]) => p !== "" && !isNaN(Number(p)))
+      .map(([milestoneId, p]) => ({ milestoneId, claimedPct: Number(p) }));
+
     const payload: CreatePCApiPayload = {
       projectId: Number(projectId),
       valuationPeriod: valuationPeriod ? format(valuationPeriod, "yyyy-MM") : "",
       certificateDate: certificateDate ? format(certificateDate, "yyyy-MM-dd") : "",
       workItems,
       voItems,
+      milestoneLinks: milestoneLinks.length > 0 ? milestoneLinks : undefined,
       materialsOnSite,
       penalties,
       advanceRecovery,
@@ -735,6 +754,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     setRetentionRelease(0);
     setNotes("");
     setVoNotes({});
+    setClaimedPctByMilestone({});
     setIntegrity(null);
     setSubmitError(null);
     setIsSubmitting(false);
@@ -1134,6 +1154,60 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 </table>
               </div>
             </section>
+
+            {/* ── 2b. Link to Programme Phases ─────────────────────────────────────
+                Programme Phase 3 — optional. Turns on risk.gates.evaluate_pc_gate's
+                claimed-vs-measured-progress cross-check for this certificate. A
+                certificate with no links here still saves fine; the gate just has
+                nothing to compare against, same as before this section existed. */}
+            {milestones.length > 0 && (
+              <section>
+                <SectionHeader>Link to Programme Phases</SectionHeader>
+                <p className="text-xs text-muted-foreground -mt-2 mb-3">
+                  Select the phases this claim is measured against, and the percentage of each claimed complete.
+                </p>
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {milestones.map((m) => {
+                    const checked = m._id in claimedPctByMilestone;
+                    return (
+                      <div key={m._id} className="flex items-center gap-3 px-3 py-2">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => {
+                            setClaimedPctByMilestone((prev) => {
+                              const next = { ...prev };
+                              if (value) {
+                                next[m._id] = m.percentComplete != null ? String(m.percentComplete) : "";
+                              } else {
+                                delete next[m._id];
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                        <span className="flex-1 text-sm text-foreground">{m.name}</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            disabled={!checked}
+                            className="w-16 text-sm text-right bg-transparent border-b border-transparent focus:border-primary focus:outline-none disabled:text-muted-foreground py-0.5"
+                            placeholder="0"
+                            aria-label={`Claimed percent complete for ${m.name}`}
+                            value={claimedPctByMilestone[m._id] ?? ""}
+                            onChange={(e) =>
+                              setClaimedPctByMilestone((prev) => ({ ...prev, [m._id]: e.target.value }))
+                            }
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* ── 3. Approved Variation Orders ─────────────────────────────────── */}
             <section>

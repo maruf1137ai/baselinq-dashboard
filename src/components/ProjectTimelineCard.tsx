@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import ProjectTimeline from './icons/ProjectTimeline';
 import { useProjects } from '@/hooks/useProjects';
+import { useMilestones } from '@/hooks/useMilestones';
 import { format, differenceInDays, isBefore, isAfter, parseISO } from 'date-fns';
 
 interface ProjectTimelineCardProps {
@@ -18,6 +19,9 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
   const { data: projects = [], isLoading } = useProjects();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const selectedProject = projects.find((project: any) => (project._id || project.id) === selectedProjectId);
+  // Real physical progress, not time elapsed — a phase where nothing has
+  // been built must not read the same as one running to plan.
+  const { data: milestones = [] } = useMilestones(selectedProject ? selectedProjectId : null);
 
   const dynamicData = React.useMemo(() => {
     if (!selectedProject) {
@@ -47,14 +51,38 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
     const end = parseISO(endDateStr);
     const now = new Date();
 
-    const totalDays = differenceInDays(end, start);
-    const elapsedDays = differenceInDays(now, start);
+    // Weighted average of recorded physical progress across phases that
+    // have one, weighted by each phase's duration. Phases with no recorded
+    // progress are left out of both sides of the average rather than
+    // guessed at — the same "never guess" rule the PC gate uses.
+    const trackedPhases = milestones.filter(
+      (m) => m.percentComplete !== null && m.percentComplete !== undefined
+    );
 
-    let progress = 0;
-    if (isAfter(now, end)) {
-      progress = 100;
-    } else if (isAfter(now, start)) {
-      progress = Math.round((elapsedDays / totalDays) * 100);
+    let progress: number;
+    if (trackedPhases.length > 0) {
+      const totalWeight = trackedPhases.reduce(
+        (sum, m) => sum + Math.max(1, differenceInDays(parseISO(m.endDate), parseISO(m.startDate))),
+        0
+      );
+      const weightedSum = trackedPhases.reduce(
+        (sum, m) =>
+          sum + Number(m.percentComplete) * Math.max(1, differenceInDays(parseISO(m.endDate), parseISO(m.startDate))),
+        0
+      );
+      progress = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+    } else {
+      // No phase has recorded progress yet — fall back to the previous
+      // date-based estimate rather than showing 0% on day one.
+      const totalDays = differenceInDays(end, start);
+      const elapsedDays = differenceInDays(now, start);
+      if (isAfter(now, end)) {
+        progress = 100;
+      } else if (isAfter(now, start)) {
+        progress = Math.round((elapsedDays / totalDays) * 100);
+      } else {
+        progress = 0;
+      }
     }
 
     const daysRemaining = differenceInDays(end, now);
@@ -69,7 +97,7 @@ export function ProjectTimelineCard({ startDate: propStartDate, currentDate: pro
       progress: Math.min(100, Math.max(0, progress)),
       daysStatus
     };
-  }, [selectedProject, propStartDate, propCurrentDate, propDeadline, propProgress, propDaysStatus]);
+  }, [selectedProject, milestones, propStartDate, propCurrentDate, propDeadline, propProgress, propDaysStatus]);
 
   const { startDate, currentDate, deadline, progress, daysStatus } = dynamicData;
 
