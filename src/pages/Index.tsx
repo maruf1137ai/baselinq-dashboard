@@ -256,7 +256,9 @@ const Index = () => {
     .slice(0, 5);
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
   const currentUserId = currentUser?.id ? String(currentUser.id) : undefined;
-  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR'];
+  // CIDB is the role code real "Contractor" signups actually get (see
+  // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
+  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];
   const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
   const { canEditProject: canEditByRole } = usePermissions();
   const { data: projectListData } = useFetch(
