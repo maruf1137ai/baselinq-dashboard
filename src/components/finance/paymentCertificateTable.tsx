@@ -20,6 +20,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
+import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
+import { Textarea } from "../ui/textarea";
 import { AlertTriangle, MoreHorizontal, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
@@ -71,14 +73,13 @@ const isServerComputed = (entry: PCEntry): boolean | null => {
 const money = (v: number | null) => (v === null ? "—" : formatZAR(v));
 
 // Human labels for the certification-chain transitions the backend exposes
-// (tasks/views_pc_workflow.py) — there was previously no UI at all for
-// submit/qs-approve/client-approve/post, so a certificate could only ever
-// sit in Draft. "post" is called out specially: it's the commercial moment
-// that accrues the platform fee.
+// (tasks/views_pc_workflow.py) — certification is a single Designated
+// Principal Agent act (submit/approve/post), not the old two-stage
+// QS-approve/client-approve ladder. "post" is called out specially: it's the
+// commercial moment that accrues the platform fee.
 const TRANSITION_LABELS: Record<string, string> = {
   submit: "Submit for Certification",
-  qs_approve: "QS Approve",
-  client_approve: "Client Approve",
+  approve: "Approve",
   post: "Post Certificate",
   reject: "Reject",
   cancel: "Cancel",
@@ -86,12 +87,42 @@ const TRANSITION_LABELS: Record<string, string> = {
 
 const TRANSITION_URL_PATH: Record<string, string> = {
   submit: "submit",
-  qs_approve: "qs-approve",
-  client_approve: "client-approve",
+  approve: "approve",
   post: "post",
   reject: "reject",
   cancel: "cancel",
 };
+
+/** How the "waiting on" popover phrases each ladder stage — shorter and
+ *  read as a noun phrase ("Waiting on: Approval"), unlike TRANSITION_LABELS
+ *  above which reads as a button ("Approve"). */
+const WAITING_ON_STAGE_LABEL: Record<string, string> = {
+  approve: "Approval (Principal Agent)",
+  post: "Posting",
+};
+
+interface WaitingOnActor {
+  id: number;
+  name: string | null;
+}
+
+interface WaitingOnChainStep {
+  role: string;
+  roleLabel: string;
+  eligibleActors: WaitingOnActor[];
+}
+
+type WaitingOn =
+  | { mode: "chain"; steps: WaitingOnChainStep[] }
+  | { mode: "ladder"; transition: string; eligibleActors: WaitingOnActor[] }
+  | null
+  | undefined;
+
+interface WorkflowResponse {
+  availableTransitions: string[];
+  workflowState: string;
+  waitingOn: WaitingOn;
+}
 
 interface PaymentCertificateTableProps {
   orders: PCEntry[];
@@ -108,15 +139,170 @@ const formatDate = (iso: string) => formatDateCanonical(iso, "short", "—");
 // Status colour comes from the Badge primitive's semantic variants rather
 // than a local colour map, so a certified/pending/rejected chip here is the
 // same chip as everywhere else in the app.
-const ApprovalBadge = ({ status }: { status: string }) => {
-  const config: Record<string, { variant: "success" | "warning" | "danger" | "neutral"; label: string }> = {
-    approved: { variant: 'success', label: 'Approved' },
-    pending: { variant: 'warning', label: 'Pending' },
-    rejected: { variant: 'danger', label: 'Rejected' },
-    draft: { variant: 'neutral', label: 'Draft' },
-  };
-  const c = config[status] || config.draft;
+//
+// Reads workflowState (the certification chain's real state), not the legacy
+// approvalStatus label. approvalStatus is written once at creation
+// ("pending") and only partially kept in step by the ladder (see
+// pc_workflow._LEGACY_STATUS_MAP) — a certificate could sit at "Pending" for
+// its entire life, or show as "Draft" while genuinely APPROVED, because
+// that state has no legacy equivalent. workflowState is the one field every
+// transition actually stamps.
+const WORKFLOW_STATE_BADGE: Record<string, { variant: "success" | "warning" | "danger" | "neutral"; label: string }> = {
+  draft: { variant: "neutral", label: "Draft" },
+  submitted: { variant: "warning", label: "Submitted" },
+  approved: { variant: "warning", label: "Approved" },
+  posted: { variant: "success", label: "Posted" },
+  rejected: { variant: "danger", label: "Rejected" },
+  cancelled: { variant: "neutral", label: "Cancelled" },
+};
+
+const ApprovalBadge = ({ workflowState }: { workflowState?: string }) => {
+  const c = (workflowState && WORKFLOW_STATE_BADGE[workflowState]) || WORKFLOW_STATE_BADGE.draft;
   return <Badge variant={c.variant}>{c.label}</Badge>;
+};
+
+/** Content of the "waiting on" popover opened from the Approvals badge. */
+const WaitingOnContent = ({
+  waitingOn,
+  isLoading,
+}: {
+  waitingOn: WaitingOn;
+  isLoading: boolean;
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking who can act…
+      </div>
+    );
+  }
+  if (!waitingOn) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nothing is currently pending on this certificate.
+      </p>
+    );
+  }
+
+  const groups =
+    waitingOn.mode === "chain"
+      ? waitingOn.steps.map((s) => ({ label: s.roleLabel, actors: s.eligibleActors }))
+      : [
+          {
+            label:
+              WAITING_ON_STAGE_LABEL[waitingOn.transition] ||
+              TRANSITION_LABELS[waitingOn.transition] ||
+              waitingOn.transition,
+            actors: waitingOn.eligibleActors,
+          },
+        ];
+
+  return (
+    <div className="space-y-3">
+      {groups.map((g, i) => (
+        <div key={i}>
+          <p className="text-sm font-medium text-foreground">Waiting on: {g.label}</p>
+          {g.actors.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">
+              Nobody on this project currently holds this role — the certificate is
+              held until someone does.
+            </p>
+          ) : (
+            <ul className="mt-1 space-y-0.5">
+              {g.actors.map((a) => (
+                <li key={a.id} className="text-sm text-muted-foreground">
+                  {a.name || `User #${a.id}`}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Reject and Cancel are the two transitions the backend requires a reason
+// for (views_pc_workflow.py's require_reason=True) — both are terminal, and
+// both close the certificate's live approval chain. What they mean is not
+// the same act, though: Reject is the certifier's-side judgement on the
+// claim itself ("I decline to certify this"), Cancel is the raising side
+// withdrawing its own submission ("we're pulling this back"). The copy here
+// says so, rather than presenting an identical dialog for two different
+// decisions.
+const REASON_TRANSITION_COPY: Record<string, { description: string; placeholder: string; confirmLabel: string }> = {
+  reject: {
+    description:
+      "Rejecting is terminal — a fresh certificate is raised rather than reopening this one. The contractor is entitled to know the grounds.",
+    placeholder: "e.g. Quantities on line 3 don't match the site measure…",
+    confirmLabel: "Confirm Reject",
+  },
+  cancel: {
+    description:
+      "Cancelling withdraws this certificate on behalf of whoever raised it. This is terminal and cannot be undone.",
+    placeholder: "e.g. Raised against the wrong valuation period, refiling…",
+    confirmLabel: "Confirm Cancel",
+  },
+};
+
+const ReasonDialog = ({
+  entry,
+  transition,
+  reason,
+  onReasonChange,
+  isSubmitting,
+  onConfirm,
+  onOpenChange,
+}: {
+  entry: PCEntry;
+  transition: string | null;
+  reason: string;
+  onReasonChange: (value: string) => void;
+  isSubmitting: boolean;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  const copy = transition ? REASON_TRANSITION_COPY[transition] : null;
+  return (
+    <Dialog open={transition !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {transition ? TRANSITION_LABELS[transition] : ""} {entry.pcNumber}?
+          </DialogTitle>
+          <DialogDescription>{copy?.description}</DialogDescription>
+        </DialogHeader>
+        <div className="mt-2 space-y-1.5">
+          <label htmlFor={`reason-${entry.id}`} className="text-sm font-medium text-foreground">
+            Reason <span className="text-muted-foreground font-normal">(required)</span>
+          </label>
+          <Textarea
+            id={`reason-${entry.id}`}
+            value={reason}
+            onChange={(e) => onReasonChange(e.target.value)}
+            placeholder={copy?.placeholder}
+            rows={3}
+            autoFocus
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
+              Cancel
+            </button>
+          </DialogClose>
+          <button
+            onClick={onConfirm}
+            disabled={!reason.trim() || isSubmitting}
+            className="h-10 px-4 rounded-lg text-sm text-destructive-foreground bg-destructive hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {copy?.confirmLabel ?? "Confirm"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 const PCDetailsDialog = ({
@@ -142,7 +328,7 @@ const PCDetailsDialog = ({
             <p><span className="text-muted-foreground">Net Amount:</span> {formatCurrency(entry.netAmount)}</p>
             <p><span className="text-muted-foreground">VAT:</span> {money(serverNumber(entry, "vatAmount", "vat_amount"))}</p>
             <p><span className="text-muted-foreground">Total Payable:</span> {money(serverNumber(entry, "totalPayable", "total_payable"))}</p>
-            <p><span className="text-muted-foreground">Status:</span> {entry.approvalStatus}</p>
+            <p><span className="text-muted-foreground">Status:</span> {(entry.workflowState && WORKFLOW_STATE_BADGE[entry.workflowState]?.label) || entry.approvalStatus}</p>
             <p><span className="text-muted-foreground">Updated:</span> {formatDate(entry.updatedAt)}</p>
             {isServerComputed(entry) === false && (
               <p className="text-amber-700">
@@ -181,29 +367,29 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
   const warnings = warningsOf(entry);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [waitingOnOpen, setWaitingOnOpen] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
+  // Reject/Cancel need a reason from the person, not just a click — this
+  // dialog replaces what used to be a window.prompt(). null means closed;
+  // "reject" | "cancel" says which transition it's collecting a reason for.
+  const [reasonTransition, setReasonTransition] = useState<string | null>(null);
+  const [reasonText, setReasonText] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetched lazily (only once the row's menu is opened) rather than for
-  // every row on page load — availableTransitions is already permission-
-  // filtered server-side for the current user, so the buttons shown here
-  // can never offer an action that would 403.
-  const { data: workflow, isLoading: workflowLoading } = useFetch<{
-    availableTransitions: string[];
-    workflowState: string;
-  }>(`tasks/payment-certificates/${entry.id}/workflow/`, { enabled: menuOpen });
+  // Fetched lazily (only once the row's menu OR its Approvals badge is
+  // opened) rather than for every row on page load — availableTransitions is
+  // already permission-filtered server-side for the current user, so the
+  // buttons shown here can never offer an action that would 403, and
+  // waitingOn is the same "who may act" question answered for display rather
+  // than for the current viewer specifically.
+  const { data: workflow, isLoading: workflowLoading } = useFetch<WorkflowResponse>(
+    `tasks/payment-certificates/${entry.id}/workflow/`,
+    { enabled: menuOpen || waitingOnOpen }
+  );
 
-  const runTransition = async (transition: string) => {
+  const runTransition = async (transition: string, reason?: string) => {
     setActingOn(transition);
     try {
-      const requiresReason = transition === "reject" || transition === "cancel";
-      const reason = requiresReason
-        ? window.prompt(`Reason for ${TRANSITION_LABELS[transition].toLowerCase()}:`) || ""
-        : undefined;
-      if (requiresReason && !reason) {
-        setActingOn(null);
-        return;
-      }
       await postData({
         url: `tasks/payment-certificates/${entry.id}/${TRANSITION_URL_PATH[transition]}/`,
         data: reason !== undefined ? { reason } : {},
@@ -216,6 +402,8 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
             query.queryKey[0].startsWith("cost-ledger")),
       });
       setMenuOpen(false);
+      setReasonTransition(null);
+      setReasonText("");
     } catch (err: any) {
       const message =
         err?.response?.data?.error || err?.message || "Action failed.";
@@ -224,6 +412,8 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
       setActingOn(null);
     }
   };
+
+  const requiresReason = (transition: string) => transition === "reject" || transition === "cancel";
 
   return (
     <tr className="hover:bg-muted/50 transition-colors">
@@ -255,7 +445,19 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm">
         <div className="flex items-center gap-1.5">
-          <ApprovalBadge status={entry.approvalStatus} />
+          <Popover open={waitingOnOpen} onOpenChange={setWaitingOnOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={`${entry.pcNumber} approval status — click to see who can act next`}
+                className="outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+                <ApprovalBadge workflowState={entry.workflowState} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start">
+              <WaitingOnContent waitingOn={workflow?.waitingOn} isLoading={waitingOnOpen && workflowLoading} />
+            </PopoverContent>
+          </Popover>
           {warnings.length > 0 && (
             <Badge variant="warning" title={warnings.join("\n")}>
               <AlertTriangle className="h-3 w-3 mr-1" />
@@ -293,7 +495,12 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
                       disabled={actingOn !== null}
                       onSelect={(e) => {
                         e.preventDefault();
-                        runTransition(t);
+                        if (requiresReason(t)) {
+                          setReasonText("");
+                          setReasonTransition(t);
+                        } else {
+                          runTransition(t);
+                        }
                       }}
                       className={t === "reject" || t === "cancel" ? "text-destructive" : undefined}
                     >
@@ -315,6 +522,22 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
           entry={entry}
           open={showViewDialog}
           onOpenChange={setShowViewDialog}
+        />
+        <ReasonDialog
+          entry={entry}
+          transition={reasonTransition}
+          reason={reasonText}
+          onReasonChange={setReasonText}
+          isSubmitting={actingOn !== null}
+          onConfirm={() => {
+            if (reasonTransition) runTransition(reasonTransition, reasonText.trim());
+          }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setReasonTransition(null);
+              setReasonText("");
+            }
+          }}
         />
       </td>
     </tr>

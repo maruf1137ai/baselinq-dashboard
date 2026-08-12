@@ -15,6 +15,7 @@ import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
 import HelpTasks from "./pages/HelpTasks";
+import HelpFinance from "./pages/HelpFinance";
 import ForgotPassword from "./pages/ForgotPassword";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
@@ -191,6 +192,13 @@ const App = () => (
           <Route path="/help/tasks" element={
             <ProtectedRoute>
               <HelpTasks />
+            </ProtectedRoute>
+          } />
+          {/* Finance reference — who can do what in Cost Ledger / VOs / PCs /
+              Platform Fees. No project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/finance" element={
+            <ProtectedRoute>
+              <HelpFinance />
             </ProtectedRoute>
           } />
           <Route path="/compliance" element={

@@ -33,13 +33,16 @@ const PaymentCertificate = () => {
   const certificates: PCEntry[] = data?.results ?? [];
 
   // Matches the backend's own check (_can_create_payment_certificate in
-  // tasks/views.py): drafting a certificate requires finance.approve_payment,
-  // not finance.edit. This used to check finance.edit, which meant a
-  // Construction Manager (finance.edit, no approve_payment) saw this button
-  // and got a silent 403, while a QS (approve_payment, no finance.edit) —
-  // the role that actually drafts certificates — never saw it at all.
+  // tasks/views.py): drafting a certificate requires finance.create_certificate
+  // (see user/migrations/0038_pc_stage_permissions), not finance.approve_payment
+  // or finance.edit. This used to check finance.approve_payment — correct
+  // when that was the only certification permission, but too broad now that
+  // creating and certifying are split: Client/Owner, Client PM and Project
+  // Manager still hold finance.approve_payment (they still certify) but are
+  // no longer among the roles that raise a certificate, and this button must
+  // not offer them an action the server will 403.
   const projectIdNum = parseInt(projectId) || null;
-  const canCreatePC = usePermission("finance.approve_payment", projectIdNum);
+  const canCreatePC = usePermission("finance.create_certificate", projectIdNum);
 
   return (
     // pt-6 only: the page already has DashboardLayout's p-6, so a p-6 here

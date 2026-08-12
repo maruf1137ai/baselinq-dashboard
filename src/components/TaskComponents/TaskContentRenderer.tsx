@@ -24,7 +24,7 @@ export const TaskContentRenderer: React.FC<TaskContentRendererProps> = ({ displa
     case 'VO':
       return <TaskVO formFields={displayTask.formFields} />;
     case 'DC':
-      return <TaskDC formFields={displayTask.formFields} />;
+      return <TaskDC formFields={displayTask.formFields} onRefresh={onRefresh} />;
     case 'CPI':
       return <TaskCPI formFields={displayTask.formFields} />;
     case 'GI':
