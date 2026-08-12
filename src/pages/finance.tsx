@@ -32,7 +32,8 @@ import { deleteData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
 
@@ -161,7 +162,19 @@ const Finance = () => {
       {/* DashboardLayout owns the p-6 page padding; a page is a plain
           space-y-6 wrapper, same as Project Health. */}
       <div className="space-y-6">
-        <PageHeader title="Finance" />
+        <PageHeader
+          title="Finance"
+          actions={
+            <Link
+              to="/help/finance"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Who can create / submit / approve / post in Cost Ledger, Variation Orders and Payment Certificates"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Finance reference
+            </Link>
+          }
+        />
         <div>
           <header className="border-b border-border">
             {/* role="tablist" + aria-selected so the tab strip is navigable and
