@@ -14,6 +14,7 @@ import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
+import Help from "./pages/Help";
 import HelpTasks from "./pages/HelpTasks";
 import HelpFinance from "./pages/HelpFinance";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -185,6 +186,13 @@ const App = () => (
               <ProjectProtectedRoute>
                 <TaskDetails />
               </ProjectProtectedRoute>
+            </ProtectedRoute>
+          } />
+          {/* Help hub — sidebar's "Help" link lands here, chooser between
+              the /help/tasks and /help/finance reference pages below. */}
+          <Route path="/help" element={
+            <ProtectedRoute>
+              <Help />
             </ProtectedRoute>
           } />
           {/* Werner task workflow reference — who can do what per doc type.
