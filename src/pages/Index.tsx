@@ -1,38 +1,43 @@
 /**
  * Home.
  *
- * Rebuilt from a 1,615-line page into role-aware composed blocks, with three
- * layout directions behind a switch so they can be compared side by side.
+ * ── The hierarchy ────────────────────────────────────────────────────────
  *
- * ── What changed, and why ────────────────────────────────────────────────
+ * A project manager opens this screen to answer one question: *what needs me,
+ * and is any of it late.* Everything on the page is ordered by how close it
+ * sits to that question.
  *
- * **Fabrication removed.** The previous page shipped `progress={65}` and
- * `progress={45}` as literals, a five-name array of invented people used to
- * sign activity ("Sarah Chen approved VO: …" for a VO nobody named Sarah had
- * touched), and four commented-out health cards with hardcoded values. All
- * gone. Every figure below traces to a response.
+ *   1. Project setup      — one hairline strip. A precondition, not the work,
+ *                           so it is first and it is small. Disappears at 100%.
+ *   2. What needs you     — the only hero. One contained, ranked, divided list.
+ *   3. Risk               — is anything on fire. Absent when nothing is.
+ *   4. Commercial position— where the money stands. finance.view only.
+ *   5. Current certificate— the live one. finance.view only.
+ *   6. Meetings · Programme · Documents — reference, three-up, deliberately
+ *                           the smallest things on the page.
  *
- * **Elapsed time is not progress.** The progress ring was
- * `(now - start) / (end - start)` — a project where nothing had been built
- * read 50% at its halfway date, and the same bug drove every milestone bar.
- * Baselinq holds no physical-progress data, so none is shown. What replaces
- * it is certified value against contract sum, which is real and is labelled
- * as a commercial measure.
+ * The three earlier A/B/C layout directions are gone. A layout switcher on a
+ * shipped homepage reads as a product feature, and two of the three were dead
+ * UI by definition.
  *
- * **Role-awareness.** The page had no permission branching at all: a Client,
- * a PM and a Contractor saw identical sections, so a contractor without
- * `finance.view` was reading contract sums and certified values on their
- * landing page. Money blocks now declare `finance.view` and the endpoints
- * behind them are not even requested without it; certification actions
- * declare `finance.approve_payment`.
+ * ── Containment ──────────────────────────────────────────────────────────
  *
- * **An outage never reads as "you are clear."** The six-state machine is
- * copied from `src/pages/Compliance.tsx` — no project, total outage, partial
- * outage, loading, empty and empty-of-work are six designed states.
+ * Every section is a panel with its heading inside it (see the header comment
+ * in `components/home/blocks.tsx`). Nothing is bare text on `--background`.
+ * `EmptyState` survives here — for the three states where the WHOLE PAGE is
+ * empty, which is the only place a full dashed well is the right answer.
+ *
+ * ── What has not changed ─────────────────────────────────────────────────
+ *
+ * No figure, no fetch and no permission gate. `useHomeData` is untouched; the
+ * money endpoints are still not REQUESTED without `finance.view`, risk is
+ * still gated on `compliance.view`, and `resolveFinanceAccess` still fails
+ * closed while the permission map loads. Elapsed calendar time is still not
+ * shown as progress, and there is still no invented data anywhere on it.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, Inbox, ShieldAlert } from "lucide-react";
+import { FolderOpen, ShieldAlert } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -47,34 +52,15 @@ import {
   ActionQueueBlock,
   CurrentCertificateBlock,
   DocumentsBlock,
-  KeyIndicatorsBlock,
   LoadIssueBanner,
   MeetingsBlock,
   MilestonesBlock,
   MoneyLineBlock,
-  MoneyPanelBlock,
   RiskStripBlock,
   SetupLineBlock,
 } from "@/components/home/blocks";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
-import { cn } from "@/lib/utils";
-
-// ── Direction switch ──────────────────────────────────────────────────────
-//
-// Three arrangements of the SAME blocks. They differ in layout and priority
-// only — not in colour, radius, type scale or spacing. If two of them can be
-// told apart by their palette, that is a bug.
-
-const DIRECTIONS = [
-  { key: "A", label: "A · The queue", hint: "One ranked list of what needs you, then risk, then money on a line." },
-  { key: "B", label: "B · Two columns", hint: "Queue above the fold, then finance left, certificate and indicators right." },
-  { key: "C", label: "C · Certificate first", hint: "The live certificate leads, with the queue and alerts docked beside it." },
-] as const;
-
-type DirectionKey = (typeof DIRECTIONS)[number]["key"];
-
-const DIRECTION_STORAGE_KEY = "homeLayoutDirection";
 
 // Real signups get CIDB rather than CONTRACTOR (see user/serializers.py's
 // ROLE_MAP), so both are listed — CONTRACTOR alone missed most of them.
@@ -88,15 +74,6 @@ const Index = () => {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [setupSection, setSetupSection] = useState<string | null>(null);
-  const [direction, setDirection] = useState<DirectionKey>(() => {
-    const stored = localStorage.getItem(DIRECTION_STORAGE_KEY);
-    return stored === "B" || stored === "C" ? stored : "A";
-  });
-
-  const chooseDirection = (key: DirectionKey) => {
-    setDirection(key);
-    localStorage.setItem(DIRECTION_STORAGE_KEY, key);
-  };
 
   const openSetup = (section: string | null) => {
     setSetupSection(section);
@@ -162,35 +139,10 @@ const Index = () => {
     );
   }
 
-  const activeDirection = DIRECTIONS.find((d) => d.key === direction)!;
-
-  // Setup, insurance and primary-contract sit together, BELOW the queue.
-  // Previously three permanent non-dismissible amber banners could stack
-  // above a seven-row setup card — roughly 480px of chrome before the user's
-  // actual work. They are all still here and still non-dismissible; they are
-  // simply no longer the first thing on the page.
-  const setupSectionNode = (
-    <div className="space-y-3">
-      <SetupLineBlock
-        data={data}
-        onOpen={() => openSetup(null)}
-        onOpenSection={(s) => openSetup(s)}
-      />
-      <PrimaryContractAlert projectId={projectId} visibleToCurrentUser={data.canEditProject} />
-      <InsuranceBanner />
-    </div>
-  );
-
-  const everyoneElse = (
-    <>
-      <MeetingsBlock data={data} />
-      <MilestonesBlock data={data} />
-      <DocumentsBlock data={data} onOpen={setSelectedDoc} />
-    </>
-  );
-
   return (
     <DashboardLayout>
+      {/* DashboardLayout owns the p-6 page padding; a page is a plain
+          space-y-6 wrapper, same as Finance and Project Health. */}
       <div className="space-y-6">
         <PageHeader
           title="Home"
@@ -201,116 +153,42 @@ const Index = () => {
           }
         />
 
-        {/* Layout direction switch — the same underline tab strip Finance,
-            Programme and Project Health already use. */}
-        <div>
-          <div className="flex items-center gap-2 border-b border-border" role="tablist">
-            {DIRECTIONS.map((d) => (
-              <button
-                key={d.key}
-                role="tab"
-                aria-selected={direction === d.key}
-                onClick={() => chooseDirection(d.key)}
-                className={cn(
-                  "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none",
-                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
-                  direction === d.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">{activeDirection.hint}</p>
+        {/* Setup, primary contract and insurance are preconditions for the
+            rest of the screen being trustworthy, so they sit above it — but
+            as three hairline strips, `space-y-3`, not as three permanent
+            amber banners over a seven-row card. They were roughly 480px of
+            chrome before the user's actual work; they are now about 130px,
+            and usually one line or none. */}
+        <div className="space-y-3">
+          <SetupLineBlock
+            data={data}
+            onOpen={() => openSetup(null)}
+            onOpenSection={(s) => openSetup(s)}
+          />
+          <PrimaryContractAlert projectId={projectId} visibleToCurrentUser={data.canEditProject} />
+          <InsuranceBanner />
+          {/* State 3: partial outage — one line, one action. */}
+          <LoadIssueBanner data={data} />
         </div>
-
-        {/* State 3: partial outage — one line, one action. */}
-        <LoadIssueBanner data={data} />
 
         {/* State 4: loading */}
         {data.isLoading ? (
           <AwesomeLoader message="Reading what needs you" />
         ) : (
           <>
-            {/* ── A — The queue ──────────────────────────────────────────
-                One ranked list, then risk, then money on a single line,
-                then setup as one line. Nothing competes with the queue. */}
-            {direction === "A" && (
-              <>
-                <ActionQueueBlock data={data} />
-                <RiskStripBlock data={data} />
-                <MoneyLineBlock data={data} />
-                {setupSectionNode}
-                {everyoneElse}
-              </>
-            )}
+            <ActionQueueBlock data={data} />
+            <RiskStripBlock data={data} />
+            <MoneyLineBlock data={data} />
+            <CurrentCertificateBlock data={data} />
 
-            {/* ── B — Two columns ────────────────────────────────────────
-                Darren's arrangement, made actionable: the queue is above the
-                fold rather than below the numbers, the alert tiles route, and
-                there are no gauges — a gauge implies a target, and none of
-                these figures has one. */}
-            {direction === "B" && (
-              <>
-                <ActionQueueBlock data={data} limit={5} />
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {/* Without finance.view there is no financial overview and no
-                      certificate to put opposite it, so the two columns become
-                      indicators and risk rather than one empty half. */}
-                  <div className="space-y-6">
-                    {data.canViewFinance ? (
-                      <MoneyPanelBlock data={data} />
-                    ) : (
-                      <KeyIndicatorsBlock data={data} />
-                    )}
-                  </div>
-                  <div className="space-y-6">
-                    {data.canViewFinance ? (
-                      <>
-                        <CurrentCertificateBlock data={data} />
-                        <KeyIndicatorsBlock data={data} />
-                      </>
-                    ) : (
-                      <RiskStripBlock data={data} />
-                    )}
-                  </div>
-                </div>
-                {data.canViewFinance && <RiskStripBlock data={data} />}
-                {setupSectionNode}
-                {everyoneElse}
-              </>
-            )}
-
-            {/* ── C — Certificate first ──────────────────────────────────
-                The live certificate leads and the queue docks beside it. For
-                a viewer without finance.view there is no certificate to lead
-                with, so the queue takes the lead column instead — the page
-                shape adapts rather than rendering an empty hero. */}
-            {direction === "C" && (
-              <>
-                <div className="grid gap-6 lg:grid-cols-3">
-                  <div className="lg:col-span-2 space-y-6">
-                    {data.canViewFinance ? (
-                      <>
-                        <CurrentCertificateBlock data={data} />
-                        <MoneyLineBlock data={data} />
-                      </>
-                    ) : (
-                      <ActionQueueBlock data={data} />
-                    )}
-                  </div>
-                  <div className="space-y-6">
-                    {data.canViewFinance && <ActionQueueBlock data={data} limit={6} />}
-                    <RiskStripBlock data={data} />
-                    <KeyIndicatorsBlock data={data} />
-                  </div>
-                </div>
-                {setupSectionNode}
-                {everyoneElse}
-              </>
-            )}
+            {/* Reference, not work. Three-up so that on a quiet project — which
+                is most projects most days — they are one ~76px band rather
+                than three screens of dashed boxes. */}
+            <div className="grid gap-4 lg:grid-cols-3 items-start">
+              <MeetingsBlock data={data} />
+              <MilestonesBlock data={data} />
+              <DocumentsBlock data={data} onOpen={setSelectedDoc} />
+            </div>
           </>
         )}
       </div>

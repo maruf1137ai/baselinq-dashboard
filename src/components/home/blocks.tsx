@@ -1,22 +1,40 @@
 /**
  * Homepage blocks.
  *
- * All three layout directions are built from exactly these components. The
- * directions differ in ARRANGEMENT and PRIORITY only — if two of them can be
- * told apart by their colours, that is a bug, not a variant.
+ * ── The container rule ────────────────────────────────────────────────────
  *
- * The card treatment is copied from `src/pages/ProjectHealth.tsx` and
- * `src/pages/finance.tsx`, the app's cleanest screens:
+ * A section IS a panel. Its heading lives INSIDE the panel, on the card
+ * surface — never as bare text on the page background. The previous revision
+ * put every heading and its description straight onto `--background` and only
+ * wrapped the contents, so six headings floated on grey above sixteen
+ * separately-bordered tiles. That is what made the page read as a wireframe
+ * next to `/finance` and `/project-health`.
  *
- *   card   bg-card border border-border rounded-xl p-4   (hero: p-5)
- *   row    flex items-start justify-between gap-3
- *   title  text-sm font-medium text-foreground
- *   meta   text-xs text-muted-foreground mt-0.5
+ * The shell below is not invented. It is the finance table shell, copied
+ * verbatim from `src/components/finance/VariationOrdersTable.tsx:108` and
+ * `paymentCertificateTable.tsx:585`, which is the app's real grammar for
+ * "a titled container full of rows":
  *
- * No colour, radius, type size or spacing is introduced here that is not
- * already in `src/index.css` / `tailwind.config.ts`.
+ *   panel   bg-card border border-border rounded-xl overflow-hidden
+ *   header  px-4 py-3            (hero: p-5, per ProjectHealth's hero card)
+ *   rows    divide-y divide-border, px-4 py-3, hover:bg-muted/50
+ *   footer  px-4 py-3 border-t border-border
+ *
+ * The icon tiles and their severity classes are ProjectHealth's, unchanged.
+ * No colour, radius, type size or spacing appears here that is not already in
+ * `src/index.css` / `tailwind.config.ts`.
+ *
+ * ── The empty rule ────────────────────────────────────────────────────────
+ *
+ * Most projects on most days are quiet, so the empty treatment IS the page
+ * far more often than the full one. An empty section is therefore its panel
+ * header and nothing else — the "nothing here" sentence becomes the header's
+ * own hint line, roughly 64px total. A 250px dashed `EmptyState` well per
+ * section made the emptiest project the loudest screen in the product.
+ * `EmptyState` is still the right primitive for a whole empty PAGE (no
+ * project, total outage) and is used for exactly that in `Index.tsx`.
  */
-import { Link, useNavigate } from "react-router-dom";
+import { Link, type LinkProps } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowRight,
@@ -33,7 +51,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
@@ -43,28 +60,182 @@ import type { HomeData } from "@/hooks/useHomeData";
 
 // ── Shared chrome ─────────────────────────────────────────────────────────
 
-export function Section({
+/** ProjectHealth's severity tiles, unchanged, plus the neutral it implies. */
+const TONE: Record<string, string> = {
+  red: "bg-red-50 text-red-700 border-red-200",
+  orange: "bg-amber-50 text-amber-700 border-amber-200",
+  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  neutral: "bg-muted text-muted-foreground border-border",
+};
+
+type Tone = keyof typeof TONE;
+
+/**
+ * A titled container.
+ *
+ * `size="hero"` is ProjectHealth's hero card (p-5, text-lg, h-5 tile) and is
+ * used for exactly one thing on this page — the queue. Everything else is the
+ * default, which is the finance table header (px-4 py-3, text-sm, h-4 tile).
+ */
+export function Panel({
   title,
+  lead,
   hint,
+  icon: Icon,
+  tone = "neutral",
   action,
+  size = "default",
+  footer,
   children,
 }: {
   title: string;
+  /** Short quantitative line beside the title — "7 open, 3 past a deadline". */
+  lead?: string;
+  /** A sentence under the title. Carries the empty message when there are no rows. */
   hint?: string;
+  icon?: typeof Clock;
+  tone?: Tone;
   action?: React.ReactNode;
-  children: React.ReactNode;
+  size?: "default" | "hero";
+  footer?: React.ReactNode;
+  children?: React.ReactNode;
 }) {
+  const hero = size === "hero";
+  // An empty array is still truthy, and rendering it would draw a 1px divider
+  // strip under the header with nothing beneath it.
+  const hasBody =
+    children !== undefined &&
+    children !== null &&
+    children !== false &&
+    !(Array.isArray(children) && children.length === 0);
+
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-medium text-foreground">{title}</h2>
-          {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+    <section className="bg-card border border-border rounded-xl overflow-hidden">
+      <header className={cn("flex items-start justify-between gap-3", hero ? "p-5" : "px-4 py-3")}>
+        <div className={cn("flex items-start min-w-0", hero ? "gap-4" : "gap-3")}>
+          {Icon && (
+            <div
+              className={cn(
+                "border shrink-0",
+                hero ? "p-2.5 rounded-lg" : "p-1.5 rounded-md",
+                TONE[tone],
+              )}
+            >
+              <Icon className={hero ? "h-5 w-5" : "h-4 w-4"} />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h2
+                className={cn(
+                  "text-foreground",
+                  hero ? "text-lg font-medium" : "text-sm font-medium",
+                )}
+              >
+                {title}
+              </h2>
+              {lead && (
+                <span
+                  className={cn(
+                    "text-muted-foreground tabular-nums",
+                    hero ? "text-sm" : "text-xs",
+                  )}
+                >
+                  {lead}
+                </span>
+              )}
+            </div>
+            {hint && (
+              <p
+                className={cn(
+                  "text-muted-foreground leading-relaxed",
+                  hero ? "text-sm mt-1" : "text-xs mt-0.5",
+                )}
+              >
+                {hint}
+              </p>
+            )}
+          </div>
         </div>
         {action && <div className="shrink-0">{action}</div>}
-      </div>
-      {children}
+      </header>
+
+      {/* No body at all when there is nothing to list: an empty section is its
+          header, and the hint above has already said so. */}
+      {hasBody && <div className="border-t border-border divide-y divide-border">{children}</div>}
+
+      {footer && <div className="px-4 py-3 border-t border-border">{footer}</div>}
     </section>
+  );
+}
+
+/** Row hit-area. `ring-inset` because the panel clips an offset ring. */
+const ROW =
+  "block w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+
+function RowLink({ className, ...props }: LinkProps) {
+  return <Link className={cn(ROW, className)} {...props} />;
+}
+
+function RowButton({
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" className={cn(ROW, className)} {...props} />;
+}
+
+/** Icon tile + title + meta + right-hand slot. The wide-column row. */
+function RowContent({
+  icon: Icon,
+  tone = "neutral",
+  title,
+  meta,
+  right,
+}: {
+  icon?: typeof Clock;
+  tone?: Tone;
+  title: string;
+  meta?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3 min-w-0">
+        {Icon && (
+          <div className={cn("p-1.5 rounded-md border shrink-0", TONE[tone])}>
+            <Icon className="h-4 w-4" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{title}</p>
+          {meta && <p className="text-xs text-muted-foreground mt-0.5">{meta}</p>}
+        </div>
+      </div>
+      {right && <div className="shrink-0">{right}</div>}
+    </div>
+  );
+}
+
+/**
+ * The narrow-column row, for the three supporting panels that sit 3-up.
+ * No icon tile and the badge drops below the meta line — at ~370px a tile
+ * plus a right-aligned badge leaves nothing for the title.
+ */
+function StackedRowContent({
+  title,
+  meta,
+  badge,
+}: {
+  title: string;
+  meta?: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-sm font-medium text-foreground truncate">{title}</p>
+      {meta && <p className="text-xs text-muted-foreground mt-0.5">{meta}</p>}
+      {badge && <div className="mt-1.5">{badge}</div>}
+    </div>
   );
 }
 
@@ -119,43 +290,16 @@ const KIND_LABEL: Record<QueueKind, string> = {
   task: "Task",
 };
 
-function QueueRow({ item }: { item: QueueItem }) {
-  const Icon = KIND_ICON[item.kind];
-  return (
-    <Link
-      to={item.href}
-      className="block bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div
-            className={cn(
-              "p-1.5 rounded-md border shrink-0",
-              item.overdue
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-muted text-muted-foreground border-border",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground">{item.headline}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {KIND_LABEL[item.kind]}
-              {item.detail ? ` · ${item.detail}` : ""}
-            </p>
-          </div>
-        </div>
-        {item.overdue && (
-          <Badge variant="danger" className="shrink-0">
-            Overdue
-          </Badge>
-        )}
-      </div>
-    </Link>
-  );
-}
-
+/**
+ * The queue is the only hero on this page.
+ *
+ * It gets ProjectHealth's hero header — the one place a `text-lg` and a 20px
+ * icon are spent — because "what needs me, and is any of it late" is the
+ * whole question a PM opens this screen to answer. Its header states the
+ * position before a single row is read; the rows are one contained, divided
+ * list rather than N floating tiles, so forty items stay a list instead of
+ * becoming forty cards.
+ */
 export function ActionQueueBlock({
   data,
   limit,
@@ -169,52 +313,69 @@ export function ActionQueueBlock({
   const shown = limit ? queue.slice(0, limit) : queue;
   const overdue = queue.filter((i) => i.overdue).length;
 
+  if (isLoading) {
+    return (
+      <Panel title={title} icon={Inbox} size="hero">
+        <div className="px-4 py-3">
+          <AwesomeLoader message="Working out what needs you" />
+        </div>
+      </Panel>
+    );
+  }
+
+  if (queue.length === 0) {
+    return (
+      <Panel
+        title="Nothing is waiting on you"
+        icon={CheckCircle2}
+        tone="green"
+        size="hero"
+        hint={
+          loadIssue.level === "partial"
+            ? "Nothing outstanding in the sources that answered. Some could not be read — see above."
+            : "Certificates to certify, notices inside their deadline window, invitations to answer and instructions assigned to you all appear here, worst first."
+        }
+      />
+    );
+  }
+
   return (
-    <Section
+    <Panel
       title={title}
-      hint={
-        queue.length === 0
-          ? undefined
-          : overdue > 0
-            ? `${queue.length} open, ${overdue} already past a deadline`
-            : `${queue.length} open, worst first`
+      icon={overdue > 0 ? AlertTriangle : Inbox}
+      tone={overdue > 0 ? "red" : "neutral"}
+      size="hero"
+      lead={
+        overdue > 0
+          ? `${queue.length} open, ${overdue} already past a deadline`
+          : `${queue.length} open, worst first`
+      }
+      footer={
+        limit && queue.length > limit ? (
+          <p className="text-xs text-muted-foreground">
+            {queue.length - limit} more further down the queue.
+          </p>
+        ) : undefined
       }
     >
-      {isLoading ? (
-        <AwesomeLoader message="Working out what needs you" />
-      ) : queue.length === 0 ? (
-        <EmptyState
-          icon={CheckCircle2}
-          title="Nothing is waiting on you"
-          description={
-            loadIssue.level === "partial"
-              ? "Nothing outstanding in the sources that answered. Some could not be read — see above."
-              : "Certificates to certify, notices inside their deadline window, invitations to answer and instructions assigned to you all appear here, worst first."
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          {shown.map((item) => (
-            <QueueRow key={item.key} item={item} />
-          ))}
-          {limit && queue.length > limit && (
-            <p className="text-xs text-muted-foreground">
-              {queue.length - limit} more further down the queue.
-            </p>
-          )}
-        </div>
-      )}
-    </Section>
+      {shown.map((item: QueueItem) => (
+        <RowLink key={item.key} to={item.href}>
+          <RowContent
+            icon={KIND_ICON[item.kind]}
+            tone={item.overdue ? "red" : "neutral"}
+            title={item.headline}
+            meta={`${KIND_LABEL[item.kind]}${item.detail ? ` · ${item.detail}` : ""}`}
+            right={
+              item.overdue ? <Badge variant="danger">Overdue</Badge> : undefined
+            }
+          />
+        </RowLink>
+      ))}
+    </Panel>
   );
 }
 
 // ── Risk strip ────────────────────────────────────────────────────────────
-
-const SEVERITY_STYLE: Record<string, string> = {
-  red: "bg-red-50 text-red-700 border-red-200",
-  orange: "bg-amber-50 text-amber-700 border-amber-200",
-  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
 
 export function RiskStripBlock({ data }: { data: HomeData }) {
   const { riskSignals, riskCounts, riskUnavailable } = data;
@@ -224,50 +385,35 @@ export function RiskStripBlock({ data }: { data: HomeData }) {
   // is indistinguishable from "we could not read the risk engine".
   if (riskUnavailable) {
     return (
-      <Section title="Risk">
-        <div className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
-          <ShieldQuestion className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            The risk engine did not respond, so this project's risk posture is unknown — treat it
-            as unknown, not as clear.
-          </p>
-        </div>
-      </Section>
+      <Panel
+        title="Risk"
+        icon={ShieldQuestion}
+        hint="The risk engine did not respond, so this project's risk posture is unknown — treat it as unknown, not as clear."
+      />
     );
   }
 
   if (riskSignals.length === 0) return null;
 
   return (
-    <Section
+    <Panel
       title="Risk"
-      hint={`${riskCounts.red} red, ${riskCounts.orange} amber`}
+      icon={AlertTriangle}
+      tone={riskCounts.red > 0 ? "red" : "orange"}
+      lead={`${riskCounts.red} red, ${riskCounts.orange} amber`}
       action={<ViewAll to="/project-health">Project health</ViewAll>}
     >
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {riskSignals.slice(0, 6).map((s) => (
-          <Link
-            key={s.id}
-            to="/project-health"
-            className="bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className={cn("p-1.5 rounded-md border shrink-0", SEVERITY_STYLE[s.severity])}
-              >
-                <AlertTriangle className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">{s.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {s.is_contractual ? "Contractual breach" : "Commercial guide"} · rule {s.code}
-                </p>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </Section>
+      {riskSignals.slice(0, 6).map((s) => (
+        <RowLink key={s.id} to="/project-health">
+          <RowContent
+            icon={AlertTriangle}
+            tone={s.severity as Tone}
+            title={s.title}
+            meta={`${s.is_contractual ? "Contractual breach" : "Commercial guide"} · rule ${s.code}`}
+          />
+        </RowLink>
+      ))}
+    </Panel>
   );
 }
 
@@ -295,14 +441,15 @@ function moneyFigures(data: HomeData) {
   ];
 }
 
-/** The whole commercial position on one line. Direction A and C. */
+/** The whole commercial position on one line. */
 export function MoneyLineBlock({ data }: { data: HomeData }) {
   if (!data.canViewFinance) return null;
   const { money } = data;
 
   return (
-    <Section
+    <Panel
       title="Commercial position"
+      icon={Banknote}
       hint={
         money.certifiedPct === null
           ? "Certified value against contract sum"
@@ -310,42 +457,12 @@ export function MoneyLineBlock({ data }: { data: HomeData }) {
       }
       action={<ViewAll to="/finance">Finance</ViewAll>}
     >
-      <div className="bg-card border border-border rounded-xl p-4 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="px-4 py-3 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {moneyFigures(data).map((f) => (
           <Figure key={f.label} label={f.label} value={f.value} hint={f.hint} />
         ))}
       </div>
-    </Section>
-  );
-}
-
-/** The same figures stacked for a narrow column. Direction B. */
-export function MoneyPanelBlock({ data }: { data: HomeData }) {
-  if (!data.canViewFinance) return null;
-  const { money } = data;
-
-  return (
-    <Section title="Financial overview" action={<ViewAll to="/finance">Finance</ViewAll>}>
-      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-        {moneyFigures(data).map((f, i) => (
-          <div
-            key={f.label}
-            className={cn(
-              "flex items-baseline justify-between gap-3",
-              i > 0 && "pt-3 border-t border-border",
-            )}
-          >
-            <span className="text-xs text-muted-foreground">{f.label}</span>
-            <span className="text-sm text-foreground tabular-nums">{f.value ?? "—"}</span>
-          </div>
-        ))}
-        <p className="text-xs text-muted-foreground pt-3 border-t border-border leading-relaxed">
-          {money.certifiedPct === null
-            ? "A contract sum has not been recorded, so the certified share cannot be stated."
-            : `${money.certifiedPct}% of the contract sum has been certified. This is certified value, not physical progress — Baselinq holds no measure of work built.`}
-        </p>
-      </div>
-    </Section>
+    </Panel>
   );
 }
 
@@ -386,15 +503,11 @@ export function CurrentCertificateBlock({ data }: { data: HomeData }) {
 
   if (!cert) {
     return (
-      <Section title="Current certificate">
-        <EmptyState
-          variant="bordered"
-          size="sm"
-          icon={Banknote}
-          title="No payment certificate raised yet"
-          description="A certificate appears here once a payment claim is assessed, showing the amount certified, the retention held and who it is waiting on."
-        />
-      </Section>
+      <Panel
+        title="Current certificate"
+        icon={Banknote}
+        hint="No payment certificate raised yet. A certificate appears here once a payment claim is assessed, showing the amount certified, the retention held and who it is waiting on."
+      />
     );
   }
 
@@ -402,114 +515,37 @@ export function CurrentCertificateBlock({ data }: { data: HomeData }) {
   const amount = cert.totalPayable ?? cert.netAmount ?? null;
 
   return (
-    <Section title="Current certificate" action={<ViewAll to="/finance">Finance</ViewAll>}>
-      <div className="bg-card border border-border rounded-xl p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-lg font-medium text-foreground">
-                {cert.pcNumber || `PC-${cert.id}`}
-              </span>
-              <Badge variant={badge.variant}>{badge.label}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              {certificateHeadline(cert.workflowState, data.canApprovePayment)}
-            </p>
-          </div>
+    <Panel
+      title="Current certificate"
+      icon={Banknote}
+      lead={cert.pcNumber || `PC-${cert.id}`}
+      hint={certificateHeadline(cert.workflowState, data.canApprovePayment)}
+      action={
+        <div className="flex items-center gap-3">
+          <Badge variant={badge.variant}>{badge.label}</Badge>
+          <ViewAll to="/finance">Finance</ViewAll>
         </div>
-
-        <div className="mt-4 pt-4 border-t border-border grid gap-4 grid-cols-2 md:grid-cols-3">
-          <Figure label="Amount payable" value={amount === null ? null : formatZAR(amount)} />
-          <Figure
-            label="Retention held"
-            value={cert.retentionAmount === undefined ? null : formatZAR(cert.retentionAmount)}
-          />
-          <Figure
-            label="Last updated"
-            value={cert.updatedAt ? formatDateUk(cert.updatedAt, "short", "—") : null}
-          />
-        </div>
-
-        {data.canApprovePayment && cert.workflowState === "submitted" && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <Button size="sm" asChild>
-              <Link to="/finance">Open it to certify</Link>
-            </Button>
-          </div>
-        )}
+      }
+      footer={
+        data.canApprovePayment && cert.workflowState === "submitted" ? (
+          <Button size="xs" asChild>
+            <Link to="/finance">Open it to certify</Link>
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="px-4 py-3 grid gap-4 grid-cols-2 md:grid-cols-3">
+        <Figure label="Amount payable" value={amount === null ? null : formatZAR(amount)} />
+        <Figure
+          label="Retention held"
+          value={cert.retentionAmount === undefined ? null : formatZAR(cert.retentionAmount)}
+        />
+        <Figure
+          label="Last updated"
+          value={cert.updatedAt ? formatDateUk(cert.updatedAt, "short", "—") : null}
+        />
       </div>
-    </Section>
-  );
-}
-
-// ── Key indicators ────────────────────────────────────────────────────────
-//
-// Counts only, every one traceable to a list this page already holds. No
-// gauges: a gauge implies a target, and none of these have one.
-
-export function KeyIndicatorsBlock({ data }: { data: HomeData }) {
-  const navigate = useNavigate();
-  const { queue, riskCounts, upcomingMeetings, milestoneRows, riskUnavailable } = data;
-
-  const tiles = [
-    {
-      label: "Waiting on you",
-      value: String(queue.length),
-      to: "/tasks",
-      tone: queue.some((i) => i.overdue) ? "red" : "neutral",
-    },
-    {
-      label: "Past a deadline",
-      value: String(queue.filter((i) => i.overdue).length),
-      to: "/project-health",
-      tone: queue.some((i) => i.overdue) ? "red" : "neutral",
-    },
-    {
-      label: "Open risk signals",
-      value: riskUnavailable ? "—" : String(riskCounts.total),
-      to: "/project-health",
-      tone: riskCounts.red > 0 ? "red" : riskCounts.orange > 0 ? "orange" : "neutral",
-    },
-    {
-      label: "Meetings ahead",
-      value: String(upcomingMeetings.length),
-      to: "/meetings",
-      tone: "neutral",
-    },
-    {
-      label: "Milestones not yet complete",
-      value: String(milestoneRows.length),
-      to: "/programme",
-      tone: "neutral",
-    },
-  ];
-
-  return (
-    <Section title="Key indicators" hint="Every tile opens the list behind it">
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-        {tiles.map((t) => (
-          <button
-            key={t.label}
-            onClick={() => navigate(t.to)}
-            className="text-left bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <p
-              className={cn(
-                "text-2xl font-normal tabular-nums",
-                t.tone === "red"
-                  ? "text-red-700"
-                  : t.tone === "orange"
-                    ? "text-amber-700"
-                    : "text-foreground",
-              )}
-            >
-              {t.value}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{t.label}</p>
-          </button>
-        ))}
-      </div>
-    </Section>
+    </Panel>
   );
 }
 
@@ -529,56 +565,42 @@ export function MeetingsBlock({ data, limit = 4 }: { data: HomeData; limit?: num
   );
 
   return (
-    <Section
+    <Panel
       title="Meetings"
       hint={
-        pendingActions > 0
-          ? `${pendingActions} action${pendingActions === 1 ? "" : "s"} proposed in recent notes still need a decision`
-          : undefined
+        upcomingMeetings.length === 0
+          ? "No meetings scheduled. Site and progress meetings appear here once scheduled, with their notes and the actions they raise attached afterwards."
+          : pendingActions > 0
+            ? `${pendingActions} action${pendingActions === 1 ? "" : "s"} proposed in recent notes still need a decision`
+            : undefined
       }
       action={<ViewAll to="/meetings">All meetings</ViewAll>}
     >
-      {upcomingMeetings.length === 0 ? (
-        <EmptyState
-          variant="bordered"
-          size="sm"
-          icon={CalendarClock}
-          title="No meetings scheduled"
-          description="Site and progress meetings appear here once scheduled, with their notes and the actions they raise attached afterwards."
-        />
-      ) : (
-        <div className="space-y-3">
-          {upcomingMeetings.slice(0, limit).map((m) => {
+      {upcomingMeetings.length === 0
+        ? undefined
+        : upcomingMeetings.slice(0, limit).map((m) => {
             const attendees = m.attendees ?? [];
             return (
-              <Link
-                key={m.id}
-                to={`/meetings/${m.id}`}
-                className="block bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {m.date_time || m.date || "No date recorded"}
-                      {m.location ? ` · ${m.location}` : ""}
-                      {attendees.length > 0
-                        ? ` · ${attendees.length + (m.extra_attendees ?? 0)} invited`
-                        : ""}
-                    </p>
-                  </div>
-                  {m.my_rsvp === "invited" && (
-                    <Badge variant="warning" className="shrink-0">
-                      You have not replied
-                    </Badge>
-                  )}
-                </div>
-              </Link>
+              <RowLink key={m.id} to={`/meetings/${m.id}`}>
+                <StackedRowContent
+                  title={m.title}
+                  meta={`${m.date_time || m.date || "No date recorded"}${
+                    m.location ? ` · ${m.location}` : ""
+                  }${
+                    attendees.length > 0
+                      ? ` · ${attendees.length + (m.extra_attendees ?? 0)} invited`
+                      : ""
+                  }`}
+                  badge={
+                    m.my_rsvp === "invited" ? (
+                      <Badge variant="warning">You have not replied</Badge>
+                    ) : undefined
+                  }
+                />
+              </RowLink>
             );
           })}
-        </div>
-      )}
-    </Section>
+    </Panel>
   );
 }
 
@@ -593,61 +615,69 @@ const MILESTONE_BADGE: Record<string, "neutral" | "info" | "success" | "danger">
 
 export function MilestonesBlock({ data, limit = 4 }: { data: HomeData; limit?: number }) {
   const { milestoneRows } = data;
-  if (milestoneRows.length === 0) return null;
 
+  // This used to `return null` when empty. It no longer does, because it is
+  // now the middle cell of a three-up band and vanishing left the band ragged
+  // — and an empty panel here is one 76px header, cheaper than the hole was.
+  // Risk still returns null when empty: an absent Risk section is silence,
+  // whereas an empty Programme section is a true and useful "none outstanding".
   return (
-    <Section
+    <Panel
       title="Programme"
-      hint="Dates against baseline where one has been accepted"
+      hint={
+        milestoneRows.length === 0
+          ? "No milestones outstanding. Milestones appear here with their dates, and their slip against baseline once one has been accepted."
+          : "Dates against baseline where one has been accepted"
+      }
       action={<ViewAll to="/programme">Programme</ViewAll>}
     >
-      <div className="space-y-3">
-        {milestoneRows.slice(0, limit).map((m) => {
-          // Slip is only stated where a baseline actually exists. Without one
-          // there is nothing to slip against, and no bar is drawn: the old
-          // page's bar was elapsed calendar time, which said a phase was 50%
-          // done at its halfway date whether or not anything had been built.
-          const hasBaseline = !!m.baselineEnd;
-          const slipDays = hasBaseline
-            ? Math.round(
-                (new Date(m.actualEnd || m.endDate).getTime() -
-                  new Date(m.baselineEnd as string).getTime()) /
-                  86_400_000,
-              )
-            : null;
+      {milestoneRows.length === 0
+        ? undefined
+        : milestoneRows.slice(0, limit).map((m) => {
+            // Slip is only stated where a baseline actually exists. Without one
+            // there is nothing to slip against, and no bar is drawn: the old
+            // page's bar was elapsed calendar time, which said a phase was 50%
+            // done at its halfway date whether or not anything had been built.
+            const hasBaseline = !!m.baselineEnd;
+            const slipDays = hasBaseline
+              ? Math.round(
+                  (new Date(m.actualEnd || m.endDate).getTime() -
+                    new Date(m.baselineEnd as string).getTime()) /
+                    86_400_000,
+                )
+              : null;
 
-          return (
-            <Link
-              key={m._id}
-              to="/programme"
-              className="block bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {formatDateUk(m.startDate, "short", "—")} – {formatDateUk(m.endDate, "short", "—")}
-                    {slipDays === null
+            return (
+              <RowLink key={m._id} to="/programme">
+                <StackedRowContent
+                  title={m.name}
+                  meta={`${formatDateUk(m.startDate, "short", "—")} – ${formatDateUk(
+                    m.endDate,
+                    "short",
+                    "—",
+                  )}${
+                    slipDays === null
                       ? " · no baseline accepted"
                       : slipDays > 0
                         ? ` · ${slipDays} days later than baseline`
                         : slipDays < 0
                           ? ` · ${Math.abs(slipDays)} days ahead of baseline`
-                          : " · on baseline"}
-                    {m.percentComplete !== null && m.percentComplete !== undefined
+                          : " · on baseline"
+                  }${
+                    m.percentComplete !== null && m.percentComplete !== undefined
                       ? ` · ${m.percentComplete}% recorded complete`
-                      : ""}
-                  </p>
-                </div>
-                <Badge variant={MILESTONE_BADGE[m.status] ?? "neutral"} className="shrink-0">
-                  {m.status.replace("_", " ")}
-                </Badge>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </Section>
+                      : ""
+                  }`}
+                  badge={
+                    <Badge variant={MILESTONE_BADGE[m.status] ?? "neutral"}>
+                      {m.status.replace("_", " ")}
+                    </Badge>
+                  }
+                />
+              </RowLink>
+            );
+          })}
+    </Panel>
   );
 }
 
@@ -665,55 +695,43 @@ export function DocumentsBlock({
   const docs = data.documents.slice(0, limit);
 
   return (
-    <Section title="Documents" action={<ViewAll to="/documents">All documents</ViewAll>}>
-      {docs.length === 0 ? (
-        <EmptyState
-          variant="bordered"
-          size="sm"
-          icon={FileText}
-          title="No documents uploaded yet"
-          description="Contracts, drawings and specifications appear here. Obligations are extracted from them, so an empty list means nothing is being tracked against this project's contract."
-        />
-      ) : (
-        <div className="space-y-3">
-          {docs.map((doc: any, i: number) => (
-            <button
-              key={doc.id || doc._id || i}
-              onClick={() => onOpen(doc)}
-              className="w-full text-left bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="p-1.5 rounded-md border border-border bg-muted text-muted-foreground shrink-0">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {doc.name || doc.file_name || doc.fileName || "Document"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {doc.uploaded_at || doc.uploadedAt
-                        ? formatDateUk(doc.uploaded_at || doc.uploadedAt, "short", "—")
-                        : "No upload date recorded"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </button>
+    <Panel
+      title="Documents"
+      hint={
+        docs.length === 0
+          ? "No documents uploaded yet. Contracts, drawings and specifications appear here. Obligations are extracted from them, so an empty list means nothing is being tracked against this project's contract."
+          : undefined
+      }
+      action={<ViewAll to="/documents">All documents</ViewAll>}
+    >
+      {docs.length === 0
+        ? undefined
+        : docs.map((doc: any, i: number) => (
+            <RowButton key={doc.id || doc._id || i} onClick={() => onOpen(doc)}>
+              <StackedRowContent
+                title={doc.name || doc.file_name || doc.fileName || "Document"}
+                meta={
+                  doc.uploaded_at || doc.uploadedAt
+                    ? formatDateUk(doc.uploaded_at || doc.uploadedAt, "short", "—")
+                    : "No upload date recorded"
+                }
+              />
+            </RowButton>
           ))}
-        </div>
-      )}
-    </Section>
+    </Panel>
   );
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 
 /**
- * Project setup as ONE line.
+ * Project setup as ONE line, at the very top of the page.
  *
- * It was seven full-width rows — roughly 480px of chrome above the user's
- * actual work, on a page whose entire job is telling them what needs doing.
+ * It was seven full-width rows, and then a card stranded in the middle of the
+ * page below the money. It is a precondition for everything else on the
+ * screen working, so it belongs first — but it is a precondition, not the
+ * work, so it gets a single hairline strip and nothing more. `py-2.5` rather
+ * than a card's `p-4`: this must not out-weigh the queue beneath it.
  */
 export function SetupLineBlock({
   data,
@@ -728,7 +746,7 @@ export function SetupLineBlock({
   if (!projectStats || projectStats.percentage === 100) return null;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap">
+    <div className="bg-card border border-border rounded-xl px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-sm text-foreground shrink-0">
           Project setup {projectStats.filledCount} of {projectStats.totalCount}
@@ -769,12 +787,12 @@ export function SetupLineBlock({
 export function LoadIssueBanner({ data }: { data: HomeData }) {
   if (data.loadIssue.level !== "partial") return null;
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
+    <div className="bg-card border border-border rounded-xl px-4 py-2.5 flex items-center justify-between gap-4">
       <div className="flex items-start gap-3 min-w-0">
         <ShieldAlert className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground leading-relaxed">{data.loadIssue.message}</p>
       </div>
-      <Button variant="outline" size="sm" className="shrink-0" onClick={data.retryFailed}>
+      <Button variant="outline" size="xs" className="shrink-0" onClick={data.retryFailed}>
         Try again
       </Button>
     </div>
