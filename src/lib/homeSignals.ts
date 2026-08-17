@@ -312,54 +312,106 @@ export interface RiskSignalLike {
 }
 
 /**
- * Open risk signals, as queue rows rather than only as a strip.
+ * ── Why risk signals are NOT queue items ──────────────────────────────────
  *
- * A risk signal has NO date of any kind beyond `first_detected_at` — no due
- * date, no deadline — so its pressure comes from `severity`, which is the only
- * thing the risk engine grades. Red is treated as "critical", amber as "soon",
- * green as "later". That is a severity-to-urgency mapping and it is stated
- * here rather than implied.
+ * They used to be. `buildRiskQueue` put every open signal into "What needs
+ * you" alongside certificates and notice deadlines, and on project 45 that
+ * made twelve of the thirteen rows risk signals — three of them the same
+ * sentence about three variations that had *already been approved*.
  *
- * `is_contractual` decides the consequence, and the split is real: a
- * contractual signal says a term of the contract is being breached, whereas a
- * non-contractual one is Baselinq's own commercial guide. A red guide should
- * not outrank an amber breach, and under this mapping it does not.
+ * A queue row answers *what must I do today*. Nothing can be done about an
+ * approved variation from that row: its only action was "Open the signal",
+ * which navigates to `/project-health`, where the row already appears with
+ * its evidence and an Acknowledge control. So the queue was carrying twelve
+ * rows that were neither actionable nor unique, and they buried the one row
+ * that was — certify PC-006.
  *
- * **Permission gating is unchanged.** The strip is `compliance.view`, because
- * that is what `/project-health` is gated on and a row nobody can open is a
- * dead end. `financial` signals additionally require `finance.view`, because
- * their titles carry certified values and contract-sum overruns.
+ * A signal is a **standing condition**, not a task. It is grouped by rule
+ * below and shown as the project's condition, and `/project-health` remains
+ * the place it is worked. The ranking in `homeQueueRank.ts` was never the
+ * problem and is unchanged; this is a decision about what belongs in an
+ * actionable list at all.
  */
-export function buildRiskQueue(signals: RiskSignalLike[]): QueueItem[] {
-  return signals
-    .filter((s) => s.status === "open")
-    .map((s) => {
-      const contractual = s.is_contractual === true;
+
+/** One rule's worth of open signals. */
+export interface RiskGroup {
+  /** The rule that fired. Groups are one-per-code. */
+  code: string;
+  /** How many open signals this rule produced. */
+  count: number;
+  /** The worst severity in the group — the group is drawn at this level. */
+  severity: "red" | "orange" | "green";
+  /** True when every signal in the group is a contractual breach. */
+  contractual: boolean;
+  /** One line for the whole group. A single signal keeps its own title. */
+  title: string;
+  /** The signals behind it, worst first. Never lost, only folded. */
+  signals: RiskSignalLike[];
+}
+
+/**
+ * Collective wording for a rule that fired more than once.
+ *
+ * Only reached when `count > 1`; a lone signal always keeps the backend's own
+ * title verbatim. Each string is a true summary of the group it replaces —
+ * `VO_MANDATE_BREACH` fires once per variation, so three of them *are* three
+ * variations over mandate. Any rule not listed here falls back to the first
+ * signal's own title plus an honest "+N more", which asserts nothing.
+ */
+const RISK_GROUP_TITLE: Record<string, (n: number) => string> = {
+  VO_MANDATE_BREACH: (n) => `${n} variations exceed the principal agent mandate`,
+  VO_TOLERANCE_BREACH: (n) => `${n} variation tolerance breaches`,
+  PAYMENT_OVERDUE: (n) => `${n} certificates unpaid after certification`,
+  SCHEDULE_SLIPPAGE: (n) => `${n} milestones slipped beyond plan`,
+  MILESTONE_OVERDUE: (n) => `${n} milestones overdue`,
+};
+
+const SEVERITY_RANK = { red: 0, orange: 1, green: 2 } as const;
+
+/**
+ * Open signals folded to one line per rule, worst first.
+ *
+ * **No filtering happens here.** Callers pass the output of
+ * `visibleRiskSignals`, which applies exactly the gates `buildRiskQueue` used
+ * to declare — `compliance.view` for every signal, plus `finance.view` for a
+ * `financial` one — so nothing becomes visible to anyone who could not
+ * already see it. Grouping is presentation; the gate is upstream and unmoved.
+ */
+export function groupRiskSignals(signals: RiskSignalLike[]): RiskGroup[] {
+  const byCode = new Map<string, RiskSignalLike[]>();
+  for (const s of signals) {
+    const bucket = byCode.get(s.code);
+    if (bucket) bucket.push(s);
+    else byCode.set(s.code, [s]);
+  }
+
+  return [...byCode.entries()]
+    .map(([code, group]) => {
+      const ordered = [...group].sort(
+        (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity],
+      );
+      const n = ordered.length;
+      const collective = RISK_GROUP_TITLE[code];
       return {
-        key: `risk-${s.id}`,
-        kind: "risk" as const,
-        headline: s.title,
-        detail:
-          s.evidence?.trim() ||
-          `${contractual ? "Contractual breach" : "Commercial guide"} · rule ${s.code}`,
-        consequence: contractual ? ("breach" as const) : ("advisory" as const),
-        pressure:
-          s.severity === "red" ? ("critical" as const)
-          : s.severity === "orange" ? ("soon" as const)
-          : ("later" as const),
-        // No signal carries a due date, so there is no clock to state.
-        daysRemaining: null,
-        clock: null,
-        overdue: false,
-        href: ROUTE.riskSignals,
-        action: "Open the signal",
-        waitingSince: s.first_detected_at ?? null,
-        requires:
-          s.category === "financial"
-            ? (["compliance.view", "finance.view"] as PermissionCode[])
-            : (["compliance.view"] as PermissionCode[]),
+        code,
+        count: n,
+        severity: ordered[0].severity,
+        contractual: ordered.every((s) => s.is_contractual === true),
+        title:
+          n === 1
+            ? ordered[0].title
+            : collective
+              ? collective(n)
+              : `${ordered[0].title} · +${n - 1} more`,
+        signals: ordered,
       };
-    });
+    })
+    .sort(
+      (a, b) =>
+        SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+        b.count - a.count ||
+        (a.code < b.code ? -1 : a.code > b.code ? 1 : 0),
+    );
 }
 
 export interface ObligationLike {

@@ -27,7 +27,7 @@ import {
   buildMeetingActionQueue,
   buildObligationQueue,
   buildRejectedCertificateQueue,
-  buildRiskQueue,
+  groupRiskSignals,
   buildRsvpQueue,
   buildTaskQueue,
   buildTimeBarQueue,
@@ -262,12 +262,18 @@ export function useHomeData(projectId: string | undefined) {
   // own rows and not the queue. Order here is irrelevant — `rankQueue` is the
   // only thing that decides what a user sees first, and it is tested on its
   // own in `src/lib/__tests__/homeQueueRank.test.ts`.
+  //
+  // **Only sources a person can act on are here.** Risk signals are not: they
+  // are standing conditions with no move attached, they are already listed and
+  // acknowledgeable on `/project-health`, and putting them in this list made
+  // twelve of project 45's thirteen rows non-actionable duplicates that buried
+  // the one certificate genuinely waiting on the user. They surface as
+  // `riskGroups` below instead. See the note above `groupRiskSignals`.
   const queue: QueueItem[] = useMemo(() => {
     const items = [
       ...buildTimeBarQueue(timeBars.data?.time_bars ?? []),
       ...buildCertificateQueue(certificateList),
       ...buildRejectedCertificateQueue(certificateList),
-      ...buildRiskQueue(risk.data?.signals ?? []),
       ...buildObligationQueue(obligations.data?.obligations ?? []),
       ...buildRsvpQueue(meetingList),
       ...buildMeetingActionQueue(meetingsWithActions),
@@ -284,7 +290,6 @@ export function useHomeData(projectId: string | undefined) {
   }, [
     certificateList,
     timeBars.data,
-    risk.data,
     obligations.data,
     meetingList,
     meetingsWithActions,
@@ -372,6 +377,10 @@ export function useHomeData(projectId: string | undefined) {
     }),
     [riskSignals],
   );
+  // One line per rule that fired, worst first. Grouping only — `riskSignals`
+  // has already been through `visibleRiskSignals`, so no signal reaches this
+  // that the viewer was not already entitled to.
+  const riskGroups = useMemo(() => groupRiskSignals(riskSignals), [riskSignals]);
 
   // ── Milestones ──────────────────────────────────────────────────────────
   // Only milestones with a real baseline can report slip. The rest are shown
@@ -439,6 +448,11 @@ export function useHomeData(projectId: string | undefined) {
     // identity + permissions
     currentUser,
     canViewFinance,
+    // Exposed so the page can tell "no open signals" from "you may not see
+    // them". A viewer without this gate is served an empty `riskSignals`, and
+    // rendering that as a zero would assert a clear project to somebody who was
+    // simply not shown it.
+    canViewCompliance,
     canApprovePayment,
     canEditProject: canEditByRole || isProjectCreator,
     // project
@@ -461,6 +475,7 @@ export function useHomeData(projectId: string | undefined) {
     meetingsWithActions,
     riskSignals,
     riskCounts,
+    riskGroups,
     milestoneRows,
     documents: (project?.documents || project?.attachments || []) as any[],
     // state

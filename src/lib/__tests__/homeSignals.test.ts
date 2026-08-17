@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   actionItemIsPending,
   buildObligationQueue,
-  buildRiskQueue,
+  groupRiskSignals,
   filterQueueByPermission,
   rankQueue,
   buildCertificateQueue,
@@ -214,7 +214,7 @@ describe("buildTimeBarQueue", () => {
   });
 });
 
-describe("buildRiskQueue", () => {
+describe("groupRiskSignals", () => {
   const signal = (over: Record<string, unknown>) => ({
     id: 1,
     code: "R-01",
@@ -225,38 +225,78 @@ describe("buildRiskQueue", () => {
     ...over,
   });
 
-  it("takes only open signals", () => {
-    expect(buildRiskQueue([signal({ status: "resolved" }), signal({ id: 2 })])).toHaveLength(1);
-  });
-
-  it("derives urgency from severity, because no signal carries a date", () => {
-    expect(buildRiskQueue([signal({ severity: "red" })])[0].pressure).toBe("critical");
-    expect(buildRiskQueue([signal({ severity: "orange" })])[0].pressure).toBe("soon");
-    expect(buildRiskQueue([signal({ severity: "green" })])[0].pressure).toBe("later");
-    expect(buildRiskQueue([signal({})])[0].daysRemaining).toBeNull();
-    expect(buildRiskQueue([signal({})])[0].clock).toBeNull();
-  });
-
-  it("separates a contractual breach from a commercial guide", () => {
-    expect(buildRiskQueue([signal({ is_contractual: true })])[0].consequence).toBe("breach");
-    expect(buildRiskQueue([signal({ is_contractual: false })])[0].consequence).toBe("advisory");
-    // Absent means not asserted, and we do not assert a breach on its behalf.
-    expect(buildRiskQueue([signal({})])[0].consequence).toBe("advisory");
-  });
-
-  it("prefers the backend's own evidence line over a rule number", () => {
-    expect(buildRiskQueue([signal({ evidence: "Practical completion is 12 days late" })])[0].detail)
-      .toBe("Practical completion is 12 days late");
-    expect(buildRiskQueue([signal({ is_contractual: true })])[0].detail)
-      .toBe("Contractual breach · rule R-01");
-  });
-
-  it("keeps the existing gates: compliance.view, plus finance.view when financial", () => {
-    expect(buildRiskQueue([signal({ category: "delay" })])[0].requires).toEqual(["compliance.view"]);
-    expect(buildRiskQueue([signal({ category: "financial" })])[0].requires).toEqual([
-      "compliance.view",
-      "finance.view",
+  it("folds one line per rule, so three identical signals stop being three rows", () => {
+    // Project 45's actual shape: VO_MANDATE_BREACH fires once per variation.
+    const groups = groupRiskSignals([
+      signal({ id: 27, code: "VO_MANDATE_BREACH", title: "VO-001 exceeds principal agent mandate" }),
+      signal({ id: 26, code: "VO_MANDATE_BREACH", title: "VO-002 exceeds principal agent mandate" }),
+      signal({ id: 25, code: "VO_MANDATE_BREACH", title: "VO-003 exceeds principal agent mandate" }),
     ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].count).toBe(3);
+    expect(groups[0].title).toBe("3 variations exceed the principal agent mandate");
+  });
+
+  it("leaves a lone signal's own title exactly as the backend wrote it", () => {
+    const groups = groupRiskSignals([signal({ code: "VO_MANDATE_BREACH" })]);
+    expect(groups[0].title).toBe("Programme slipped past the baseline");
+    expect(groups[0].count).toBe(1);
+  });
+
+  it("asserts nothing it cannot know about a rule it has no wording for", () => {
+    const groups = groupRiskSignals([
+      signal({ id: 1, code: "UNKNOWN_RULE", title: "First" }),
+      signal({ id: 2, code: "UNKNOWN_RULE", title: "Second" }),
+    ]);
+    expect(groups[0].title).toBe("First · +1 more");
+  });
+
+  it("takes the worst severity in the group, and orders groups by it", () => {
+    const groups = groupRiskSignals([
+      signal({ id: 1, code: "AMBER_RULE", severity: "orange" }),
+      signal({ id: 2, code: "MIXED_RULE", severity: "orange" }),
+      signal({ id: 3, code: "MIXED_RULE", severity: "red" }),
+    ]);
+    expect(groups.map((g) => g.code)).toEqual(["MIXED_RULE", "AMBER_RULE"]);
+    expect(groups[0].severity).toBe("red");
+  });
+
+  it("calls a group contractual only when EVERY signal in it is", () => {
+    const mixed = groupRiskSignals([
+      signal({ id: 1, code: "C", is_contractual: true }),
+      signal({ id: 2, code: "C", is_contractual: false }),
+    ]);
+    expect(mixed[0].contractual).toBe(false);
+    const all = groupRiskSignals([
+      signal({ id: 1, code: "C", is_contractual: true }),
+      signal({ id: 2, code: "C", is_contractual: true }),
+    ]);
+    expect(all[0].contractual).toBe(true);
+    // Absent means not asserted, and we do not assert a breach on its behalf.
+    expect(groupRiskSignals([signal({})])[0].contractual).toBe(false);
+  });
+
+  it("loses no signal — folding is presentation, not filtering", () => {
+    const input = [
+      signal({ id: 1, code: "A" }),
+      signal({ id: 2, code: "A" }),
+      signal({ id: 3, code: "B" }),
+    ];
+    const groups = groupRiskSignals(input);
+    expect(groups.flatMap((g) => g.signals)).toHaveLength(input.length);
+    expect(groups.reduce((n, g) => n + g.count, 0)).toBe(input.length);
+  });
+
+  it("does not gate — the caller passes what visibleRiskSignals already allowed", () => {
+    // The gate lives in visibleRiskSignals (tested below) and is unchanged from
+    // the one the removed risk queue rows used to declare. Grouping must not
+    // become a second, weaker filter.
+    const financial = signal({ category: "financial" as const });
+    const withheld = visibleRiskSignals([financial], {
+      canViewCompliance: true,
+      canViewFinance: false,
+    });
+    expect(groupRiskSignals(withheld)).toEqual([]);
   });
 });
 
@@ -445,17 +485,6 @@ describe("resolveFinanceAccess", () => {
       ]),
       ...buildRejectedCertificateQueue([{ id: 3, pcNumber: "PC-003", workflowState: "rejected" }]),
       ...buildTimeBarQueue([{ id: 4, label: "VO-012", days_remaining: 5, status: "open" }]),
-      ...buildRiskQueue([
-        {
-          id: 5,
-          code: "R-09",
-          category: "financial",
-          severity: "red",
-          status: "open",
-          title: "Certified value exceeds the contract sum",
-          is_contractual: true,
-        },
-      ]),
       ...buildTaskQueue([{ id: "t", title: "Respond", needsAction: true }], NOW),
     ]);
     // The contractor holds compliance.view but not finance.view, which is the
@@ -465,6 +494,55 @@ describe("resolveFinanceAccess", () => {
     expect(visible.map((i) => i.kind).sort()).toEqual(["task", "time-bar"]);
     // The notice deadline still leads: it is the only thing here that forfeits.
     expect(visible[0].kind).toBe("time-bar");
+  });
+
+  it("hides a financial risk signal from that same contractor, now that risk is not a queue item", () => {
+    // Risk moved out of the queue and into `groupRiskSignals`. The gate did not
+    // move with it: `visibleRiskSignals` applies exactly what the removed rows
+    // used to declare — compliance.view for every signal, plus finance.view for
+    // a financial one — so this is the same guarantee at its new call site.
+    const access = resolveFinanceAccess({
+      canViewFinance: false,
+      canApprovePayment: false,
+      isLoading: false,
+    });
+    const signals = [
+      {
+        id: 5,
+        code: "R-09",
+        category: "financial" as const,
+        severity: "red" as const,
+        status: "open",
+        title: "Certified value exceeds the contract sum",
+        is_contractual: true,
+      },
+      {
+        id: 6,
+        code: "R-02",
+        category: "delay" as const,
+        severity: "red" as const,
+        status: "open",
+        title: "Practical completion has slipped",
+      },
+    ];
+    const groups = groupRiskSignals(
+      visibleRiskSignals(signals, { canViewCompliance: true, canViewFinance: access.canViewFinance }),
+    );
+    expect(groups.map((g) => g.code)).toEqual(["R-02"]);
+    // And nothing at all while the permission map is still in flight.
+    const loading = resolveFinanceAccess({
+      canViewFinance: true,
+      canApprovePayment: true,
+      isLoading: true,
+    });
+    expect(
+      groupRiskSignals(
+        visibleRiskSignals(signals, {
+          canViewCompliance: true,
+          canViewFinance: loading.canViewFinance,
+        }),
+      ).map((g) => g.code),
+    ).toEqual(["R-02"]);
   });
 });
 

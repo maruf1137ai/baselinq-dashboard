@@ -1,83 +1,108 @@
 /**
- * The action queue.
+ * What needs you.
  *
- * One question: *what will cost me money if I do not act today?*
+ * One question: *what must a person actually do?*
  *
- * Everything in a row is decided in `src/lib/homeSignals.ts` (what the row
- * says) and `src/lib/homeQueueRank.ts` (what order the rows come in). This
- * file only renders them, and introduces no colour, radius, type size or
- * spacing that is not already in `src/index.css` / `tailwind.config.ts` — the
- * card treatment is the same `bg-card border border-border rounded-xl p-4`
- * used on ProjectHealth and Finance.
+ * ── Only things a person can do ───────────────────────────────────────────
  *
- * Three things this component is careful about:
+ * Risk signals are not in this list — see the note above `groupRiskSignals` in
+ * `src/lib/homeSignals.ts`. A standing condition with no move attached is not
+ * a task, and twelve of them made the one real task on project 45 invisible.
+ * The list is short by design; empty is a true and good answer.
+ *
+ * ── Sections, in a fixed order ────────────────────────────────────────────
+ *
+ * The rows are grouped by **the kind of obligation**, not by object type, and
+ * **a section with nothing in it does not render**. This is Linear's "My
+ * Issues" focus order (urgent · SLA-bound · blockers · cycle work · …, "some
+ * sections only appear when they apply") and GitHub's rebuilt pull-request
+ * dashboard (review requests · needs fixes · ready to merge — not by
+ * repository) applied to contract administration.
+ *
+ * It solves the empty state structurally rather than cosmetically: on a quiet
+ * day nothing renders and the panel is one header line, so there is no "you
+ * are clear" well to design around.
+ *
+ * `SECTIONS` below is in `CONSEQUENCE_ORDER` — the same axis `rankQueue`
+ * already sorts on — so section order and row order agree by construction
+ * rather than by coincidence. **`homeQueueRank.ts` is untouched**: it still
+ * decides the order of rows *within* a section, and its bands still decide
+ * what `queueLead` calls urgent.
+ *
+ * One trade-off, stated: a forfeiture item thirty working days out is
+ * deliberately demoted to band 5 by `BAND`, below an unsigned certificate, and
+ * sectioning puts it back above one. The section headings therefore make no
+ * urgency claim — "Notices to serve", not "Closing now" — and the clock chip on
+ * the row says how far away it is.
+ *
+ * ── No decoration ─────────────────────────────────────────────────────────
+ *
+ * There is no per-row icon, no severity tile and no priority marker. Ten
+ * near-identical rows each wearing a red triangle is why nothing stood out.
+ * **Urgency is position** — the section a row sits in — and the only colour on
+ * a row is the clock chip, and only when the clock has actually run out or runs
+ * today. That is a fact, not a gradient.
+ *
+ * ── Two things this file is still careful about ───────────────────────────
  *
  *  1. **One action per row, to a route that exists.** Every `href` comes from
- *     the `ROUTE` table in homeSignals.ts, checked against App.tsx. Nothing
- *     points at `/approvals`, which is not a route.
+ *     the `ROUTE` table in homeSignals.ts, checked against App.tsx.
  *
- *  2. **Empty and calm are different.** A new project has no certificates, no
- *     variations and no meetings — the common case. That is "nothing is being
- *     tracked yet", not "you are clear". A project with eleven items, none of
- *     them inside a deadline window, IS clear and says so.
- *
- *  3. **An outage never reads as clear.** If a source failed, the empty state
- *     says which, because on a page whose whole job is telling somebody what
- *     is outstanding, a confident silence is the most expensive thing we could
+ *  2. **An outage never reads as clear.** If a source failed, the empty state
+ *     says so, because on a page whose whole job is telling somebody what is
+ *     outstanding, a confident silence is the most expensive thing we could
  *     render.
  */
 import { Link } from "react-router-dom";
-import {
-  AlertTriangle,
-  Banknote,
-  CalendarClock,
-  CheckCircle2,
-  ClipboardCheck,
-  FileText,
-  FileWarning,
-  Inbox,
-  ShieldAlert,
-} from "lucide-react";
+import { CheckCircle2, ShieldAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { cn } from "@/lib/utils";
-import { ACT_TODAY_BAND, bandOf, summariseQueue } from "@/lib/homeQueueRank";
+import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import type { HomeData } from "@/hooks/useHomeData";
 
 import { Panel } from "./blocks";
 
-const KIND_ICON: Record<QueueKind, typeof CalendarClock> = {
-  "time-bar": CalendarClock,
-  certificate: Banknote,
-  rejected: FileWarning,
-  risk: AlertTriangle,
-  obligation: ClipboardCheck,
-  "meeting-action": FileText,
-  rsvp: CalendarClock,
-  task: Inbox,
-};
-
-const KIND_LABEL: Record<QueueKind, string> = {
-  "time-bar": "Notice deadline",
-  certificate: "Certificate",
-  rejected: "Returned certificate",
-  risk: "Risk signal",
-  obligation: "Contract obligation",
-  "meeting-action": "Meeting notes",
-  rsvp: "Meeting",
-  task: "Task",
-};
+/**
+ * The fixed focus order. Named for what the reader must DO, never for how
+ * urgent it is — a heading that claims urgency would be wrong for the tail of
+ * its own section (see the trade-off in the header comment).
+ *
+ * In `CONSEQUENCE_ORDER`: forfeiture, money, breach, blocking, own-work.
+ */
+const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
+  { label: "Notices to serve", kinds: ["time-bar"] },
+  { label: "Certificates awaiting you", kinds: ["certificate", "rejected"] },
+  { label: "Contract obligations", kinds: ["obligation"] },
+  { label: "Blocking someone else", kinds: ["rsvp", "meeting-action"] },
+  { label: "Assigned to you", kinds: ["task"] },
+];
 
 /**
- * The one chip on a row, and it is about the CLOCK, not the state.
+ * A launcher, not a backlog.
  *
- * A forfeiture clock is stated in the unit the backend counted in. "3 days"
+ * Jira's "Your work" hard-caps at 20 items with no "show more" for exactly
+ * this reason, and Linear scales by removing things from view rather than by
+ * paginating. Twelve is the cap here because the queue no longer carries risk
+ * signals and a genuine action list this long is already a bad week.
+ */
+const CAP = 12;
+
+/**
+ * The one chip on a row, and it is about the CLOCK, not a priority.
+ *
+ * A forfeiture clock is stated in the unit the backend counted in: "3 days"
  * and "3 working days" are a week apart in May.
+ *
+ * **Colour marks a fact, not a gradient.** Only a clock that has run out or
+ * runs today is drawn in `danger`; everything with time left is neutral,
+ * whatever its `pressure`. Urgency is carried by which section the row is in.
  */
 function clockChip(item: QueueItem): { label: string; variant: "danger" | "warning" | "neutral" } | null {
   if (item.daysRemaining === null) {
+    // An undated forfeiture clock is an UNKNOWN deadline and must not read as
+    // "no deadline". It is the one non-fact that still earns a colour.
     return item.consequence === "forfeiture"
       ? { label: "Not dated", variant: "warning" }
       : null;
@@ -87,81 +112,76 @@ function clockChip(item: QueueItem): { label: string; variant: "danger" | "warni
     return { label: `${Math.abs(item.daysRemaining)}${unit} days over`, variant: "danger" };
   }
   if (item.daysRemaining === 0) return { label: "Today", variant: "danger" };
-  return {
-    label: `${item.daysRemaining}${unit} days left`,
-    variant: item.pressure === "critical" ? "danger" : item.pressure === "soon" ? "warning" : "neutral",
-  };
+  return { label: `${item.daysRemaining}${unit} days left`, variant: "neutral" };
 }
 
+/**
+ * One row, one line.
+ *
+ * It was a bordered card with an icon tile, a headline, a subtitle and a
+ * separate "Open it" link — 92px, and 104px of pitch once the gap between
+ * cards was counted. Four things went:
+ *
+ *  - **The card.** A row inside a panel is a row; `divide-y` is how every other
+ *    list in the app (finance tables, ProjectHealth) separates them.
+ *  - **The icon tile.** The bordered 28px tile set the row's height by itself,
+ *    and its severity colour was the decoration described above.
+ *  - **The action link.** The whole row is already the link to exactly that
+ *    place. It survives in `aria-label`, where it is genuinely useful.
+ *  - **The kind label and the detail.** "Certificate · In this state since
+ *    today" was object type plus prose. The section heading now says the kind
+ *    once for every row under it, and the detail moves to the row's tooltip.
+ *
+ * The headline is untouched and already leads with the verb ("Certify PC-006
+ * — submitted and waiting on you"), so nothing was lost from the face of it.
+ */
 export function QueueRow({ item }: { item: QueueItem }) {
-  const Icon = KIND_ICON[item.kind];
   const chip = clockChip(item);
-  // Only the top bands earn the loud treatment. If every row is red, the row
-  // that is actually forfeiting a claim reads the same as a late task.
-  const urgent = bandOf(item) <= ACT_TODAY_BAND;
 
   return (
     <Link
       to={item.href}
+      title={item.detail ?? undefined}
       aria-label={`${item.headline}. ${item.action}.`}
-      className="block bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div
-            className={cn(
-              "p-1.5 rounded-md border shrink-0",
-              urgent
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-muted text-muted-foreground border-border",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground">{item.headline}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {KIND_LABEL[item.kind]}
-              {item.detail ? ` · ${item.detail}` : ""}
-            </p>
-            <p className="text-xs text-primary mt-1">{item.action}</p>
-          </div>
-        </div>
-        {chip && (
-          <Badge variant={chip.variant} className="shrink-0 tabular-nums">
-            {chip.label}
-          </Badge>
-        )}
-      </div>
+      <p className="text-sm text-foreground truncate min-w-0 flex-1">{item.headline}</p>
+      {chip && (
+        <Badge variant={chip.variant} className="shrink-0 tabular-nums">
+          {chip.label}
+        </Badge>
+      )}
     </Link>
   );
 }
 
-/** What the header line says, given the shape of the queue. */
-function queueHint(summary: ReturnType<typeof summariseQueue>): string | undefined {
+/** The section heading strip. A row-height label, not a second panel. */
+function SectionHeading({ label }: { label: string }) {
+  return (
+    <p className="px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground">{label}</p>
+  );
+}
+
+/**
+ * The count beside the heading. A `lead`, not a `hint` — it is a figure, and
+ * the sentence it used to be ("4 need you today · 13 open in all") was three
+ * clauses where one number does. `summariseQueue`'s bands decide "today".
+ */
+function queueLead(summary: ReturnType<typeof summariseQueue>): string | undefined {
   if (summary.total === 0) return undefined;
-  if (summary.calm) return `${summary.total} open, none inside a deadline window`;
-  const parts = [`${summary.actToday} need${summary.actToday === 1 ? "s" : ""} you today`];
-  if (summary.forfeiture > 0) {
-    parts.push(
-      `${summary.forfeiture} notice deadline${summary.forfeiture === 1 ? "" : "s"} running`,
-    );
-  }
-  return `${parts.join(" · ")} · ${summary.total} open in all`;
+  if (summary.calm) return `${summary.total} open · none urgent`;
+  return `${summary.actToday} today · ${summary.total} open`;
 }
 
 export function ActionQueueBlock({
   data,
-  limit,
   title = "What needs you",
 }: {
   data: HomeData;
-  limit?: number;
   title?: string;
 }) {
   const { queue, isLoading, loadIssue } = data;
   const summary = summariseQueue(queue);
-  const shown = limit ? queue.slice(0, limit) : queue;
 
   if (isLoading) {
     return (
@@ -172,16 +192,9 @@ export function ActionQueueBlock({
   }
 
   // ── Empty ───────────────────────────────────────────────────────────────
-  // Empty is the COMMON case on a new project, so it must read as correct
-  // rather than as broken — and it must never read as reassurance we cannot
-  // give. If a source failed, that is the headline, not the emptiness.
-  //
-  // The message is the PANEL HEADER'S HINT, not a dashed well inside the
-  // panel. Every other block on this page already empties that way (see the
-  // header comment in blocks.tsx); the queue was the one place where the two
-  // treatments met and the older one survived. A full dashed `EmptyState` is
-  // right when the WHOLE PAGE is empty — no project, none selected, a total
-  // outage — and `Index.tsx` still uses it for exactly those three.
+  // Empty is the COMMON case, and it must read as correct rather than as
+  // broken — but it must never read as reassurance we cannot give. If a source
+  // failed, that is the headline, not the emptiness.
   if (queue.length === 0) {
     if (loadIssue.level === "partial") {
       return (
@@ -189,32 +202,35 @@ export function ActionQueueBlock({
           title={title}
           icon={ShieldAlert}
           tone="orange"
-          hint="Nothing outstanding in the sources that answered — but some could not be read, so this is not a statement that nothing is waiting on you. Retry from the banner above."
+          // Still a sentence, and deliberately: this is the one empty state
+          // that must NOT be read at a glance as "you are clear".
+          hint="Some sources could not be read — this is not a statement that nothing is waiting on you."
         />
       );
     }
-    return (
-      <Panel
-        title={title}
-        icon={CheckCircle2}
-        tone="green"
-        hint="Nothing is waiting on you. Notice deadlines, certificates waiting to be certified, obligations from the contract, invitations to answer and instructions assigned to you all appear here — the ones that forfeit something first."
-      />
+    return <Panel title={title} icon={CheckCircle2} tone="green" hint="Nothing is waiting on you." />;
+  }
+
+  // Rows keep `rankQueue`'s order inside their section; sections keep theirs.
+  const shown = queue.slice(0, CAP);
+  const rows: React.ReactNode[] = [];
+  for (const section of SECTIONS) {
+    const items = shown.filter((i) => section.kinds.includes(i.kind));
+    if (items.length === 0) continue; // Sections only appear when they apply.
+    rows.push(<SectionHeading key={`h-${section.label}`} label={section.label} />);
+    for (const item of items) rows.push(<QueueRow key={item.key} item={item} />);
+  }
+  if (queue.length > shown.length) {
+    rows.push(
+      <p key="capped" className="px-4 py-2.5 text-xs text-muted-foreground">
+        {queue.length - shown.length} more not shown
+      </p>,
     );
   }
 
   return (
-    <Panel title={title} hint={queueHint(summary)}>
-      <div className="space-y-3">
-        {shown.map((item) => (
-          <QueueRow key={item.key} item={item} />
-        ))}
-        {limit && queue.length > limit && (
-          <p className="text-xs text-muted-foreground">
-            {queue.length - limit} more further down the queue.
-          </p>
-        )}
-      </div>
+    <Panel title={title} lead={queueLead(summary)}>
+      {rows}
     </Panel>
   );
 }
