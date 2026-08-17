@@ -118,6 +118,9 @@ const PaymentCertificate = () => {
           // that takes the project past its contract sum is allowed through
           // with a warning, and used to render as an ordinary row.
           for (const w of warnings) toast.warning(w);
+          // The drawer needs the created certificate's id so it can register
+          // any attached files against it.
+          return created;
         }}
       />
     </main>

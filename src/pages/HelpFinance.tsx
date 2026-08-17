@@ -12,9 +12,15 @@
  *                                     backend/cost_ledger/views.py
  *   - VO Sign & Issue              → backend/tasks/views_signing.py (SIGNING_ROLES)
  *   - Auto cost-ledger entries     → backend/cost_ledger/signals.py
- *   - PC create / submit / certify / post permissions → backend/tasks/pc_workflow.py
+ *   - PC create / submit / certify permissions → backend/tasks/pc_workflow.py
  *                                     (TRANSITION_PERMISSIONS)
  *                                     and user/migrations/0040_pc_single_approve_permission.py
+ *   - PC approve auto-posts, no manual post action → backend/tasks/views_pc_workflow.py
+ *                                     (PaymentCertificateWorkflowMixin._run_transition) —
+ *                                     approving chains straight to posting; there is no
+ *                                     ".../post/" HTTP route left, and
+ *                                     user/migrations/0042_remove_pc_manual_post.py revoked
+ *                                     finance.post_certificate from every role
  *   - PC maker-checker              → backend/tasks/pc_workflow.py
  *                                     (CREATOR_EXCLUDED_TRANSITIONS)
  *   - PC draft edit/delete (creator-only, Draft-only) → backend/tasks/views.py
@@ -113,13 +119,7 @@ const SECTIONS: FinanceSection[] = [
         action: "Approve / Reject",
         who: "Principal / PM — the project's Designated Principal Agent — but never the certificate's own creator.",
         when: "Once it's been Submitted.",
-        note: "A single certifying act. There is no separate QS stage and client stage — one role certifies, independently, exactly as JBCC's principal-agent clause describes.",
-      },
-      {
-        action: "Post Certificate",
-        who: "Client/Owner, Client Project Manager, or Administrator — but never the certificate's own creator.",
-        when: "Once it's been Approved.",
-        note: "The moment the certificate becomes final — money is now legally due, the platform fee accrues, and this is when the credit lands in the Cost Ledger.",
+        note: "A single certifying act, and the only step that exists — approving is what makes the certificate final: money becomes legally due, the platform fee accrues, and the credit lands in the Cost Ledger, all in the same act. There is no separate QS stage, client stage, or posting step, and Client/Owner has no action anywhere in this process — one role certifies, independently, exactly as JBCC's principal-agent clause describes.",
       },
       {
         action: "Cancel",
@@ -151,9 +151,9 @@ const SECTIONS: FinanceSection[] = [
 ];
 
 const GLOBAL_NOTES = [
-  "Maker-checker on Payment Certificates: whoever creates a certificate can never approve, reject, or post that same certificate — even when their role would otherwise qualify for the action. This is enforced by the server, not just hidden in the menu, so it holds even if someone calls the API directly. The creator CAN submit and cancel their own draft — raising and submitting is the maker's job, not a certification act.",
+  "Maker-checker on Payment Certificates: whoever creates a certificate can never approve or reject that same certificate — even when their role would otherwise qualify for the action. This is enforced by the server, not just hidden in the menu, so it holds even if someone calls the API directly. The creator CAN submit and cancel their own draft — raising and submitting is the maker's job, not a certification act.",
   "A certificate's Approvals status (Draft, Submitted, Approved, Posted, Rejected, Cancelled) always reflects its real state. Click the status to see who it's currently waiting on and who's eligible to act.",
-  "Cost Ledger entries linked to a Payment Certificate only ever appear once that certificate is Posted — never earlier, and never at all if it's Rejected or Cancelled first.",
+  "Cost Ledger entries linked to a Payment Certificate only ever appear once that certificate is Posted — never earlier, and never at all if it's Rejected or Cancelled first. Posting happens automatically the instant a certificate is Approved — there is no separate posting action.",
   "Client/Owner, Administrator and similar \"owner\" roles inherit these permissions through a role alias — Administrator behaves as Client/Owner, and a plain \"QS\" behaves as Consultant Quantity Surveyor, for every rule on this page.",
 ];
 
@@ -246,7 +246,7 @@ export default function HelpFinance() {
         </section>
 
         <p className="mt-12 text-xs text-muted-foreground">
-          Last updated 2026-08-13. If the platform behaves differently from
+          Last updated 2026-08-14. If the platform behaves differently from
           what's described here, the platform's behaviour is the bug — please
           let the team know.
         </p>

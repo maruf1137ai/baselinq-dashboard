@@ -1,40 +1,74 @@
 import React, { useMemo } from 'react';
-import { DollarSign, ExternalLink } from 'lucide-react';
+import { ExternalLink, Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import SaveMoney from './icons/SaveMoney';
 import { useProjects } from '@/hooks/useProjects';
-import { format, differenceInDays, isAfter, parseISO } from 'date-fns';
+import { differenceInDays, isAfter, parseISO } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { fetchData } from '@/lib/Api';
+import { formatZAR } from '@/lib/formatCurrency';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '@/components/ui/empty-state';
+import { usePermission } from '@/hooks/usePermission';
 
-const CATEGORY_CONFIG = [
-  { key: 'Subcontractor', label: 'Subcontractor Costs', color: '#6c5ce7' },
-  { key: 'Materials', label: 'Materials', color: '#10B981' },
-  { key: 'Preliminaries', label: 'Preliminaries', color: '#F97316' },
-  { key: 'Professional Fees', label: 'Professional Fees', color: '#3B82F6' },
-  { key: 'Contingency', label: 'Contingency', color: '#6B7280' },
-  { key: 'Labour', label: 'Labour', color: '#F59E0B' },
-  { key: 'Plant & Equipment', label: 'Plant & Equipment', color: '#EC4899' },
-  { key: 'Other', label: 'Other', color: '#94A3B8' },
-];
-
-const FALLBACK_RATIOS = [0.40, 0.25, 0.15, 0.12, 0.08];
-
-interface CostSummaryResponse {
+// Same shape cost_ledger/summary/ returns and costLadger.tsx's Cost Ledger
+// tab already consumes — fetching it here too is what keeps this card and
+// the Finance page permanently in sync (one source of truth, not a copy).
+interface LedgerSummary {
   totalDebits: number;
   totalCredits: number;
   netPosition: number;
+  totalProjectCost: number;
+  originalBudget: number;
+  remainingBudget: number;
   currency: string;
 }
 
-interface CostLedgerEntry {
-  id: number;
-  category: string;
-  net: number;
-  total: number;
-  entry_type: string;
+interface BarSegment {
+  label: string;
+  value: number;
+  color: string;
+}
+
+function BudgetBar({ title, segments, total }: { title: string; segments: BarSegment[]; total: number }) {
+  // Segment widths are clamped cumulatively, not just individually — real
+  // ledger data can have non-VO debits pushing a segment's true share past
+  // what's left in the bar, and letting widths sum past 100% would overflow
+  // the track rather than just under-representing that segment.
+  let cumulativePct = 0;
+
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground mb-1.5">{title}</p>
+      <div className="flex w-full h-4 rounded-full overflow-hidden bg-muted">
+        {segments.map((s, i) => {
+          const rawPct = total > 0 ? Math.max(0, (s.value / total) * 100) : 0;
+          const pct = Math.max(0, Math.min(rawPct, 100 - cumulativePct));
+          cumulativePct += pct;
+          if (pct <= 0) return null;
+          return (
+            <div
+              key={s.label}
+              className={i > 0 ? 'ml-0.5' : undefined}
+              style={{ width: `${pct}%`, backgroundColor: s.color }}
+              title={`${s.label}: ${formatZAR(s.value)}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
+        {segments.map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="text-xs text-foreground">{s.label}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatZAR(s.value)} ({total > 0 ? Math.round((s.value / total) * 100) : 0}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDaysStatus }) {
@@ -45,14 +79,24 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
     String(project._id || project.id) === String(selectedProjectId)
   );
 
-  // Fetch real cost ledger entries for the selected project
-  const { data: ledgerEntries = [] } = useQuery<CostLedgerEntry[]>({
-    queryKey: ["cost-ledger-entries", selectedProjectId],
-    queryFn: () =>
-      fetchData(`cost-ledger/?project_id=${selectedProjectId}&entry_type=debit`).then(
-        (res: any) => res?.results ?? res ?? []
-      ),
-    enabled: !!selectedProjectId,
+  // The summary endpoint 403s without finance.view/finance.edit on the
+  // project (unlike the old list-based query this replaced, which just
+  // returned an empty list) — gate the fetch and the empty state on it the
+  // same way costLadger.tsx's Cost Ledger tab does.
+  const projectIdNum = selectedProjectId ? parseInt(selectedProjectId, 10) : null;
+  // Both hooks must always run, every render — `a() || b()` would short-circuit
+  // and skip calling b() whenever a() is truthy (which it is by default while
+  // loading, see usePermission's docstring), changing the hook count between
+  // renders and crashing React's reconciler ("change in the order of Hooks").
+  const canViewFinanceView = usePermission("finance.view", projectIdNum);
+  const canViewFinanceEdit = usePermission("finance.edit", projectIdNum);
+  const canViewFinance = canViewFinanceView || canViewFinanceEdit;
+
+  // Same endpoint the Finance > Cost Ledger tab uses for its summary tiles.
+  const { data: summary } = useQuery<LedgerSummary>({
+    queryKey: ["cost-ledger-summary", selectedProjectId],
+    queryFn: () => fetchData(`cost-ledger/summary/?project_id=${selectedProjectId}`),
+    enabled: !!selectedProjectId && canViewFinance,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -83,40 +127,12 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
   }, [selectedProject, propProgress, propDaysStatus]);
 
   const { progress, daysStatus } = dynamicTimelineData;
-  const projectTotalBudget = selectedProject?.totalBudget ?? selectedProject?.total_budget ?? 0;
 
-  // Build chart data from real ledger entries (debit totals per category)
-  const budgetData = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const entry of ledgerEntries as CostLedgerEntry[]) {
-      if (entry.entry_type === "debit") {
-        totals[entry.category] = (totals[entry.category] ?? 0) + (entry.total ?? entry.net ?? 0);
-      }
-    }
-
-    const hasRealData = Object.keys(totals).length > 0;
-
-    if (hasRealData) {
-      return CATEGORY_CONFIG
-        .filter((c) => (totals[c.key] ?? 0) > 0)
-        .map((c) => ({
-          name: c.label,
-          value: totals[c.key] ?? 0,
-          percentage: projectTotalBudget > 0
-            ? Math.round(((totals[c.key] ?? 0) / Number(projectTotalBudget)) * 100)
-            : 0,
-          color: c.color,
-        }));
-    }
-
-    // Fallback: show allocation based on total budget with first 5 categories
-    return CATEGORY_CONFIG.slice(0, 5).map((c, i) => ({
-      name: c.label,
-      value: Number(projectTotalBudget) * FALLBACK_RATIOS[i],
-      percentage: Math.round(FALLBACK_RATIOS[i] * 100),
-      color: c.color,
-    }));
-  }, [ledgerEntries, projectTotalBudget]);
+  const totalNewBudget = summary?.totalProjectCost ?? 0;
+  const originalBudget = summary?.originalBudget ?? 0;
+  const debit = summary?.totalDebits ?? 0;
+  const credit = summary?.totalCredits ?? 0;
+  const pending = summary?.remainingBudget ?? 0;
 
   return (
     <Card>
@@ -139,50 +155,51 @@ export function BudgetBreakdownCard({ progress: propProgress, daysStatus: propDa
           </button>
         </div>
       </CardHeader>
-      <CardContent className="bg-card p-2 mx-2 rounded-md">
-        <div className="grid grid-cols-12 gap-8">
-          <div className="flex items-center justify-center col-span-5">
-            <div className="relative w-56 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={budgetData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={-1}
-                    dataKey="value">
-                    {budgetData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-lg text-foreground">
-                  R {Number(projectTotalBudget).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-muted-foreground">Total Budget</p>
-              </div>
+      <CardContent className="bg-card p-3 mx-2 rounded-md">
+        {!selectedProjectId ? (
+          <EmptyState
+            icon={Receipt}
+            variant="plain"
+            size="sm"
+            title="No project selected"
+            description="Budget is tracked per project. Select a project to view its breakdown."
+          />
+        ) : !canViewFinance ? (
+          <EmptyState
+            icon={Receipt}
+            variant="plain"
+            size="sm"
+            title="No permission to view financials"
+            description="Ask a project admin for Finance access to see the budget breakdown."
+          />
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <p className="text-lg text-foreground">{formatZAR(totalNewBudget)}</p>
+              <p className="text-xs text-muted-foreground">
+                Total Budget{originalBudget !== totalNewBudget ? ` · Original: ${formatZAR(originalBudget)}` : ''}
+              </p>
             </div>
-          </div>
 
-          <div className="flex flex-col justify-center space-y-4 w-full col-span-7">
-            {budgetData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-sm text-foreground">{item.name}</span>
-                </div>
-                <span className="text-sm text-foreground">
-                  R {item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
-                  <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
-                </span>
-              </div>
-            ))}
+            <BudgetBar
+              title="Budget growth"
+              total={totalNewBudget}
+              segments={[
+                { label: 'Original Budget', value: originalBudget, color: '#94A3B8' },
+                { label: 'Variations (Debit)', value: debit, color: '#F97316' },
+              ]}
+            />
+
+            <BudgetBar
+              title="Payment status"
+              total={totalNewBudget}
+              segments={[
+                { label: 'Certified (Credit)', value: credit, color: '#10B981' },
+                { label: 'Pending', value: pending, color: '#3B82F6' },
+              ]}
+            />
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

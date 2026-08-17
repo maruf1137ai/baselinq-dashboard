@@ -271,6 +271,7 @@ const Finance = () => {
                 initialData={{
                   title: selectedOrder.rawTask?.title,
                   discipline: selectedOrder.rawTask?.discipline,
+                  category: selectedOrder.rawTask?.category,
                   description: selectedOrder.rawTask?.description,
                   lineItems: selectedOrder.rawTask?.lineItems,
                 }}

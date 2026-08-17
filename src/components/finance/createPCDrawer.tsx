@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import useFetch from "@/hooks/useFetch";
-import { useProject } from "@/hooks/useProjects";
 import { useMilestones } from "@/hooks/useMilestones";
-import { CloseIcon } from "../icons/icons";
-import { AlertTriangle, CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
+import { useS3Upload } from "@/hooks/useS3Upload";
+import { S3AttachmentSection } from "@/components/S3AttachmentSection";
+import { registerS3TaskAttachment } from "@/lib/Api";
+import { AlertTriangle, CalendarIcon, Loader2, Minus, Plus, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,8 +22,16 @@ import {
   groupIntegrityIssues,
   type PCIntegrityError,
 } from "@/lib/pcIntegrity";
+import {
+  loadTaskDraft,
+  clearTaskDraft,
+  useTaskDraftAutosave,
+} from "@/lib/taskDrafts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+const DRAFT_TYPE = "PC";
+const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"] as const;
 
 interface WorkLineItem {
   id: string;
@@ -36,11 +45,26 @@ interface WorkLineItem {
    * item, or a milestone), this has to be entered by the person preparing the
    * valuation.
    *
+   * The drawer's SEED row (the first row when the form opens empty) is the
+   * one exception: its `contractValue`/`previouslyCertified` are auto-filled
+   * from the project's own figures — see `defaults` below — since that one
+   * row represents the whole contract, not a sub-scope of it. Rows added
+   * afterward via "+ Add Line Item" still start blank.
+   *
    * VO lines DO carry a real history — they key on the VO number. See
    * `certifiedByVo`.
    */
   previouslyCertified: number;
   thisPeriod: number; // key editable field
+  /**
+   * True only for the seed row created when the drawer opens. Its Contract
+   * Value is locked to the project's own original contract value — there is
+   * only one real contract value for the project, so nothing should be able
+   * to type over it here. Rows added afterward via "+ Add Line Item" are not
+   * locked, since they may represent a sub-scope with its own budget (a
+   * bill-of-quantities item).
+   */
+  locked?: boolean;
 }
 
 interface VOLineItem {
@@ -53,6 +77,31 @@ interface VOLineItem {
   included: boolean;
   /** approvedValue − previouslyCertified, floored at zero. */
   remainingValue?: number;
+}
+
+/**
+ * Server-computed defaults for this project — see
+ * `tasks/payment-certificates/defaults/`. `originalContractValue` /
+ * `currentContractValue` are `project.total_budget` / `project.contract_value`
+ * respectively; `previouslyCertified` counts only this project's
+ * APPROVED/POSTED certificates, never drafts or pending ones — see
+ * `pc_integrity.certified_to_date`.
+ */
+interface PCDefaults {
+  originalContractValue: number;
+  currentContractValue: number;
+  previouslyCertified: number;
+  retentionRatePct: number;
+  vatRatePct: number;
+  currency: string;
+  /**
+   * A PREVIEW of the number this certificate will get — pc_number is
+   * globally unique across every project, and the backend re-generates and
+   * retries under a row lock at actual creation time, so a concurrent create
+   * elsewhere could still take this exact number first. Display only; never
+   * sent back to the server.
+   */
+  nextPcNumber: string;
 }
 
 export interface PCFormData {
@@ -93,6 +142,17 @@ export interface CreatePCApiPayload {
   // against. Undefined when nothing was linked (leaves existing links, if
   // any, untouched on an update).
   milestoneLinks?: { milestoneId: string; claimedPct: number }[];
+  // Retention/VAT/currency — default from the project's own settings but
+  // overridable per certificate, since these can vary over a project's life.
+  retentionApplies?: boolean;
+  retentionRatePct?: number;
+  vatRatePct?: number;
+  currency?: string;
+}
+
+/** What `onSubmit` must resolve to — just enough to register attachments against it. */
+export interface CreatedPC {
+  id: string | number;
 }
 
 interface CreatePCDrawerProps {
@@ -106,7 +166,24 @@ interface CreatePCDrawerProps {
    * regardless, so a certificate refused for over-certifying a variation
    * destroyed the user's work and told them nothing.
    */
-  onSubmit?: (payload: CreatePCApiPayload) => void | Promise<void>;
+  onSubmit?: (payload: CreatePCApiPayload) => Promise<CreatedPC>;
+}
+
+interface DraftShape {
+  valuationPeriod?: string;
+  certificateDate?: string;
+  workItems?: WorkLineItem[];
+  voOverrides?: Record<string, { included: boolean; thisPeriod: number }>;
+  materialsOnSite?: number;
+  penalties?: number;
+  advanceRecovery?: number;
+  retentionRelease?: number;
+  notes?: string;
+  claimedPctByMilestone?: Record<string, string>;
+  retentionApplies?: boolean;
+  retentionRatePctOverride?: number | null;
+  vatRatePctOverride?: number | null;
+  currencyOverride?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -296,8 +373,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   projectId,
   onSubmit,
 }) => {
-  // Certificate Info (pcNumber is set by backend on create)
-  const pcNumber = "—"; // readonly; backend returns PC-001, PC-002, etc.
   const [valuationPeriod, setValuationPeriod] = useState<Date | undefined>(
     // First day of the current month — not a date pinned to a demo dataset.
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -324,39 +399,33 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     { enabled: !!(isOpen && projectId) }
   );
 
-  // Retention/VAT rates were hardcoded here (5% / 15%) regardless of the
-  // project's own project.retention_rate / vat_rate — correct for the seeded
-  // demo project, wrong for any project on different terms.
-  //
-  // They then fell back to 5/15 *while the project was still loading*, and the
-  // drawer was submittable before it resolved. On a 10%-retention project the
-  // operator could read "Retention @ 5%", press Create, and have something
-  // else stored. Nothing is now computed or submitted against a placeholder:
-  // until the real rates arrive the retention and VAT lines read "—" and the
-  // submit button is held.
-  const { data: projectDetail, isLoading: isLoadingProject } = useProject(
-    isOpen ? projectId ?? undefined : undefined
-  );
-  const rawRetentionRate =
-    (projectDetail as any)?.retentionRate ?? (projectDetail as any)?.retention_rate;
-  const rawVatRate = (projectDetail as any)?.vatRate ?? (projectDetail as any)?.vat_rate;
-  const retentionRatePct = Number(rawRetentionRate);
-  const vatRatePct = Number(rawVatRate);
-  const ratesReady =
-    !isLoadingProject &&
-    rawRetentionRate !== undefined &&
-    rawRetentionRate !== null &&
-    rawVatRate !== undefined &&
-    rawVatRate !== null &&
-    Number.isFinite(retentionRatePct) &&
-    Number.isFinite(vatRatePct);
-
-  // Every certificate already issued on this project. Needed for
-  // previouslyCertified — see below.
-  const { data: priorPCResponse } = useFetch<{ results: any[] }>(
-    isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
+  // Original/current contract value, "previously certified" (certificate
+  // memory), and the project's retention/VAT/currency — all computed
+  // authoritatively server-side. See `tasks/payment-certificates/defaults/`
+  // and `pc_integrity.certified_to_date`. Nothing here reimplements "which
+  // certificates count as previous" — that lives in one place.
+  const { data: defaults, isLoading: isLoadingDefaults } = useFetch<PCDefaults>(
+    isOpen && projectId ? `tasks/payment-certificates/defaults/?projectId=${projectId}` : "",
     { enabled: !!(isOpen && projectId) }
   );
+  const defaultsReady = !isLoadingDefaults && defaults != null;
+  // A preview only — see PCDefaults.nextPcNumber. Falls back to a loading
+  // dash while `defaults` is still in flight.
+  const pcNumber = defaults?.nextPcNumber ?? "—";
+
+  // Retention/VAT/currency default from the project's own settings, but are
+  // overridable per certificate — retention and VAT can vary over a
+  // project's life. `null` means "use the server default"; a number/string
+  // means the operator has touched the field.
+  const [retentionApplies, setRetentionApplies] = useState(true);
+  const [retentionRatePctOverride, setRetentionRatePctOverride] = useState<number | null>(null);
+  const [vatRatePctOverride, setVatRatePctOverride] = useState<number | null>(null);
+  const [currencyOverride, setCurrencyOverride] = useState<string | null>(null);
+
+  const retentionRatePct = retentionRatePctOverride ?? defaults?.retentionRatePct ?? 0;
+  const vatRatePct = vatRatePctOverride ?? defaults?.vatRatePct ?? 0;
+  const currency = currencyOverride ?? defaults?.currency ?? "ZAR";
+  const ratesReady = defaultsReady;
 
   /**
    * How much of each VO has already been certified on earlier certificates.
@@ -374,6 +443,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * clamp below forced the entry to zero. `sumCertifiedByVo` counts only the
    * certificates that took effect — see `@/lib/pcHistory`.
    */
+  const { data: priorPCResponse } = useFetch<{ results: any[] }>(
+    isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
+    { enabled: !!(isOpen && projectId) }
+  );
   const certifiedByVo = useMemo<Record<string, number>>(
     () => sumCertifiedByVo(priorPCResponse?.results),
     [priorPCResponse]
@@ -424,6 +497,36 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     );
   }, [approvedVOs]);
 
+  /**
+   * Seed the Work Completed table with one row, once, whenever it is empty
+   * and the project's own figures have arrived.
+   *
+   * Contract Value and Prev. Certified used to start at 0 and wait for
+   * manual entry, which also meant % Complete showed 0% on every certificate
+   * until someone typed the full contract sum in by hand. This row's Contract
+   * Value comes from the project's original contract value and its Prev.
+   * Certified from the sum of this project's approved certificates — both
+   * from `defaults` above — so the table is meaningful the moment it opens.
+   *
+   * Only fires while `workItems` is empty, so a restored draft or a manually
+   * edited table is never clobbered.
+   */
+  useEffect(() => {
+    if (!isOpen || !defaultsReady || !defaults) return;
+    setWorkItems((items) =>
+      items.length > 0
+        ? items
+        : [{
+          id: "1",
+          description: "",
+          contractValue: defaults.originalContractValue,
+          previouslyCertified: defaults.previouslyCertified,
+          thisPeriod: 0,
+          locked: true,
+        }]
+    );
+  }, [isOpen, defaultsReady, defaults]);
+
   // Materials on Site
   const [materialsOnSite, setMaterialsOnSite] = useState(0);
 
@@ -434,20 +537,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // Retention Release (editable)
   const [retentionRelease, setRetentionRelease] = useState(0);
 
-  // Notes
-  //
-  // The "Supporting Documents" dropzone that used to sit beside this has been
-  // removed rather than repaired. It collected files into state that
-  // `handleSubmit` never referenced, so delivery notes substantiating a
-  // valuation were silently discarded on every create. There is no payment-
-  // certificate attachment route to send them to either: the attachment API
-  // (`uploadTaskAttachment` in @/lib/Api) enumerates its segments — variation
-  // orders, site instructions, RFIs, delay claims, critical-path items — and
-  // payment certificates are not among them, and the create endpoint's payload
-  // (`CreatePCApiPayload`) has no attachment field. A control that cannot do
-  // what it says is worse than no control; substantiation goes on the
-  // document record until the backend grows a route.
   const [notes, setNotes] = useState("");
+
+  // The formal certificate PDF/invoice (JBCC/NEC) and any other supporting
+  // files. Uploads start immediately on selection so they survive the drawer
+  // being minimized before submit; registered against the certificate once it
+  // exists — see `registerAttachments`.
+  const s3Upload = useS3Upload("task-attachments/pending");
 
   // Per-variation feedback when an entry was held back to the remainder.
   const [voNotes, setVoNotes] = useState<Record<string, string>>({});
@@ -468,10 +564,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     const grossValuationAdjusted = grossValuation - penalties - advanceRecovery;
     // "Net Valuation This Period" = Claim column
     const netValuationThisPeriod = grossValuationAdjusted;
-    // Zero, not 5/15, while the project's real rates are still in flight. The
-    // rate-dependent lines render "—" until `ratesReady`, so no placeholder
-    // figure is ever shown as if it were the certificate's.
-    const retention = netValuationThisPeriod * ((ratesReady ? retentionRatePct : 0) / 100);
+    // Zero, not a placeholder rate, while the project's real rates are still
+    // in flight, or while the operator has switched retention off entirely.
+    const retention =
+      netValuationThisPeriod * ((ratesReady && retentionApplies ? retentionRatePct : 0) / 100);
     const subtotal = netValuationThisPeriod - retention + retentionRelease;
     const vat = subtotal * ((ratesReady ? vatRatePct : 0) / 100);
     // Amount Due = Net column
@@ -497,6 +593,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     retentionRelease,
     retentionRatePct,
     vatRatePct,
+    retentionApplies,
     ratesReady,
   ]);
 
@@ -575,81 +672,30 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     });
   };
 
-  // ─── Submit ──────────────────────────────────────────────────────────────────
+  // ─── Attachments ────────────────────────────────────────────────────────────
 
-  // const payload = {
-  //   "pcNumber": "PC-004",
-  //   "valuationPeriod": "2025-11",
-  //   "certificateDate": "2026-02-25",
-  //   "workItems": [
-  //     {
-  //       "id": "1",
-  //       "description": "Preliminaries",
-  //       "contractValue": 4500000,
-  //       "previouslyCertified": 3825000,
-  //       "thisPeriod": 225000
-  //     },
-  //     {
-  //       "id": "2",
-  //       "description": "Substructure",
-  //       "contractValue": 6800000,
-  //       "previouslyCertified": 6800000,
-  //       "thisPeriod": 0
-  //     },
-  //     {
-  //       "id": "3",
-  //       "description": "Superstructure",
-  //       "contractValue": 12000000,
-  //       "previouslyCertified": 9600000,
-  //       "thisPeriod": 600000
-  //     },
-  //     {
-  //       "id": "4",
-  //       "description": "Roof Works",
-  //       "contractValue": 3800000,
-  //       "previouslyCertified": 2660000,
-  //       "thisPeriod": 380000
-  //     },
-  //     {
-  //       "id": "5",
-  //       "description": "Internal Finishes",
-  //       "contractValue": 8500000,
-  //       "previouslyCertified": 2975000,
-  //       "thisPeriod": 850000
-  //     },
-  //     {
-  //       "id": "6",
-  //       "description": "Mechanical",
-  //       "contractValue": 4200000,
-  //       "previouslyCertified": 1260000,
-  //       "thisPeriod": 630000
-  //     },
-  //     {
-  //       "id": "7",
-  //       "description": "Electrical",
-  //       "contractValue": 3800000,
-  //       "previouslyCertified": 1140000,
-  //       "thisPeriod": 570000
-  //     },
-  //     {
-  //       "id": "8",
-  //       "description": "External Works",
-  //       "contractValue": 2100000,
-  //       "previouslyCertified": 0,
-  //       "thisPeriod": 210000
-  //     }
-  //   ],
-  //   "voItems": [],
-  //   "materialsOnSite": 0,
-  //   "penalties": 0,
-  //   "advanceRecovery": 0,
-  //   "retentionRelease": 0,
-  //   "notes": "",
-  //   "claim": 3465000,
-  //   "retention": 173250,
-  //   "net": 3785512.5
-  // }
-  // API payload = above + projectId (see CreatePCApiPayload). Backend stores full structure.
+  const registerAttachments = async (pcId: string | number) => {
+    if (!s3Upload.entries.length) return;
+    const ids = s3Upload.entries.map((e) => e.id);
+    const s3Keys = await s3Upload.waitForAll(ids);
+    await Promise.all(
+      s3Upload.entries.map(async (entry) => {
+        const key = s3Keys.get(entry.id);
+        if (!key) return; // upload itself already surfaced its own error
+        try {
+          await registerS3TaskAttachment("payment-certificates", pcId, {
+            file_name: entry.file.name,
+            s3_key: key,
+          });
+        } catch {
+          // Certificate is already created; a failed attachment registration
+          // must not look like the certificate itself failed.
+        }
+      })
+    );
+  };
+
+  // ─── Submit ──────────────────────────────────────────────────────────────────
 
   /**
    * Awaits the create and only closes once the certificate exists.
@@ -684,21 +730,26 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       notes,
       // Sent for display continuity only. The server recomputes every one of
       // these from the components above plus the project's own retention and
-      // VAT rates, and ignores what arrives here — see
-      // PaymentCertificateSerializer.validate(). Previously these were stored
-      // verbatim, which is how a hardcoded 5%/15% in this file ended up
-      // deciding what a certificate said.
+      // VAT rates (or this certificate's overrides, below), and ignores what
+      // arrives here — see PaymentCertificateSerializer.validate().
       claim: calc.netValuationThisPeriod,
       retention: calc.retention,
       net: calc.amountDue,
       approvalStatus: "pending",
+      // Overridable per certificate — see the Retention/VAT/Currency section.
+      retentionApplies,
+      retentionRatePct,
+      vatRatePct,
+      currency,
     };
 
     setIsSubmitting(true);
     setIntegrity(null);
     setSubmitError(null);
     try {
-      await onSubmit?.(payload);
+      const created = await onSubmit?.(payload);
+      if (created?.id) await registerAttachments(created.id);
+      clearTaskDraft(DRAFT_TYPE);
       onClose();
     } catch (err) {
       // Stay open. Every line item, note and VO amount is still on screen.
@@ -710,6 +761,49 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  /** Explicit Cancel — the only action that discards the draft, and only after confirming. */
+  const handleCancel = () => {
+    if (isSubmitting) return;
+    const hasContent =
+      workItems.some((w) => w.description.trim() !== "" || w.thisPeriod !== 0) ||
+      voItems.some((v) => v.included) ||
+      materialsOnSite !== 0 ||
+      penalties !== 0 ||
+      advanceRecovery !== 0 ||
+      notes.trim() !== "" ||
+      s3Upload.entries.length > 0;
+    if (hasContent && !window.confirm("Discard this certificate draft?")) {
+      return;
+    }
+    clearTaskDraft(DRAFT_TYPE);
+    onClose();
+  };
+
+  // ─── Draft persistence ──────────────────────────────────────────────────────
+  //
+  // Closing the drawer via the overlay, Escape or the header (×) no longer
+  // discards what was typed — those now behave like "minimize": the draft is
+  // kept and restored the next time the drawer opens. Only the footer Cancel
+  // button (above) clears it, and only after confirming.
+  useTaskDraftAutosave(DRAFT_TYPE, isOpen, {
+    valuationPeriod: valuationPeriod?.toISOString(),
+    certificateDate: certificateDate?.toISOString(),
+    workItems,
+    voOverrides: Object.fromEntries(
+      voItems.map((v) => [v.voNumber, { included: v.included, thisPeriod: v.thisPeriod }])
+    ),
+    materialsOnSite,
+    penalties,
+    advanceRecovery,
+    retentionRelease,
+    notes,
+    claimedPctByMilestone,
+    retentionApplies,
+    retentionRatePctOverride,
+    vatRatePctOverride,
+    currencyOverride,
+  } satisfies DraftShape);
 
   // ─── Open / close lifecycle ─────────────────────────────────────────────────
 
@@ -737,41 +831,54 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   }, [isOpen]);
 
   /**
-   * Everything the form holds, cleared on each open.
-   *
-   * There was no reset at all. Reopening the drawer pre-filled the previous
-   * certificate's line items, notes and variation amounts — and the VO resync
-   * above deliberately preserves them — so issuing the same certificate twice
-   * was one click away.
+   * Everything the form holds, restored from a saved draft on open (or reset
+   * to fresh defaults when there is none).
    */
-  const resetForm = useCallback(() => {
-    setValuationPeriod(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-    setCertificateDate(new Date());
-    setWorkItems([]);
-    setMaterialsOnSite(0);
-    setPenalties(0);
-    setAdvanceRecovery(0);
-    setRetentionRelease(0);
-    setNotes("");
+  const applyDraft = useCallback((draft: DraftShape | null) => {
+    setValuationPeriod(
+      draft?.valuationPeriod
+        ? new Date(draft.valuationPeriod)
+        : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    );
+    setCertificateDate(draft?.certificateDate ? new Date(draft.certificateDate) : new Date());
+    setWorkItems(draft?.workItems ?? []);
+    setMaterialsOnSite(draft?.materialsOnSite ?? 0);
+    setPenalties(draft?.penalties ?? 0);
+    setAdvanceRecovery(draft?.advanceRecovery ?? 0);
+    setRetentionRelease(draft?.retentionRelease ?? 0);
+    setNotes(draft?.notes ?? "");
     setVoNotes({});
-    setClaimedPctByMilestone({});
+    setClaimedPctByMilestone(draft?.claimedPctByMilestone ?? {});
+    setRetentionApplies(draft?.retentionApplies ?? true);
+    setRetentionRatePctOverride(draft?.retentionRatePctOverride ?? null);
+    setVatRatePctOverride(draft?.vatRatePctOverride ?? null);
+    setCurrencyOverride(draft?.currencyOverride ?? null);
     setIntegrity(null);
     setSubmitError(null);
     setIsSubmitting(false);
+    // Fresh copies of the VO register, with the draft's inclusion/amount
+    // overrides reapplied — approvedVOs itself isn't in scope here yet on the
+    // very first render, so this only restores what the draft actually saved;
+    // the resync effect below reconciles it against the live register anyway.
+    if (draft?.voOverrides) {
+      setVoItems((prev) =>
+        prev.map((v) => {
+          const override = draft.voOverrides?.[v.voNumber];
+          return override ? { ...v, ...override } : v;
+        })
+      );
+    }
   }, []);
 
   const wasOpen = useRef(false);
   useEffect(() => {
     if (isOpen && !wasOpen.current) {
       wasOpen.current = true;
-      resetForm();
-      // Fresh copies, so a previous session's inclusions and amounts cannot
-      // survive into this one via the resync effect's `prev`.
-      setVoItems(approvedVOs.map((vo) => ({ ...vo })));
+      applyDraft(loadTaskDraft(DRAFT_TYPE));
     } else if (!isOpen) {
       wasOpen.current = false;
     }
-  }, [isOpen, approvedVOs, resetForm]);
+  }, [isOpen, applyDraft]);
 
   // Escape, a focus trap and focus restore — none of which existed.
   const panelRef = useRef<HTMLDivElement>(null);
@@ -796,8 +903,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
+      // Deliberately does nothing — matches CreateRequestDialog's
+      // `onEscapeKeyDown={(e) => e.preventDefault()}`. Only the header
+      // Minimize/Close buttons and the footer Cancel button may exit.
       e.stopPropagation();
-      if (!isSubmitting) onClose();
+      e.preventDefault();
       return;
     }
     if (e.key !== "Tab") return;
@@ -843,11 +953,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay — deliberately inert. An accidental click beside the panel
+          must not lose or discard anything; the only exits are the header
+          Minimize/Close buttons and the footer Cancel button below. Matches
+          CreateRequestDialog's `onInteractOutside={(e) => e.preventDefault()}`. */}
       <div
         className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${shown ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
-        onClick={() => !isSubmitting && onClose()}
       />
 
       {/* Drawer panel */}
@@ -874,14 +986,26 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               {pcNumber} · Creates as Draft — submit for certification afterwards from the table
             </p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CloseIcon className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => !isSubmitting && onClose()}
+              disabled={isSubmitting}
+              title="Minimize — keep your progress"
+              className="rounded-lg p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Minus className="h-4 w-4" />
+              <span className="sr-only">Minimize — keep your progress</span>
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSubmitting}
+              title="Close — discard your progress"
+              className="rounded-lg p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close — discard your progress</span>
+            </button>
+          </div>
         </header>
 
         {/* ── Scrollable body ─────────────────────────────────────────────────── */}
@@ -1042,7 +1166,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       <tr>
                         <td colSpan={7} className="px-3 py-8">
                           <div className="rounded-lg bg-muted/50 px-4 py-6 text-center">
-                            <p className="text-sm text-foreground">No work items yet</p>
+                            <p className="text-sm text-foreground">
+                              {defaultsReady ? "No work items yet" : "Loading this project's contract value…"}
+                            </p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               Add a line for each section of work being valued this period.
                             </p>
@@ -1083,13 +1209,22 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             />
                           </td>
                           <td className="px-3 py-2 w-36">
-                            <CurrencyInput
-                              aria-label="Contract value"
-                              value={item.contractValue}
-                              onChange={(v) =>
-                                updateWorkItem(item.id, "contractValue", v)
-                              }
-                            />
+                            {item.locked ? (
+                              <span
+                                title="Locked to this project's original contract value"
+                                className="block text-right text-sm text-muted-foreground whitespace-nowrap tabular-nums px-2.5 py-1.5"
+                              >
+                                {fmt(item.contractValue)}
+                              </span>
+                            ) : (
+                              <CurrencyInput
+                                aria-label="Contract value"
+                                value={item.contractValue}
+                                onChange={(v) =>
+                                  updateWorkItem(item.id, "contractValue", v)
+                                }
+                              />
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-sm text-muted-foreground whitespace-nowrap tabular-nums">
                             {fmt(item.previouslyCertified)}
@@ -1372,7 +1507,97 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               </section>
             </div>
 
-            {/* ── 6. Financial Summary ─────────────────────────────────────────── */}
+            {/* ── 6. Retention, VAT & Currency ─────────────────────────────────── */}
+            <section>
+              <SectionHeader>Retention, VAT &amp; Currency</SectionHeader>
+              <p className="text-xs text-muted-foreground -mt-2 mb-3">
+                Default from this project's settings, but can be adjusted for
+                this certificate specifically — retention and VAT can vary
+                over a project's life.
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+                    <Checkbox
+                      checked={retentionApplies}
+                      onCheckedChange={(v) => setRetentionApplies(v === true)}
+                      aria-label="Retention applies to this certificate"
+                    />
+                    Retention applies
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      disabled={!retentionApplies || !ratesReady}
+                      aria-label="Retention rate percent"
+                      className="w-full px-3 py-2 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted/50 disabled:text-muted-foreground"
+                      value={ratesReady ? retentionRatePct : ""}
+                      placeholder={ratesReady ? undefined : "—"}
+                      onChange={(e) =>
+                        setRetentionRatePctOverride(e.target.value === "" ? 0 : Number(e.target.value))
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1.5">
+                    VAT rate
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      disabled={!ratesReady}
+                      aria-label="VAT rate percent"
+                      className="w-full px-3 py-2 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted/50 disabled:text-muted-foreground"
+                      value={ratesReady ? vatRatePct : ""}
+                      placeholder={ratesReady ? undefined : "—"}
+                      onChange={(e) =>
+                        setVatRatePctOverride(e.target.value === "" ? 0 : Number(e.target.value))
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1.5">
+                    Currency
+                  </label>
+                  <select
+                    value={currency}
+                    disabled={!ratesReady}
+                    onChange={(e) => setCurrencyOverride(e.target.value)}
+                    className="w-full px-3 py-2 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted/50 disabled:text-muted-foreground bg-card"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            {/* ── 7. Attachments ───────────────────────────────────────────────── */}
+            <section>
+              <SectionHeader>Attachments</SectionHeader>
+              <p className="text-xs text-muted-foreground -mt-2 mb-3">
+                Attach the formal certificate (JBCC / NEC) issued outside the
+                system, or any supporting invoice — for the historical record.
+              </p>
+              <S3AttachmentSection
+                s3Upload={s3Upload}
+                inputId="pc-attachments"
+                label="Formal certificate / invoice"
+              />
+            </section>
+
+            {/* ── 8. Financial Summary ─────────────────────────────────────────── */}
             <section>
               <SectionHeader>Financial Summary</SectionHeader>
               <div className="bg-muted rounded-lg border border-border px-5 py-4">
@@ -1436,7 +1661,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">
                       {ratesReady
-                        ? `Less: Retention @ ${retentionRatePct}%`
+                        ? retentionApplies
+                          ? `Less: Retention @ ${retentionRatePct}%`
+                          : "Less: Retention (not applied)"
                         : "Less: Retention"}
                     </span>
                     <span className="text-sm text-red-500">
@@ -1480,16 +1707,16 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     Amount Due to Contractor
                   </span>
                   <span className="text-sm text-primary">
-                    {ratesReady ? fmt(calc.amountDue) : "\u2014"}
+                    {ratesReady ? fmt(calc.amountDue) : "—"}
                   </span>
                 </div>
 
                 {!ratesReady && (
                   <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Reading this project\u2019s retention and VAT rates. Retention, VAT
-                    and the amount due stay blank until they arrive \u2014 they are not
-                    assumed.
+                    Reading this project's contract value, certificate history,
+                    and retention/VAT rates. These stay blank until they
+                    arrive — they are not assumed.
                   </p>
                 )}
               </div>
@@ -1505,19 +1732,19 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     {ratesReady ? `Retention @ ${retentionRatePct}%` : "Retention"}
                   </span>
                   <span className="text-sm text-foreground tabular-nums">
-                    {ratesReady ? fmtCard(calc.retention) : "\u2014"}
+                    {ratesReady ? fmtCard(calc.retention) : "—"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3 bg-primary/10">
                   <span className="text-xs text-muted-foreground">Net (Amount Due)</span>
                   <span className="text-sm text-primary tabular-nums">
-                    {ratesReady ? fmtCard(calc.amountDue) : "\u2014"}
+                    {ratesReady ? fmtCard(calc.amountDue) : "—"}
                   </span>
                 </div>
               </div>
             </section>
 
-            {/* ── 7. Notes ──────────────────────────────────────────── */}
+            {/* ── 9. Notes ──────────────────────────────────────────── */}
             <section>
               <SectionHeader>Notes</SectionHeader>
               <div>
@@ -1533,12 +1760,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2.5 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none placeholder:text-muted-foreground"
-                  placeholder="Add valuation methodology, site notes, or special instructions\u2026"
+                  placeholder="Add valuation methodology, site notes, or special instructions…"
                 />
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  Supporting files attach to the document record on this project.
-                  A certificate carries no attachments of its own.
-                </p>
               </div>
             </section>
           </div>
@@ -1548,11 +1771,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         <footer className="flex items-center justify-between px-6 py-4 border-t border-border bg-card shrink-0">
           <p className="text-xs text-muted-foreground max-w-xs">
             Creates the certificate as Draft. Submit it for certification
-            (QS → Client → Post) from the Payment Certificates table afterwards.
+            from the Payment Certificates table afterwards.
           </p>
           <div className="flex items-center gap-3">
             <button
-              onClick={onClose}
+              onClick={handleCancel}
               disabled={isSubmitting}
               className="h-10 px-4 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1568,7 +1791,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 !projectId
                   ? "Select a project first"
                   : !ratesReady
-                    ? "Waiting for this project's retention and VAT rates"
+                    ? "Waiting for this project's contract value and rates"
                     : undefined
               }
               className="h-10 px-5 text-sm text-primary-foreground bg-primary rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

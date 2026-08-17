@@ -456,6 +456,25 @@ const DocumentDetail = () => {
                 )}
               </Button>
             )}
+            {/* Payment Certificates have a real filed PDF alongside the branded
+                certificate view — VO/SI/Claim link-docs have no real file, so this
+                never renders for them. */}
+            {doc.userPermissions?.canDownload !== false &&
+              doc.certificateUrl &&
+              (selectedVersion?.downloadUrl || doc.downloadUrl) && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg border-border text-foreground hover:bg-muted"
+                  title="Download the filed PDF"
+                  onClick={() => {
+                    const target = selectedVersion?.downloadUrl || doc.downloadUrl;
+                    if (target) window.open(target, '_blank');
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
             {doc.userPermissions?.canUploadVersion !== false && (
               <Button
                 className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"

@@ -7,7 +7,48 @@
 
 import { format, parseISO } from "date-fns";
 
-export type CertificateType = "si" | "vo" | "claim" | "ic";
+export type CertificateType = "si" | "vo" | "claim" | "ic" | "pc";
+
+/** One row of the JBCC form — mirrors tasks/pc_jbcc.py::build_form()'s "lines" entries.
+ *  Money values are fixed-2dp strings straight from the backend, or null for a cell the
+ *  form has no box for (never coerced to "0.00" — see pc_jbcc.py's own module docstring
+ *  on why an unmodelled cell must stay empty rather than asserted as nil). */
+export type JbccFormLine = {
+  line: string;
+  direction: "Less" | "Add" | null;
+  label: string;
+  cells: string[];
+  columns: { A: string | null; B: string | null; C: string | null; D: string | null };
+  percentage?: string;
+  receiving_party?: "employer" | "contractor";
+  note?: string;
+};
+
+export type JbccForm = {
+  contract_form: string;
+  form_revision: string;
+  currency: string;
+  retention_rate_pct: string;
+  tax_rate_pct: string;
+  lines: JbccFormLine[];
+  security_status: {
+    d17_under_50: boolean | null;
+    d17_over_50: boolean | null;
+    practical_completion: boolean | null;
+    final_completion: boolean | null;
+  };
+  security_held: string;
+  omissions: Array<{ line: string; column: string; reason: string }>;
+  totals: {
+    valuation: string;
+    retention: string;
+    net_certified: string;
+    subtotal_before_tax: string;
+    tax: string;
+    certified_amount_due: string;
+    receiving_party: "employer" | "contractor";
+  };
+};
 
 export type CertificateData = {
   type: CertificateType;
@@ -18,6 +59,7 @@ export type CertificateData = {
   signed_at: string | null;
   issued_at: string | null;
   signed_by: { name: string; email: string; role: string } | null;
+  claimed_by?: { name: string; email?: string; role: string } | null;
   audit_trail: Array<{ description: string; actor: string; at: string | null }>;
   // type-specific
   approved_amount?: string;
@@ -30,6 +72,12 @@ export type CertificateData = {
   time_days_claimed?: number | null;
   cost_amount_claimed?: string;
   formal_claim_at?: string | null;
+  // Payment Certificate
+  period?: string;
+  certificate_date?: string | null;
+  claim_received_at?: string | null;
+  jbcc_form?: JbccForm | null;
+  jbcc_form_error?: string;
 };
 
 const TYPE_LABEL: Record<CertificateType, string> = {
@@ -37,6 +85,10 @@ const TYPE_LABEL: Record<CertificateType, string> = {
   vo: "Variation Order",
   claim: "Formal Claim",
   ic: "Intention to Claim",
+  // Bare noun, same convention as the others above — CertificatePage.tsx appends
+  // " Certificate" itself, so this must NOT already contain the word "Certificate"
+  // (that produced the literal "CERTIFICATE CERTIFICATE" header bug this fixes).
+  pc: "Payment",
 };
 
 /** Human title for the certificate header. */

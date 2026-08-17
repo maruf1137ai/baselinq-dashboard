@@ -82,6 +82,9 @@ interface LedgerSummary {
   totalDebits: number;
   totalCredits: number;
   netPosition: number;
+  totalProjectCost: number;
+  originalBudget: number;
+  remainingBudget: number;
   currency: string;
 }
 
@@ -208,6 +211,19 @@ const CostLadger = () => {
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <ProjectStatusCard
           icon={<CashIcon />}
+          title="Total Project Cost"
+          value={summaryData ? formatSummary(summaryData.totalProjectCost) : '—'}
+          subtitle={
+            summaryData && summaryData.originalBudget !== summaryData.totalProjectCost
+              ? `Original: ${formatSummary(summaryData.originalBudget)}`
+              : undefined
+          }
+          badgeText=""
+          badgeVariant="default"
+          actionText=""
+        />
+        <ProjectStatusCard
+          icon={<CashIcon />}
           title="Total Debits"
           value={summaryData ? formatSummary(summaryData.totalDebits) : '—'}
           badgeText=""
@@ -218,6 +234,7 @@ const CostLadger = () => {
           icon={<CashIcon />}
           title="Total Credits"
           value={summaryData ? formatSummary(summaryData.totalCredits) : '—'}
+          subtitle="Certified for payment"
           badgeText=""
           badgeVariant="default"
           actionText=""
@@ -231,6 +248,16 @@ const CostLadger = () => {
           actionText=""
           valueClassName={summaryData?.netPosition != null && summaryData.netPosition < 0 ? 'text-red-600' : ''}
           className={summaryData?.netPosition != null && summaryData.netPosition < 0 ? 'border border-red-200' : ''}
+        />
+        <ProjectStatusCard
+          icon={<CashIcon />}
+          title="Remaining Budget"
+          value={summaryData ? formatSummary(summaryData.remainingBudget) : '—'}
+          badgeText=""
+          badgeVariant="default"
+          actionText=""
+          valueClassName={summaryData?.remainingBudget != null && summaryData.remainingBudget < 0 ? 'text-red-600' : ''}
+          className={summaryData?.remainingBudget != null && summaryData.remainingBudget < 0 ? 'border border-red-200' : ''}
         />
       </div>
 

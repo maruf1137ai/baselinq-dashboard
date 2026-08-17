@@ -207,8 +207,19 @@ export default function CertificatePage() {
                 </span>
               </DetailRow>
 
+              {cert.claimed_by && (
+                <DetailRow label="Claimed by">
+                  <span>
+                    {cert.claimed_by.name}
+                    {cert.claimed_by.role ? (
+                      <span className="text-muted-foreground"> · {cert.claimed_by.role}</span>
+                    ) : null}
+                  </span>
+                </DetailRow>
+              )}
+
               {cert.signed_by && (
-                <DetailRow label="Signed by">
+                <DetailRow label={cert.type === "pc" ? "Approved by" : "Signed by"}>
                   <span>
                     {cert.signed_by.name}
                     {cert.signed_by.role ? (
@@ -253,8 +264,109 @@ export default function CertificatePage() {
                   </DetailRow>
                 </>
               )}
+              {cert.type === "pc" && (
+                <>
+                  <DetailRow label="Period">{cert.period ?? "—"}</DetailRow>
+                  {cert.jbcc_form && (
+                    <>
+                      <DetailRow label="Certified amount due">
+                        <span className="font-normal">
+                          {formatCertCurrency(
+                            cert.jbcc_form.totals.certified_amount_due,
+                            cert.jbcc_form.currency,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          (due to the{" "}
+                          {cert.jbcc_form.totals.receiving_party === "employer"
+                            ? "Employer"
+                            : "Contractor"}
+                          )
+                        </span>
+                      </DetailRow>
+                      <DetailRow label="Retention">
+                        {formatCertCurrency(cert.jbcc_form.totals.retention, cert.jbcc_form.currency)}
+                        <span className="text-muted-foreground"> ({cert.jbcc_form.retention_rate_pct}%)</span>
+                      </DetailRow>
+                      <DetailRow label="Tax (VAT)">
+                        {formatCertCurrency(cert.jbcc_form.totals.tax, cert.jbcc_form.currency)}
+                        <span className="text-muted-foreground"> ({cert.jbcc_form.tax_rate_pct}%)</span>
+                      </DetailRow>
+                    </>
+                  )}
+                </>
+              )}
             </dl>
           </div>
+
+          {/* The JBCC line-by-line breakdown — this IS the certificate's actual
+              financial content. Data-driven straight off cert.jbcc_form.lines,
+              same discipline tasks/pc_jbcc.py itself insists on: no clause
+              number or label is re-encoded here a second time.
+
+              Rows with nothing in any column (and no percentage) are lines
+              this platform doesn't model at all — see pc_jbcc.py's own
+              _NOT_MODELLED — dropped here for a clean read, but never
+              silently: the omissions footnote below states the count. The
+              PDF itself is deliberately NOT filtered this way — it's the
+              filed legal instrument, and hiding an unmodelled cell there
+              would misrepresent the certificate as complete. */}
+          {cert.type === "pc" && cert.jbcc_form && (() => {
+            const visibleLines = cert.jbcc_form.lines.filter(
+              (row) => row.columns.A || row.columns.B || row.columns.C || row.columns.D || row.percentage,
+            );
+            const hiddenCount = cert.jbcc_form.lines.length - visibleLines.length;
+            return (
+            <div className="border-t border-border px-8 py-5">
+              <div className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">
+                JBCC certificate breakdown
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-1.5 pr-2 font-normal">Line</th>
+                      <th className="py-1.5 pr-2 font-normal">Description</th>
+                      <th className="py-1.5 pr-2 text-right font-normal">A</th>
+                      <th className="py-1.5 pr-2 text-right font-normal">B</th>
+                      <th className="py-1.5 pr-2 text-right font-normal">C</th>
+                      <th className="py-1.5 text-right font-normal">D</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleLines.map((row) => (
+                      <tr key={row.line} className="border-b border-border/50 last:border-b-0">
+                        <td className="py-1.5 pr-2 align-top text-muted-foreground">{row.line}</td>
+                        <td className="py-1.5 pr-2 align-top text-foreground">
+                          {row.direction ? `${row.direction}: ` : ""}
+                          {row.label}
+                        </td>
+                        <td className="py-1.5 pr-2 text-right align-top tabular-nums">{row.columns.A ?? ""}</td>
+                        <td className="py-1.5 pr-2 text-right align-top tabular-nums">{row.columns.B ?? ""}</td>
+                        <td className="py-1.5 pr-2 text-right align-top tabular-nums">{row.columns.C ?? ""}</td>
+                        <td className="py-1.5 text-right align-top tabular-nums">
+                          {row.columns.D ?? ""}
+                          {row.percentage ? ` (${row.percentage}%)` : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {hiddenCount > 0 && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {hiddenCount} line{hiddenCount === 1 ? "" : "s"} not shown — not modelled on this platform.
+                </div>
+              )}
+            </div>
+            );
+          })()}
+          {cert.type === "pc" && !cert.jbcc_form && cert.jbcc_form_error && (
+            <div className="border-t border-border bg-orange-50 px-8 py-5 text-sm text-orange-800">
+              {cert.jbcc_form_error}
+            </div>
+          )}
 
           {cert.description && (
             <div className="border-t border-border px-8 py-5">

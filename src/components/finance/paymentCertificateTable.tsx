@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
-import { postData } from "@/lib/Api";
+import { postData, deleteData } from "@/lib/Api";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,9 +20,29 @@ import {
   DialogFooter,
   DialogClose,
 } from "../ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
-import { AlertTriangle, MoreHorizontal, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Send,
+  CheckCircle2,
+  XCircle,
+  Ban,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -52,6 +72,33 @@ export interface PCEntry {
   serverComputed?: boolean;
   /** Accepted, but flagged. Never hidden. */
   integrityWarnings?: string[];
+  /**
+   * What THIS user may do next — server-filtered (permission + creator
+   * exclusion, see tasks/pc_workflow.py). The row and the details dialog
+   * render one button per entry here; nothing is derived from role client-side.
+   */
+  availableTransitions?: string[];
+  /** Hard-delete (Draft-only, creator-only) — see tasks/pc_workflow.may_delete_payment_certificate. */
+  canDelete?: boolean;
+  // ── Who / when ─────────────────────────────────────────────────────────────
+  /** Name of the certificate's creator. Null for legacy rows written before this was tracked. */
+  createdBy?: string | null;
+  /** When the Designated Principal Agent certified this — set only once Approved/Posted. */
+  approvedAt?: string | null;
+  /** Name of whoever approved (certified) it. */
+  approvedBy?: string | null;
+  // ── Financial build-up (the same figures createPCDrawer.tsx's Financial
+  // Summary computes from, frozen at the state they were when certified) ────
+  materialsOnSite?: number;
+  penalties?: number;
+  advanceRecovery?: number;
+  retentionRelease?: number;
+  /** String, e.g. "5.00" — the rate frozen onto this certificate, not the project's current one. */
+  retentionRatePct?: string | null;
+  vatRatePct?: string | null;
+  retentionApplies?: boolean;
+  workItems?: { thisPeriod: number }[];
+  voItems?: { thisPeriod: number; included: boolean }[];
 }
 
 /** Server fields also arrive snake_cased depending on the endpoint. */
@@ -74,13 +121,17 @@ const money = (v: number | null) => (v === null ? "—" : formatZAR(v));
 
 // Human labels for the certification-chain transitions the backend exposes
 // (tasks/views_pc_workflow.py) — certification is a single Designated
-// Principal Agent act (submit/approve/post), not the old two-stage
-// QS-approve/client-approve ladder. "post" is called out specially: it's the
-// commercial moment that accrues the platform fee.
+// Principal Agent act (submit/approve), not the old two-stage
+// QS-approve/client-approve ladder. Approving is now also the commercial
+// moment that accrues the platform fee: it chains straight through to
+// posting under the same actor, server-side. There is no "post" action here
+// at all any more — Client/Owner/CPM/Admin have no role anywhere in the
+// certificate lifecycle. The backend never includes "post" in
+// availableTransitions or waitingOn (the route itself was removed), so there
+// is nothing for this map to render a button for.
 const TRANSITION_LABELS: Record<string, string> = {
   submit: "Submit for Certification",
   approve: "Approve",
-  post: "Post Certificate",
   reject: "Reject",
   cancel: "Cancel",
 };
@@ -88,17 +139,35 @@ const TRANSITION_LABELS: Record<string, string> = {
 const TRANSITION_URL_PATH: Record<string, string> = {
   submit: "submit",
   approve: "approve",
-  post: "post",
   reject: "reject",
   cancel: "cancel",
 };
+
+/** Short label for the inline row/modal buttons — TRANSITION_LABELS above is
+ *  the fuller phrasing used in toasts and the ReasonDialog title. */
+const TRANSITION_BUTTON_LABELS: Record<string, string> = {
+  submit: "Submit",
+  approve: "Approve",
+  reject: "Reject",
+  cancel: "Cancel",
+};
+
+const TRANSITION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  submit: Send,
+  approve: CheckCircle2,
+  reject: XCircle,
+  cancel: Ban,
+};
+
+/** submit/approve read as the positive, forward action; reject/cancel are
+ *  destructive and terminal — same distinction ReasonDialog already draws. */
+const isPositiveTransition = (t: string) => t === "submit" || t === "approve";
 
 /** How the "waiting on" popover phrases each ladder stage — shorter and
  *  read as a noun phrase ("Waiting on: Approval"), unlike TRANSITION_LABELS
  *  above which reads as a button ("Approve"). */
 const WAITING_ON_STAGE_LABEL: Record<string, string> = {
   approve: "Approval (Principal Agent)",
-  post: "Posting",
 };
 
 interface WaitingOnActor {
@@ -305,38 +374,396 @@ const ReasonDialog = ({
   );
 };
 
-const PCDetailsDialog = ({
+const DeleteConfirmDialog = ({
   entry,
   open,
   onOpenChange,
+  isDeleting,
+  onConfirm,
 }: {
   entry: PCEntry;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isDeleting: boolean;
+  onConfirm: () => void;
+}) => (
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete {entry.pcNumber}?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This permanently deletes the draft certificate — unlike Cancel, it leaves nothing behind
+          to audit. This cannot be undone.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={onConfirm}
+          disabled={isDeleting}
+          className="bg-destructive hover:opacity-90 focus:ring-destructive"
+        >
+          {isDeleting ? "Deleting…" : "Delete"}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+);
+
+/**
+ * One primary button — whichever of Submit/Approve applies, the "forward"
+ * action (see isPositiveTransition) — plus a "..." menu for everything else
+ * this user may do (Reject/Cancel, Delete, and optionally View Details).
+ * Shared between the row's Actions cell and the details dialog's footer, so
+ * both surfaces have the same shape and act through the same handlers.
+ */
+const ActionButtons = ({
+  entry,
+  actingOn,
+  onTransitionClick,
+  onDeleteClick,
+  onViewDetails,
+}: {
+  entry: PCEntry;
+  actingOn: string | null;
+  onTransitionClick: (transition: string) => void;
+  onDeleteClick: () => void;
+  /** Omit when rendering inside the details dialog itself — nothing to view-details *to*. */
+  onViewDetails?: () => void;
+}) => {
+  const transitions = entry.availableTransitions ?? [];
+  const primary = transitions.find(isPositiveTransition) ?? null;
+  const rest = transitions.filter((t) => t !== primary);
+  const PrimaryIcon = primary ? TRANSITION_ICONS[primary] ?? Send : null;
+  const isEmpty = !onViewDetails && rest.length === 0 && !entry.canDelete;
+
+  return (
+    <div className="flex items-center gap-1">
+      {primary && (
+        <button
+          type="button"
+          disabled={actingOn !== null}
+          onClick={() => onTransitionClick(primary)}
+          className="h-8 px-2.5 rounded-md text-xs font-medium inline-flex items-center gap-1 bg-primary text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {actingOn === primary ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            PrimaryIcon && <PrimaryIcon className="h-3.5 w-3.5" />
+          )}
+          {TRANSITION_BUTTON_LABELS[primary] || primary}
+        </button>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            aria-label="More actions"
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-48" align="end">
+          {onViewDetails && (
+            <DropdownMenuItem onSelect={onViewDetails}>View Details</DropdownMenuItem>
+          )}
+          {onViewDetails && (rest.length > 0 || entry.canDelete) && <DropdownMenuSeparator />}
+          {rest.map((t) => (
+            <DropdownMenuItem
+              key={t}
+              disabled={actingOn !== null}
+              onSelect={(e) => {
+                e.preventDefault();
+                onTransitionClick(t);
+              }}
+              className="text-destructive"
+            >
+              {actingOn === t ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" /> {TRANSITION_LABELS[t]}…
+                </span>
+              ) : (
+                TRANSITION_LABELS[t] || t
+              )}
+            </DropdownMenuItem>
+          ))}
+          {entry.canDelete && (
+            <DropdownMenuItem
+              disabled={actingOn !== null}
+              onSelect={(e) => {
+                e.preventDefault();
+                onDeleteClick();
+              }}
+              className="text-destructive"
+            >
+              Delete
+            </DropdownMenuItem>
+          )}
+          {isEmpty && (
+            <DropdownMenuItem disabled className="text-muted-foreground">
+              No further actions available
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
+
+/**
+ * Every applicable button shown at once, no "..." — unlike the row (tight on
+ * horizontal space), the details dialog is already the "see everything"
+ * surface, so nothing needs to stay hidden behind a menu here.
+ */
+const ModalActionButtons = ({
+  entry,
+  actingOn,
+  onTransitionClick,
+  onDeleteClick,
+}: {
+  entry: PCEntry;
+  actingOn: string | null;
+  onTransitionClick: (transition: string) => void;
+  onDeleteClick: () => void;
+}) => {
+  const transitions = entry.availableTransitions ?? [];
+  if (transitions.length === 0 && !entry.canDelete) return null;
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+      {transitions.map((t) => {
+        const Icon = TRANSITION_ICONS[t] ?? Send;
+        const positive = isPositiveTransition(t);
+        return (
+          <button
+            key={t}
+            type="button"
+            disabled={actingOn !== null}
+            onClick={() => onTransitionClick(t)}
+            className={`h-9 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              positive
+                ? "bg-primary text-primary-foreground hover:opacity-90"
+                : "border border-destructive/30 text-destructive hover:bg-destructive/10"
+            }`}
+          >
+            {actingOn === t ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Icon className="h-3.5 w-3.5" />
+            )}
+            {TRANSITION_BUTTON_LABELS[t] || t}
+          </button>
+        );
+      })}
+      {entry.canDelete && (
+        <button
+          type="button"
+          disabled={actingOn !== null}
+          onClick={onDeleteClick}
+          className="h-9 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Delete
+        </button>
+      )}
+    </div>
+  );
+};
+
+/** Read-only mirror of createPCDrawer.tsx's SummaryLine — same look, no editable inputs. */
+const SummaryLine = ({
+  label,
+  value,
+  bold,
+  deduction,
+  addition,
+  indent,
+  border,
+  doubleBorder,
+  pending,
+}: {
+  label: string;
+  value: number;
+  bold?: boolean;
+  deduction?: boolean;
+  addition?: boolean;
+  indent?: boolean;
+  border?: boolean;
+  doubleBorder?: boolean;
+  /** Renders "—" instead of a figure — a pre-integrity-check certificate has no computed VAT/total yet. */
+  pending?: boolean;
+}) => (
+  <div
+    className={`flex justify-between items-center py-2 ${
+      doubleBorder ? "border-t-2 border-foreground mt-3 pt-3" : border ? "border-t border-border mt-2 pt-3" : ""
+    } ${indent ? "pl-4" : ""}`}
+  >
+    <span className={`text-sm ${bold ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+    <span
+      className={`text-sm tabular-nums ${
+        deduction ? "text-red-500" : addition ? "text-green-600" : "text-foreground"
+      }`}
+    >
+      {pending
+        ? "—"
+        : deduction
+          ? `- ${formatCurrency(value)}`
+          : addition
+            ? `+ ${formatCurrency(value)}`
+            : formatCurrency(value)}
+    </span>
+  </div>
+);
+
+/**
+ * The same build-up createPCDrawer.tsx's live "Financial Summary" computes
+ * while a certificate is being drafted (see its `calc` useMemo) — reproduced
+ * here from the certificate's own FROZEN figures once it exists, so a
+ * historical certificate reads the same way it did the day it was raised,
+ * regardless of the project's rates today.
+ */
+const financialBuildUp = (entry: PCEntry) => {
+  const grossWorkValue = (entry.workItems ?? []).reduce((s, i) => s + (i.thisPeriod || 0), 0);
+  const voThisPeriod = (entry.voItems ?? [])
+    .filter((v) => v.included)
+    .reduce((s, v) => s + (v.thisPeriod || 0), 0);
+  const materialsOnSite = entry.materialsOnSite ?? 0;
+  const grossValuation = grossWorkValue + voThisPeriod + materialsOnSite;
+  const penalties = entry.penalties ?? 0;
+  const advanceRecovery = entry.advanceRecovery ?? 0;
+  return { grossWorkValue, voThisPeriod, materialsOnSite, grossValuation, penalties, advanceRecovery };
+};
+
+const PCDetailsDialog = ({
+  entry,
+  open,
+  onOpenChange,
+  actingOn,
+  onTransitionClick,
+  onDeleteClick,
+}: {
+  entry: PCEntry;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  actingOn: string | null;
+  onTransitionClick: (transition: string) => void;
+  onDeleteClick: () => void;
 }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
             <DialogDescription>Period: {entry.period}</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 space-y-2 text-sm tabular-nums">
-            <p><span className="text-muted-foreground">Claim Amount:</span> {formatCurrency(entry.claimAmount)}</p>
-            <p><span className="text-muted-foreground">Retention:</span> {formatCurrency(entry.retentionAmount)}</p>
-            <p><span className="text-muted-foreground">Net Amount:</span> {formatCurrency(entry.netAmount)}</p>
-            <p><span className="text-muted-foreground">VAT:</span> {money(serverNumber(entry, "vatAmount", "vat_amount"))}</p>
-            <p><span className="text-muted-foreground">Total Payable:</span> {money(serverNumber(entry, "totalPayable", "total_payable"))}</p>
-            <p><span className="text-muted-foreground">Status:</span> {(entry.workflowState && WORKFLOW_STATE_BADGE[entry.workflowState]?.label) || entry.approvalStatus}</p>
-            <p><span className="text-muted-foreground">Updated:</span> {formatDate(entry.updatedAt)}</p>
+
+          {/* Who / when — creation is always known; certification only once it's happened. */}
+          <div className="mt-3 space-y-1 text-sm">
+            <p>
+              <span className="text-muted-foreground">Status:</span>{" "}
+              {(entry.workflowState && WORKFLOW_STATE_BADGE[entry.workflowState]?.label) || entry.approvalStatus}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Created:</span>{" "}
+              {entry.createdBy ? `${entry.createdBy} — ` : ""}
+              {formatDate(entry.createdAt)}
+            </p>
+            {entry.approvedAt && (
+              <p>
+                <span className="text-muted-foreground">Approved:</span>{" "}
+                {entry.approvedBy ? `${entry.approvedBy} — ` : ""}
+                {formatDate(entry.approvedAt)}
+              </p>
+            )}
+            <p>
+              <span className="text-muted-foreground">Updated:</span> {formatDate(entry.updatedAt)}
+            </p>
+          </div>
+
+          {/* Financial Summary — same build-up createPCDrawer.tsx shows while
+              drafting, reproduced from this certificate's own frozen figures. */}
+          <div className="mt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Financial Summary
+            </p>
+            <div className="bg-muted rounded-lg border border-border px-5 py-4">
+              {(() => {
+                const b = financialBuildUp(entry);
+                const vat = serverNumber(entry, "vatAmount", "vat_amount");
+                const totalPayable = serverNumber(entry, "totalPayable", "total_payable");
+                const hasAdjustment = b.penalties > 0 || b.advanceRecovery > 0;
+                return (
+                  <>
+                    <SummaryLine label="Gross Work Value" value={b.grossWorkValue} />
+                    <SummaryLine
+                      label="Plus: Variation Orders (this period)"
+                      value={b.voThisPeriod}
+                      indent
+                      addition
+                    />
+                    <SummaryLine label="Plus: Materials on Site" value={b.materialsOnSite} indent addition />
+                    <SummaryLine label="Gross Valuation" value={b.grossValuation} bold border />
+
+                    {b.penalties > 0 && (
+                      <SummaryLine label="Less: Contractual Penalties" value={b.penalties} indent deduction />
+                    )}
+                    {b.advanceRecovery > 0 && (
+                      <SummaryLine
+                        label="Less: Advance Payment Recovery"
+                        value={b.advanceRecovery}
+                        indent
+                        deduction
+                      />
+                    )}
+
+                    <SummaryLine
+                      label="Net Valuation This Period (Claim)"
+                      value={entry.claimAmount}
+                      bold
+                      border={hasAdjustment}
+                    />
+
+                    <SummaryLine
+                      label={
+                        entry.retentionApplies === false
+                          ? "Less: Retention (not applied)"
+                          : entry.retentionRatePct
+                            ? `Less: Retention @ ${entry.retentionRatePct}%`
+                            : "Less: Retention"
+                      }
+                      value={entry.retentionAmount}
+                      deduction
+                      border
+                    />
+                    {(entry.retentionRelease ?? 0) > 0 && (
+                      <SummaryLine label="Plus: Retention Release" value={entry.retentionRelease ?? 0} addition />
+                    )}
+
+                    <SummaryLine label="Subtotal (ex VAT)" value={entry.netAmount} bold border />
+                    <SummaryLine
+                      label={entry.vatRatePct ? `Plus: VAT @ ${entry.vatRatePct}%` : "Plus: VAT"}
+                      value={vat ?? 0}
+                      pending={vat === null}
+                      indent
+                      addition
+                    />
+
+                    <div className="border-t-2 border-foreground mt-3 pt-4 flex justify-between items-center">
+                      <span className="text-sm text-foreground">Amount Due to Contractor</span>
+                      <span className="text-sm font-medium text-primary tabular-nums">
+                        {totalPayable === null ? "—" : formatCurrency(totalPayable)}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
             {isServerComputed(entry) === false && (
-              <p className="text-amber-700">
+              <p className="text-amber-700 text-sm mt-2">
                 These figures were stored as submitted — the server did not
                 recompute them from the project's retention and VAT rates.
               </p>
             )}
           </div>
+
           {warningsOf(entry).length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
               <p className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
@@ -350,12 +777,18 @@ const PCDetailsDialog = ({
               </ul>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-wrap gap-1.5">
             <DialogClose asChild>
               <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
                 Close
               </button>
             </DialogClose>
+            <ModalActionButtons
+              entry={entry}
+              actingOn={actingOn}
+              onTransitionClick={onTransitionClick}
+              onDeleteClick={onDeleteClick}
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -366,7 +799,6 @@ const PCDetailsDialog = ({
 const PCRow = ({ entry }: { entry: PCEntry }) => {
   const warnings = warningsOf(entry);
   const [showViewDialog, setShowViewDialog] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [waitingOnOpen, setWaitingOnOpen] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
   // Reject/Cancel need a reason from the person, not just a click — this
@@ -374,18 +806,26 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
   // "reject" | "cancel" says which transition it's collecting a reason for.
   const [reasonTransition, setReasonTransition] = useState<string | null>(null);
   const [reasonText, setReasonText] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetched lazily (only once the row's menu OR its Approvals badge is
-  // opened) rather than for every row on page load — availableTransitions is
-  // already permission-filtered server-side for the current user, so the
-  // buttons shown here can never offer an action that would 403, and
-  // waitingOn is the same "who may act" question answered for display rather
-  // than for the current viewer specifically.
+  // Fetched lazily, only once the Approvals badge is opened — "who is this
+  // waiting on" is display-only detail, unlike availableTransitions/canDelete
+  // on `entry` itself, which arrive with the list fetch already
+  // permission-filtered for the current user and need no extra call.
   const { data: workflow, isLoading: workflowLoading } = useFetch<WorkflowResponse>(
     `tasks/payment-certificates/${entry.id}/workflow/`,
-    { enabled: menuOpen || waitingOnOpen }
+    { enabled: waitingOnOpen }
   );
+
+  const invalidatePcQueries = () =>
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        (query.queryKey[0].startsWith("tasks/payment-certificates") ||
+          query.queryKey[0].startsWith("cost-ledger")),
+    });
 
   const runTransition = async (transition: string, reason?: string) => {
     setActingOn(transition);
@@ -395,13 +835,7 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
         data: reason !== undefined ? { reason } : {},
       });
       toast.success(`${entry.pcNumber}: ${TRANSITION_LABELS[transition]} done.`);
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          typeof query.queryKey[0] === "string" &&
-          (query.queryKey[0].startsWith("tasks/payment-certificates") ||
-            query.queryKey[0].startsWith("cost-ledger")),
-      });
-      setMenuOpen(false);
+      invalidatePcQueries();
       setReasonTransition(null);
       setReasonText("");
     } catch (err: any) {
@@ -414,6 +848,31 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
   };
 
   const requiresReason = (transition: string) => transition === "reject" || transition === "cancel";
+
+  const handleTransitionClick = (transition: string) => {
+    if (requiresReason(transition)) {
+      setReasonText("");
+      setReasonTransition(transition);
+    } else {
+      runTransition(transition);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteData({ url: `tasks/payment-certificates/${entry.id}/`, data: undefined });
+      toast.success(`${entry.pcNumber} deleted.`);
+      invalidatePcQueries();
+      setShowDeleteDialog(false);
+      setShowViewDialog(false);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || err?.message || "Delete failed.";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <tr className="hover:bg-muted/50 transition-colors">
@@ -469,59 +928,21 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
       <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground tabular-nums">
         {formatDate(entry.updatedAt)}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground">
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <button
-              aria-label="More actions" className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-52" align="end">
-            <DropdownMenuItem onSelect={() => setShowViewDialog(true)}>
-              View Details
-            </DropdownMenuItem>
-            {menuOpen && (workflowLoading || (workflow?.availableTransitions?.length ?? 0) > 0) && (
-              <>
-                <DropdownMenuSeparator />
-                {workflowLoading ? (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Checking available actions…
-                  </div>
-                ) : (
-                  workflow?.availableTransitions?.map((t) => (
-                    <DropdownMenuItem
-                      key={t}
-                      disabled={actingOn !== null}
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        if (requiresReason(t)) {
-                          setReasonText("");
-                          setReasonTransition(t);
-                        } else {
-                          runTransition(t);
-                        }
-                      }}
-                      className={t === "reject" || t === "cancel" ? "text-destructive" : undefined}
-                    >
-                      {actingOn === t ? (
-                        <span className="flex items-center gap-1.5">
-                          <Loader2 className="h-3 w-3 animate-spin" /> {TRANSITION_LABELS[t]}…
-                        </span>
-                      ) : (
-                        TRANSITION_LABELS[t] || t
-                      )}
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <td className="px-4 py-3 whitespace-nowrap text-sm">
+        <ActionButtons
+          entry={entry}
+          actingOn={actingOn}
+          onTransitionClick={handleTransitionClick}
+          onDeleteClick={() => setShowDeleteDialog(true)}
+          onViewDetails={() => setShowViewDialog(true)}
+        />
         <PCDetailsDialog
           entry={entry}
           open={showViewDialog}
           onOpenChange={setShowViewDialog}
+          actingOn={actingOn}
+          onTransitionClick={handleTransitionClick}
+          onDeleteClick={() => setShowDeleteDialog(true)}
         />
         <ReasonDialog
           entry={entry}
@@ -538,6 +959,13 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
               setReasonText("");
             }
           }}
+        />
+        <DeleteConfirmDialog
+          entry={entry}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          isDeleting={isDeleting}
+          onConfirm={handleDelete}
         />
       </td>
     </tr>
@@ -556,7 +984,7 @@ const HEADERS: { label: string; align?: "right" }[] = [
   { label: "Total Payable", align: "right" },
   { label: "Approvals" },
   { label: "Updated" },
-  { label: "Actions", align: "right" },
+  { label: "Actions" },
 ];
 
 export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({ orders, search }) => {

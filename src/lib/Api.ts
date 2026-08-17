@@ -695,7 +695,8 @@ export type TaskAttachmentSegment =
   | "site-instructions"
   | "requests-for-information"
   | "delay-claims"
-  | "critical-path-items";
+  | "critical-path-items"
+  | "payment-certificates";
 
 export interface TaskAttachmentResponse {
   id: string;

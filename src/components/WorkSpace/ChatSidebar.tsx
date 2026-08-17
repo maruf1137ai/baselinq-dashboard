@@ -5,8 +5,9 @@ import {
   PanelLeft,
   Grid3x3,
   UserPlus,
-  MoreHorizontal,
   Search,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,11 +18,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SideBar from "../icons/SideBar";
 import NewChat from "../icons/NewChat";
@@ -30,7 +34,11 @@ import NewDoc from "../icons/NewDoc";
 import InviteMember from "../icons/InviteMember";
 
 import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
+import { deleteData } from "@/lib/Api";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import {
   Tooltip,
@@ -82,18 +90,39 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
-  const { taskId: currentTaskId } = useParams<{ taskId: string }>();
+  const { taskId: currentTaskId, sessionId: currentSessionId } = useParams<{ taskId: string; sessionId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
 
   // Scope chat history to the selected project so a user working across
   // multiple projects doesn't see Project A's chats while in Project B.
   const projectId = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
+  const chatSessionsQueryKey = `ai_analysis/chat-sessions/?project_id=${projectId}`;
   const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>(
-    projectId ? `ai_analysis/chat-sessions/?project_id=${projectId}` : 'ai_analysis/chat-sessions/',
+    projectId ? chatSessionsQueryKey : 'ai_analysis/chat-sessions/',
     { enabled: !!projectId }
   );
 
   const sessions = sessionsData?.sessions || [];
+
+  const { mutate: deleteSession, isPending: isDeletingSession } = useMutation({
+    mutationFn: (session: ChatSession) => deleteData({ url: `ai_analysis/session/${session.id}/`, data: undefined }),
+    onSuccess: (_data, session) => {
+      queryClient.invalidateQueries({ queryKey: [chatSessionsQueryKey] });
+      toast.success('Chat deleted.');
+      setSessionToDelete(null);
+      // If the deleted chat is the one currently open, fall back to a
+      // fresh/empty chat — same reset the "New Chat" button does below.
+      if (session.kind === 'project' && projectId && String(session.id) === currentSessionId) {
+        onNewChat();
+        navigate(`/ai-workspace/project/${projectId}`);
+      }
+    },
+    onError: () => {
+      toast.error('Failed to delete chat. Please try again.');
+    },
+  });
 
   const groupedSessions: GroupedSessions[] = [
     {
@@ -115,10 +144,6 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
       }),
     },
   ].filter(group => group.items.length > 0);
-
-  // const handleChatAction = (action: string, chatId: number) => {
-  //   console.log(`${action} chat ${chatId}`);
-  // };
 
   return (
     <div
@@ -179,39 +204,19 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
                               : ""
                               }`} onClick={() => navigate(targetUrl)}>
                             <SessionLabel label={session.label} />
-                            {/* <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100">
-                              <MoreHorizontal
-                                color="#676767"
-                              />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleChatAction("Rename", session.id)
-                              }>
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleChatAction("Share", session.id)
-                              }>
-                              Share
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleChatAction("Delete", session.id)
-                              }
-                              className="text-destructive">
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu> */}
+                            {isProjectChat && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSessionToDelete(session);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         );
                       })}
@@ -236,6 +241,28 @@ export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
           </Button>
         )}
       </SidebarFooter> */}
+
+      <AlertDialog open={!!sessionToDelete} onOpenChange={(open) => !open && setSessionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <span className="font-medium text-foreground">{sessionToDelete?.label}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingSession}>Cancel</AlertDialogCancel>
+            <Button
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={isDeletingSession}
+              onClick={() => { if (sessionToDelete) deleteSession(sessionToDelete); }}
+            >
+              {isDeletingSession ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting...</> : 'Delete'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
