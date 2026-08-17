@@ -40,11 +40,7 @@ import {
   ArrowRight,
   Banknote,
   CalendarClock,
-  CheckCircle2,
-  Clock,
   FileText,
-  FileWarning,
-  Inbox,
   ShieldAlert,
   ShieldQuestion,
 } from "lucide-react";
@@ -52,10 +48,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
-import type { QueueItem, QueueKind } from "@/lib/homeSignals";
 import type { HomeData } from "@/hooks/useHomeData";
 
 // ── Shared chrome ─────────────────────────────────────────────────────────
@@ -271,109 +267,11 @@ function Figure({
 }
 
 // ── Action queue ──────────────────────────────────────────────────────────
-
-const KIND_ICON: Record<QueueKind, typeof Clock> = {
-  certificate: Banknote,
-  "time-bar": CalendarClock,
-  rsvp: CalendarClock,
-  "meeting-action": FileText,
-  rejected: FileWarning,
-  task: Inbox,
-};
-
-const KIND_LABEL: Record<QueueKind, string> = {
-  certificate: "Certificate",
-  "time-bar": "Notice deadline",
-  rsvp: "Meeting",
-  "meeting-action": "Meeting notes",
-  rejected: "Returned",
-  task: "Task",
-};
-
-/**
- * The queue is the only hero on this page.
- *
- * It gets ProjectHealth's hero header — the one place a `text-lg` and a 20px
- * icon are spent — because "what needs me, and is any of it late" is the
- * whole question a PM opens this screen to answer. Its header states the
- * position before a single row is read; the rows are one contained, divided
- * list rather than N floating tiles, so forty items stay a list instead of
- * becoming forty cards.
- */
-export function ActionQueueBlock({
-  data,
-  limit,
-  title = "What needs you",
-}: {
-  data: HomeData;
-  limit?: number;
-  title?: string;
-}) {
-  const { queue, isLoading, loadIssue } = data;
-  const shown = limit ? queue.slice(0, limit) : queue;
-  const overdue = queue.filter((i) => i.overdue).length;
-
-  if (isLoading) {
-    return (
-      <Panel title={title} icon={Inbox} size="hero">
-        <div className="px-4 py-3">
-          <AwesomeLoader message="Working out what needs you" />
-        </div>
-      </Panel>
-    );
-  }
-
-  if (queue.length === 0) {
-    return (
-      <Panel
-        title="Nothing is waiting on you"
-        icon={CheckCircle2}
-        tone="green"
-        size="hero"
-        hint={
-          loadIssue.level === "partial"
-            ? "Nothing outstanding in the sources that answered. Some could not be read — see above."
-            : "Certificates to certify, notices inside their deadline window, invitations to answer and instructions assigned to you all appear here, worst first."
-        }
-      />
-    );
-  }
-
-  return (
-    <Panel
-      title={title}
-      icon={overdue > 0 ? AlertTriangle : Inbox}
-      tone={overdue > 0 ? "red" : "neutral"}
-      size="hero"
-      lead={
-        overdue > 0
-          ? `${queue.length} open, ${overdue} already past a deadline`
-          : `${queue.length} open, worst first`
-      }
-      footer={
-        limit && queue.length > limit ? (
-          <p className="text-xs text-muted-foreground">
-            {queue.length - limit} more further down the queue.
-          </p>
-        ) : undefined
-      }
-    >
-      {shown.map((item: QueueItem) => (
-        <RowLink key={item.key} to={item.href}>
-          <RowContent
-            icon={KIND_ICON[item.kind]}
-            tone={item.overdue ? "red" : "neutral"}
-            title={item.headline}
-            meta={`${KIND_LABEL[item.kind]}${item.detail ? ` · ${item.detail}` : ""}`}
-            right={
-              item.overdue ? <Badge variant="danger">Overdue</Badge> : undefined
-            }
-          />
-        </RowLink>
-      ))}
-    </Panel>
-  );
-}
+//
+// The queue is the page's reason to exist and lives in its own file, next to
+// the pure ranking it renders. Re-exported here so every call site keeps
+// importing blocks.
+export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 
 // ── Risk strip ────────────────────────────────────────────────────────────
 

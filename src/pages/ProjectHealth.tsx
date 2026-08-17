@@ -10,6 +10,7 @@
  * be able to act on the worst item without scrolling.
  */
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,21 @@ import InsurerTab from "@/components/risk/InsurerTab";
 
 const TABS = ["Risk signals", "Notice deadlines", "Evidence", "Insurer"] as const;
 type TabKey = (typeof TABS)[number];
+
+/**
+ * `?tab=` slugs, so another page can link to a specific tab.
+ *
+ * The homepage action queue needs this: a notice-deadline row is the highest
+ * stakes thing it renders, and landing the user on "Risk signals" and leaving
+ * them to find the right tab is not an action — it is a maze. Slugs rather
+ * than the labels themselves so the URL survives a change of wording.
+ */
+const TAB_SLUG: Record<string, TabKey> = {
+  "risk-signals": "Risk signals",
+  "notice-deadlines": "Notice deadlines",
+  evidence: "Evidence",
+  insurer: "Insurer",
+};
 
 // ── Types (mirror the backend serializer) ─────────────────────────────
 
@@ -271,7 +287,19 @@ export default function ProjectHealth() {
   const [ackTarget, setAckTarget] = useState<RiskSignal | null>(null);
   const [ackNote, setAckNote] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<TabKey>("Risk signals");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<TabKey>(
+    () => TAB_SLUG[searchParams.get("tab") ?? ""] ?? "Risk signals",
+  );
+
+  // Keep the URL in step so the tab is shareable and survives a reload.
+  const chooseTab = (next: TabKey) => {
+    setTab(next);
+    const slug = Object.keys(TAB_SLUG).find(k => TAB_SLUG[k] === next);
+    const params = new URLSearchParams(searchParams);
+    if (slug) params.set("tab", slug);
+    setSearchParams(params, { replace: true });
+  };
 
   const { data, isLoading, isError, refetch } = useFetch<SignalsResponse>(
     projectId ? `projects/${projectId}/risk-signals/?refresh=true` : null
@@ -381,7 +409,7 @@ export default function ProjectHealth() {
               key={t}
               role="tab"
               aria-selected={tab === t}
-              onClick={() => setTab(t)}
+              onClick={() => chooseTab(t)}
               className={cn(
                 "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",

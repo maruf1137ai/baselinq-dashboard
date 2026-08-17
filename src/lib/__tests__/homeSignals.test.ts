@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 
 import {
   actionItemIsPending,
+  buildObligationQueue,
+  buildRiskQueue,
+  filterQueueByPermission,
+  rankQueue,
   buildCertificateQueue,
   buildMeetingActionQueue,
   buildRejectedCertificateQueue,
@@ -10,14 +14,11 @@ import {
   buildTimeBarQueue,
   certificateIsCertified,
   daysUntil,
-  filterQueueByPermission,
-  rankQueue,
   relativeDays,
   resolveFinanceAccess,
   summariseHomeLoad,
   summariseMoney,
   visibleRiskSignals,
-  type QueueItem,
 } from "../homeSignals";
 import { summariseProjectSetup } from "../homeSetup";
 
@@ -71,8 +72,30 @@ describe("buildCertificateQueue", () => {
     expect(q[1].headline).toContain("Post PC-002");
   });
 
-  it("gates every certificate row on finance.view", () => {
-    expect(buildCertificateQueue(certs).every((i) => i.requires === "finance.view")).toBe(true);
+  it("gates every certificate row on finance.view, and nothing more", () => {
+    expect(buildCertificateQueue(certs).map((i) => i.requires)).toEqual([
+      ["finance.view"],
+      ["finance.view"],
+    ]);
+  });
+
+  it("carries no clock, because no certificate payload has a due date", () => {
+    // Not "no rush" — a gap in the API. The band matrix is what stops this
+    // absence from burying the most valuable thing a principal agent does.
+    const q = buildCertificateQueue(certs);
+    expect(q.map((i) => i.daysRemaining)).toEqual([null, null]);
+    expect(q.map((i) => i.clock)).toEqual([null, null]);
+    expect(q.every((i) => i.consequence === "money" && i.pressure === "none")).toBe(true);
+  });
+
+  it("puts certifying ahead of posting within the money class", () => {
+    const q = buildCertificateQueue(certs);
+    expect(q[0].subRank).toBeLessThan(q[1].subRank as number);
+  });
+
+  it("routes every row somewhere that exists", () => {
+    expect(buildCertificateQueue(certs).every((i) => i.href === "/finance")).toBe(true);
+    expect(buildCertificateQueue(certs).every((i) => i.action.length > 0)).toBe(true);
   });
 
   it("reads workflowState, never the legacy approvalStatus", () => {
@@ -93,26 +116,61 @@ describe("buildRejectedCertificateQueue", () => {
     ]);
     expect(q).toHaveLength(1);
     expect(q[0].headline).toContain("PC-005 was rejected");
-    expect(q[0].requires).toBe("finance.view");
+    expect(q[0].requires).toEqual(["finance.view"]);
+  });
+
+  it("leads the money class, because payment on it has stopped dead", () => {
+    const rejected = buildRejectedCertificateQueue([{ id: 5, workflowState: "rejected" }]);
+    const submitted = buildCertificateQueue([{ id: 6, workflowState: "submitted" }]);
+    expect(rejected[0].subRank).toBeLessThan(submitted[0].subRank as number);
+  });
+
+  it("never states a rejection reason, because no response carries one", () => {
+    const q = buildRejectedCertificateQueue([
+      { id: 7, workflowState: "rejected", updatedAt: iso(-4) },
+    ]);
+    expect(q[0].detail).toBe("Payment on it has stopped for 4 days");
   });
 });
 
 describe("buildTimeBarQueue", () => {
-  it("states the clock and the thing, with days remaining", () => {
+  it("states the clock, its unit and the thing it protects", () => {
     const q = buildTimeBarQueue([
       {
         id: 1,
         label: "VO-012",
         days_remaining: 14,
+        unit: "working",
         status: "open",
         clause_ref: "26.5",
         clause_verified: true,
         contract_form: "JBCC",
       },
     ]);
-    expect(q[0].headline).toBe("14 days left to serve notice on VO-012");
+    expect(q[0].headline).toBe("14 working days left to serve notice on VO-012");
     expect(q[0].detail).toBe("JBCC 26.5");
+    expect(q[0].clock).toBe("working");
+    expect(q[0].consequence).toBe("forfeiture");
     expect(q[0].overdue).toBe(false);
+  });
+
+  it("uses the backend's days_remaining verbatim and never the deadline date", () => {
+    // The backend counts on the SA working-day calendar, holidays and the
+    // builders' break included. Recomputing from deadline_date would hand
+    // somebody days they do not have.
+    const q = buildTimeBarQueue([
+      {
+        id: 9,
+        label: "VO-020",
+        days_remaining: 2,
+        unit: "working",
+        // Four calendar days away. If this were used, pressure would differ.
+        deadline_date: iso(4).slice(0, 10),
+        status: "open",
+      },
+    ]);
+    expect(q[0].daysRemaining).toBe(2);
+    expect(q[0].pressure).toBe("critical");
   });
 
   it("withholds an unverified clause reference rather than guessing", () => {
@@ -122,14 +180,133 @@ describe("buildTimeBarQueue", () => {
     expect(q[0].detail).toBeNull();
   });
 
-  it("marks a passed deadline as overdue", () => {
+  it("marks a passed deadline as overdue and expired", () => {
     const q = buildTimeBarQueue([{ id: 3, label: "VO-014", days_remaining: -4, status: "open" }]);
     expect(q[0].overdue).toBe(true);
-    expect(q[0].headline).toContain("passed its deadline 4 days ago");
+    expect(q[0].pressure).toBe("expired");
+    expect(q[0].headline).toContain("passed its deadline 4 working days ago");
+  });
+
+  it("says a deadline falling today must be served today", () => {
+    const q = buildTimeBarQueue([{ id: 10, label: "VO-021", days_remaining: 0, status: "open" }]);
+    expect(q[0].headline).toBe("Notice on VO-021 must be served today");
+    expect(q[0].pressure).toBe("expired");
+  });
+
+  it("treats an undated deadline as live and says so, rather than dropping it", () => {
+    const q = buildTimeBarQueue([{ id: 4, label: "VO-015", days_remaining: null, status: "open" }]);
+    expect(q).toHaveLength(1);
+    expect(q[0].daysRemaining).toBeNull();
+    expect(q[0].clock).toBeNull();
+    expect(q[0].pressure).toBe("none");
+    expect(q[0].detail).toContain("treat it as live");
   });
 
   it("ignores bars that are no longer open", () => {
-    expect(buildTimeBarQueue([{ id: 4, label: "x", days_remaining: 2, status: "served" }])).toHaveLength(0);
+    expect(buildTimeBarQueue([{ id: 5, label: "x", days_remaining: 2, status: "served" }])).toHaveLength(0);
+  });
+
+  it("is not gated — a lapsing notice prejudices every party to the contract", () => {
+    const q = buildTimeBarQueue([{ id: 6, label: "x", days_remaining: 2, status: "open" }]);
+    expect(q[0].requires).toEqual([]);
+    expect(q[0].href).toBe("/project-health?tab=notice-deadlines");
+  });
+});
+
+describe("buildRiskQueue", () => {
+  const signal = (over: Record<string, unknown>) => ({
+    id: 1,
+    code: "R-01",
+    category: "delay" as const,
+    severity: "red" as const,
+    status: "open",
+    title: "Programme slipped past the baseline",
+    ...over,
+  });
+
+  it("takes only open signals", () => {
+    expect(buildRiskQueue([signal({ status: "resolved" }), signal({ id: 2 })])).toHaveLength(1);
+  });
+
+  it("derives urgency from severity, because no signal carries a date", () => {
+    expect(buildRiskQueue([signal({ severity: "red" })])[0].pressure).toBe("critical");
+    expect(buildRiskQueue([signal({ severity: "orange" })])[0].pressure).toBe("soon");
+    expect(buildRiskQueue([signal({ severity: "green" })])[0].pressure).toBe("later");
+    expect(buildRiskQueue([signal({})])[0].daysRemaining).toBeNull();
+    expect(buildRiskQueue([signal({})])[0].clock).toBeNull();
+  });
+
+  it("separates a contractual breach from a commercial guide", () => {
+    expect(buildRiskQueue([signal({ is_contractual: true })])[0].consequence).toBe("breach");
+    expect(buildRiskQueue([signal({ is_contractual: false })])[0].consequence).toBe("advisory");
+    // Absent means not asserted, and we do not assert a breach on its behalf.
+    expect(buildRiskQueue([signal({})])[0].consequence).toBe("advisory");
+  });
+
+  it("prefers the backend's own evidence line over a rule number", () => {
+    expect(buildRiskQueue([signal({ evidence: "Practical completion is 12 days late" })])[0].detail)
+      .toBe("Practical completion is 12 days late");
+    expect(buildRiskQueue([signal({ is_contractual: true })])[0].detail)
+      .toBe("Contractual breach · rule R-01");
+  });
+
+  it("keeps the existing gates: compliance.view, plus finance.view when financial", () => {
+    expect(buildRiskQueue([signal({ category: "delay" })])[0].requires).toEqual(["compliance.view"]);
+    expect(buildRiskQueue([signal({ category: "financial" })])[0].requires).toEqual([
+      "compliance.view",
+      "finance.view",
+    ]);
+  });
+});
+
+describe("buildObligationQueue", () => {
+  const ob = (over: Record<string, unknown>) => ({
+    _id: "o1",
+    title: "Submit the OHS file",
+    documentName: "JBCC PBA 6.2",
+    responsibleRole: "Contractor",
+    status: "Pending",
+    ...over,
+  });
+
+  it("uses the server's own day counts rather than recomputing them", () => {
+    const late = buildObligationQueue([ob({ isOverdue: true, daysOverdue: 9, dueDate: iso(-9) })], NOW);
+    expect(late[0].daysRemaining).toBe(-9);
+    expect(late[0].overdue).toBe(true);
+    expect(late[0].headline).toBe("Submit the OHS file — 9 days past its date");
+
+    const soon = buildObligationQueue([ob({ _id: "o2", daysUntilDue: 3, dueDate: iso(3) })], NOW);
+    expect(soon[0].daysRemaining).toBe(3);
+    expect(soon[0].headline).toBe("Submit the OHS file — due in 3 days");
+  });
+
+  it("falls back to the due date only when the server supplied no count", () => {
+    const q = buildObligationQueue([ob({ dueDate: iso(4) })], NOW);
+    expect(q[0].daysRemaining).toBe(4);
+    expect(q[0].clock).toBe("calendar");
+  });
+
+  it("keeps the queue to what is near, leaving the rest to Compliance", () => {
+    expect(buildObligationQueue([ob({ daysUntilDue: 14, dueDate: iso(14) })], NOW)).toHaveLength(1);
+    expect(buildObligationQueue([ob({ daysUntilDue: 15, dueDate: iso(15) })], NOW)).toHaveLength(0);
+  });
+
+  it("drops closed obligations however the backend spells it", () => {
+    for (const status of ["Completed", "completed", " Closed ", "waived"]) {
+      expect(buildObligationQueue([ob({ status, daysUntilDue: 1 })], NOW)).toHaveLength(0);
+    }
+  });
+
+  it("drops an obligation with no date at all rather than claiming it is due", () => {
+    expect(buildObligationQueue([ob({ dueDate: null })], NOW)).toHaveLength(0);
+  });
+
+  it("names the responsible ROLE without implying the row is yours", () => {
+    // The payload carries no assignee id, so these cannot be narrowed to "mine".
+    const q = buildObligationQueue([ob({ daysUntilDue: 2, dueDate: iso(2) })], NOW);
+    expect(q[0].detail).toBe("JBCC PBA 6.2 · responsible: Contractor");
+    expect(q[0].requires).toEqual(["compliance.view"]);
+    expect(q[0].consequence).toBe("breach");
   });
 });
 
@@ -220,90 +397,9 @@ describe("buildTaskQueue", () => {
   });
 });
 
-describe("rankQueue", () => {
-  const item = (over: Partial<QueueItem>): QueueItem => ({
-    key: "k",
-    kind: "task",
-    headline: "h",
-    detail: null,
-    daysRemaining: null,
-    overdue: false,
-    href: "/",
-    requires: null,
-    ...over,
-  });
+// `rankQueue` and `filterQueueByPermission` are the ranking rule itself and
+// are tested in `homeQueueRank.test.ts`, next to the matrix they implement.
 
-  it("puts anything overdue above everything on time", () => {
-    const ranked = rankQueue([
-      item({ key: "cert", kind: "certificate" }),
-      item({ key: "late-task", kind: "task", overdue: true, daysRemaining: -2 }),
-    ]);
-    expect(ranked[0].key).toBe("late-task");
-  });
-
-  it("orders on-time work certificates → notices → RSVPs → meeting actions → rejected → tasks", () => {
-    const ranked = rankQueue([
-      item({ key: "task", kind: "task" }),
-      item({ key: "rejected", kind: "rejected" }),
-      item({ key: "meeting-action", kind: "meeting-action" }),
-      item({ key: "rsvp", kind: "rsvp" }),
-      item({ key: "time-bar", kind: "time-bar" }),
-      item({ key: "certificate", kind: "certificate" }),
-    ]);
-    expect(ranked.map((i) => i.key)).toEqual([
-      "certificate",
-      "time-bar",
-      "rsvp",
-      "meeting-action",
-      "rejected",
-      "task",
-    ]);
-  });
-
-  it("breaks ties on the nearest clock, and sinks items with no clock", () => {
-    const ranked = rankQueue([
-      item({ key: "far", kind: "time-bar", daysRemaining: 20 }),
-      item({ key: "none", kind: "time-bar", daysRemaining: null }),
-      item({ key: "near", kind: "time-bar", daysRemaining: 2 }),
-    ]);
-    expect(ranked.map((i) => i.key)).toEqual(["near", "far", "none"]);
-  });
-});
-
-describe("filterQueueByPermission", () => {
-  const items: QueueItem[] = [
-    {
-      key: "money",
-      kind: "certificate",
-      headline: "h",
-      detail: null,
-      daysRemaining: null,
-      overdue: false,
-      href: "/",
-      requires: "finance.view",
-    },
-    {
-      key: "everyone",
-      kind: "task",
-      headline: "h",
-      detail: null,
-      daysRemaining: null,
-      overdue: false,
-      href: "/",
-      requires: null,
-    },
-  ];
-
-  it("hides finance rows from a viewer without finance.view", () => {
-    const out = filterQueueByPermission(items, { canViewFinance: false });
-    expect(out.map((i) => i.key)).toEqual(["everyone"]);
-  });
-
-  it("shows them to a viewer who holds it", () => {
-    const out = filterQueueByPermission(items, { canViewFinance: true });
-    expect(out).toHaveLength(2);
-  });
-});
 
 describe("resolveFinanceAccess", () => {
   // The case that matters: on live project 45, Contractor resolves
@@ -348,11 +444,26 @@ describe("resolveFinanceAccess", () => {
       ]),
       ...buildRejectedCertificateQueue([{ id: 3, pcNumber: "PC-003", workflowState: "rejected" }]),
       ...buildTimeBarQueue([{ id: 4, label: "VO-012", days_remaining: 5, status: "open" }]),
+      ...buildRiskQueue([
+        {
+          id: 5,
+          code: "R-09",
+          category: "financial",
+          severity: "red",
+          status: "open",
+          title: "Certified value exceeds the contract sum",
+          is_contractual: true,
+        },
+      ]),
       ...buildTaskQueue([{ id: "t", title: "Respond", needsAction: true }], NOW),
     ]);
-    const visible = filterQueueByPermission(items, access);
-    expect(visible.every((i) => i.requires === null)).toBe(true);
+    // The contractor holds compliance.view but not finance.view, which is the
+    // live configuration on project 45.
+    const visible = filterQueueByPermission(items, { ...access, canViewCompliance: true });
+    expect(visible.every((i) => !i.requires.includes("finance.view"))).toBe(true);
     expect(visible.map((i) => i.kind).sort()).toEqual(["task", "time-bar"]);
+    // The notice deadline still leads: it is the only thing here that forfeits.
+    expect(visible[0].kind).toBe("time-bar");
   });
 });
 

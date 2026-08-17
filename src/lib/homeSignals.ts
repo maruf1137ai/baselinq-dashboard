@@ -20,45 +20,46 @@
  *     commercial measure and is labelled as one at the call site.
  */
 
-/** The permission code a block or queue item requires, or null for everyone. */
-export type PermissionCode = "finance.view" | "finance.approve_payment" | null;
-
-export type QueueKind =
-  | "certificate"
-  | "time-bar"
-  | "rsvp"
-  | "meeting-action"
-  | "rejected"
-  | "task";
-
 /**
- * Rank order of the queue, worst-first. The brief's order: certificates
- * awaiting you, notices inside their deadline window, RSVPs pending, meeting
- * actions needing approval, rejected items, then tasks.
+ * The queue's item shape and its ranking rule live in `homeQueueRank.ts` —
+ * that file is the one with legal consequence and is tested on its own. This
+ * file turns API payloads into items; that file decides their order.
  */
-const KIND_RANK: Record<QueueKind, number> = {
-  certificate: 0,
-  "time-bar": 1,
-  rsvp: 2,
-  "meeting-action": 3,
-  rejected: 4,
-  task: 5,
-};
+export {
+  ACT_TODAY_BAND,
+  bandOf,
+  filterQueueByPermission,
+  pressureFromDays,
+  rankQueue,
+  summariseQueue,
+} from "./homeQueueRank";
+export type {
+  Clock,
+  Consequence,
+  PermissionCode,
+  Pressure,
+  QueueItem,
+  QueueKind,
+  QueueSummary,
+} from "./homeQueueRank";
 
-export interface QueueItem {
-  key: string;
-  kind: QueueKind;
-  /** Names the next move, never the state. */
-  headline: string;
-  /** Clause, date or value behind the headline. Null when the API gave none. */
-  detail: string | null;
-  /** Days until the clock runs out. Negative is past. Null when no clock. */
-  daysRemaining: number | null;
-  overdue: boolean;
-  href: string;
-  /** Permission required to see this item at all. */
-  requires: PermissionCode;
-}
+import {
+  pressureFromDays,
+  type Clock,
+  type PermissionCode,
+  type QueueItem,
+} from "./homeQueueRank";
+
+/** Every route below is one that exists in App.tsx. `/approvals` does not. */
+const ROUTE = {
+  finance: "/finance",
+  /** Notice deadlines are the "Notice deadlines" tab of Project health. */
+  timeBars: "/project-health?tab=notice-deadlines",
+  riskSignals: "/project-health?tab=risk-signals",
+  compliance: "/compliance",
+  meeting: (id: number | string) => `/meetings/${id}`,
+  task: (id: string) => `/tasks/${id}`,
+} as const;
 
 /** Whole days from today to `iso`, or null when unparseable. */
 export function daysUntil(iso: string | null | undefined, now: Date = new Date()): number | null {
@@ -100,49 +101,115 @@ export interface CertificateLike {
 }
 
 /**
+ * How long an item has been sitting, in whole days, or null.
+ *
+ * Used for wording and for the last tiebreak only — never to manufacture a
+ * deadline. A certificate has no due date anywhere in the payload, so "waiting
+ * eleven days" is a statement about elapsed time and is worded as one.
+ */
+export function daysWaiting(iso: string | null | undefined, now: Date = new Date()): number | null {
+  const d = daysUntil(iso, now);
+  return d === null ? null : -d;
+}
+
+/**
  * Certificates sitting in a state that needs a human.
  *
  * `workflowState` is the only field every transition stamps — `approvalStatus`
  * is written once at creation and lies (see paymentCertificateTable.tsx).
  *
- * These are gated on `finance.view` because the row carries the certified
- * amount. Acting on them additionally needs `finance.approve_payment`.
+ * **No certificate endpoint carries a due date.** There is no `dueDate`, no
+ * `rejected_at`, no statutory clock on the row — only `createdAt` and
+ * `updatedAt`. So these items have NO clock, and `pressure: "none"` on a
+ * `money` consequence is what puts them at band 3 rather than at the bottom.
+ * Absence of a date here is a gap in the payload, not evidence of slack: the
+ * contract gives the principal agent a fixed period to certify, and Baselinq
+ * cannot presently see it. Reported as missing.
+ *
+ * `subRank` orders the three money states against each other, because the axes
+ * cannot: a rejected certificate is dead in the water and must be reworked by
+ * a person; a submitted one is waiting on a signature; an approved one only
+ * needs posting.
+ *
+ * Gated on `finance.view` — the row names a certificate, and the block it
+ * links to carries the certified amount. Unchanged from the previous revision.
  */
-export function buildCertificateQueue(certificates: CertificateLike[]): QueueItem[] {
+export function buildCertificateQueue(
+  certificates: CertificateLike[],
+  now: Date = new Date(),
+): QueueItem[] {
   return certificates
     .filter((c) => c.workflowState === "submitted" || c.workflowState === "approved")
     .map((c) => {
       const ref = c.pcNumber || `PC-${c.id}`;
       const awaitingCertification = c.workflowState === "submitted";
+      const waited = daysWaiting(c.updatedAt, now);
       return {
         key: `certificate-${c.id}`,
         kind: "certificate" as const,
         headline: awaitingCertification
           ? `Certify ${ref} — submitted and waiting on you`
           : `Post ${ref} to release payment`,
-        detail: null,
+        detail:
+          waited === null
+            ? null
+            : waited <= 0
+              ? "In this state since today"
+              : `In this state for ${waited} day${waited === 1 ? "" : "s"}`,
+        consequence: "money" as const,
+        pressure: "none" as const,
         daysRemaining: null,
+        clock: null,
         overdue: false,
-        href: "/finance",
-        requires: "finance.view" as const,
+        href: ROUTE.finance,
+        action: awaitingCertification ? "Open to certify" : "Open to post",
+        waitingSince: c.updatedAt ?? null,
+        subRank: awaitingCertification ? 1 : 2,
+        requires: ["finance.view"] as PermissionCode[],
       };
     });
 }
 
-/** Certificates the payer sent back. Real, and the most ignorable if unlisted. */
-export function buildRejectedCertificateQueue(certificates: CertificateLike[]): QueueItem[] {
+/**
+ * Certificates the payer sent back.
+ *
+ * Rejection currently reaches nobody: the reject transition POSTs a `{ reason }`
+ * and **nothing reads it back** — there is no `rejectionReason` field on any
+ * response — so this row can say a certificate was returned but cannot say
+ * why. Reported as missing. It is still worth surfacing: money has stopped and
+ * the only thing that restarts it is somebody reworking the certificate.
+ *
+ * `subRank: 0` puts it at the head of the money band for that reason.
+ */
+export function buildRejectedCertificateQueue(
+  certificates: CertificateLike[],
+  now: Date = new Date(),
+): QueueItem[] {
   return certificates
     .filter((c) => c.workflowState === "rejected")
-    .map((c) => ({
-      key: `rejected-certificate-${c.id}`,
-      kind: "rejected" as const,
-      headline: `${c.pcNumber || `PC-${c.id}`} was rejected — it needs reworking before it can be certified`,
-      detail: null,
-      daysRemaining: null,
-      overdue: false,
-      href: "/finance",
-      requires: "finance.view" as const,
-    }));
+    .map((c) => {
+      const waited = daysWaiting(c.updatedAt, now);
+      return {
+        key: `rejected-certificate-${c.id}`,
+        kind: "rejected" as const,
+        headline: `${c.pcNumber || `PC-${c.id}`} was rejected — it needs reworking before it can be certified`,
+        // The reason is not returned by the API, so none is shown.
+        detail:
+          waited === null || waited <= 0
+            ? "Payment on it has stopped until it is reworked"
+            : `Payment on it has stopped for ${waited} day${waited === 1 ? "" : "s"}`,
+        consequence: "money" as const,
+        pressure: "none" as const,
+        daysRemaining: null,
+        clock: null,
+        overdue: false,
+        href: ROUTE.finance,
+        action: "Open to rework",
+        waitingSince: c.updatedAt ?? null,
+        subRank: 0,
+        requires: ["finance.view"] as PermissionCode[],
+      };
+    });
 }
 
 export interface TimeBarLike {
@@ -151,41 +218,226 @@ export interface TimeBarLike {
   clause_ref?: string;
   clause_verified?: boolean;
   contract_form?: string;
-  deadline_date?: string;
-  days_remaining: number;
+  deadline_date?: string | null;
+  /** Null in practice on a bar the backend could not date (see compliance.ts). */
+  days_remaining?: number | null;
+  /** "working" or "calendar" — the calendar the backend counted on. */
+  unit?: string;
   status: string;
 }
 
 /**
- * Contractual notice deadlines still open.
+ * Contractual notice deadlines still open. **The highest-stakes rows here.**
  *
- * The clause reference is only rendered when the backend verified it against
- * the contract corpus — an unverified clause number on a legally consequential
- * deadline is worse than none, which is the rule TimeBarsTab already follows.
+ * Three rules, all of which matter legally:
+ *
+ *  1. **`days_remaining` is never recomputed.** The backend counts it on the
+ *     South African working-day calendar — public holidays and the builders'
+ *     break included. Deriving it here from `deadline_date` would silently
+ *     substitute calendar days and hand somebody four days they do not have
+ *     over an Easter weekend. When the backend could not compute it, the row
+ *     says the deadline is undated and `pressureFromDays` returns "none",
+ *     which the band matrix treats as live-and-unknown rather than as safe.
+ *
+ *  2. **The clause reference is shown only when verified** against the
+ *     contract corpus. An invented clause number on a legally consequential
+ *     deadline is worse than none — the rule TimeBarsTab already follows.
+ *
+ *  3. **The unit is named.** "7 days left" reads as a week; on the working-day
+ *     calendar it is nine or ten. The row says "working days" when the backend
+ *     says the count is in working days.
+ *
+ * Not gated: a notice deadline is not commercial information and every party
+ * to the contract is prejudiced by it lapsing. `/project-health` is behind
+ * `compliance.view`, which is a real dead end for a viewer without it — see
+ * the report; the fix belongs on the route, not in a hidden row.
  */
 export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
   return bars
     .filter((b) => b.status === "open")
     .map((b) => {
-      const days = b.days_remaining;
+      const raw = b.days_remaining;
+      const days = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+      const unit = (b.unit ?? "working").toLowerCase() === "calendar" ? "calendar" : "working";
+      const clock: Clock = days === null ? null : (unit as Clock);
       const clause =
         b.clause_verified && b.clause_ref
           ? `${b.contract_form ?? ""} ${b.clause_ref}`.trim()
           : null;
+      const undatedNote = "Deadline could not be dated — treat it as live, not as clear";
+
       return {
         key: `time-bar-${b.id}`,
         kind: "time-bar" as const,
         headline:
-          days < 0
-            ? `Notice on ${b.label} passed its deadline ${Math.abs(days)} days ago`
-            : `${days} days left to serve notice on ${b.label}`,
-        detail: clause,
+          days === null
+            ? `Serve notice on ${b.label} — its deadline is not dated`
+            : days < 0
+              ? `Notice on ${b.label} passed its deadline ${Math.abs(days)} ${unit} days ago`
+              : days === 0
+                ? `Notice on ${b.label} must be served today`
+                : `${days} ${unit} days left to serve notice on ${b.label}`,
+        detail: days === null ? [clause, undatedNote].filter(Boolean).join(" · ") : clause,
+        consequence: "forfeiture" as const,
+        pressure: pressureFromDays(days, clock),
         daysRemaining: days,
-        overdue: days < 0,
-        href: "/project-health",
-        requires: null,
+        clock,
+        overdue: days !== null && days < 0,
+        href: ROUTE.timeBars,
+        action: "Open the deadline",
+        requires: [] as PermissionCode[],
       };
     });
+}
+
+export interface RiskSignalLike {
+  id: number;
+  code: string;
+  category: "delay" | "financial" | "compliance" | "claim";
+  severity: "green" | "orange" | "red";
+  status: string;
+  title: string;
+  /** The backend's own human-readable one-liner. Not always populated. */
+  evidence?: string;
+  is_contractual?: boolean;
+  first_detected_at?: string;
+}
+
+/**
+ * Open risk signals, as queue rows rather than only as a strip.
+ *
+ * A risk signal has NO date of any kind beyond `first_detected_at` — no due
+ * date, no deadline — so its pressure comes from `severity`, which is the only
+ * thing the risk engine grades. Red is treated as "critical", amber as "soon",
+ * green as "later". That is a severity-to-urgency mapping and it is stated
+ * here rather than implied.
+ *
+ * `is_contractual` decides the consequence, and the split is real: a
+ * contractual signal says a term of the contract is being breached, whereas a
+ * non-contractual one is Baselinq's own commercial guide. A red guide should
+ * not outrank an amber breach, and under this mapping it does not.
+ *
+ * **Permission gating is unchanged.** The strip is `compliance.view`, because
+ * that is what `/project-health` is gated on and a row nobody can open is a
+ * dead end. `financial` signals additionally require `finance.view`, because
+ * their titles carry certified values and contract-sum overruns.
+ */
+export function buildRiskQueue(signals: RiskSignalLike[]): QueueItem[] {
+  return signals
+    .filter((s) => s.status === "open")
+    .map((s) => {
+      const contractual = s.is_contractual === true;
+      return {
+        key: `risk-${s.id}`,
+        kind: "risk" as const,
+        headline: s.title,
+        detail:
+          s.evidence?.trim() ||
+          `${contractual ? "Contractual breach" : "Commercial guide"} · rule ${s.code}`,
+        consequence: contractual ? ("breach" as const) : ("advisory" as const),
+        pressure:
+          s.severity === "red" ? ("critical" as const)
+          : s.severity === "orange" ? ("soon" as const)
+          : ("later" as const),
+        // No signal carries a due date, so there is no clock to state.
+        daysRemaining: null,
+        clock: null,
+        overdue: false,
+        href: ROUTE.riskSignals,
+        action: "Open the signal",
+        waitingSince: s.first_detected_at ?? null,
+        requires:
+          s.category === "financial"
+            ? (["compliance.view", "finance.view"] as PermissionCode[])
+            : (["compliance.view"] as PermissionCode[]),
+      };
+    });
+}
+
+export interface ObligationLike {
+  _id: string;
+  title: string;
+  documentName?: string;
+  documentReference?: string;
+  documentId?: string;
+  dueDate?: string | null;
+  responsibleRole?: string;
+  status?: string;
+  isOverdue?: boolean;
+  daysOverdue?: number;
+  daysUntilDue?: number | null;
+}
+
+const OBLIGATION_CLOSED = new Set(["completed", "complete", "closed", "done", "satisfied", "waived"]);
+
+/**
+ * Only obligations near or past their date reach the queue.
+ *
+ * A contract yields dozens of obligations, most of them months out. The queue
+ * answers "what will cost me money if I do not act today", so an obligation
+ * two months away is Compliance's job, not the homepage's.
+ */
+export const OBLIGATION_HORIZON_DAYS = 14;
+
+/**
+ * Obligations extracted from the project's documents, from
+ * `documents/obligations/?project_id=`.
+ *
+ * The day count is the SERVER's — `daysOverdue` when it says the obligation is
+ * overdue, otherwise `daysUntilDue`. Only if the server supplied neither do we
+ * fall back to counting calendar days to `dueDate`, and that fallback is
+ * calendar-only by nature: obligations are stored as bare `YYYY-MM-DD` and
+ * carry no working-day treatment, unlike a time bar.
+ *
+ * **`responsibleRole` is a ROLE, not a user.** There is no assignee id on the
+ * payload, so these rows cannot be narrowed to "mine" and the row names the
+ * role instead of implying ownership. Reported as missing.
+ *
+ * Gated on `compliance.view`, matching `/compliance`.
+ */
+export function buildObligationQueue(
+  obligations: ObligationLike[],
+  now: Date = new Date(),
+): QueueItem[] {
+  const out: QueueItem[] = [];
+  for (const o of obligations) {
+    if (OBLIGATION_CLOSED.has((o.status ?? "").trim().toLowerCase())) continue;
+
+    const serverDays =
+      o.isOverdue && typeof o.daysOverdue === "number" && Number.isFinite(o.daysOverdue)
+        ? -Math.abs(o.daysOverdue)
+        : typeof o.daysUntilDue === "number" && Number.isFinite(o.daysUntilDue)
+          ? o.daysUntilDue
+          : null;
+    const days = serverDays ?? daysUntil(o.dueDate, now);
+
+    // No date at all: Compliance already lists it, and a queue that cannot say
+    // when something is due cannot claim it is due today.
+    if (days === null) continue;
+    if (days > OBLIGATION_HORIZON_DAYS) continue;
+
+    const source = o.documentReference || o.documentName;
+    out.push({
+      key: `obligation-${o._id}`,
+      kind: "obligation",
+      headline:
+        days < 0
+          ? `${o.title} — ${Math.abs(days)} days past its date`
+          : `${o.title} — due ${relativeDays(days)}`,
+      detail: [source, o.responsibleRole ? `responsible: ${o.responsibleRole}` : null]
+        .filter(Boolean)
+        .join(" · ") || null,
+      consequence: "breach",
+      pressure: pressureFromDays(days, "calendar"),
+      daysRemaining: days,
+      clock: "calendar",
+      overdue: days < 0,
+      href: ROUTE.compliance,
+      action: "Open the obligation",
+      requires: ["compliance.view"],
+    });
+  }
+  return out;
 }
 
 export interface MeetingLike {
@@ -227,11 +479,17 @@ export function buildRsvpQueue(meetings: MeetingLike[], now: Date = new Date()):
         key: `rsvp-${m.id}`,
         kind: "rsvp" as const,
         headline: `Reply to the invitation for ${m.title}`,
-        detail: when ? `Meets ${when}` : null,
+        detail: when ? `Meets ${when}` : "No date recorded",
+        // Blocking, not own-work: the organiser is holding a room and an
+        // agenda on an answer only this person can give.
+        consequence: "blocking" as const,
+        pressure: pressureFromDays(days, "calendar"),
         daysRemaining: days,
+        clock: days === null ? null : ("calendar" as const),
         overdue: days !== null && days < 0,
-        href: `/meetings/${m.id}`,
-        requires: null,
+        href: ROUTE.meeting(m.id),
+        action: "Open to reply",
+        requires: [] as PermissionCode[],
       };
     });
 }
@@ -281,10 +539,16 @@ export function buildMeetingActionQueue(
         pending.length === 1
           ? pending[0].text
           : `Approving one raises it as a numbered instruction`,
+      // Blocking: until it is approved or declined, the action does not exist
+      // as an instruction and nobody can be held to it.
+      consequence: "blocking",
+      pressure: "none",
       daysRemaining: null,
+      clock: null,
       overdue: false,
-      href: `/meetings/${meeting.id}`,
-      requires: null,
+      href: ROUTE.meeting(meeting.id),
+      action: "Open to decide",
+      requires: [],
     });
   }
   return out;
@@ -298,7 +562,18 @@ export interface TaskLike {
   needsAction: boolean;
 }
 
-/** Tasks where the ball is in the current user's court. */
+/**
+ * Tasks where the ball is in the current user's court.
+ *
+ * `needsAction` is the one piece of the old homepage that was right and it is
+ * kept verbatim: `assignedTo` is "To" — the ball is in your court — while
+ * `responseBy` is "CC'd, watching only".
+ *
+ * `own-work` is the lowest consequence class deliberately. An overdue task is
+ * late; nothing is forfeited and nobody else is blocked by it. It therefore
+ * sits below every live notice deadline, every unsigned certificate and every
+ * contractual breach — which is the single biggest change in this ranking.
+ */
 export function buildTaskQueue(tasks: TaskLike[], now: Date = new Date()): QueueItem[] {
   return tasks
     .filter((t) => t.needsAction)
@@ -313,27 +588,16 @@ export function buildTaskQueue(tasks: TaskLike[], now: Date = new Date()): Queue
           ? `${label} — ${Math.abs(days as number)} days past its due date`
           : label,
         detail: days === null ? "No due date recorded" : `Due ${relativeDays(days)}`,
+        consequence: "own-work" as const,
+        pressure: pressureFromDays(days, "calendar"),
         daysRemaining: days,
+        clock: days === null ? null : ("calendar" as const),
         overdue,
-        href: `/tasks/${t.id}`,
-        requires: null,
+        href: ROUTE.task(t.id),
+        action: "Open the task",
+        requires: [] as PermissionCode[],
       };
     });
-}
-
-/**
- * One ranked list. Overdue always floats above its own kind's on-time items,
- * because a passed deadline outranks a comfortable one of the same sort.
- */
-export function rankQueue(items: QueueItem[]): QueueItem[] {
-  return [...items].sort((a, b) => {
-    if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
-    const rank = KIND_RANK[a.kind] - KIND_RANK[b.kind];
-    if (rank !== 0) return rank;
-    const da = a.daysRemaining ?? Number.POSITIVE_INFINITY;
-    const db = b.daysRemaining ?? Number.POSITIVE_INFINITY;
-    return da - db;
-  });
 }
 
 /**
@@ -367,7 +631,8 @@ export function resolveFinanceAccess(perms: {
   };
 }
 
-export interface RiskSignalLike {
+/** The minimum a signal must carry for the gate below to judge it. */
+export interface RiskGateLike {
   category: "delay" | "financial" | "compliance" | "claim";
   status: string;
 }
@@ -388,7 +653,7 @@ export interface RiskSignalLike {
  *    compliance.view. That divergence is real and should be settled on the
  *    page, not just worked around here.
  */
-export function visibleRiskSignals<T extends RiskSignalLike>(
+export function visibleRiskSignals<T extends RiskGateLike>(
   signals: T[],
   held: { canViewCompliance: boolean; canViewFinance: boolean },
 ): T[] {
@@ -396,17 +661,6 @@ export function visibleRiskSignals<T extends RiskSignalLike>(
   return signals.filter(
     (s) => s.status === "open" && (s.category !== "financial" || held.canViewFinance),
   );
-}
-
-/** Drop everything the viewer is not permitted to see. */
-export function filterQueueByPermission(
-  items: QueueItem[],
-  held: { canViewFinance: boolean },
-): QueueItem[] {
-  return items.filter((i) => {
-    if (i.requires === "finance.view") return held.canViewFinance;
-    return true;
-  });
 }
 
 // ── Money ─────────────────────────────────────────────────────────────────
@@ -490,6 +744,7 @@ export interface HomeLoadState {
   variationsFailed: boolean;
   timeBarsFailed: boolean;
   riskFailed: boolean;
+  obligationsFailed: boolean;
 }
 
 export interface HomeLoadIssue {
@@ -504,6 +759,7 @@ const EMPTY_LOAD_STATE: HomeLoadState = {
   variationsFailed: false,
   timeBarsFailed: false,
   riskFailed: false,
+  obligationsFailed: false,
 };
 
 const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
@@ -513,6 +769,7 @@ const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
   variationsFailed: "variation orders",
   timeBarsFailed: "notice deadlines",
   riskFailed: "risk signals",
+  obligationsFailed: "contract obligations",
 };
 
 /**

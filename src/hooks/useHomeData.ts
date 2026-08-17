@@ -25,12 +25,15 @@ import type { Milestone } from "@/hooks/useMilestones";
 import {
   buildCertificateQueue,
   buildMeetingActionQueue,
+  buildObligationQueue,
   buildRejectedCertificateQueue,
+  buildRiskQueue,
   buildRsvpQueue,
   buildTaskQueue,
   buildTimeBarQueue,
   filterQueueByPermission,
   rankQueue,
+  summariseQueue,
   resolveFinanceAccess,
   summariseHomeLoad,
   summariseMoney,
@@ -39,6 +42,7 @@ import {
   type HomeLoadState,
   type MeetingActionItemLike,
   type MeetingLike,
+  type ObligationLike,
   type QueueItem,
   type TimeBarLike,
   type VariationLike,
@@ -98,6 +102,13 @@ export function useHomeData(projectId: string | undefined) {
   const canViewCompliance = !permissionsLoading && perms.canViewCompliance;
   const risk = useFetch<SignalsResponse>(
     has && canViewCompliance ? `projects/${projectId}/risk-signals/` : "",
+    on(has && canViewCompliance),
+  );
+  // Obligations are extracted from the project's own contract documents and
+  // are rendered on `/compliance`, so they carry the same gate. Like the risk
+  // endpoint they are not merely hidden without it — they are not requested.
+  const obligations = useFetch<{ obligations: ObligationLike[] }>(
+    has && canViewCompliance ? `documents/obligations/?project_id=${projectId}` : "",
     on(has && canViewCompliance),
   );
   const projectList = useFetch<any>(
@@ -209,17 +220,42 @@ export function useHomeData(projectId: string | undefined) {
   );
   const variationList = useMemo(() => listOf<VariationLike>(variations.data), [variations.data]);
 
+  // Every source contributes independently, so one failing endpoint costs its
+  // own rows and not the queue. Order here is irrelevant — `rankQueue` is the
+  // only thing that decides what a user sees first, and it is tested on its
+  // own in `src/lib/__tests__/homeQueueRank.test.ts`.
   const queue: QueueItem[] = useMemo(() => {
     const items = [
-      ...buildCertificateQueue(certificateList),
       ...buildTimeBarQueue(timeBars.data?.time_bars ?? []),
+      ...buildCertificateQueue(certificateList),
+      ...buildRejectedCertificateQueue(certificateList),
+      ...buildRiskQueue(risk.data?.signals ?? []),
+      ...buildObligationQueue(obligations.data?.obligations ?? []),
       ...buildRsvpQueue(meetingList),
       ...buildMeetingActionQueue(meetingsWithActions),
-      ...buildRejectedCertificateQueue(certificateList),
       ...buildTaskQueue(taskList),
     ];
-    return rankQueue(filterQueueByPermission(items, { canViewFinance }));
-  }, [certificateList, timeBars.data, meetingList, meetingsWithActions, taskList, canViewFinance]);
+    // Unchanged gating: finance rows need finance.view, compliance rows need
+    // compliance.view, and a financial risk signal needs both. `canViewFinance`
+    // has already been through `resolveFinanceAccess`, so it is false while the
+    // permission map is in flight — this filter inherits that fail-closed
+    // behaviour rather than reopening the hole.
+    return rankQueue(
+      filterQueueByPermission(items, { canViewFinance, canViewCompliance }),
+    );
+  }, [
+    certificateList,
+    timeBars.data,
+    risk.data,
+    obligations.data,
+    meetingList,
+    meetingsWithActions,
+    taskList,
+    canViewFinance,
+    canViewCompliance,
+  ]);
+
+  const queueSummary = useMemo(() => summariseQueue(queue), [queue]);
 
   // ── Money ───────────────────────────────────────────────────────────────
   const money = useMemo(
@@ -271,7 +307,7 @@ export function useHomeData(projectId: string | undefined) {
     // the outage message — a contractor is not told the certificates endpoint
     // failed for data they were never going to see.
     const base: (keyof HomeLoadState)[] = ["tasksFailed", "meetingsFailed", "timeBarsFailed"];
-    if (canViewCompliance) base.push("riskFailed");
+    if (canViewCompliance) base.push("riskFailed", "obligationsFailed");
     return canViewFinance ? [...base, "certificatesFailed", "variationsFailed"] : base;
   }, [canViewFinance, canViewCompliance]);
 
@@ -283,6 +319,7 @@ export function useHomeData(projectId: string | undefined) {
       variationsFailed: variations.isError,
       timeBarsFailed: timeBars.isError,
       riskFailed: risk.isError,
+      obligationsFailed: obligations.isError,
     },
     visibleSources,
   );
@@ -294,6 +331,7 @@ export function useHomeData(projectId: string | undefined) {
     if (variations.isError) variations.refetch();
     if (timeBars.isError) timeBars.refetch();
     if (risk.isError) risk.refetch();
+    if (obligations.isError) obligations.refetch();
   };
 
   // Permissions are part of loading: until the map lands we do not know
@@ -323,6 +361,7 @@ export function useHomeData(projectId: string | undefined) {
     projectStats,
     // derived
     queue,
+    queueSummary,
     money,
     currentCertificate,
     upcomingMeetings,
