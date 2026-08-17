@@ -48,7 +48,15 @@ import {
   type TimeBarLike,
   type VariationLike,
 } from "@/lib/homeSignals";
+import {
+  buildCertificateRun,
+  elapsedAwaitingCertification,
+  retentionPosition,
+  summariseVariations,
+  toVariationRecord,
+} from "@/lib/homeIndicators";
 import { summariseProjectSetup } from "@/lib/homeSetup";
+import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { isMeetingPast } from "@/lib/dateUtils";
 
 interface RiskSignal {
@@ -129,6 +137,10 @@ export function useHomeData(projectId: string | undefined) {
     wantsMoney ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
     on(wantsMoney),
   );
+  // The variation RECORDS, as distinct from the assignment tasks above. Both
+  // are read and merged below — see `useProjectVariations` for why neither
+  // alone is sufficient. Same `finance.view` gate: not requested without it.
+  const variationRecords = useProjectVariations(projectId, wantsMoney);
 
   const allProjects = listOf<any>(projectList.data);
   const project = allProjects.find((p: any) => String(p._id || p.id) === String(projectId));
@@ -221,6 +233,31 @@ export function useHomeData(projectId: string | undefined) {
   );
   const variationList = useMemo(() => listOf<VariationLike>(variations.data), [variations.data]);
 
+  /**
+   * The two variation sources, merged and de-duplicated on VO number.
+   *
+   * Neither route sees everything: `tasks/variation-orders/` misses nothing but
+   * is paged across projects, while `tasks/tasks/?taskType=VO` is
+   * project-scoped but only returns variations that have an assignment task.
+   * The variation RECORD wins on collision — its `status` is the contractual
+   * one, where the task's is a todo/in-review/done lifecycle.
+   *
+   * A row with no VO number cannot be matched against anything, so it is kept
+   * rather than dropped: under-counting an outstanding variation is the more
+   * expensive mistake of the two.
+   */
+  const variationRecordList = useMemo(() => {
+    const merged = [...variationRecords.records];
+    const seen = new Set(merged.map((v) => v.ref).filter(Boolean) as string[]);
+    for (const raw of variationList) {
+      const rec = toVariationRecord(raw);
+      if (rec.ref && seen.has(rec.ref)) continue;
+      if (rec.ref) seen.add(rec.ref);
+      merged.push(rec);
+    }
+    return merged;
+  }, [variationRecords.records, variationList]);
+
   // Every source contributes independently, so one failing endpoint costs its
   // own rows and not the queue. Order here is irrelevant — `rankQueue` is the
   // only thing that decides what a user sees first, and it is tested on its
@@ -260,8 +297,46 @@ export function useHomeData(projectId: string | undefined) {
 
   // ── Money ───────────────────────────────────────────────────────────────
   const money = useMemo(
-    () => summariseMoney(project, certificateList, variationList),
-    [project, certificateList, variationList],
+    () =>
+      summariseMoney(
+        project,
+        certificateList,
+        variationRecordList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value })),
+      ),
+    [project, certificateList, variationRecordList],
+  );
+
+  // ── Key indicators ──────────────────────────────────────────────────────
+  //
+  // The client's "Key Indicators" strip. Every figure below comes off a real
+  // response and each is derived by a pure, tested function in
+  // `src/lib/homeIndicators.ts`, which also records the two indicators from
+  // that mock that CANNOT be stated honestly and the fields they would need.
+  //
+  // No new fetch and no new gate: variations and certificates are already
+  // behind `finance.view`, risk is already behind `compliance.view`, and the
+  // risk counts are the ones `visibleRiskSignals` has already filtered.
+  const variationPosition = useMemo(
+    () => summariseVariations(variationRecordList),
+    [variationRecordList],
+  );
+
+  /** The certificate series — the client's "Payment Timeline". */
+  const certificateRun = useMemo(() => buildCertificateRun(certificateList), [certificateList]);
+
+  /**
+   * How long the longest-waiting certificate has been awaiting certification.
+   * ELAPSED time, not a countdown: no payment deadline is modelled on this
+   * project. See the header of `homeIndicators.ts`.
+   */
+  const awaitingCertification = useMemo(
+    () => elapsedAwaitingCertification(certificateList),
+    [certificateList],
+  );
+
+  const retention = useMemo(
+    () => retentionPosition(project, money.retentionHeld),
+    [project, money.retentionHeld],
   );
 
   // ── Contract time ───────────────────────────────────────────────────────
@@ -323,7 +398,10 @@ export function useHomeData(projectId: string | undefined) {
       tasksFailed: tasks.isError,
       meetingsFailed: meetings.isError,
       certificatesFailed: certificates.isError,
-      variationsFailed: variations.isError,
+      // Either variation source failing means the variation figures are
+      // incomplete, and the banner must say so rather than showing a short
+      // count as though it were the whole picture.
+      variationsFailed: variations.isError || variationRecords.isError,
       timeBarsFailed: timeBars.isError,
       riskFailed: risk.isError,
       obligationsFailed: obligations.isError,
@@ -336,6 +414,7 @@ export function useHomeData(projectId: string | undefined) {
     if (meetings.isError) meetings.refetch();
     if (certificates.isError) certificates.refetch();
     if (variations.isError) variations.refetch();
+    if (variationRecords.isError) variationRecords.refetch();
     if (timeBars.isError) timeBars.refetch();
     if (risk.isError) risk.refetch();
     if (obligations.isError) obligations.refetch();
@@ -371,6 +450,12 @@ export function useHomeData(projectId: string | undefined) {
     queueSummary,
     money,
     time,
+    // Key indicators
+    variationPosition,
+    variationsTruncated: variationRecords.truncated,
+    certificateRun,
+    awaitingCertification,
+    retention,
     currentCertificate,
     upcomingMeetings,
     meetingsWithActions,

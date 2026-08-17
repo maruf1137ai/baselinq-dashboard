@@ -93,10 +93,18 @@ export function relativeDays(days: number | null): string | null {
 export interface CertificateLike {
   id: number;
   pcNumber?: string;
+  /**
+   * The VALUE OF WORK certified, exclusive of VAT — `claim_amount` on the
+   * server. See `certifiedValueOf` for why this, and not `totalPayable`, is
+   * what a contract sum is measured against.
+   */
+  claimAmount?: number;
   netAmount?: number;
   totalPayable?: number;
   retentionAmount?: number;
   workflowState?: string;
+  /** The certificate's own date. Real and populated; not a deadline. */
+  certificateDate?: string | null;
   updatedAt?: string;
 }
 
@@ -808,14 +816,50 @@ export interface MoneyPosition {
 
 export interface VariationLike {
   status?: string;
+  /**
+   * `tasks/variation-orders/` carries the value on the variation itself;
+   * `tasks/tasks/?taskType=VO` nests it under the assignment task. Both shapes
+   * are read so this function does not depend on which route supplied the row.
+   */
+  grandTotal?: number | null;
   task?: { grandTotal?: number } | null;
 }
 
 const APPROVED_VO = new Set(["done", "approved", "completed"]);
 
+/** The value on a variation, whichever route it arrived by. */
+export function variationValue(v: VariationLike): number {
+  return v.task?.grandTotal ?? v.grandTotal ?? 0;
+}
+
 /** A certificate counts as certified once it is posted. */
 export function certificateIsCertified(c: CertificateLike): boolean {
   return c.workflowState === "posted";
+}
+
+/**
+ * The value a certificate contributes to "certified against the contract sum".
+ *
+ * **`claimAmount`, not `totalPayable`.** They answer different questions and
+ * mixing them inflates the proportion:
+ *
+ *   claim_amount   the value of WORK certified, exclusive of VAT
+ *   net_amount     "the VAT-INCLUSIVE amount due" (tasks/pc_integrity.py:370)
+ *   total_payable  subtotal + VAT − advance recovery (same file, line 357)
+ *
+ * `Project.contract_value` is a contract sum and carries no VAT, so measuring a
+ * VAT-inclusive payable against it reads roughly 15% high — on project 45 that
+ * is 90% certified where the true figure is 82%. The server settles the
+ * question itself: `pc_integrity.py:703` builds its own over-certification
+ * ceiling from cumulative **claim_amount** against `contract_value` plus
+ * approved variations. This follows that basis.
+ *
+ * The fallback exists only for rows that predate server-side recomputation and
+ * carry no `claimAmount` at all. It is a different basis, so it is a last
+ * resort rather than an equal alternative.
+ */
+export function certifiedValueOf(c: CertificateLike): number {
+  return c.claimAmount ?? c.totalPayable ?? c.netAmount ?? 0;
 }
 
 export function summariseMoney(
@@ -830,13 +874,10 @@ export function summariseMoney(
   const approvedVos = variations.filter((v) =>
     APPROVED_VO.has((v.status || "").toLowerCase()),
   );
-  const variationsTotal = approvedVos.reduce((s, v) => s + (v.task?.grandTotal || 0), 0);
+  const variationsTotal = approvedVos.reduce((s, v) => s + variationValue(v), 0);
 
   const certifiedCerts = certificates.filter(certificateIsCertified);
-  const certified = certifiedCerts.reduce(
-    (s, c) => s + (c.totalPayable ?? c.netAmount ?? 0),
-    0,
-  );
+  const certified = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
   const retentionHeld = certifiedCerts.reduce((s, c) => s + (c.retentionAmount ?? 0), 0);
 
   return {

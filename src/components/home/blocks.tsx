@@ -41,6 +41,8 @@ import {
   Banknote,
   CalendarClock,
   FileText,
+  Activity,
+  Receipt,
   ShieldAlert,
   ShieldQuestion,
 } from "lucide-react";
@@ -267,12 +269,229 @@ function Figure({
   );
 }
 
+/**
+ * A proportional bar.
+ *
+ * ── Why this shape and no other ───────────────────────────────────────────
+ *
+ * The client's mock answered "how far through are we" with two dial gauges.
+ * There is no gauge component in Baselinq and this is not the page to invent
+ * one: a dial is a shape that appears nowhere else in the product, and one of
+ * his two dials ("65% Complete") is a measure this product does not hold at
+ * all. What IS in the system is the recessed track with a fill — the exact
+ * classes below are `ProjectStatusCard.tsx:99` and
+ * `programme/detailsDialog.tsx:152`, which is Baselinq's existing way of
+ * drawing one quantity against another.
+ *
+ * **The fill is `bg-muted-foreground`, not `bg-primary`.** A proportion of a
+ * contract sum is neither good nor bad — 82% certified is exactly what a job
+ * eight tenths of the way through its money looks like — and the brand accent
+ * would read as an achievement. The one case that IS a judgement is certifying
+ * past the agreed sum, and `tone="danger"` is reserved for it.
+ *
+ * `aria-hidden` because the bar restates a figure that is already written out
+ * beside it in words; a screen reader should hear the number once.
+ */
+function ProportionBar({
+  pct,
+  tone = "neutral",
+  muted = false,
+}: {
+  /** 0–100. Values above 100 fill the track and are said in words alongside. */
+  pct: number;
+  tone?: "neutral" | "danger";
+  /** For a value not yet certified — present, but not counted. */
+  muted?: boolean;
+}) {
+  return (
+    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden" aria-hidden="true">
+      <div
+        className={cn(
+          "h-full rounded-full",
+          tone === "danger"
+            ? "bg-destructive"
+            : muted
+              ? "bg-muted-foreground/30"
+              : "bg-muted-foreground",
+        )}
+        style={{ width: `${Math.max(0, Math.min(pct, 100))}%` }}
+      />
+    </div>
+  );
+}
+
 // ── Action queue ──────────────────────────────────────────────────────────
 //
 // The queue is the page's reason to exist and lives in its own file, next to
 // the pure ranking it renders. Re-exported here so every call site keeps
 // importing blocks.
 export { ActionQueueBlock, QueueRow } from "./ActionQueue";
+
+// ── Key indicators ────────────────────────────────────────────────────────
+//
+// The client's "Key Indicators" strip — *Outstanding VOs · Payment Delay ·
+// Retention Status · Risk Alerts*. Two of his four are stated here as he drew
+// them. The other two are not, and the substitutions are deliberate:
+//
+//   "Payment Delay: 10 Days Overdue"  →  "Awaiting certification, N days"
+//       Overdue against WHAT? No payment deadline exists on this project.
+//       `PaymentCertificate.date_for_issue` and `ProjectPaymentTerms.
+//       payment_days` are both in the schema and both unset here, and nothing
+//       records payment actually received. So the cell reports elapsed time,
+//       says the date it is counting from, and carries no severity colour —
+//       nothing has been missed, because nothing was due.
+//
+//   "Retention Status: At Limit"      →  "Retention held, R X at Y%"
+//       `Project` has a retention RATE and no retention LIMIT, so there is no
+//       limit to be at. The amount and the rate are both real and are shown.
+//
+// Nothing here is fetched that the page did not already fetch, and nothing is
+// gated differently: the three money cells require `finance.view` exactly as
+// `MoneyLineBlock` does, and the risk cell requires `compliance.view` by
+// virtue of reading `riskSignals`, which `visibleRiskSignals` has already
+// filtered for this viewer.
+
+/** One indicator. `note` is what the figure MEASURES, and is not optional prose. */
+function Indicator({
+  label,
+  value,
+  note,
+  badge,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+        <p className="text-lg text-foreground tabular-nums">{value}</p>
+        {badge}
+      </div>
+      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{note}</p>
+    </div>
+  );
+}
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+export function KeyIndicatorsBlock({ data }: { data: HomeData }) {
+  const {
+    canViewFinance,
+    variationPosition: vos,
+    variationsTruncated,
+    awaitingCertification: waiting,
+    retention,
+    riskSignals,
+    riskCounts,
+    riskUnavailable,
+  } = data;
+
+  const cells: React.ReactNode[] = [];
+
+  if (canViewFinance) {
+    // ── Outstanding variations ──────────────────────────────────────────
+    // Raised and undecided. Drafts are counted separately by
+    // `summariseVariations` and named only when there are some, because a
+    // draft is the raiser's own unfinished work and is not waiting on anyone.
+    if (vos.total > 0) {
+      cells.push(
+        <Indicator
+          key="variations"
+          label="Variations awaiting a decision"
+          value={String(vos.outstanding)}
+          badge={
+            variationsTruncated ? <Badge variant="neutral">Count may be short</Badge> : undefined
+          }
+          note={[
+            vos.outstandingValue === null
+              ? vos.outstanding > 0
+                ? "None of them carries an agreed price yet"
+                : `All ${vos.total} settled`
+              : `${formatZAR(vos.outstandingValue)} of variation value undecided`,
+            vos.drafts > 0
+              ? `${vos.drafts} further ${plural(vos.drafts, "variation is", "variations are")} still in draft`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        />,
+      );
+    }
+
+    // ── Awaiting certification ──────────────────────────────────────────
+    // ELAPSED, and worded as elapsed. See the note above.
+    if (waiting) {
+      cells.push(
+        <Indicator
+          key="awaiting"
+          label="Awaiting certification"
+          value={`${waiting.days} ${plural(waiting.days, "day", "days")}`}
+          note={`${waiting.ref}, since ${
+            waiting.basis === "certificate" ? "its certificate date" : "it last changed"
+          } on ${formatDateUk(waiting.since, "short", "—")}. Time elapsed — this contract records no payment date to be measured against.`}
+        />,
+      );
+    }
+
+    // ── Retention ───────────────────────────────────────────────────────
+    if (retention.held !== null) {
+      cells.push(
+        <Indicator
+          key="retention"
+          label="Retention held"
+          value={formatZAR(retention.held)}
+          note={
+            retention.ratePct === null
+              ? "Withheld across posted certificates. No retention rate is recorded on this contract."
+              : `Withheld at ${retention.ratePct}% across posted certificates. No retention limit is recorded on this contract.`
+          }
+        />,
+      );
+    }
+  }
+
+  // ── Risk ──────────────────────────────────────────────────────────────
+  // An outage is not silence: ProjectHealth and `RiskStripBlock` both make
+  // this call, and a zeroed count would be indistinguishable from a healthy
+  // one. Only rendered for a viewer who was served the risk endpoint at all.
+  if (riskUnavailable) {
+    cells.push(
+      <Indicator
+        key="risk"
+        label="Risk alerts"
+        value="Unknown"
+        note="The risk engine did not respond. Treat this project's risk posture as unknown, not as clear."
+      />,
+    );
+  } else if (riskSignals.length > 0) {
+    cells.push(
+      <Indicator
+        key="risk"
+        label="Risk alerts"
+        value={String(riskSignals.length)}
+        badge={riskCounts.red > 0 ? <Badge variant="danger">{riskCounts.red} red</Badge> : undefined}
+        note={`${riskCounts.red} red, ${riskCounts.orange} amber, ${riskCounts.green} green. Listed in full below.`}
+      />,
+    );
+  }
+
+  // Nothing worth a strip: a viewer with neither gate, or a project with no
+  // variations, no certificate in flight, nothing retained and no open signal.
+  if (cells.length === 0) return null;
+
+  return (
+    <Panel
+      title="Key indicators"
+      icon={Activity}
+      hint="What is outstanding right now. Each figure says what it measures — none of them is a deadline unless it says so."
+    >
+      <div className="px-4 py-3 grid gap-x-10 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">{cells}</div>
+    </Panel>
+  );
+}
 
 // ── Risk strip ────────────────────────────────────────────────────────────
 
@@ -352,15 +571,27 @@ function moneyFigures(data: HomeData) {
  * hero heading uses, so no new step enters the type scale — and the remaining
  * three drop to the ordinary `text-sm` figure.
  *
+ * ── The proportion, and its weight ────────────────────────────────────────
+ *
+ * The client's mock stated it as a "70% Spent" dial. It was built as a small
+ * `Badge` beside the certified figure, and he is right that a pill is too
+ * little for it — certified against contract sum is the single number that
+ * says where the money stands.
+ *
+ * It is now the second lead figure: the percentage at `text-lg`, the same step
+ * as the amounts beside it, with a `ProportionBar` under the pair drawing
+ * certified against the contract sum. No dial, and no new step in the type
+ * scale — `text-lg` is `Panel`'s own hero heading size and was already in use
+ * on this block.
+ *
  * ── On colour ─────────────────────────────────────────────────────────────
  *
- * Certified value against the contract sum is a real proportion, so it is
- * stated as a badge. Its VARIANT is neutral for every ordinary value: 4%
- * certified is not bad and 80% is not good — the contract makes no such
- * judgement and neither may we. The one case that IS meaningful is certifying
- * PAST the contract sum, which is over-certification against an agreed figure,
- * and that alone earns `danger`. This is `Badge`'s existing variant set and
- * the `statusColors` scale behind it; no new hue is introduced.
+ * Its tone is NEUTRAL for every ordinary value: 4% certified is not bad and
+ * 82% is not good — the contract makes no such judgement and neither may we.
+ * The one case that IS meaningful is certifying PAST the contract sum, which
+ * is over-certification against an agreed figure, and that alone earns
+ * `danger`. This is `Badge`'s existing variant set and the `statusColors`
+ * scale behind it; no new hue is introduced.
  */
 export function MoneyLineBlock({ data }: { data: HomeData }) {
   if (!data.canViewFinance) return null;
@@ -375,41 +606,65 @@ export function MoneyLineBlock({ data }: { data: HomeData }) {
       hint="Certified value against the contract sum — a commercial measure, not physical progress."
       action={<ViewAll to="/finance">Finance</ViewAll>}
     >
-      <div className="px-4 py-3 flex flex-wrap items-start gap-x-10 gap-y-4">
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Certified to date</p>
-          <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
-            <p className="text-lg text-foreground tabular-nums">
+      <div className="px-4 py-3 space-y-4">
+        <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Certified to date</p>
+            <p className="text-lg text-foreground tabular-nums mt-0.5">
               {money.certified === null ? "—" : formatZAR(money.certified)}
             </p>
-            {/* No badge where nothing has been certified: `certifiedPct` is 0
-                in that case, and "— / 0% of contract sum" reads as a measured
-                zero rather than as "no certificate has been posted yet". */}
-            {money.certified !== null && money.certifiedPct !== null && (
-              <Badge variant={over ? "danger" : "neutral"} className="tabular-nums">
-                {money.certifiedPct}% of contract sum
-              </Badge>
-            )}
           </div>
-          {over && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Certified past the contract sum
-            </p>
+
+          {/* The proportion, at the same weight as the amounts it sits
+              between. Nothing is shown where nothing has been certified:
+              `certifiedPct` is 0 in that case, and "0% of contract sum" reads
+              as a measured zero rather than as "no certificate has been
+              posted yet". */}
+          {money.certified !== null && money.certifiedPct !== null && (
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Share of contract sum</p>
+              <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+                <p
+                  className={cn(
+                    "text-lg tabular-nums",
+                    over ? "text-destructive" : "text-foreground",
+                  )}
+                >
+                  {money.certifiedPct}%
+                </p>
+                {over && <Badge variant="danger">Over-certified</Badge>}
+              </div>
+            </div>
           )}
+
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Balance of contract sum</p>
+            <p className="text-lg text-foreground tabular-nums mt-0.5">
+              {money.balance === null ? "—" : formatZAR(money.balance)}
+            </p>
+          </div>
+
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 flex-1 min-w-[260px]">
+            {moneyFigures(data).map((f) => (
+              <Figure key={f.label} label={f.label} value={f.value} hint={f.hint} />
+            ))}
+          </div>
         </div>
 
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Balance of contract sum</p>
-          <p className="text-lg text-foreground tabular-nums mt-0.5">
-            {money.balance === null ? "—" : formatZAR(money.balance)}
-          </p>
-        </div>
-
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 flex-1 min-w-[260px]">
-          {moneyFigures(data).map((f) => (
-            <Figure key={f.label} label={f.label} value={f.value} hint={f.hint} />
-          ))}
-        </div>
+        {money.certified !== null && money.certifiedPct !== null && (
+          <div>
+            <ProportionBar pct={money.certifiedPct} tone={over ? "danger" : "neutral"} />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {over
+                ? `Certified past the contract sum. ${formatZAR(money.certified)} certified against ${
+                    money.contractSum === null ? "the contract sum" : formatZAR(money.contractSum)
+                  }.`
+                : `${formatZAR(money.certified)} of ${
+                    money.contractSum === null ? "the contract sum" : formatZAR(money.contractSum)
+                  } certified. Value of work, exclusive of VAT.`}
+            </p>
+          </div>
+        )}
       </div>
     </Panel>
   );
@@ -519,6 +774,105 @@ export function ContractTimeBlock({ data }: { data: HomeData }) {
           </div>
         </div>
       </div>
+    </Panel>
+  );
+}
+
+// ── Certificate run ───────────────────────────────────────────────────────
+//
+// The client's "Payment Timeline / Cert 12 → Cert 15". It is the one chart on
+// his mock that needs nothing Baselinq does not already hold: every
+// certificate carries a number, a date, an amount and a workflow state, and
+// the series is built by `buildCertificateRun` in `src/lib/homeIndicators.ts`.
+//
+// ── No charting library ───────────────────────────────────────────────────
+//
+// `recharts` IS already a dependency (three files use it), so reaching for it
+// would not have added one. It is still the wrong answer here. A recharts
+// canvas brings its own type, its own axes and its own tooltip, and would be
+// the only thing on this page that does not look like the rest of it — the
+// test in the brief is whether the result can be told from `finance.tsx` by
+// its colours or type, and a chart fails that test by construction. What this
+// renders instead is the finance table's own row grammar with the
+// `ProportionBar` above, both already in the system.
+//
+// It survives one certificate and it survives thirty: the bars scale against
+// the largest entry in the run rather than against a fixed axis, and the list
+// is windowed to the most recent `RUN_WINDOW` with the header saying so. The
+// cumulative figure is absolute, so a windowed view still reads correctly.
+
+/** How many certificates the panel lists before it starts saying "the last N of M". */
+const RUN_WINDOW = 8;
+
+export function CertificateRunBlock({ data }: { data: HomeData }) {
+  if (!data.canViewFinance) return null;
+  const { entries, certified, inFlight, undated } = data.certificateRun;
+
+  if (entries.length === 0) {
+    return (
+      <Panel
+        title="Certificate run"
+        icon={Receipt}
+        hint="No payment certificates raised yet. Once they are, this shows the run in date order — what has been posted, what is still outstanding and the certified value to date."
+      />
+    );
+  }
+
+  const shown = entries.slice(-RUN_WINDOW);
+  const windowed = shown.length < entries.length;
+
+  return (
+    <Panel
+      title="Certificate run"
+      icon={Receipt}
+      lead={`${entries.length} ${plural(entries.length, "certificate", "certificates")}${
+        certified === null ? "" : ` · ${formatZAR(certified)} certified`
+      }`}
+      hint={[
+        windowed ? `Showing the last ${shown.length} in date order.` : "In date order, oldest first.",
+        inFlight === null
+          ? null
+          : `${formatZAR(inFlight)} raised but not yet posted.`,
+        undated > 0
+          ? `${undated} ${plural(undated, "certificate carries", "certificates carry")} no date and ${plural(undated, "is", "are")} listed last.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      action={<ViewAll to="/finance">Finance</ViewAll>}
+    >
+      {shown.map((e) => {
+        const badge = WORKFLOW_BADGE[e.workflowState] ?? WORKFLOW_BADGE.draft;
+        return (
+          <RowLink key={e.id} to="/finance">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <p className="text-sm font-medium text-foreground">{e.ref}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {e.date ? formatDateUk(e.date, "short", "—") : "No date recorded"}
+                </p>
+              </div>
+              <div className="flex items-baseline gap-3 shrink-0">
+                <p className="text-sm text-foreground tabular-nums">
+                  {e.amount === null ? "—" : formatZAR(e.amount)}
+                </p>
+                <Badge variant={badge.variant}>{badge.label}</Badge>
+              </div>
+            </div>
+            <div className="mt-2">
+              {/* Not yet posted is drawn at a third of the weight: the value is
+                  really there and really claimed, but nobody has certified it,
+                  and a full-weight bar would say otherwise. */}
+              <ProportionBar pct={e.share} muted={!e.certified} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5 tabular-nums">
+              {e.certified && e.cumulative !== null
+                ? `${formatZAR(e.cumulative)} certified to date`
+                : "Not counted towards certified value until it is posted"}
+            </p>
+          </RowLink>
+        );
+      })}
     </Panel>
   );
 }

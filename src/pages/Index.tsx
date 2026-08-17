@@ -53,9 +53,11 @@ import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
 import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
+  CertificateRunBlock,
   ContractTimeBlock,
   CurrentCertificateBlock,
   DocumentsBlock,
+  KeyIndicatorsBlock,
   LoadIssueBanner,
   MeetingsBlock,
   MilestonesBlock,
@@ -181,12 +183,19 @@ const Index = () => {
         ) : (
           <>
             <ActionQueueBlock data={data} />
+            {/* "What is wrong right now", directly under "what needs you" —
+                the two questions a PM opens this screen to answer. Each cell
+                carries its own gate, and the strip is absent entirely for a
+                viewer who holds neither. */}
+            <KeyIndicatorsBlock data={data} />
             <RiskStripBlock data={data} />
             {/* Time before money, and above the finance gate: every viewer of
                 this project gets the contract dates, only `finance.view`
                 holders get the sum. */}
             <ContractTimeBlock data={data} />
             <MoneyLineBlock data={data} />
+            {/* Whole run, then the live one. Both finance.view only. */}
+            <CertificateRunBlock data={data} />
             <CurrentCertificateBlock data={data} />
 
             {/* Reference, not work. Three-up so that on a quiet project — which
