@@ -22,11 +22,7 @@ import {
   ArrowRight,
   Banknote,
   CalendarClock,
-  CheckCircle2,
-  Clock,
   FileText,
-  FileWarning,
-  Inbox,
   ShieldAlert,
   ShieldQuestion,
 } from "lucide-react";
@@ -34,11 +30,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
-import type { QueueItem, QueueKind } from "@/lib/homeSignals";
 import type { HomeData } from "@/hooks/useHomeData";
 
 // ── Shared chrome ─────────────────────────────────────────────────────────
@@ -100,113 +94,11 @@ function Figure({
 }
 
 // ── Action queue ──────────────────────────────────────────────────────────
-
-const KIND_ICON: Record<QueueKind, typeof Clock> = {
-  certificate: Banknote,
-  "time-bar": CalendarClock,
-  rsvp: CalendarClock,
-  "meeting-action": FileText,
-  rejected: FileWarning,
-  task: Inbox,
-};
-
-const KIND_LABEL: Record<QueueKind, string> = {
-  certificate: "Certificate",
-  "time-bar": "Notice deadline",
-  rsvp: "Meeting",
-  "meeting-action": "Meeting notes",
-  rejected: "Returned",
-  task: "Task",
-};
-
-function QueueRow({ item }: { item: QueueItem }) {
-  const Icon = KIND_ICON[item.kind];
-  return (
-    <Link
-      to={item.href}
-      className="block bg-card border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div
-            className={cn(
-              "p-1.5 rounded-md border shrink-0",
-              item.overdue
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-muted text-muted-foreground border-border",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground">{item.headline}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {KIND_LABEL[item.kind]}
-              {item.detail ? ` · ${item.detail}` : ""}
-            </p>
-          </div>
-        </div>
-        {item.overdue && (
-          <Badge variant="danger" className="shrink-0">
-            Overdue
-          </Badge>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-export function ActionQueueBlock({
-  data,
-  limit,
-  title = "What needs you",
-}: {
-  data: HomeData;
-  limit?: number;
-  title?: string;
-}) {
-  const { queue, isLoading, loadIssue } = data;
-  const shown = limit ? queue.slice(0, limit) : queue;
-  const overdue = queue.filter((i) => i.overdue).length;
-
-  return (
-    <Section
-      title={title}
-      hint={
-        queue.length === 0
-          ? undefined
-          : overdue > 0
-            ? `${queue.length} open, ${overdue} already past a deadline`
-            : `${queue.length} open, worst first`
-      }
-    >
-      {isLoading ? (
-        <AwesomeLoader message="Working out what needs you" />
-      ) : queue.length === 0 ? (
-        <EmptyState
-          icon={CheckCircle2}
-          title="Nothing is waiting on you"
-          description={
-            loadIssue.level === "partial"
-              ? "Nothing outstanding in the sources that answered. Some could not be read — see above."
-              : "Certificates to certify, notices inside their deadline window, invitations to answer and instructions assigned to you all appear here, worst first."
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          {shown.map((item) => (
-            <QueueRow key={item.key} item={item} />
-          ))}
-          {limit && queue.length > limit && (
-            <p className="text-xs text-muted-foreground">
-              {queue.length - limit} more further down the queue.
-            </p>
-          )}
-        </div>
-      )}
-    </Section>
-  );
-}
+//
+// The queue is the page's reason to exist and lives in its own file, next to
+// the pure ranking it renders. Re-exported here so every call site keeps
+// importing blocks.
+export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 
 // ── Risk strip ────────────────────────────────────────────────────────────
 
