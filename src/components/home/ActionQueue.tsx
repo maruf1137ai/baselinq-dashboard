@@ -47,7 +47,7 @@ import { ACT_TODAY_BAND, bandOf, summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import type { HomeData } from "@/hooks/useHomeData";
 
-import { Section } from "./blocks";
+import { Panel } from "./blocks";
 
 const KIND_ICON: Record<QueueKind, typeof CalendarClock> = {
   "time-bar": CalendarClock,
@@ -166,9 +166,9 @@ export function ActionQueueBlock({
 
   if (isLoading) {
     return (
-      <Section title={title}>
+      <Panel title={title}>
         <AwesomeLoader message="Working out what needs you" />
-      </Section>
+      </Panel>
     );
   }
 
@@ -179,29 +179,29 @@ export function ActionQueueBlock({
   if (queue.length === 0) {
     if (loadIssue.level === "partial") {
       return (
-        <Section title={title}>
+        <Panel title={title}>
           <EmptyState
             variant="bordered"
             icon={ShieldAlert}
             title="Nothing outstanding in the sources that answered"
             description="Some could not be read, so this is not a statement that nothing is waiting on you. Retry from the banner above."
           />
-        </Section>
+        </Panel>
       );
     }
     return (
-      <Section title={title}>
+      <Panel title={title}>
         <EmptyState
           icon={CheckCircle2}
           title="Nothing is waiting on you"
           description="Notice deadlines, certificates waiting to be certified, obligations from the contract, invitations to answer and instructions assigned to you all appear here — the ones that forfeit something first."
         />
-      </Section>
+      </Panel>
     );
   }
 
   return (
-    <Section title={title} hint={queueHint(summary)}>
+    <Panel title={title} hint={queueHint(summary)}>
       <div className="space-y-3">
         {shown.map((item) => (
           <QueueRow key={item.key} item={item} />
@@ -212,6 +212,6 @@ export function ActionQueueBlock({
           </p>
         )}
       </div>
-    </Section>
+    </Panel>
   );
 }
