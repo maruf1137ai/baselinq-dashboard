@@ -849,19 +849,64 @@ export function summariseTime(project: any, now: Date = new Date()): TimePositio
 // ── Money ─────────────────────────────────────────────────────────────────
 
 export interface MoneyPosition {
-  /** Live contract value, kept in step by signed variations on the backend. */
+  /**
+   * `Project.contract_value` — the ORIGINAL contract sum.
+   *
+   * The server treats it as the original and adds approved variations on top:
+   * `pc_integrity.check` builds its over-certification ceiling as
+   * `contract_value + Σ approved variations` (tasks/pc_integrity.py:700), and
+   * the VO_TOLERANCE_BREACH rule measures cumulative variations AGAINST it as
+   * a budget. Both readings only make sense if it is the pre-variation figure.
+   *
+   * ONE CAVEAT, AND IT IS THE SERVER'S, NOT OURS. `_apply_vo_to_project`
+   * (tasks/views_signing.py:344) ADDS a variation's approved amount to
+   * `contract_value` when a VO is signed through the sign-and-issue endpoint,
+   * and sets its status to APPROVED in the same transaction. A variation that
+   * took that path is therefore inside `contract_value` AND inside the
+   * approved-variation total, and any `original + approved` sum counts it
+   * twice — including the server's own ceiling. Nothing on the payload
+   * distinguishes the two populations. See `revisedContractSum`.
+   */
   contractSum: number | null;
   /** Approved variations by value. */
   variations: number | null;
   variationCount: number;
+  /**
+   * Original contract sum plus approved variations — the sum the works are
+   * actually being carried out for, and the figure a QS means by "the contract
+   * sum" once variations have been approved.
+   *
+   * Null whenever the original is null: a revised sum built on an unknown
+   * original would be a guess wearing a total's clothes.
+   */
+  revisedContractSum: number | null;
   /** Value certified to date — posted certificates only. */
   certified: number | null;
   retentionHeld: number | null;
-  /** Contract sum less certified. Not a forecast; not cost-to-complete. */
+  /**
+   * What is left to certify: revised contract sum, less what has been
+   * certified, less what is being held back as retention.
+   *
+   * **This used to be `contractSum - certified`, and that was wrong.** It
+   * ignored approved variations, so every approved variation understated the
+   * balance by its own value; and it ignored retention, so it counted money
+   * that is withheld against defects as though it were still available to
+   * certify. On project 45 the two errors ran the same way and the figure was
+   * R 970 000 light.
+   *
+   * Not a forecast and not cost-to-complete.
+   */
   balance: number | null;
   /**
-   * Certified value as a share of contract sum. A COMMERCIAL measure —
-   * it is not physical progress and must never be labelled as such.
+   * Certified value as a share of the REVISED contract sum. A COMMERCIAL
+   * measure — it is not physical progress and must never be labelled as such.
+   *
+   * Against the revised sum and not the original, for the same reason the
+   * balance is: `pc_integrity.check` sets its over-certification ceiling at
+   * `contract_value + approved variations`, so measuring against the original
+   * reports a certificate as over 100% while the server considers it well
+   * inside its ceiling. That is a false alarm on the one judgement this figure
+   * is used to make.
    */
   certifiedPct: number | null;
 }
@@ -932,16 +977,26 @@ export function summariseMoney(
   const certified = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
   const retentionHeld = certifiedCerts.reduce((s, c) => s + (c.retentionAmount ?? 0), 0);
 
+  // Original + approved variations. Null on a null original rather than
+  // falling back to the variation total on its own, which would present
+  // R 1 380 000 of variations as though it were the contract.
+  const revisedContractSum = contractSum === null ? null : contractSum + variationsTotal;
+
   return {
     contractSum,
     variations: approvedVos.length > 0 ? variationsTotal : null,
     variationCount: approvedVos.length,
+    revisedContractSum,
     certified: certifiedCerts.length > 0 ? certified : null,
     retentionHeld: certifiedCerts.length > 0 ? retentionHeld : null,
-    balance: contractSum !== null ? contractSum - certified : null,
+    // The QS balance: what remains of the revised sum once certified value and
+    // retention held are taken off. See the field's comment for what this
+    // replaced and by how much it was wrong.
+    balance:
+      revisedContractSum === null ? null : revisedContractSum - certified - retentionHeld,
     certifiedPct:
-      contractSum !== null && contractSum > 0
-        ? Math.round((certified / contractSum) * 100)
+      revisedContractSum !== null && revisedContractSum > 0
+        ? Math.round((certified / revisedContractSum) * 100)
         : null,
   };
 }

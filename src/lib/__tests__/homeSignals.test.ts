@@ -600,18 +600,51 @@ describe("summariseMoney", () => {
     expect(m.variationCount).toBe(1);
   });
 
-  it("derives balance and a certified share of contract sum", () => {
+  it("revises the contract sum by the approved variations", () => {
     const m = summariseMoney(project, certificates, variations);
     expect(m.contractSum).toBe(1_000_000);
-    expect(m.balance).toBe(670_000);
-    expect(m.certifiedPct).toBe(33);
+    // Only the approved one. The in-review R999 999 is in no sum at all.
+    expect(m.revisedContractSum).toBe(1_050_000);
+  });
+
+  it("takes BOTH certified value and retention held off the revised sum", () => {
+    const m = summariseMoney(project, certificates, variations);
+    // 1 050 000 revised − 330 000 certified − 30 000 retention.
+    // The old formula was contractSum − certified = 670 000, which ignored
+    // the R50 000 approved variation and the R30 000 retention alike.
+    expect(m.balance).toBe(690_000);
+    expect(m.balance).not.toBe(670_000);
+  });
+
+  it("measures the certified share against the revised sum, not the original", () => {
+    const m = summariseMoney(project, certificates, variations);
+    // 330 000 / 1 050 000, not 330 000 / 1 000 000.
+    expect(m.certifiedPct).toBe(31);
+  });
+
+  it("does not report over-certification once a variation covers it", () => {
+    const posted = [{ id: 1, workflowState: "posted", claimAmount: 1_050_000 }];
+    const approved = [{ status: "approved", grandTotal: 200_000 }];
+    // Against the original this reads 105% and fires the "Over" badge; against
+    // the revised sum the server certifies against (pc_integrity's ceiling is
+    // contract_value + approved variations) it is 88% and well inside.
+    expect(summariseMoney(project, posted, approved).certifiedPct).toBe(88);
   });
 
   it("returns null rather than zero when the contract sum is unknown", () => {
     const m = summariseMoney({}, certificates, variations);
     expect(m.contractSum).toBeNull();
+    expect(m.revisedContractSum).toBeNull();
     expect(m.balance).toBeNull();
     expect(m.certifiedPct).toBeNull();
+  });
+
+  it("does not present a bare variation total as a revised contract sum", () => {
+    // No original sum, but approved variations exist. Adding them to nothing
+    // would render R50 000 as this project's contract.
+    const m = summariseMoney({}, [], variations);
+    expect(m.variations).toBe(50_000);
+    expect(m.revisedContractSum).toBeNull();
   });
 
   it("returns null figures when nothing has been certified at all", () => {

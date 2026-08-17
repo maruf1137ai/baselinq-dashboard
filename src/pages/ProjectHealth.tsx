@@ -35,9 +35,23 @@ import { EmptyState } from "@/components/ui/empty-state";
 import TimeBarsTab from "@/components/risk/TimeBarsTab";
 import EvidenceTab from "@/components/risk/EvidenceTab";
 import InsurerTab from "@/components/risk/InsurerTab";
+import CommercialTab from "@/components/risk/CommercialTab";
+import KeyIndicators from "@/components/risk/KeyIndicators";
+import { useProjectCommercials } from "@/hooks/useProjectCommercials";
+import { buildKeyIndicators } from "@/lib/projectPosition";
 
-const TABS = ["Risk signals", "Notice deadlines", "Evidence", "Insurer"] as const;
+/**
+ * "Commercial position" is appended rather than inserted, and it is only in
+ * this array for a viewer holding `finance.view` — see `tabsFor` below. A
+ * contractor without it never sees the tab, and `useProjectCommercials` never
+ * requests the figures behind it.
+ */
+const BASE_TABS = ["Risk signals", "Notice deadlines", "Evidence", "Insurer"] as const;
+const TABS = [...BASE_TABS, "Commercial position"] as const;
 type TabKey = (typeof TABS)[number];
+
+const tabsFor = (canViewFinance: boolean): readonly TabKey[] =>
+  canViewFinance ? TABS : BASE_TABS;
 
 /**
  * `?tab=` slugs, so another page can link to a specific tab.
@@ -52,6 +66,7 @@ const TAB_SLUG: Record<string, TabKey> = {
   "notice-deadlines": "Notice deadlines",
   evidence: "Evidence",
   insurer: "Insurer",
+  commercial: "Commercial position",
 };
 
 // ── Types (mirror the backend serializer) ─────────────────────────────
@@ -152,10 +167,37 @@ function SignalRow({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">{signal.title}</p>
-              {/* The evidence line is the whole credibility of the row: it
-                  shows the user the numbers behind the claim. */}
+              {/*
+                The evidence line is the whole credibility of the row: it shows
+                the user the numbers behind the claim.
+
+                ── Why it carries the severity colour ────────────────────────
+
+                It used to be `text-muted-foreground` at every severity, which
+                meant "Cumulative variations at 13.8% of budget (tolerance
+                10%)" — a real figure over a real tolerance, i.e. the breach
+                itself — was drawn in exactly the grey used for an ordinary
+                caption, while the only coloured thing in view was a count.
+                Colour belongs on the state, so the sentence that STATES the
+                breach is what gets it.
+
+                Red and amber only. A green signal has breached nothing and
+                stays neutral, which is the whole point of the rule: if
+                everything is coloured, nothing is.
+              */}
               {signal.evidence && (
-                <p className="text-xs text-muted-foreground mt-0.5">{signal.evidence}</p>
+                <p
+                  className={cn(
+                    "text-xs mt-0.5",
+                    signal.severity === "red"
+                      ? "text-red-700"
+                      : signal.severity === "orange"
+                        ? "text-amber-700"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {signal.evidence}
+                </p>
               )}
             </div>
 
@@ -312,10 +354,53 @@ export default function ProjectHealth() {
 
   const { mutateAsync: post } = usePost();
 
+  // The commercial position. Fetches NOTHING without finance.view — see the
+  // header of useProjectCommercials — so a contractor's browser never holds
+  // the contract sum, the certified value or the retention balance.
+  const commercials = useProjectCommercials(projectId ?? undefined);
+  const visibleTabs = tabsFor(commercials.canViewFinance);
+
+  // `?tab=commercial` is a shareable URL and can be pasted to anybody. A
+  // viewer who may not see finance data falls back to the first tab rather
+  // than landing on an empty one, and the tab's data was never requested for
+  // them in the first place.
+  const activeTab: TabKey = visibleTabs.includes(tab) ? tab : "Risk signals";
+
   const counts = data?.counts ?? { red: 0, orange: 0, green: 0, total: 0 };
   const signals = data?.signals ?? [];
   const state = posture(counts);
   const StateIcon = state.icon;
+
+  /**
+   * The client's four Key Indicators.
+   *
+   * `counts` is the risk engine's own count for a viewer who holds
+   * `compliance.view` — which everybody on this page does, it is the route's
+   * gate — and the three financial indicators are built only when
+   * `canViewFinance` is true. `isError` is passed through as `riskUnavailable`
+   * so an outage can never be drawn as a clear project.
+   */
+  const indicators = useMemo(
+    () =>
+      buildKeyIndicators({
+        variations: commercials.variations,
+        paymentDelay: commercials.paymentDelay,
+        paymentsAnswered: commercials.paymentsAnswered,
+        retention: commercials.retention,
+        riskCounts: isError ? null : counts,
+        riskUnavailable: isError,
+        canViewFinance: commercials.canViewFinance,
+      }),
+    [
+      commercials.variations,
+      commercials.paymentDelay,
+      commercials.paymentsAnswered,
+      commercials.retention,
+      commercials.canViewFinance,
+      counts,
+      isError,
+    ],
+  );
 
   const { live, acknowledged } = useMemo(() => ({
     live: signals.filter(s => s.status === "open"),
@@ -391,7 +476,7 @@ export default function ProjectHealth() {
           title="Project Health"
           description="Live risk signals across programme, financial and contractual data."
           actions={
-            tab === "Risk signals" ? (
+            activeTab === "Risk signals" ? (
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                 <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
                 Refresh
@@ -404,16 +489,16 @@ export default function ProjectHealth() {
         {/* Same tab strip as Finance and Programme: text-sm py-4 px-6,
             border-b-2 underline pulled onto the container's own hairline. */}
         <div className="flex items-center gap-2 border-b border-border" role="tablist">
-          {TABS.map(t => (
+          {visibleTabs.map(t => (
             <button
               key={t}
               role="tab"
-              aria-selected={tab === t}
+              aria-selected={activeTab === t}
               onClick={() => chooseTab(t)}
               className={cn(
                 "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
-                tab === t
+                activeTab === t
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
@@ -426,11 +511,18 @@ export default function ProjectHealth() {
           ))}
         </div>
 
-        {tab === "Notice deadlines" && <TimeBarsTab projectId={projectId} />}
-        {tab === "Evidence" && <EvidenceTab projectId={projectId} />}
-        {tab === "Insurer" && <InsurerTab projectId={projectId} />}
+        {activeTab === "Notice deadlines" && <TimeBarsTab projectId={projectId} />}
+        {activeTab === "Evidence" && <EvidenceTab projectId={projectId} />}
+        {activeTab === "Insurer" && <InsurerTab projectId={projectId} />}
 
-        {tab === "Risk signals" && (isLoading ? (
+        {activeTab === "Commercial position" &&
+          (commercials.isLoading ? (
+            <AwesomeLoader message="Reading the commercial position" />
+          ) : (
+            <CommercialTab data={commercials} />
+          ))}
+
+        {activeTab === "Risk signals" && (isLoading ? (
           <AwesomeLoader message="Evaluating project risk" />
         ) : (
           <>
@@ -456,19 +548,27 @@ export default function ProjectHealth() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-                {(["red", "orange", "green"] as const).map(tone => (
-                  <div
-                    key={tone}
-                    className={cn(
-                      "px-2.5 py-1 rounded-md border text-xs font-medium",
-                      SEVERITY_STYLES[tone]
-                    )}
-                  >
-                    {counts[tone]} {tone === "red" ? "critical" : tone === "orange" ? "warning" : "clear"}
-                  </div>
-                ))}
-              </div>
+              {/*
+                The client's Key Indicators, in the slot the three severity
+                count chips used to occupy — "8 critical / 2 warning / 0 clear",
+                three bare counts each painted in a severity colour.
+
+                That row was the colour inversion in miniature: a count is not a
+                condition, so painting "2" amber said nothing about what the two
+                WERE, while the sentence naming the actual breach sat in grey in
+                the feed below. Nothing it said is lost — the red and amber
+                counts are the Risk alerts cell's second line — and in its place
+                are four indicators that each name a state.
+
+                Rendered only when there is at least one. A project with no
+                variations, nothing overdue and no risk data does not get a row
+                of zeroes; it gets no row.
+              */}
+              {indicators.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <KeyIndicators indicators={indicators} />
+                </div>
+              )}
             </div>
 
             {/* Signal feed */}

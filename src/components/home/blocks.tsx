@@ -276,21 +276,35 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
         // The comparison that used to be its own "Share of contract sum" cell
         // AND a sentence underneath. Certifying past an agreed sum is the one
         // judgement this strip makes, and the figure alone makes it.
+        // The baseline named here is the REVISED sum — original plus approved
+        // variations — because that is what the works are being carried out
+        // for and what the server's own over-certification ceiling uses.
         compare={
-          money.certifiedPct === null || money.contractSum === null
+          money.certifiedPct === null || money.revisedContractSum === null
             ? undefined
-            : `${money.certifiedPct}% of ${formatZAR(money.contractSum)}`
+            : `${money.certifiedPct}% of ${formatZAR(money.revisedContractSum)}`
         }
-        caveat="A commercial measure, not physical progress. Baselinq records no measure of what has been built."
+        caveat={
+          money.variations
+            ? "Against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
+            : "A commercial measure, not physical progress. Baselinq records no measure of what has been built."
+        }
       />,
       <Figure
         key="balance"
-        label="Balance of contract sum"
+        label="Balance remaining"
         value={money.balance === null ? null : formatZAR(money.balance)}
         emphasis
+        // The retention deduction is the part a reader will not assume, so it
+        // is the part the comparison line spends itself on.
         compare={
-          money.certifiedPct === null ? undefined : `${Math.max(0, 100 - money.certifiedPct)}% remaining`
+          money.retentionHeld
+            ? `after ${formatZAR(money.retentionHeld)} retention`
+            : money.certifiedPct === null
+              ? undefined
+              : `${Math.max(0, 100 - money.certifiedPct)}% remaining`
         }
+        caveat="Contract sum as revised by approved variations, less certified value, less retention held."
       />,
       <Figure
         key="retention"
@@ -394,26 +408,64 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
       lead={`${riskCounts.red} red · ${riskCounts.orange} amber`}
       action={<ViewAll to="/project-health">Project health</ViewAll>}
     >
-      {riskGroups.map((g) => (
-        <Link
-          key={g.code}
-          to="/project-health"
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-        >
-          <p className="text-sm text-foreground truncate min-w-0 flex-1">
-            {g.title}
-            {/* Stated only when true of every signal in the group, so a folded
-                line never upgrades a commercial guide into a breach. */}
-            {g.contractual && <span className="text-muted-foreground"> · contractual</span>}
-          </p>
-          <Badge
-            variant={g.severity === "red" ? "danger" : "warning"}
-            className="shrink-0 tabular-nums"
+      {/*
+        ── Colour is on the BREACH, not on the count ────────────────────────
+
+        This block used to render the group's TITLE — the sentence that states
+        what has gone wrong — in plain foreground, and put the severity colour
+        on the count badge beside it. That is the inversion: "Cumulative
+        variations at 13.8% of budget (tolerance 10%)" is an actual breach of
+        an actual tolerance and read as neutral body text, while "1" — a count,
+        which has no state at all — was the only red thing on the row.
+
+        So the colour moved onto the thing that has state. A red or amber group
+        states its severity in words, in its severity colour; the count stays
+        neutral because a count is not a condition. A green group is drawn in
+        neither, because nothing about it has breached anything.
+      */}
+      {riskGroups.map((g) => {
+        const breached = g.severity === "red" || g.severity === "orange";
+        return (
+          <Link
+            key={g.code}
+            to="/project-health"
+            className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
-            {g.count}
-          </Badge>
-        </Link>
-      ))}
+            <p
+              className={cn(
+                "text-sm truncate min-w-0 flex-1",
+                g.severity === "red"
+                  ? "text-red-700"
+                  : g.severity === "orange"
+                    ? "text-amber-700"
+                    : "text-foreground",
+              )}
+            >
+              {g.title}
+              {/* Stated only when true of every signal in the group, so a
+                  folded line never upgrades a commercial guide into a breach. */}
+              {g.contractual && <span className="text-muted-foreground"> · contractual</span>}
+            </p>
+            {/* Only ever more than one signal folded into a line needs saying;
+                a bare "1" beside a single sentence was decoration. */}
+            {g.count > 1 && (
+              <Badge variant="neutral" className="shrink-0 tabular-nums">
+                {g.count}
+              </Badge>
+            )}
+            {breached && (
+              <span
+                className={cn(
+                  "text-xs shrink-0",
+                  g.severity === "red" ? "text-red-700" : "text-amber-700",
+                )}
+              >
+                {g.severity === "red" ? "Critical" : "Warning"}
+              </span>
+            )}
+          </Link>
+        );
+      })}
     </Panel>
   );
 }
