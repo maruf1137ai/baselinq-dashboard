@@ -11,9 +11,12 @@
  *                           so it is first and it is small. Disappears at 100%.
  *   2. What needs you     — the only hero. One contained, ranked, divided list.
  *   3. Risk               — is anything on fire. Absent when nothing is.
- *   4. Commercial position— where the money stands. finance.view only.
- *   5. Current certificate— the live one. finance.view only.
- *   6. Meetings · Programme · Documents — reference, three-up, deliberately
+ *   4. Contract time      — build length, elapsed, remaining, and whether the
+ *                           completion date has moved. Ungated: dates are not
+ *                           money.
+ *   5. Commercial position— where the money stands. finance.view only.
+ *   6. Current certificate— the live one. finance.view only.
+ *   7. Meetings · Programme · Documents — reference, three-up, deliberately
  *                           the smallest things on the page.
  *
  * The three earlier A/B/C layout directions are gone. A layout switcher on a
@@ -50,6 +53,7 @@ import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
 import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
+  ContractTimeBlock,
   CurrentCertificateBlock,
   DocumentsBlock,
   LoadIssueBanner,
@@ -178,6 +182,10 @@ const Index = () => {
           <>
             <ActionQueueBlock data={data} />
             <RiskStripBlock data={data} />
+            {/* Time before money, and above the finance gate: every viewer of
+                this project gets the contract dates, only `finance.view`
+                holders get the sum. */}
+            <ContractTimeBlock data={data} />
             <MoneyLineBlock data={data} />
             <CurrentCertificateBlock data={data} />
 

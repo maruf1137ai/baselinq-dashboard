@@ -37,6 +37,7 @@ import {
   resolveFinanceAccess,
   summariseHomeLoad,
   summariseMoney,
+  summariseTime,
   visibleRiskSignals,
   type CertificateLike,
   type HomeLoadState,
@@ -263,6 +264,12 @@ export function useHomeData(projectId: string | undefined) {
     [project, certificateList, variationList],
   );
 
+  // ── Contract time ───────────────────────────────────────────────────────
+  // Read off the project object that is ALREADY fetched for the page header —
+  // no new request, and no permission gate: dates are not money. A contractor
+  // who cannot see the contract sum can still see when the works are due.
+  const time = useMemo(() => summariseTime(project), [project]);
+
   /** The certificate the project is currently working on. */
   const currentCertificate = useMemo(() => {
     const rank: Record<string, number> = { submitted: 0, approved: 1, rejected: 2, draft: 3, posted: 4 };
@@ -363,6 +370,7 @@ export function useHomeData(projectId: string | undefined) {
     queue,
     queueSummary,
     money,
+    time,
     currentCertificate,
     upcomingMeetings,
     meetingsWithActions,

@@ -663,6 +663,129 @@ export function visibleRiskSignals<T extends RiskGateLike>(
   );
 }
 
+// ── Contract time ─────────────────────────────────────────────────────────
+//
+// The old homepage drew a ring from `(now - start) / (end - start)` and called
+// it the project's completion, so a job where nothing had been built read 50%
+// at its halfway date. Nothing below is a percentage and nothing below is
+// progress. Every figure here is a count of CALENDAR DAYS, which Baselinq
+// genuinely knows, and each is labelled as such at the call site.
+//
+// Three real fields back this:
+//   Project.start_date         when the works were to begin
+//   Project.end_date           the ORIGINAL completion date
+//   Project.contract_end_date  the LIVE one — moved by a signed variation that
+//                              granted an extension of time (the backend does
+//                              this in tasks/views_signing.py::_apply_vo_to_project)
+// The gap between the last two is the extension of time granted so far, and
+// that movement is the one thing on this block that carries consequence.
+
+export interface TimePosition {
+  /** ISO start, or null when the project has no timeline set. */
+  start: string | null;
+  /** The completion date as originally agreed. */
+  originalEnd: string | null;
+  /** The live completion date, after any extension of time. */
+  contractEnd: string | null;
+  /** Calendar days from start to the LIVE completion date, inclusive. */
+  buildDays: number | null;
+  /** Calendar days from start to today. Null before the start date. */
+  elapsedDays: number | null;
+  /** Days from today to the live completion date. Negative once it is past. */
+  remainingDays: number | null;
+  /**
+   * Days the completion date has moved from the one originally agreed.
+   * Positive = extended. Null when there is nothing to compare, or no move.
+   */
+  extensionDays: number | null;
+  /** True once today is past the live completion date. */
+  overrun: boolean;
+  /** True before the start date — nothing has elapsed yet. */
+  notStarted: boolean;
+  /** False when the project has neither a start nor any completion date. */
+  hasDates: boolean;
+}
+
+const EMPTY_TIME: TimePosition = {
+  start: null,
+  originalEnd: null,
+  contractEnd: null,
+  buildDays: null,
+  elapsedDays: null,
+  remainingDays: null,
+  extensionDays: null,
+  overrun: false,
+  notStarted: false,
+  hasDates: false,
+};
+
+/** Whole days between two ISO dates, both floored to their own local midnight. */
+function daysBetween(fromIso: string, toIso: string): number | null {
+  const a = new Date(fromIso).getTime();
+  const b = new Date(toIso).getTime();
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  const floor = (t: number) => {
+    const d = new Date(t);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  return Math.round((floor(b) - floor(a)) / 86_400_000);
+}
+
+const iso = (v: unknown): string | null =>
+  typeof v === "string" && v.trim() !== "" && Number.isFinite(new Date(v).getTime()) ? v : null;
+
+/**
+ * Where the contract stands in TIME. Reads camelCase and snake_case, as
+ * `summariseProjectSetup` does, because several call sites still hand back the
+ * raw snake payload.
+ */
+export function summariseTime(project: any, now: Date = new Date()): TimePosition {
+  if (!project) return EMPTY_TIME;
+
+  const start = iso(project.startDate ?? project.start_date);
+  const originalEnd = iso(project.endDate ?? project.end_date);
+  // The live date is the one that governs. Where a project predates the
+  // contract_end_date field it is unset, and the original end IS the live one.
+  const contractEnd = iso(project.contractEndDate ?? project.contract_end_date) ?? originalEnd;
+
+  if (!start && !contractEnd) return EMPTY_TIME;
+
+  const today = now.toISOString();
+
+  const buildDays =
+    start && contractEnd
+      ? (() => {
+          const d = daysBetween(start, contractEnd);
+          // Inclusive of both endpoints: a one-day contract is one day long.
+          return d === null ? null : d + 1;
+        })()
+      : null;
+
+  const elapsedRaw = start ? daysBetween(start, today) : null;
+  const notStarted = elapsedRaw !== null && elapsedRaw < 0;
+
+  const remainingDays = contractEnd ? daysBetween(today, contractEnd) : null;
+
+  const movement =
+    originalEnd && contractEnd && contractEnd !== originalEnd
+      ? daysBetween(originalEnd, contractEnd)
+      : null;
+
+  return {
+    start,
+    originalEnd,
+    contractEnd,
+    buildDays,
+    elapsedDays: elapsedRaw === null || notStarted ? (notStarted ? 0 : null) : elapsedRaw,
+    remainingDays,
+    extensionDays: movement === 0 ? null : movement,
+    overrun: remainingDays !== null && remainingDays < 0,
+    notStarted,
+    hasDates: true,
+  };
+}
+
 // ── Money ─────────────────────────────────────────────────────────────────
 
 export interface MoneyPosition {

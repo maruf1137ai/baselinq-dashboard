@@ -51,6 +51,7 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
+import { SETUP_LABELS } from "@/lib/homeSetup";
 import { cn } from "@/lib/utils";
 import type { HomeData } from "@/hooks/useHomeData";
 
@@ -324,6 +325,11 @@ export function RiskStripBlock({ data }: { data: HomeData }) {
 // holds none of those, and the previous page's progress bars were elapsed
 // calendar time wearing their clothes.
 
+/**
+ * The three supporting figures. Contract sum, what has been added to it, and
+ * what is being withheld — the terms of the sum rather than the position in
+ * it. They stay at `text-sm`.
+ */
 function moneyFigures(data: HomeData) {
   const { money } = data;
   return [
@@ -333,32 +339,185 @@ function moneyFigures(data: HomeData) {
       value: money.variations === null ? null : formatZAR(money.variations),
       hint: money.variationCount > 0 ? `${money.variationCount} approved` : undefined,
     },
-    { label: "Certified to date", value: money.certified === null ? null : formatZAR(money.certified) },
     { label: "Retention held", value: money.retentionHeld === null ? null : formatZAR(money.retentionHeld) },
-    { label: "Balance of contract sum", value: money.balance === null ? null : formatZAR(money.balance) },
   ];
 }
 
-/** The whole commercial position on one line. */
+/**
+ * The whole commercial position.
+ *
+ * Five equal neutral figures said nothing about which of them mattered. Two
+ * of them do: **certified to date** and its complement, **balance of contract
+ * sum**. Those two are now the lead pair at `text-lg` — the size `Panel`'s own
+ * hero heading uses, so no new step enters the type scale — and the remaining
+ * three drop to the ordinary `text-sm` figure.
+ *
+ * ── On colour ─────────────────────────────────────────────────────────────
+ *
+ * Certified value against the contract sum is a real proportion, so it is
+ * stated as a badge. Its VARIANT is neutral for every ordinary value: 4%
+ * certified is not bad and 80% is not good — the contract makes no such
+ * judgement and neither may we. The one case that IS meaningful is certifying
+ * PAST the contract sum, which is over-certification against an agreed figure,
+ * and that alone earns `danger`. This is `Badge`'s existing variant set and
+ * the `statusColors` scale behind it; no new hue is introduced.
+ */
 export function MoneyLineBlock({ data }: { data: HomeData }) {
   if (!data.canViewFinance) return null;
   const { money } = data;
+  const over = money.certifiedPct !== null && money.certifiedPct > 100;
 
   return (
     <Panel
       title="Commercial position"
       icon={Banknote}
-      hint={
-        money.certifiedPct === null
-          ? "Certified value against contract sum"
-          : `${money.certifiedPct}% of the contract sum has been certified — a commercial measure, not physical progress`
-      }
+      tone={over ? "red" : "neutral"}
+      hint="Certified value against the contract sum — a commercial measure, not physical progress."
       action={<ViewAll to="/finance">Finance</ViewAll>}
     >
-      <div className="px-4 py-3 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        {moneyFigures(data).map((f) => (
-          <Figure key={f.label} label={f.label} value={f.value} hint={f.hint} />
-        ))}
+      <div className="px-4 py-3 flex flex-wrap items-start gap-x-10 gap-y-4">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Certified to date</p>
+          <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+            <p className="text-lg text-foreground tabular-nums">
+              {money.certified === null ? "—" : formatZAR(money.certified)}
+            </p>
+            {/* No badge where nothing has been certified: `certifiedPct` is 0
+                in that case, and "— / 0% of contract sum" reads as a measured
+                zero rather than as "no certificate has been posted yet". */}
+            {money.certified !== null && money.certifiedPct !== null && (
+              <Badge variant={over ? "danger" : "neutral"} className="tabular-nums">
+                {money.certifiedPct}% of contract sum
+              </Badge>
+            )}
+          </div>
+          {over && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Certified past the contract sum
+            </p>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Balance of contract sum</p>
+          <p className="text-lg text-foreground tabular-nums mt-0.5">
+            {money.balance === null ? "—" : formatZAR(money.balance)}
+          </p>
+        </div>
+
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 flex-1 min-w-[260px]">
+          {moneyFigures(data).map((f) => (
+            <Figure key={f.label} label={f.label} value={f.value} hint={f.hint} />
+          ))}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+// ── Contract time ─────────────────────────────────────────────────────────
+//
+// The client's project-health mock had time on it and the build took only the
+// financial figures, so build length, elapsed and remaining were absent from
+// the homepage entirely. They come off three real fields — Project.start_date,
+// Project.end_date and Project.contract_end_date — and are derived in
+// `summariseTime` in homeSignals.ts.
+//
+// NOT gated on `finance.view`. Dates are not money: a contractor who may not
+// see the contract sum still has to know when the works are due.
+//
+// **Everything here is a count of calendar days and says so.** There is no
+// bar, no ring and no percentage, because Baselinq holds no measure of
+// physical progress and the previous homepage's "50% complete at the halfway
+// date" was elapsed calendar time wearing that measure's clothes. The honest
+// substitute for "how are we doing" is milestone slip against an accepted
+// baseline, which is real, and it is in the Programme panel below.
+
+/** "30 days" / "1 day" — never a bare number, never a percentage. */
+const days = (n: number) => `${n} day${Math.abs(n) === 1 ? "" : "s"}`;
+
+export function ContractTimeBlock({ data }: { data: HomeData }) {
+  const t = data.time;
+
+  if (!t.hasDates) {
+    return (
+      <Panel
+        title="Contract time"
+        icon={CalendarClock}
+        hint="No project timeline recorded. Once a start and completion date are set, the build length, the days elapsed and the days remaining appear here — along with any extension of time a signed variation has granted."
+      />
+    );
+  }
+
+  // Only ever "past the contract completion date", which is a fact about the
+  // contract, never "behind programme", which would be a judgement about the
+  // works that nothing in Baselinq can support.
+  const overrun = t.overrun && t.remainingDays !== null;
+
+  return (
+    <Panel
+      title="Contract time"
+      icon={CalendarClock}
+      tone={overrun ? "red" : "neutral"}
+      hint="Calendar days against the contract dates. Not a measure of what has been built — Baselinq records none."
+      action={<ViewAll to="/programme">Programme</ViewAll>}
+    >
+      <div className="px-4 py-3 flex flex-wrap items-start gap-x-10 gap-y-4">
+        {/* The lead figure is whichever of the two the reader needs first. */}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">
+            {overrun ? "Past contract completion" : "Time remaining"}
+          </p>
+          <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+            <p className="text-lg text-foreground tabular-nums">
+              {t.remainingDays === null
+                ? "—"
+                : days(Math.abs(t.remainingDays))}
+            </p>
+            {overrun && <Badge variant="danger">Overrun</Badge>}
+            {t.notStarted && <Badge variant="neutral">Not started</Badge>}
+          </div>
+        </div>
+
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 flex-1 min-w-[260px]">
+          <Figure
+            label="Build length"
+            value={t.buildDays === null ? null : days(t.buildDays)}
+            hint={
+              t.start && t.contractEnd
+                ? `${formatDateUk(t.start, "short", "—")} – ${formatDateUk(t.contractEnd, "short", "—")}`
+                : undefined
+            }
+          />
+          <Figure
+            label="Time elapsed"
+            value={t.elapsedDays === null ? null : days(t.elapsedDays)}
+            hint={t.start ? `since ${formatDateUk(t.start, "short", "—")}` : undefined}
+          />
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Contract completion</p>
+            <p className="text-sm text-foreground tabular-nums mt-0.5 truncate">
+              {t.contractEnd ? formatDateUk(t.contractEnd, "short", "—") : "—"}
+            </p>
+            {/* The one movement worth showing. contract_end_date is mutated by
+                a signed variation granting an extension of time (backend:
+                tasks/views_signing.py::_apply_vo_to_project), so a date that
+                differs from the one originally agreed is evidence of an EOT
+                and not a typo. */}
+            {t.extensionDays !== null && t.originalEnd && (
+              <div className="mt-1.5">
+                <Badge variant={t.extensionDays > 0 ? "warning" : "neutral"}>
+                  {t.extensionDays > 0
+                    ? `Extended by ${days(t.extensionDays)}`
+                    : `Brought forward ${days(Math.abs(t.extensionDays))}`}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  originally {formatDateUk(t.originalEnd, "short", "—")}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Panel>
   );
@@ -511,8 +670,25 @@ const MILESTONE_BADGE: Record<string, "neutral" | "info" | "success" | "danger">
   delayed: "danger",
 };
 
+/** Days between a milestone's actual/planned end and its accepted baseline. */
+function milestoneSlip(m: HomeData["milestoneRows"][number]): number | null {
+  if (!m.baselineEnd) return null;
+  const d = Math.round(
+    (new Date(m.actualEnd || m.endDate).getTime() - new Date(m.baselineEnd).getTime()) / 86_400_000,
+  );
+  return Number.isFinite(d) ? d : null;
+}
+
 export function MilestonesBlock({ data, limit = 4 }: { data: HomeData; limit?: number }) {
   const { milestoneRows } = data;
+
+  // Slip against a PRESERVED baseline is the only honest answer this product
+  // has to "how are we doing", so the header states it rather than leaving it
+  // buried in a row's meta line — and where no baseline has been accepted the
+  // header says that once, instead of every row repeating it.
+  const withBaseline = milestoneRows.filter((m) => !!m.baselineEnd);
+  const slipped = withBaseline.filter((m) => (milestoneSlip(m) ?? 0) > 0);
+  const anyBaseline = withBaseline.length > 0;
 
   // This used to `return null` when empty. It no longer does, because it is
   // now the middle cell of a three-up band and vanishing left the band ragged
@@ -522,10 +698,19 @@ export function MilestonesBlock({ data, limit = 4 }: { data: HomeData; limit?: n
   return (
     <Panel
       title="Programme"
+      lead={
+        milestoneRows.length === 0
+          ? undefined
+          : anyBaseline && slipped.length > 0
+            ? `${slipped.length} slipped`
+            : `${milestoneRows.length} outstanding`
+      }
       hint={
         milestoneRows.length === 0
           ? "No milestones outstanding. Milestones appear here with their dates, and their slip against baseline once one has been accepted."
-          : "Dates against baseline where one has been accepted"
+          : anyBaseline
+            ? "Movement is measured against the accepted programme baseline."
+            : "No programme baseline accepted, so no slip can be stated against these dates."
       }
       action={<ViewAll to="/programme">Programme</ViewAll>}
     >
@@ -536,14 +721,7 @@ export function MilestonesBlock({ data, limit = 4 }: { data: HomeData; limit?: n
             // there is nothing to slip against, and no bar is drawn: the old
             // page's bar was elapsed calendar time, which said a phase was 50%
             // done at its halfway date whether or not anything had been built.
-            const hasBaseline = !!m.baselineEnd;
-            const slipDays = hasBaseline
-              ? Math.round(
-                  (new Date(m.actualEnd || m.endDate).getTime() -
-                    new Date(m.baselineEnd as string).getTime()) /
-                    86_400_000,
-                )
-              : null;
+            const slipDays = milestoneSlip(m);
 
             return (
               <RowLink key={m._id} to="/programme">
@@ -555,11 +733,11 @@ export function MilestonesBlock({ data, limit = 4 }: { data: HomeData; limit?: n
                     "—",
                   )}${
                     slipDays === null
-                      ? " · no baseline accepted"
+                      ? ""
                       : slipDays > 0
-                        ? ` · ${slipDays} days later than baseline`
+                        ? ` · ${days(slipDays)} later than baseline`
                         : slipDays < 0
-                          ? ` · ${Math.abs(slipDays)} days ahead of baseline`
+                          ? ` · ${days(Math.abs(slipDays))} ahead of baseline`
                           : " · on baseline"
                   }${
                     m.percentComplete !== null && m.percentComplete !== undefined
@@ -643,33 +821,36 @@ export function SetupLineBlock({
   const { projectStats, canEditProject } = data;
   if (!projectStats || projectStats.percentage === 100) return null;
 
+  // A SENTENCE, not a row of chips. The outlined chip was a shape that appears
+  // nowhere else in Baselinq — the app's inline affordance is a text link
+  // (`ViewAll` below, every table cell link) — and at three or four of them
+  // they out-weighed the queue heading directly beneath. The missing items are
+  // now inline text, underlined where they are clickable, which is both
+  // quieter and says more per pixel because the names can be longer.
   return (
     <div className="bg-card border border-border rounded-xl px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-sm text-foreground shrink-0">
+      <p className="text-sm text-muted-foreground min-w-0">
+        <span className="text-foreground tabular-nums">
           Project setup {projectStats.filledCount} of {projectStats.totalCount}
         </span>
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          {projectStats.missing.map((item) =>
-            canEditProject ? (
+        {" — still to add: "}
+        {projectStats.missing.map((item, i) => (
+          <span key={item}>
+            {i > 0 && (i === projectStats.missing.length - 1 ? " and " : ", ")}
+            {canEditProject ? (
               <button
-                key={item}
                 onClick={() => onOpenSection(item)}
-                className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2 py-0.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
               >
-                {item}
+                {SETUP_LABELS[item]}
               </button>
             ) : (
-              <span
-                key={item}
-                className="text-xs text-muted-foreground border border-border rounded-md px-2 py-0.5"
-              >
-                {item}
-              </span>
-            ),
-          )}
-        </div>
-      </div>
+              <span className="text-foreground">{SETUP_LABELS[item]}</span>
+            )}
+          </span>
+        ))}
+        .
+      </p>
       {canEditProject && (
         <Button size="xs" variant="outline" className="shrink-0" onClick={onOpen}>
           Complete setup

@@ -40,7 +40,6 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { cn } from "@/lib/utils";
 import { ACT_TODAY_BAND, bandOf, summariseQueue } from "@/lib/homeQueueRank";
@@ -176,27 +175,31 @@ export function ActionQueueBlock({
   // Empty is the COMMON case on a new project, so it must read as correct
   // rather than as broken — and it must never read as reassurance we cannot
   // give. If a source failed, that is the headline, not the emptiness.
+  //
+  // The message is the PANEL HEADER'S HINT, not a dashed well inside the
+  // panel. Every other block on this page already empties that way (see the
+  // header comment in blocks.tsx); the queue was the one place where the two
+  // treatments met and the older one survived. A full dashed `EmptyState` is
+  // right when the WHOLE PAGE is empty — no project, none selected, a total
+  // outage — and `Index.tsx` still uses it for exactly those three.
   if (queue.length === 0) {
     if (loadIssue.level === "partial") {
       return (
-        <Panel title={title}>
-          <EmptyState
-            variant="bordered"
-            icon={ShieldAlert}
-            title="Nothing outstanding in the sources that answered"
-            description="Some could not be read, so this is not a statement that nothing is waiting on you. Retry from the banner above."
-          />
-        </Panel>
+        <Panel
+          title={title}
+          icon={ShieldAlert}
+          tone="orange"
+          hint="Nothing outstanding in the sources that answered — but some could not be read, so this is not a statement that nothing is waiting on you. Retry from the banner above."
+        />
       );
     }
     return (
-      <Panel title={title}>
-        <EmptyState
-          icon={CheckCircle2}
-          title="Nothing is waiting on you"
-          description="Notice deadlines, certificates waiting to be certified, obligations from the contract, invitations to answer and instructions assigned to you all appear here — the ones that forfeit something first."
-        />
-      </Panel>
+      <Panel
+        title={title}
+        icon={CheckCircle2}
+        tone="green"
+        hint="Nothing is waiting on you. Notice deadlines, certificates waiting to be certified, obligations from the contract, invitations to answer and instructions assigned to you all appear here — the ones that forfeit something first."
+      />
     );
   }
 

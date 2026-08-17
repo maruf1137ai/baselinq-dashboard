@@ -18,6 +18,26 @@ export const SETUP_FIELDS = [
 
 export type SetupField = (typeof SETUP_FIELDS)[number];
 
+/**
+ * What each check is actually testing, in plain words.
+ *
+ * The constants above are IDENTITY — `ProjectSetupDialog` switches on them and
+ * the backend field names shadow them — so they are not renamed. What is
+ * renamed is what the user reads. "Project Documents" was the worst of them:
+ * it named a feature, not the gap, and the gap is that nothing has been
+ * attached. The setup strip lists what is MISSING, so every label below reads
+ * as a thing you could go and add.
+ */
+export const SETUP_LABELS: Record<SetupField, string> = {
+  "Client Details": "client details",
+  "Scope of Work": "scope of work",
+  "Project Documents": "attached documents",
+  "Budget Allocation": "a budget",
+  Location: "a site location",
+  "Project Timeline": "start and end dates",
+  "Associated Company": "the appointed company",
+};
+
 export interface ProjectSetupState {
   percentage: number;
   filledCount: number;

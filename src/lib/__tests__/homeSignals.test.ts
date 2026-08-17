@@ -18,9 +18,10 @@ import {
   resolveFinanceAccess,
   summariseHomeLoad,
   summariseMoney,
+  summariseTime,
   visibleRiskSignals,
 } from "../homeSignals";
-import { summariseProjectSetup } from "../homeSetup";
+import { SETUP_FIELDS, SETUP_LABELS, summariseProjectSetup } from "../homeSetup";
 
 const NOW = new Date("2026-08-17T09:00:00Z");
 
@@ -613,5 +614,108 @@ describe("summariseProjectSetup", () => {
     })!;
     expect(s.percentage).toBe(100);
     expect(s.missing).toEqual([]);
+  });
+});
+
+describe("SETUP_LABELS", () => {
+  it("gives every setup field a plain-words label", () => {
+    for (const field of SETUP_FIELDS) {
+      expect(SETUP_LABELS[field]).toBeTruthy();
+    }
+  });
+
+  it("no longer calls the documents check 'Project Documents'", () => {
+    // The check is `documents.length > 0`, i.e. "nothing has been attached".
+    // The label must say that, not name a feature.
+    expect(SETUP_LABELS["Project Documents"]).toBe("attached documents");
+  });
+});
+
+describe("summariseTime", () => {
+  // Project 36 on the local DB: 2026-05-21 → 2026-06-30, with the live
+  // contract end date moved out to 2026-07-30 by a signed variation.
+  const P36 = {
+    startDate: "2026-05-21",
+    endDate: "2026-06-30",
+    contractEndDate: "2026-07-30",
+  };
+
+  it("returns nothing usable for a project with no dates", () => {
+    expect(summariseTime(null).hasDates).toBe(false);
+    expect(summariseTime({}).hasDates).toBe(false);
+    expect(summariseTime({ startDate: null, endDate: null }).hasDates).toBe(false);
+  });
+
+  it("measures build length inclusively against the LIVE completion date", () => {
+    const t = summariseTime(P36, NOW);
+    // 21 May → 30 Jul is 70 days apart; inclusive of both ends, 71.
+    expect(t.buildDays).toBe(71);
+    expect(t.contractEnd).toBe("2026-07-30");
+    expect(t.originalEnd).toBe("2026-06-30");
+  });
+
+  it("reports the extension of time the contract end date carries", () => {
+    expect(summariseTime(P36, NOW).extensionDays).toBe(30);
+  });
+
+  it("reports no extension when the live date matches the original", () => {
+    const t = summariseTime(
+      { startDate: "2026-05-21", endDate: "2026-06-30", contractEndDate: "2026-06-30" },
+      NOW,
+    );
+    expect(t.extensionDays).toBeNull();
+  });
+
+  it("falls back to the original end when contract_end_date is unset", () => {
+    const t = summariseTime({ startDate: "2026-05-21", endDate: "2026-06-30" }, NOW);
+    expect(t.contractEnd).toBe("2026-06-30");
+    expect(t.extensionDays).toBeNull();
+  });
+
+  it("counts remaining days negative once the completion date is past", () => {
+    // NOW is 2026-08-17; the live completion date was 2026-07-30.
+    const t = summariseTime(P36, NOW);
+    expect(t.remainingDays).toBe(-18);
+    expect(t.overrun).toBe(true);
+  });
+
+  it("counts remaining days positive before completion", () => {
+    const t = summariseTime({ startDate: "2026-08-01", endDate: "2026-09-01" }, NOW);
+    expect(t.remainingDays).toBe(15);
+    expect(t.overrun).toBe(false);
+  });
+
+  it("counts elapsed days from the start date", () => {
+    const t = summariseTime(P36, NOW);
+    expect(t.elapsedDays).toBe(88);
+    expect(t.notStarted).toBe(false);
+  });
+
+  it("reports zero elapsed, not negative, before the start date", () => {
+    const t = summariseTime({ startDate: "2026-10-01", endDate: "2026-12-01" }, NOW);
+    expect(t.notStarted).toBe(true);
+    expect(t.elapsedDays).toBe(0);
+  });
+
+  it("reads snake_case as well as camelCase", () => {
+    const snake = summariseTime(
+      { start_date: "2026-05-21", end_date: "2026-06-30", contract_end_date: "2026-07-30" },
+      NOW,
+    );
+    expect(snake).toEqual(summariseTime(P36, NOW));
+  });
+
+  it("ignores unparseable dates rather than emitting NaN", () => {
+    const t = summariseTime({ startDate: "not-a-date", endDate: "2026-09-01" }, NOW);
+    expect(t.start).toBeNull();
+    expect(t.buildDays).toBeNull();
+    expect(t.elapsedDays).toBeNull();
+    expect(t.remainingDays).toBe(15);
+  });
+
+  it("computes NO percentage of any kind", () => {
+    // Guard against the old homepage's "elapsed / total = % complete".
+    expect(Object.keys(summariseTime(P36, NOW))).not.toContain("percentComplete");
+    expect(Object.keys(summariseTime(P36, NOW))).not.toContain("elapsedPct");
   });
 });
