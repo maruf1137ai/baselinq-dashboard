@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -367,16 +368,14 @@ const ProjectDetails = () => {
   const isSaving = updateProjectMutation.isPending;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-5xl p-6">
       <form onSubmit={handleSave}>
         {/* ── Page Header ── */}
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-normal tracking-tight text-foreground">Project Details</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure basic project info, financials and legal framework.
-            </p>
-          </div>
+        <PageHeader
+          className="mb-6"
+          title="Project Details"
+          description="Configure basic project info, financials and legal framework."
+          actions={<>
           {canEditProject ? (
             <Button
               type="submit"
@@ -396,7 +395,8 @@ const ProjectDetails = () => {
               <span>Read-only access</span>
             </div>
           )}
-        </div>
+          </>}
+        />
 
         {/* ── Project Information ── */}
         <SectionCard

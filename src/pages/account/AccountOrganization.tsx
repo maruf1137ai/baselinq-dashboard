@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock, Paperclip, ShieldCheck, Lock, CreditCard } from "lucide-react";
 import { hasPermission } from "@/lib/roleUtils";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Member = { id: number; name: string; email: string; role: string | null; role_code: string | null };
 type PendingInvite = { id: number; email: string; name: string; position: string; invited_at: string; expires_at: string };
@@ -201,12 +202,12 @@ const AccountOrganization = () => {
   if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading" /></div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-2xl font-normal tracking-tight text-foreground">Organisation</h2>
-          <p className="text-sm text-muted-foreground mt-1">Corporate profile, registration numbers, and entity classification.</p>
-        </div>
+    <div className="max-w-5xl p-6">
+      <PageHeader
+        className="mb-6"
+        title="Organisation"
+        description="Corporate profile, registration numbers, and entity classification."
+        actions={<>
         {canEdit ? (
           <Button onClick={handleSave} disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
             {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="mr-1.5" />}
@@ -218,7 +219,8 @@ const AccountOrganization = () => {
             <span>Read-only access</span>
           </div>
         )}
-      </div>
+        </>}
+      />
 
       <>
         {/* Org details */}

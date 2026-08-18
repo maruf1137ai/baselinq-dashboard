@@ -10,6 +10,7 @@ import { Loader2, Check, X, Hash, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Command,
   CommandEmpty,
@@ -165,12 +166,15 @@ const Communications = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-        {/* Header inset matches the canonical 24px top padding used by every
-            other page (Tasks/Compliance/Meetings/Documents). DashboardLayout
-            uses padding="p-0" here because the chat below needs full-bleed —
-            so we apply the canonical 24px on the header itself. */}
-        <div className="px-6 pt-6 pb-4 border-b border-border">
-          <h1 className="text-2xl font-normal tracking-tight text-foreground">Communications</h1>
+        {/* EXCEPTION to the page-top rule, on the BODY only: the chat pane
+            below has to reach the viewport edges, so DashboardLayout is asked
+            for padding="p-0". The header band then re-applies the canonical
+            p-6 itself, so the title still sits 24px from the top and 24px
+            from the left, exactly like every other page, and the rule below
+            it lands on the same 80px line a `space-y-6` page's second band
+            starts on. Previously `pb-4`, which put the divider at 73px. */}
+        <div className="p-6 border-b border-border">
+          <PageHeader title="Communications" />
         </div>
         <div className="flex flex-1 overflow-hidden">
           <div className="border-r border-border bg-card flex-shrink-0">

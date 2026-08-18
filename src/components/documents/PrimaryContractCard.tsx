@@ -1,13 +1,28 @@
 /**
- * Primary Contract card — top of Documents page.
+ * Primary Contract notice — Documents page, under the page header.
+ *
+ * WEIGHT
+ * ------
+ * This is a PRECONDITION NOTICE, not a hero. It used to be a dashed amber
+ * card with a `p-6` body, a 48x48 amber icon tile, an uppercase amber chip,
+ * a four-line paragraph and a solid amber-700 button — roughly 190px of
+ * chrome, sitting ABOVE the page title, on a page whose actual subject is
+ * the document list below it.
+ *
+ * It now follows the pattern the homepage already settled on for exactly
+ * this class of thing (see the composition block in `Index.tsx` and
+ * `PrimaryContractAlert`): ONE bounded container of hairline-divided rows,
+ * `empty:hidden`, no amber FILL, a single amber icon carrying the whole
+ * signal. Everything the card could do, it still does — upload-and-mark,
+ * replace, unset, the candidate-count hint, the same permission gate, the
+ * same progress read-out — it just does it at the weight of a row.
  *
  * Two states:
- *   1. EMPTY — no primary contract set yet. Renders a prominent
- *      upload CTA with explanation copy. This is what the AI MVP
- *      needs from the user: tell us WHICH uploaded doc is the
- *      official signed contract.
- *   2. FILLED — primary contract set. Renders a badge with filename
- *      + uploaded date + "Replace" + "View" actions.
+ *   1. EMPTY — no primary contract set yet. One row: the consequence, and
+ *      the upload action. This is what the AI MVP needs from the user:
+ *      tell us WHICH uploaded doc is the official signed contract.
+ *   2. FILLED — primary contract set. One row: the filename, its age, and
+ *      the Replace / Unset actions.
  *
  * Calls the backend Primary Contract endpoints introduced in branch
  * feat/ai-mvp-cache-invalidation-and-visibility:
@@ -21,10 +36,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   FileCheck2,
-  ShieldCheck,
   Upload,
   AlertTriangle,
-  Calendar,
   Loader2,
   RefreshCcw,
 } from "lucide-react";
@@ -38,6 +51,16 @@ import {
 } from "@/lib/Api";
 
 const ACCEPTED = ".pdf,application/pdf";
+
+/**
+ * The precondition container and its rows — the same grammar as the
+ * homepage precondition stack: one bounded card, hairline-divided rows,
+ * `empty:hidden` so a satisfied precondition draws nothing at all rather
+ * than an empty 2px box.
+ */
+const SHELL =
+  "empty:hidden bg-card border border-border rounded-xl overflow-hidden divide-y divide-border";
+const ROW = "flex items-center gap-3 px-4 py-2.5 min-w-0";
 
 function relativeAge(iso: string | null): string {
   if (!iso) return "";
@@ -101,124 +124,36 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
 
   if (isLoading) {
     return (
-      <div className="border border-border rounded-xl bg-card p-5 flex items-center gap-3 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading primary contract…
+      <div className={SHELL}>
+        <div className={ROW + " text-sm text-muted-foreground"}>
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          Loading primary contract…
+        </div>
       </div>
     );
   }
 
   const filled = data?.primary_contract;
 
-  // ── EMPTY state — prominent CTA ─────────────────────────────────
+  // ── EMPTY state — one row, the consequence and the action ──────
   if (!filled) {
+    const candidates = data?.candidate_count ?? 0;
     return (
-      <div className="relative border border-dashed border-amber-300 bg-amber-50/50 rounded-xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="shrink-0 w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="h-5 w-5 text-amber-700" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-base font-medium text-amber-900">
-                Upload your project's official contract
-              </h3>
-              <span className="text-xs uppercase tracking-wider text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded">
-                Required for AI analysis
-              </span>
-            </div>
-            <p className="text-sm text-amber-900/80 leading-relaxed max-w-2xl">
-              Mark the signed JBCC / NEC / GCC agreement as your{" "}
-              <strong>primary contract</strong> so Baselinq AI knows which
-              document is authoritative. Supporting documents (Bills of
-              Quantities, addenda, specifications) can be uploaded
-              afterwards and will be retrieved alongside it, weighted by
-              role.
-            </p>
-            {data?.candidate_count && data.candidate_count > 0 ? (
-              <p className="text-xs text-amber-800 mt-2">
-                {data.candidate_count} document{data.candidate_count !== 1 ? "s" : ""} already uploaded on this project but none marked as primary. You can either mark one of them in the document list below, or upload the official agreement now.
-              </p>
-            ) : null}
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED}
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleFileSelected(f);
-              }}
-            />
-            {canUploadDocument && (
-              <div className="mt-4 flex items-center gap-2">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="h-9 px-4 bg-amber-700 hover:bg-amber-800 text-white"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                      Uploading… {uploadProgress}%
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2" />
-                      Upload primary contract (PDF)
-                    </>
-                  )}
-                </Button>
-                <span className="text-xs text-amber-800/70">
-                  PDF only · max 50&nbsp;MB
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── FILLED state — badge + actions ──────────────────────────────
-  const age = relativeAge(filled.uploaded_at);
-  const supportingCount = data?.supporting_documents?.length ?? 0;
-
-  return (
-    <div className="border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-card rounded-xl p-5">
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-          <ShieldCheck className="h-6 w-6 text-emerald-700" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-xs uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded font-medium">
-              Primary Contract
-            </span>
-            <span className="text-xs uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              AI anchor
-            </span>
-            {supportingCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                · {supportingCount} supporting document{supportingCount !== 1 ? "s" : ""}
+      <div className={SHELL}>
+        <div className={ROW}>
+          {/* The ONE amber thing. No amber fill, no amber chip, no amber
+              button — the icon carries the whole signal. */}
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <p className="text-sm text-foreground flex-1 min-w-0">
+            No primary contract set — AI answers cite generic clauses until you
+            mark the signed agreement as primary.
+            {candidates > 0 && (
+              <span className="text-muted-foreground">
+                {" "}
+                {candidates} document{candidates !== 1 ? "s" : ""} uploaded, none marked; mark one
+                in the list below, or upload the agreement now.
               </span>
             )}
-          </div>
-          <h3 className="text-base font-medium text-foreground flex items-center gap-2 truncate">
-            <FileCheck2 className="h-4 w-4 text-emerald-700 shrink-0" />
-            <span className="truncate">{filled.name || filled.file_name}</span>
-          </h3>
-          {age && (
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-              <Calendar className="h-3 w-3" /> Uploaded {age}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-2xl">
-            This document anchors every AI analysis on this project.
-            Bill of Quantities, addenda and specifications are retrieved
-            alongside it but weighted lower so this contract's clauses
-            win in tie cases.
           </p>
 
           <input
@@ -231,38 +166,95 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               if (f) handleFileSelected(f);
             }}
           />
-          <div className="mt-3 flex items-center gap-2">
-            {canUploadDocument && (
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="h-8 px-3 text-xs"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                    Replacing… {uploadProgress}%
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw className="mr-1.5" />
-                    Replace
-                  </>
-                )}
-              </Button>
-            )}
+          {canUploadDocument && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="h-8 px-3 text-xs shrink-0"
+              title="PDF only · max 50 MB"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                  Uploading… {uploadProgress}%
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-1.5" />
+                  Upload contract
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── FILLED state — one row, the filename and its two actions ────
+  const age = relativeAge(filled.uploaded_at);
+  const supportingCount = data?.supporting_documents?.length ?? 0;
+
+  return (
+    <div className={SHELL}>
+      <div className={ROW}>
+        <FileCheck2 className="h-4 w-4 text-muted-foreground shrink-0" />
+        <p className="text-sm text-foreground flex-1 min-w-0 truncate">
+          <span className="text-muted-foreground">Primary contract</span>{" "}
+          {filled.name || filled.file_name}
+          <span className="text-muted-foreground">
+            {age ? ` · uploaded ${age}` : ""}
+            {supportingCount > 0
+              ? ` · ${supportingCount} supporting document${supportingCount !== 1 ? "s" : ""}`
+              : ""}
+          </span>
+        </p>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFileSelected(f);
+          }}
+        />
+        <div className="flex items-center gap-1 shrink-0">
+          {canUploadDocument && (
             <Button
               variant="ghost"
-              onClick={() => {
-                if (!confirm("Remove primary contract designation? AI analyses will continue but won't anchor against any specific document.")) return;
-                markRoleMutation.mutate({ docId: filled.id, role: "other" });
-              }}
-              className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
             >
-              Unset
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                  Replacing… {uploadProgress}%
+                </>
+              ) : (
+                <>
+                  <RefreshCcw className="mr-1.5" />
+                  Replace
+                </>
+              )}
             </Button>
-          </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (!confirm("Remove primary contract designation? AI analyses will continue but won't anchor against any specific document.")) return;
+              markRoleMutation.mutate({ docId: filled.id, role: "other" });
+            }}
+            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Unset
+          </Button>
         </div>
       </div>
     </div>

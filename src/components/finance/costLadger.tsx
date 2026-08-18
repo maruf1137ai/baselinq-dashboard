@@ -204,7 +204,7 @@ const CostLadger = () => {
   const activeFilterCount = selectedCategories.length;
 
   return (
-    <main className="pt-4 space-y-4">
+    <main className="pt-6 space-y-4">
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <ProjectStatusCard
           icon={<CashIcon />}

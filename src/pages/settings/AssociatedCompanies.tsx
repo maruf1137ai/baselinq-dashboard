@@ -40,6 +40,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
 import { COMPANY_TYPES, filterRolesByCompanyType } from "@/lib/roleUtils";
 import useFetch from "@/hooks/useFetch";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -302,23 +303,22 @@ const AssociatedCompanies = () => {
 
   return (
     <div className="w-full">
-      <div className="max-w-5xl mx-auto p-6 pb-20">
+      <div className="max-w-5xl p-6 pb-20">
 
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-normal tracking-tight text-foreground">Associated Companies</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Appoint professional firms to this project and track their insurance.
-            </p>
-          </div>
+        <PageHeader
+          className="mb-6"
+          title="Associated Companies"
+          description="Appoint professional firms to this project and track their insurance."
+          actions={<>
           {!canManageAssociatedCompanies && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
               <Lock className="h-3.5 w-3.5" />
               <span>Read-only access</span>
             </div>
           )}
-        </div>
+          </>}
+        />
 
         {/* ── Single Card ── */}
         <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden">

@@ -658,7 +658,7 @@ const PlatformFees: React.FC = () => {
       : null;
 
   return (
-    <main className="pt-4 space-y-4">
+    <main className="pt-6 space-y-4">
       {/* Header stats. Four across only from xl: these values are full ZAR
           amounts, ~4x longer than the counts a summary row usually carries,
           and at the canonical text-3xl they need the width. */}

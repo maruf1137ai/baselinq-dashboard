@@ -18,6 +18,7 @@ import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "@/components/ui/page-header";
 
 const Security = () => {
   const queryClient = useQueryClient();
@@ -135,12 +136,10 @@ const Security = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Security</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage account security, sessions, and authentication settings.
-        </p>
-      </div>
+      <PageHeader
+        title="Security"
+        description="Manage account security, sessions, and authentication settings."
+      />
 
       {/* ── Signing PIN card ────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">

@@ -47,7 +47,7 @@ const PaymentCertificate = () => {
   return (
     // pt-6 only: the page already has DashboardLayout's p-6, so a p-6 here
     // inset this one tab from the other three.
-    <main className="pt-4 space-y-4">
+    <main className="pt-6 space-y-4">
       {/* Programme link banner */}
       <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-primary/20 bg-primary/5">
         <div className="flex items-center gap-2">

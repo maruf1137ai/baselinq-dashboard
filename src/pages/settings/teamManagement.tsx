@@ -5,6 +5,7 @@ import ApprovalChains from "@/components/settings/ApprovalChains";
 import AiRouting from "@/components/settings/AiRouting";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RolesTab } from "./permissions";
+import { PageHeader } from "@/components/ui/page-header";
 
 const TeamManagement = () => {
   const { canViewSettings, canEditSettings } = usePermissions();
@@ -24,11 +25,11 @@ const TeamManagement = () => {
   const resolvedTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? "");
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-normal tracking-tight text-foreground">User Management</h2>
-      <p className="text-sm text-muted-foreground mt-1 mb-6">
-        Manage users, roles, permissions, and approval workflows.
-      </p>
+    <div className="p-6 space-y-6">
+      <PageHeader
+        title="User Management"
+        description="Manage users, roles, permissions, and approval workflows."
+      />
       <div className="btns flex items-center gap-2 border-b border-border">
         {visibleTabs.map((btn) => (
           <button
@@ -43,7 +44,7 @@ const TeamManagement = () => {
         ))}
       </div>
 
-      <div className="mt-6">
+      <div>
         {resolvedTab === "Users" && <TeamMembersTable />}
         {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditSettings} />}
         {resolvedTab === "Custom Roles" && <RolesTab />}
