@@ -413,14 +413,75 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     applyMessages([]);
     fetchMessages(true);
 
-    // Set up polling to refetch messages every 2.5 seconds
-    const intervalId = setInterval(() => {
-      fetchMessages(false);
-    }, 2500); // 2.5 seconds
+    // Polling stays as the source of truth and the fallback path — only its
+    // cadence changes. WS (below) just triggers an earlier fetchMessages()
+    // call; it never delivers message data itself, so a socket outage never
+    // loses updates, it only slows them back down to the original 2.5s.
+    const POLL_MS_DEFAULT = 2500;
+    const POLL_MS_WS_HEALTHY = 20000;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const setPollInterval = (ms: number) => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => fetchMessages(false), ms);
+    };
+    setPollInterval(POLL_MS_DEFAULT);
 
-    // Cleanup: Clear interval when component unmounts or channel changes
+    // Real-time push (falls back to the poll above if the socket never
+    // connects or drops — see backend/channel/consumers.py + signals.py).
+    // The socket only ever carries a "something changed" ping; the actual
+    // message data always comes from fetchMessages() so there is exactly one
+    // code path that parses/dedupes/renders messages.
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
+    let stopped = false;
+
+    const connectWs = () => {
+      if (stopped || !channel?.id) return;
+      const token = localStorage.getItem("access");
+      if (!token) return;
+
+      let wsBase: string;
+      try {
+        const apiUrl = new URL(
+          import.meta.env.VITE_API_BASE_URL || "/",
+          window.location.origin
+        );
+        wsBase = `${apiUrl.protocol === "https:" ? "wss:" : "ws:"}//${apiUrl.host}`;
+      } catch {
+        wsBase = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
+      }
+
+      ws = new WebSocket(
+        `${wsBase}/ws/channels/${channel.id}/?token=${encodeURIComponent(token)}`
+      );
+
+      ws.onopen = () => {
+        reconnectAttempt = 0;
+        setPollInterval(POLL_MS_WS_HEALTHY);
+      };
+      ws.onmessage = () => {
+        fetchMessages(false);
+      };
+      ws.onclose = () => {
+        if (stopped) return;
+        setPollInterval(POLL_MS_DEFAULT);
+        const delay = Math.min(1000 * 2 ** reconnectAttempt, 30000);
+        reconnectAttempt += 1;
+        reconnectTimer = setTimeout(connectWs, delay);
+      };
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+    connectWs();
+
+    // Cleanup: Clear interval/socket when component unmounts or channel changes
     return () => {
-      clearInterval(intervalId);
+      stopped = true;
+      if (intervalId) clearInterval(intervalId);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
       // Optimistic messages are dropped on channel switch — release their
       // object URLs with them.
       Object.keys(tempObjectUrlsRef.current).forEach(revokeTempUrls);
