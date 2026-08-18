@@ -29,6 +29,7 @@ import {
   summariseTime,
   visibleRiskSignals,
 } from "../homeSignals";
+import type { TaskLike } from "../homeSignals";
 import { SETUP_FIELDS, SETUP_LABELS, summariseProjectSetup } from "../homeSetup";
 
 /** The finance tab labels as they travel in a URL. See `FINANCE_TAB`. */
@@ -776,6 +777,77 @@ describe("buildTaskQueue", () => {
     const q = buildTaskQueue([{ id: "d", title: "Undated", needsAction: true }], NOW);
     expect(q[0].detail).toBe("No due date recorded");
     expect(q[0].daysRemaining).toBeNull();
+  });
+
+  // ── Escalated to you ──────────────────────────────────────────────────
+  // An SI more than three days past its due date escalates to the PM. It is
+  // NOT reassigned, so `needsAction` stays false for the PM — and before this,
+  // that meant the escalation the backend raised never reached the homepage of
+  // the person it was raised for.
+
+  const escalatedSI = (over: Partial<TaskLike> = {}): TaskLike => ({
+    id: "e",
+    title: "Confirm the slab setting-out",
+    type: "SI",
+    due_date: iso(-9),
+    needsAction: false,
+    escalatedToMe: true,
+    escalatedAt: iso(-5),
+    awaiting: "Themba Nkosi",
+    ...over,
+  });
+
+  it("surfaces a task escalated to you even though it is not assigned to you", () => {
+    const q = buildTaskQueue([escalatedSI()], NOW);
+    expect(q).toHaveLength(1);
+    expect(q[0].kind).toBe("task-escalated");
+  });
+
+  it("says someone else is late, not that the work is yours", () => {
+    const q = buildTaskQueue([escalatedSI()], NOW);
+    expect(q[0].headline).toBe("SI: Confirm the slab setting-out — awaiting Themba Nkosi");
+    expect(q[0].detail).toContain("No response from Themba Nkosi");
+    expect(q[0].detail).toContain("escalated to you");
+    // The move is to chase the person, not to do their work.
+    expect(q[0].action).toBe("Chase the response");
+  });
+
+  it("names no one rather than guessing when the payload carries no name", () => {
+    const q = buildTaskQueue([escalatedSI({ awaiting: null, title: "Untitled" })], NOW);
+    expect(q[0].headline).toBe("SI: Untitled");
+    expect(q[0].detail).toContain("No response from the assignee");
+  });
+
+  it("ranks an escalation above your own overdue work", () => {
+    const q = buildTaskQueue(
+      [
+        { id: "mine", title: "My late paperwork", type: "RFI", due_date: iso(-9), needsAction: true },
+        escalatedSI({ id: "theirs" }),
+      ],
+      NOW,
+    );
+    const escalated = q.find((i) => i.kind === "task-escalated")!;
+    const own = q.find((i) => i.kind === "task")!;
+
+    // Classified within the existing consequence axis, not added to it.
+    expect(escalated.consequence).toBe("blocking");
+    expect(own.consequence).toBe("own-work");
+    // blocking/expired is band 4; own-work/expired is band 5.
+    expect(bandOf(escalated)).toBeLessThan(bandOf(own));
+    expect(rankQueue(q)[0].key).toBe(escalated.key);
+  });
+
+  it("reads a task both assigned and escalated to you as the escalation, once", () => {
+    // The more urgent reading of the same fact wins, and it emits one row —
+    // the same task twice in one list is noise.
+    const q = buildTaskQueue([escalatedSI({ id: "both", needsAction: true })], NOW);
+    expect(q).toHaveLength(1);
+    expect(q[0].kind).toBe("task-escalated");
+  });
+
+  it("leaves a task escalated to somebody else out of your queue", () => {
+    const q = buildTaskQueue([escalatedSI({ escalatedToMe: false })], NOW);
+    expect(q).toHaveLength(0);
   });
 });
 

@@ -123,6 +123,12 @@ const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
   // server, and a meeting action is dropped when the server says
   // `can_approve: false`.
   { label: "Blocking someone else", kinds: ["rsvp", "meeting-action"] },
+  // The mirror of the section above: there, you are holding someone up; here,
+  // someone is holding you up. Separate from "Assigned to you" because the
+  // work is not yours — the task is still with whoever let it run late, and
+  // what escalated to you is the chase. Sits above "Assigned to you", matching
+  // its `blocking` consequence outranking `own-work` in the band matrix.
+  { label: "Escalated to you to chase", kinds: ["task-escalated"] },
   // Scoped: `needsAction` matches the current user against `assignedTo`.
   { label: "Assigned to you", kinds: ["task"] },
 ];
