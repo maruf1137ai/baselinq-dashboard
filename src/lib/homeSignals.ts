@@ -50,16 +50,150 @@ import {
   type QueueItem,
 } from "./homeQueueRank";
 
+/**
+ * Finance tab labels, verbatim from `visibleTabs` in `src/pages/finance.tsx`.
+ *
+ * They are the labels themselves rather than slugs because `finance.tsx` keys
+ * its `activeTab` state off these exact strings. Anything else would land on
+ * the page's default tab and silently lose the deep link.
+ */
+export const FINANCE_TAB = {
+  costLedger: "Cost Ledger",
+  certificates: "Payment Certificates",
+  variations: "Variation Orders",
+} as const;
+
+/** `/finance?tab=…` with the label encoded — the labels contain spaces. */
+const financeTab = (tab: string) => `/finance?tab=${encodeURIComponent(tab)}`;
+
 /** Every route below is one that exists in App.tsx. `/approvals` does not. */
+// `finance: "/finance"` and `compliance: "/compliance"` used to live here and
+// are deliberately gone. Every row that used them was holding the id of the
+// thing it named and dropping it on the floor; a bare page is no longer a
+// destination this file can reach for by accident.
 const ROUTE = {
-  finance: "/finance",
+  /** The certificate list, ready to certify/post. */
+  certificates: financeTab(FINANCE_TAB.certificates),
+  /** One certificate, named. */
+  certificate: (id: number | string) =>
+    `${financeTab(FINANCE_TAB.certificates)}&pc=${encodeURIComponent(String(id))}`,
+  /** The variation list. */
+  variations: financeTab(FINANCE_TAB.variations),
+  /** One variation, named. */
+  variation: (id: number | string) =>
+    `${financeTab(FINANCE_TAB.variations)}&vo=${encodeURIComponent(String(id))}`,
+  programme: "/programme",
+  milestone: (id: number | string) => `/programme?milestone=${encodeURIComponent(String(id))}`,
   /** Notice deadlines are the "Notice deadlines" tab of Project health. */
   timeBars: "/project-health?tab=notice-deadlines",
   riskSignals: "/project-health?tab=risk-signals",
-  compliance: "/compliance",
+  obligation: (id: string) => `/compliance?obligation=${encodeURIComponent(id)}`,
   meeting: (id: number | string) => `/meetings/${id}`,
   task: (id: string) => `/tasks/${id}`,
 } as const;
+
+/**
+ * `/documents` for a named project.
+ *
+ * The primary-contract alert already holds the project id and threw it away,
+ * navigating to a bare `/documents`. Naming the project makes the destination
+ * unambiguous when the alert is read from anywhere but the current selection.
+ */
+export const documentsHref = (projectId: string | number) =>
+  `/documents?project=${encodeURIComponent(String(projectId))}`;
+
+// ── Where a risk signal actually lives ────────────────────────────────────
+//
+// Every rule in `risk/rules/` attaches its signal to the object that caused
+// it through a generic FK, and the serializer publishes that as `source_type`
+// (the lowercased Django model name) and `source_id`. Confirmed against the
+// backend, rule by rule, rather than guessed:
+//
+//   vo_tolerance.py / vo_rate_variance.py  source=vo         VariationOrder
+//   payment_overdue.py / pc_certification  source=pc         PaymentCertificate
+//   milestone_overdue.py / schedule_slip.   source=m|milestone Milestone
+//   time_bar.py                            source=clock      TimeBarClock
+//   claim_notified.py                      source=ic         IntentionToClaim
+//
+// `intentiontoclaim` has no object page of its own yet, so it takes the
+// fallback with every unrecognised type. The fallback is `/project-health`,
+// and it is the ONLY thing that may send a user there — that page diagnoses,
+// it does not transact.
+
+/** `source_type` values the frontend knows how to reach. */
+const SOURCE_ROUTE: Record<string, (id: number | string) => string> = {
+  variationorder: (id) => ROUTE.variation(id),
+  paymentcertificate: (id) => ROUTE.certificate(id),
+  milestone: (id) => ROUTE.milestone(id),
+  /** A time bar legitimately IS a Project health row — the deadlines tab. */
+  timebarclock: () => ROUTE.timeBars,
+};
+
+/** The destination for a source type with no id to name, or none at all. */
+const SOURCE_LIST_ROUTE: Record<string, string> = {
+  variationorder: ROUTE.variations,
+  paymentcertificate: ROUTE.certificates,
+  milestone: ROUTE.programme,
+  timebarclock: ROUTE.timeBars,
+};
+
+/** What a signal carries about the object that caused it. */
+export interface RiskSignalSource {
+  /** Lowercased Django model name, or null when the rule attached nothing. */
+  source_type?: string | null;
+  source_id?: number | null;
+}
+
+/**
+ * The object a risk signal is about — not the page that lists risk signals.
+ *
+ * A signal that says three variations exceed the mandate must reach those
+ * variations. Landing on `/project-health` restates the sentence and offers
+ * no way through to the thing it names, which is what made every homepage row
+ * a dead end. So `/project-health?tab=risk-signals` is the LAST resort here,
+ * taken only when the backend attached no source or attached a type this app
+ * has no surface for.
+ */
+export function riskSignalHref(signal: RiskSignalSource | null | undefined): string {
+  const type = signal?.source_type?.toLowerCase() ?? null;
+  if (!type) return ROUTE.riskSignals;
+  const id = signal?.source_id;
+  const withId = SOURCE_ROUTE[type];
+  if (withId && id !== null && id !== undefined) return withId(id);
+  // Known type, but the id did not come through: the list still beats the
+  // diagnostic page, because the list contains the object.
+  const list = SOURCE_LIST_ROUTE[type];
+  if (list) return list;
+  return ROUTE.riskSignals;
+}
+
+/**
+ * Where a GROUP of folded signals goes.
+ *
+ * A row that says "3 variations exceed the principal agent mandate" must not
+ * open one of the three. No destination in this app can express "these three
+ * ids", so a group of more than one goes to the LIST that contains them all —
+ * the variations tab, the certificates tab, the programme — and the user
+ * picks. Naming one of three would assert something untrue about which
+ * variation is at issue.
+ *
+ * A group of one is a single signal and gets the single signal's destination.
+ * A group whose signals disagree about their source type cannot name any one
+ * list honestly, so it takes the risk-signals fallback.
+ */
+export function riskGroupHref(group: {
+  count?: number;
+  signals: RiskSignalSource[];
+}): string {
+  const signals = group.signals ?? [];
+  if (signals.length === 0) return ROUTE.riskSignals;
+  if (signals.length === 1) return riskSignalHref(signals[0]);
+
+  const types = new Set(signals.map((s) => s.source_type?.toLowerCase() ?? ""));
+  if (types.size !== 1) return ROUTE.riskSignals;
+  const [type] = [...types];
+  return SOURCE_LIST_ROUTE[type] ?? ROUTE.riskSignals;
+}
 
 /** Whole days from today to `iso`, or null when unparseable. */
 export function daysUntil(iso: string | null | undefined, now: Date = new Date()): number | null {
@@ -169,7 +303,7 @@ export function buildCertificateQueue(
         daysRemaining: null,
         clock: null,
         overdue: false,
-        href: ROUTE.finance,
+        href: ROUTE.certificate(c.id),
         action: awaitingCertification ? "Open to certify" : "Open to post",
         waitingSince: c.updatedAt ?? null,
         subRank: awaitingCertification ? 1 : 2,
@@ -211,7 +345,7 @@ export function buildRejectedCertificateQueue(
         daysRemaining: null,
         clock: null,
         overdue: false,
-        href: ROUTE.finance,
+        href: ROUTE.certificate(c.id),
         action: "Open to rework",
         waitingSince: c.updatedAt ?? null,
         subRank: 0,
@@ -309,6 +443,15 @@ export interface RiskSignalLike {
   evidence?: string;
   is_contractual?: boolean;
   first_detected_at?: string;
+  /**
+   * The object that caused the signal — lowercased Django model name from the
+   * serializer's generic FK, e.g. `variationorder`. These two fields have been
+   * arriving on every response all along and were simply never typed, so the
+   * homepage could not see where a signal pointed and sent everybody to
+   * `/project-health` instead. See `riskSignalHref`.
+   */
+  source_type?: string | null;
+  source_id?: number | null;
 }
 
 /**
@@ -492,7 +635,7 @@ export function buildObligationQueue(
       daysRemaining: days,
       clock: "calendar",
       overdue: days < 0,
-      href: ROUTE.compliance,
+      href: ROUTE.obligation(o._id),
       action: "Open the obligation",
       requires: ["compliance.view"],
     });

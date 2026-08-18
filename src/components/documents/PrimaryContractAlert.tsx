@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { getPrimaryContract } from "@/lib/Api";
+import { documentsHref } from "@/lib/homeSignals";
 
 interface PrimaryContractAlertProps {
   projectId: string | number | undefined;
@@ -43,6 +44,11 @@ export const PrimaryContractAlert = ({
   if (!data) return null;
   if (data.primary_contract) return null;
 
+  // The alert already knows which project has no contract; it used to throw
+  // that away and navigate to a bare `/documents`. Naming it keeps the
+  // destination unambiguous.
+  const href = documentsHref(projectId);
+
   // ONE line. It sits in the homepage's `space-y-3` precondition stack next to
   // the setup strip and the load banner, and it now carries their geometry
   // (`rounded-xl px-4 py-2.5`, one `text-sm` line) rather than a two-paragraph
@@ -54,8 +60,8 @@ export const PrimaryContractAlert = ({
       className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 cursor-pointer hover:bg-amber-100/60 transition-colors group"
       role="button"
       tabIndex={0}
-      onClick={() => navigate("/documents")}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/documents"); }}
+      onClick={() => navigate(href)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(href); }}
     >
       <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
       <p className="text-sm text-amber-900 flex-1 min-w-0">

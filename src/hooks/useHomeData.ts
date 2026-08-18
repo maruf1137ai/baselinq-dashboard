@@ -67,6 +67,14 @@ interface RiskSignal {
   status: "open" | "acknowledged" | "resolved" | "muted";
   title: string;
   is_contractual: boolean;
+  /**
+   * The object the signal is about — the serializer has always sent these
+   * (`risk/serializers.py`), and dropping them here is what left the homepage
+   * with nowhere to send a reader but `/project-health`. `ProjectHealth.tsx`
+   * types the same two fields; this is the same shape, not a new one.
+   */
+  source_type: string | null;
+  source_id: number | null;
 }
 
 interface SignalsResponse {

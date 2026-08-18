@@ -40,6 +40,7 @@ import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-r
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
+import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { SETUP_LABELS } from "@/lib/homeSetup";
 import { cn } from "@/lib/utils";
@@ -170,6 +171,7 @@ function Figure({
   badge,
   emphasis = false,
   danger = false,
+  to,
 }: {
   /** Five words at most. */
   label: string;
@@ -181,9 +183,24 @@ function Figure({
   /** The figures a reader looks for first, at the stat size. */
   emphasis?: boolean;
   danger?: boolean;
+  /**
+   * Where the figure came from. A summary you cannot open is a poster: every
+   * number here is the total of a list the app already has a page for, and
+   * the reader's next question is always "which ones". Omitted only where no
+   * list exists to open — a figure the engine could not compute.
+   *
+   * The gate is NOT here. Each cell is pushed inside the permission branch
+   * that already decided the figure may be shown at all, so a link can never
+   * become a way in to something the viewer was not served.
+   */
+  to?: string;
 }) {
-  return (
-    <div className="min-w-0" title={caveat}>
+  // The row hover already used by every list on this page. Layout is
+  // unchanged: the padding it needs is cancelled by an equal negative margin.
+  const interactive =
+    "rounded-lg -mx-2 px-2 -my-1 py-1 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const inner = (
+    <>
       <p className="text-xs text-muted-foreground truncate">{label}</p>
       <div className="flex items-baseline gap-2 mt-0.5 min-w-0">
         <p
@@ -200,6 +217,16 @@ function Figure({
       {compare && (
         <p className="text-xs text-muted-foreground tabular-nums truncate mt-0.5">{compare}</p>
       )}
+    </>
+  );
+
+  return to ? (
+    <Link to={to} className={cn("min-w-0 block", interactive)} title={caveat}>
+      {inner}
+    </Link>
+  ) : (
+    <div className="min-w-0" title={caveat}>
+      {inner}
     </div>
   );
 }
@@ -264,10 +291,17 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
   const over = money.certifiedPct !== null && money.certifiedPct > 100;
   const cells: React.ReactNode[] = [];
 
+  // Deep links use the finance tab labels verbatim — see `FINANCE_TAB`.
+  const CERTIFICATES = `/finance?tab=${encodeURIComponent(FINANCE_TAB.certificates)}`;
+  const VARIATIONS = `/finance?tab=${encodeURIComponent(FINANCE_TAB.variations)}`;
+
   if (canViewFinance) {
     cells.push(
       <Figure
         key="certified"
+        // Certified to date IS the sum of the posted certificates. "Which
+        // ones" is the only follow-on question it raises.
+        to={CERTIFICATES}
         label="Certified to date"
         value={money.certified === null ? null : formatZAR(money.certified)}
         emphasis
@@ -292,6 +326,9 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
       />,
       <Figure
         key="balance"
+        // Balance moves only when a certificate is posted, so the certificate
+        // list is the ledger behind it.
+        to={CERTIFICATES}
         label="Balance remaining"
         value={money.balance === null ? null : formatZAR(money.balance)}
         emphasis
@@ -308,6 +345,8 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
       />,
       <Figure
         key="retention"
+        // Retention is withheld certificate by certificate.
+        to={CERTIFICATES}
         label="Retention held"
         value={retention.held === null ? null : formatZAR(retention.held)}
         emphasis
@@ -320,6 +359,7 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
       />,
       <Figure
         key="variations"
+        to={VARIATIONS}
         label="Variations awaiting decision"
         value={vos.total === 0 ? "—" : String(vos.outstanding)}
         emphasis
@@ -355,6 +395,10 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
       ) : (
         <Figure
           key="risk"
+          // The one figure whose destination really is Project health: a count
+          // of open signals is a diagnosis, and the signals tab is where the
+          // whole list lives with its evidence.
+          to="/project-health?tab=risk-signals"
           label="Open risk signals"
           value={String(riskCounts.total)}
           emphasis
@@ -406,7 +450,10 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     <Panel
       title="Open risk"
       lead={`${riskCounts.red} red · ${riskCounts.orange} amber`}
-      action={<ViewAll to="/project-health">Project health</ViewAll>}
+      // The one link on this page that is SUPPOSED to go to Project health:
+      // "show me every open signal" is a diagnosis, and that is the page that
+      // diagnoses. Every ROW below goes to the object instead.
+      action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
     >
       {/*
         ── Colour is on the BREACH, not on the count ────────────────────────
@@ -428,7 +475,14 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
         return (
           <Link
             key={g.code}
-            to="/project-health"
+            /*
+              The object, not the page about objects. `riskGroupHref` sends a
+              lone signal to its own variation / certificate / milestone, and a
+              folded group of N to the LIST holding all N — never to one of the
+              N, which would name the wrong variation. Only a signal with no
+              usable source falls back to Project health.
+            */
+            to={riskGroupHref(g)}
             className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <p

@@ -14,7 +14,11 @@ import {
   buildTimeBarQueue,
   certificateIsCertified,
   daysUntil,
+  documentsHref,
+  FINANCE_TAB,
   relativeDays,
+  riskGroupHref,
+  riskSignalHref,
   resolveFinanceAccess,
   summariseHomeLoad,
   summariseMoney,
@@ -22,6 +26,11 @@ import {
   visibleRiskSignals,
 } from "../homeSignals";
 import { SETUP_FIELDS, SETUP_LABELS, summariseProjectSetup } from "../homeSetup";
+
+/** The finance tab labels as they travel in a URL. See `FINANCE_TAB`. */
+const CERTIFICATES = `/finance?tab=${encodeURIComponent(FINANCE_TAB.certificates)}`;
+const VARIATIONS = `/finance?tab=${encodeURIComponent(FINANCE_TAB.variations)}`;
+const HEALTH = "/project-health?tab=risk-signals";
 
 const NOW = new Date("2026-08-17T09:00:00Z");
 
@@ -94,9 +103,14 @@ describe("buildCertificateQueue", () => {
     expect(q[0].subRank).toBeLessThan(q[1].subRank as number);
   });
 
-  it("routes every row somewhere that exists", () => {
-    expect(buildCertificateQueue(certs).every((i) => i.href === "/finance")).toBe(true);
-    expect(buildCertificateQueue(certs).every((i) => i.action.length > 0)).toBe(true);
+  it("routes every row to the certificate it names, not to bare /finance", () => {
+    // It used to be `href === "/finance"` for all of them: the row said
+    // "Certify PC-006" and dropped you on the finance page's default tab with
+    // PC-006 nowhere named. The id it was already holding now travels.
+    const rows = buildCertificateQueue(certs);
+    expect(rows.every((i) => i.href.startsWith("/finance?tab="))).toBe(true);
+    expect(rows.map((i) => i.href)).toEqual(rows.map((i) => `${CERTIFICATES}&pc=${i.key.split("-")[1]}`));
+    expect(rows.every((i) => i.action.length > 0)).toBe(true);
   });
 
   it("reads workflowState, never the legacy approvalStatus", () => {
@@ -127,9 +141,13 @@ describe("buildRejectedCertificateQueue", () => {
   });
 
   it("never states a rejection reason, because no response carries one", () => {
-    const q = buildRejectedCertificateQueue([
-      { id: 7, workflowState: "rejected", updatedAt: iso(-4) },
-    ]);
+    // `iso()` is relative to the frozen NOW, so the clock has to be too. The
+    // call omitted it and silently used the real today, which made the test
+    // pass only on the day it was written and drift by a day thereafter.
+    const q = buildRejectedCertificateQueue(
+      [{ id: 7, workflowState: "rejected", updatedAt: iso(-4) }],
+      NOW,
+    );
     expect(q[0].detail).toBe("Payment on it has stopped for 4 days");
   });
 });
@@ -828,5 +846,166 @@ describe("summariseTime", () => {
     // Guard against the old homepage's "elapsed / total = % complete".
     expect(Object.keys(summariseTime(P36, NOW))).not.toContain("percentComplete");
     expect(Object.keys(summariseTime(P36, NOW))).not.toContain("elapsedPct");
+  });
+});
+
+
+// ── Where a homepage row actually goes ────────────────────────────────────
+//
+// The bug these lock down: every risk row on the homepage linked to the string
+// "/project-health", a read-only diagnostic page. A row saying "3 variations
+// exceed the principal agent mandate" restated the same sentence there with no
+// way through to the three variations. The `source_type` / `source_id` the
+// backend has always sent are what fix it.
+//
+// The `source_type` strings below are the lowercased Django model names, read
+// off the rules themselves — vo_tolerance.py `source=vo` (VariationOrder),
+// payment_overdue.py `source=pc` (PaymentCertificate), milestone_overdue.py
+// `source=milestone` (Milestone), time_bar.py `source=clock` (TimeBarClock),
+// claim_notified.py `source=ic` (IntentionToClaim).
+
+describe("riskSignalHref", () => {
+  it("sends a variation-order signal to that variation", () => {
+    expect(riskSignalHref({ source_type: "variationorder", source_id: 12 })).toBe(
+      `${VARIATIONS}&vo=12`,
+    );
+  });
+
+  it("sends a payment-certificate signal to that certificate", () => {
+    expect(riskSignalHref({ source_type: "paymentcertificate", source_id: 6 })).toBe(
+      `${CERTIFICATES}&pc=6`,
+    );
+  });
+
+  it("sends a milestone signal to that milestone on the programme", () => {
+    expect(riskSignalHref({ source_type: "milestone", source_id: 41 })).toBe(
+      "/programme?milestone=41",
+    );
+  });
+
+  it("sends a time-bar signal to the notice deadlines tab, which is where it lives", () => {
+    // The ONE source type that legitimately belongs on Project health.
+    expect(riskSignalHref({ source_type: "timebarclock", source_id: 3 })).toBe(
+      "/project-health?tab=notice-deadlines",
+    );
+  });
+
+  it("falls back to the risk signals tab when the rule attached NO source", () => {
+    expect(riskSignalHref({ source_type: null, source_id: null })).toBe(HEALTH);
+    expect(riskSignalHref({})).toBe(HEALTH);
+    expect(riskSignalHref(undefined)).toBe(HEALTH);
+    expect(riskSignalHref(null)).toBe(HEALTH);
+  });
+
+  it("falls back for an UNRECOGNISED source type", () => {
+    // `intentiontoclaim` is real — claim_notified.py raises it — and this app
+    // has no page for one yet, so it takes the fallback rather than guessing.
+    expect(riskSignalHref({ source_type: "intentiontoclaim", source_id: 9 })).toBe(HEALTH);
+    expect(riskSignalHref({ source_type: "somethingnewentirely", source_id: 1 })).toBe(HEALTH);
+  });
+
+  it("uses the list, not Project health, when a known type arrives without an id", () => {
+    // The list contains the object; the diagnostic page does not.
+    expect(riskSignalHref({ source_type: "variationorder", source_id: null })).toBe(VARIATIONS);
+    expect(riskSignalHref({ source_type: "paymentcertificate" })).toBe(CERTIFICATES);
+    expect(riskSignalHref({ source_type: "milestone" })).toBe("/programme");
+  });
+
+  it("is not defeated by casing", () => {
+    expect(riskSignalHref({ source_type: "VariationOrder", source_id: 2 })).toBe(
+      `${VARIATIONS}&vo=2`,
+    );
+  });
+});
+
+const signal = (over: Partial<Parameters<typeof groupRiskSignals>[0][number]>) => ({
+  id: 1,
+  code: "VO_MANDATE_BREACH",
+  category: "financial" as const,
+  severity: "red" as const,
+  status: "open",
+  title: "Variation exceeds the principal agent mandate",
+  ...over,
+});
+
+describe("riskGroupHref", () => {
+  it("sends a group of ONE to the object itself", () => {
+    const [group] = groupRiskSignals([
+      signal({ id: 1, source_type: "variationorder", source_id: 12 }),
+    ]);
+    expect(group.count).toBe(1);
+    expect(riskGroupHref(group)).toBe(`${VARIATIONS}&vo=12`);
+  });
+
+  it("sends a group of THREE to the list holding all three, never to one of them", () => {
+    // This is the owner's row: "3 variations exceed the principal agent
+    // mandate". No URL in this app can say "these three ids", so naming one of
+    // them would tell the reader the wrong variation is at issue.
+    const groups = groupRiskSignals([
+      signal({ id: 1, source_type: "variationorder", source_id: 12 }),
+      signal({ id: 2, source_type: "variationorder", source_id: 13 }),
+      signal({ id: 3, source_type: "variationorder", source_id: 14 }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].title).toBe("3 variations exceed the principal agent mandate");
+    const href = riskGroupHref(groups[0]);
+    expect(href).toBe(VARIATIONS);
+    expect(href).not.toContain("vo=");
+  });
+
+  it("sends folded certificates to the certificates tab and folded milestones to the programme", () => {
+    const certs = groupRiskSignals([
+      signal({ id: 1, code: "PAYMENT_OVERDUE", source_type: "paymentcertificate", source_id: 5 }),
+      signal({ id: 2, code: "PAYMENT_OVERDUE", source_type: "paymentcertificate", source_id: 6 }),
+    ]);
+    expect(riskGroupHref(certs[0])).toBe(CERTIFICATES);
+
+    const miles = groupRiskSignals([
+      signal({ id: 1, code: "MILESTONE_OVERDUE", category: "delay", source_type: "milestone", source_id: 7 }),
+      signal({ id: 2, code: "MILESTONE_OVERDUE", category: "delay", source_type: "milestone", source_id: 8 }),
+    ]);
+    expect(riskGroupHref(miles[0])).toBe("/programme");
+  });
+
+  it("falls back when a folded group disagrees about its source type", () => {
+    const groups = groupRiskSignals([
+      signal({ id: 1, source_type: "variationorder", source_id: 12 }),
+      signal({ id: 2, source_type: "paymentcertificate", source_id: 5 }),
+    ]);
+    expect(riskGroupHref(groups[0])).toBe(HEALTH);
+  });
+
+  it("falls back for a folded group carrying no source at all", () => {
+    const groups = groupRiskSignals([signal({ id: 1 }), signal({ id: 2 })]);
+    expect(riskGroupHref(groups[0])).toBe(HEALTH);
+    expect(riskGroupHref({ signals: [] })).toBe(HEALTH);
+  });
+});
+
+describe("queue rows name their object", () => {
+  it("a certificate row opens that certificate, not the finance page", () => {
+    const [row] = buildCertificateQueue([
+      { id: 6, pcNumber: "PC-006", workflowState: "submitted" },
+    ]);
+    expect(row.href).toBe(`${CERTIFICATES}&pc=6`);
+  });
+
+  it("a rejected certificate row opens that certificate", () => {
+    const [row] = buildRejectedCertificateQueue([
+      { id: 3, pcNumber: "PC-003", workflowState: "rejected" },
+    ]);
+    expect(row.href).toBe(`${CERTIFICATES}&pc=3`);
+  });
+
+  it("an obligation row opens that obligation, not the compliance page", () => {
+    const rows = buildObligationQueue(
+      [{ _id: "ob-9", title: "Submit the works programme", dueDate: "2026-01-02" }],
+      new Date("2026-01-01T09:00:00Z"),
+    );
+    expect(rows[0].href).toBe("/compliance?obligation=ob-9");
+  });
+
+  it("the documents alert names its project", () => {
+    expect(documentsHref(45)).toBe("/documents?project=45");
   });
 });
