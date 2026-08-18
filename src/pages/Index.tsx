@@ -98,12 +98,12 @@ import { PrimaryContractAlert } from "@/components/documents/PrimaryContractAler
 import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
-  ContractTimeBlock,
   LoadIssueBanner,
-  PositionStripBlock,
   RiskConditionBlock,
   SetupLineBlock,
 } from "@/components/home/blocks";
+import { StatusBandBlock } from "@/components/home/StatusBand";
+import { WhatChangedBlock } from "@/components/home/WhatChanged";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 
@@ -188,14 +188,48 @@ const Index = () => {
       {/* DashboardLayout owns the p-6 page padding; a page is a plain
           space-y-4 wrapper. */}
       <div className="space-y-4">
-        <PageHeader
-          title="Home"
-          description={
-            data.project?.name
-              ? `${data.project.name}${data.project.location ? ` · ${data.project.location}` : ""}`
-              : undefined
-          }
-        />
+        {/*
+          ── No description, and both halves of it were removed for a reason ──
+
+          It read `${project.name} · ${project.location}`, and on the seeded
+          project that rendered:
+
+            "Hatfield Street Refurbishment · Nine Flowers Guest House, 133,
+             Hatfield Street, Cape Town Ward 115, Cape Town, City of Cape
+             Town, Western Cape, 8001, South Africa"
+
+          **The name was already on screen.** `DashboardSidebar` renders
+          `selectedProject?.name` in the project switcher, in a fixed `h-16`
+          block that lines up with the page header's own row — so the same
+          string appeared twice, about 200px apart, on the same horizontal
+          band. The switcher is the better of the two places for it: it is
+          where the name is also the control that changes it.
+
+          **The location was not an address.** `Project.location` is one free
+          text column holding a reverse geocoder's full display string.
+          "Nine Flowers Guest House" is the nearest named building the
+          geocoder matched and is not the project; "Cape Town Ward 115" is an
+          electoral ward; and the tail is municipality, province, postcode and
+          country. A Cape Town principal agent was being told, on their own
+          project's homepage, that the job is in South Africa.
+
+          **And it could not be shortened honestly.** `Project` carries
+          `location`, `latitude` and `longitude` and no structured address —
+          no suburb, city or postcode column — so there is nothing to select a
+          better component from. Every rule for trimming the display string is
+          a positional guess against a format whose segment count varies with
+          what the geocoder matched: taking the first two segments yields
+          "Nine Flowers Guest House, 133", which is worse than silence, and
+          counting from the end is arbitrary in the same way on a string with
+          fewer segments. A heuristic that cannot be defended on a
+          differently-shaped string is not shipped.
+
+          The full address is not lost: it is on the project record, and on
+          issued notices, where the complete legal description is the point.
+          What this bought back is roughly two lines of the one screen this
+          page is held to.
+        */}
+        <PageHeader title="Home" />
 
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
@@ -254,7 +288,7 @@ const Index = () => {
         ) : (
           <>
             {/* Question 1: is anything on fire. */}
-            <PositionStripBlock data={data} />
+            <StatusBandBlock data={data} />
 
             <div className="grid gap-4 lg:grid-cols-2 items-start">
               {/* Question 2: what do I have to do. */}
@@ -264,7 +298,7 @@ const Index = () => {
               {/* What is true whether or not anybody acts today. */}
               <div className="space-y-4">
                 <RiskConditionBlock data={data} />
-                <ContractTimeBlock data={data} />
+                <WhatChangedBlock feed={data.changeFeed} />
               </div>
             </div>
           </>

@@ -66,12 +66,19 @@ export const FINANCE_TAB = {
 /** `/finance?tab=…` with the label encoded — the labels contain spaces. */
 const financeTab = (tab: string) => `/finance?tab=${encodeURIComponent(tab)}`;
 
-/** Every route below is one that exists in App.tsx. `/approvals` does not. */
+/**
+ * Every route below is one that exists in App.tsx. `/approvals` does not.
+ *
+ * Exported as `ROUTE` so the "What changed" feed in `homeVisuals.ts` reaches
+ * for the same URL shapes the queue does. A feed row and a queue row naming
+ * the same certificate must land on the same screen, and two hand-written
+ * copies of `?tab=…&pc=…` would drift the first time a tab label changed.
+ */
 // `finance: "/finance"` and `compliance: "/compliance"` used to live here and
 // are deliberately gone. Every row that used them was holding the id of the
 // thing it named and dropping it on the floor; a bare page is no longer a
 // destination this file can reach for by accident.
-const ROUTE = {
+export const ROUTE = {
   /** The certificate list, ready to certify/post. */
   certificates: financeTab(FINANCE_TAB.certificates),
   /** One certificate, named. */

@@ -347,201 +347,32 @@ function Figure({
 // importing blocks.
 export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 
-// ── The position strip ────────────────────────────────────────────────────
+// ── The position strip: MOVED ─────────────────────────────────────────────
 //
-// Six numbers, one row, above everything else on the page.
+// `PositionStripBlock` lived here and is gone. It was six figures in a row,
+// and every one of them survives — redistributed into the zone of
+// `StatusBand.tsx` that owns the question it answers:
 //
-// This replaces two separate panels — "Key indicators" (a full panel low on
-// the page, a paragraph of preamble and a sentence under every figure) and
-// "Commercial position" (five more figures and a caption). Between them they
-// stated retention twice and ran to about 385px of vertical space for what is
-// a single question: *where does this project stand right now.*
+//   certified, balance, retention  → the MONEY zone, now with the certified
+//                                    S-curve underneath them rather than a
+//                                    row of rand values on their own.
+//   variations awaiting decision   → the CHANGE zone, with the status split.
+//   open risk signals              → deleted from the band, because
+//                                    `RiskConditionBlock` below already names
+//                                    the worst tier once and lists the rules
+//                                    that fired. The strip's count was the
+//                                    same fact stated a second time, higher
+//                                    up the page.
 //
-// It is a STRIP and not a panel, and it draws nothing. GitHub, Jira and Linear
-// all put analytics on a separate named surface — Insights, Dashboards, Views
-// — and none of their home or queue surfaces renders a chart. The certified
-// proportion is a number here (82%) and a bar on `/finance`; a bar restating a
-// figure written out beside it was ink for no information.
-//
-// ── What was cut, and why it is not a lie ─────────────────────────────────
-//
-//   "Awaiting certification · N days" — CUT ENTIRELY, not shortened. It was
-//       the elapsed wait on the live certificate, and it needed a sentence
-//       ("time elapsed — this contract records no payment date to be measured
-//       against") to stop being read as an overdue count. That certificate is
-//       already the first row of the queue, where it says what to do about it.
-//       Per the brief: where a figure cannot be shown briefly AND honestly,
-//       cut the figure, not the honesty.
-//
-//   "Contract sum" and "N approved variations" — cut as reference. Certified
-//       plus balance state the same position, and /finance owns the detail.
-//
-//   The retention caveat ("no retention limit is recorded on this contract")
-//       survives on the cell's tooltip. `Project` carries a retention RATE and
-//       no retention LIMIT, so "at 5%" is stated and no limit is implied.
-//
-// Nothing here is fetched that the page did not already fetch, and the gates
-// are unchanged: the money cells require `finance.view` exactly as the old
-// `MoneyLineBlock` did, and the risk cell reads `riskCounts`, which
-// `visibleRiskSignals` has already filtered for this viewer.
-
-export function PositionStripBlock({ data }: { data: HomeData }) {
-  const {
-    canViewFinance,
-    canViewCompliance,
-    money,
-    retention,
-    variationPosition: vos,
-    variationsTruncated,
-    riskCounts,
-    riskUnavailable,
-  } = data;
-
-  const over = money.certifiedPct !== null && money.certifiedPct > 100;
-  const cells: React.ReactNode[] = [];
-
-  // Deep links use the finance tab labels verbatim — see `FINANCE_TAB`.
-  const CERTIFICATES = `/finance?tab=${encodeURIComponent(FINANCE_TAB.certificates)}`;
-  const VARIATIONS = `/finance?tab=${encodeURIComponent(FINANCE_TAB.variations)}`;
-
-  if (canViewFinance) {
-    cells.push(
-      <Figure
-        key="certified"
-        // Certified to date IS the sum of the posted certificates. "Which
-        // ones" is the only follow-on question it raises.
-        to={CERTIFICATES}
-        label="Certified to date"
-        value={money.certified === null ? null : formatZAR(money.certified)}
-        emphasis
-        // Severity rule 4: ONE coloured element per statement, and it is the
-        // element that NAMES the breach. "Over" names it; the rand figure is
-        // just the figure. Drawing both red said the same thing twice and
-        // spent two of the page's colour budget on one fact.
-        badge={over ? <Badge variant="danger">Over</Badge> : undefined}
-        // The comparison that used to be its own "Share of contract sum" cell
-        // AND a sentence underneath. Certifying past an agreed sum is the one
-        // judgement this strip makes, and the figure alone makes it.
-        // The baseline named here is the REVISED sum — original plus approved
-        // variations — because that is what the works are being carried out
-        // for and what the server's own over-certification ceiling uses.
-        compare={
-          money.certifiedPct === null || money.revisedContractSum === null
-            ? undefined
-            : `${money.certifiedPct}% of ${formatZAR(money.revisedContractSum)}`
-        }
-        caveat={
-          money.variations
-            ? "Against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
-            : "A commercial measure, not physical progress. Baselinq records no measure of what has been built."
-        }
-      />,
-      <Figure
-        key="balance"
-        // Balance moves only when a certificate is posted, so the certificate
-        // list is the ledger behind it.
-        to={CERTIFICATES}
-        label="Balance remaining"
-        value={money.balance === null ? null : formatZAR(money.balance)}
-        emphasis
-        // The retention deduction is the part a reader will not assume, so it
-        // is the part the comparison line spends itself on.
-        compare={
-          money.retentionHeld
-            ? `after ${formatZAR(money.retentionHeld)} retention`
-            : money.certifiedPct === null
-              ? undefined
-              : `${Math.max(0, 100 - money.certifiedPct)}% remaining`
-        }
-        caveat="Contract sum as revised by approved variations, less certified value, less retention held."
-      />,
-      <Figure
-        key="retention"
-        // Retention is withheld certificate by certificate.
-        to={CERTIFICATES}
-        label="Retention held"
-        value={retention.held === null ? null : formatZAR(retention.held)}
-        emphasis
-        compare={retention.ratePct === null ? undefined : `at ${retention.ratePct}%`}
-        caveat={
-          retention.ratePct === null
-            ? "Withheld across posted certificates. No retention rate is recorded on this contract."
-            : "Withheld across posted certificates. No retention limit is recorded on this contract."
-        }
-      />,
-      <Figure
-        key="variations"
-        to={VARIATIONS}
-        label="Variations awaiting decision"
-        value={vos.total === 0 ? "—" : String(vos.outstanding)}
-        emphasis
-        badge={variationsTruncated ? <Badge variant="neutral">May be short</Badge> : undefined}
-        compare={vos.total === 0 ? undefined : `of ${vos.total} raised`}
-        caveat={
-          vos.drafts > 0
-            ? `${vos.drafts} further in draft — the raiser's own unfinished work, not waiting on anyone.`
-            : undefined
-        }
-      />,
-    );
-  }
-
-  // ── Risk ──────────────────────────────────────────────────────────────
-  // Two different silences, and neither may be printed as a zero.
-  //
-  //   No `compliance.view` — `riskSignals` is empty because the viewer was
-  //       never served it, and "0" would assert a clear project to somebody
-  //       who was simply not shown it. The cell is absent instead.
-  //   The engine did not answer — a zeroed count is indistinguishable from a
-  //       healthy one, so it is said in a word rather than a number.
-  if (canViewCompliance) {
-    cells.push(
-      riskUnavailable ? (
-        <Figure
-          key="risk"
-          label="Open risk signals"
-          value="Unknown"
-          compare="engine did not respond"
-          caveat="Treat this project's risk posture as unknown, not as clear."
-        />
-      ) : (
-        <Figure
-          key="risk"
-          // The one figure whose destination really is Project health: a count
-          // of open signals is a diagnosis, and the signals tab is where the
-          // whole list lives with its evidence.
-          to="/project-health?tab=risk-signals"
-          label="Open risk signals"
-          value={String(riskCounts.total)}
-          emphasis
-          // Severity rule 1: a COUNT is not a breach, so it carries no
-          // colour however large it gets. "15" in red asserted an emergency
-          // that the number alone cannot support — fifteen advisory signals
-          // and fifteen tolerance breaches printed identically. The tiers
-          // are stated in the comparison line and worked in the panel below,
-          // where the worst one is named once and drawn once.
-          compare={`${riskCounts.red} critical · ${riskCounts.orange} warning`}
-        />
-      ),
-    );
-  }
-
-  // A viewer holding neither gate: nothing to summarise.
-  if (cells.length === 0) return null;
-
-  return (
-    <section className="bg-card border border-border rounded-xl px-4 py-3">
-      {/*
-        Five across only from `xl`. It was `lg:grid-cols-5`, which at 1024px
-        left each cell about 125px — too narrow for a rand figure at the stat
-        size (see the note in `Figure`). At `xl` the content area is 976px and
-        a cell is about 176px, which clears it. Between `sm` and `xl` the
-        strip is three across and each cell has 200px or more.
-      */}
-      <div className="grid gap-x-6 gap-y-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">{cells}</div>
-    </section>
-  );
-}
+// The strip's own note argued that a home surface should render no chart, on
+// the grounds that GitHub, Jira and Linear all put analytics on a separate
+// named surface. That was overruled deliberately: the owner's complaint was
+// that this page is "a wall of rows of text, nothing that tells you where we
+// are", and six rand figures with no scale under them is exactly that. The
+// distinction that survives is a different one — a chart here must answer
+// "where do we stand", never "browse the history". The certificate RUN, which
+// was 562px of one bar per certificate, is still on /finance and is still not
+// here; what is here is its cumulative curve at 64px.
 
 // ── Risk, as the project's condition ──────────────────────────────────────
 //
@@ -683,95 +514,20 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
   );
 }
 
-// ── Contract time ─────────────────────────────────────────────────────────
+// ── Contract time: MOVED ──────────────────────────────────────────────────
 //
-// Off three real fields — Project.start_date, Project.end_date and
-// Project.contract_end_date — derived in `summariseTime`.
+// `ContractTimeBlock` lived here and is gone. Its three figures are the TIME
+// zone of `StatusBand.tsx`: time remaining is the zone's headline, and build
+// length and the completion date are the two ends of the axis drawn under it,
+// which is the same information with the scale it was missing.
 //
-// NOT gated on `finance.view`. Dates are not money: a contractor who may not
-// see the contract sum still has to know when the works are due.
+// Its warning is not gone and is repeated on the axis that replaced it: there
+// is no fill on that axis and no percentage anywhere near it, because
+// Baselinq holds no measure of physical progress and elapsed calendar time is
+// not one. See the note on `ContractTimeline` in `homeVisuals.ts`.
 //
-// **Every figure is a count of calendar days.** There is no bar and no
-// percentage, because Baselinq holds no measure of physical progress and the
-// old homepage's "50% complete at the halfway date" was elapsed calendar time
-// wearing that measure's clothes.
-
-/** "30 days" / "1 day" — never a bare number, never a percentage. */
-const days = (n: number) => `${n} day${Math.abs(n) === 1 ? "" : "s"}`;
-
-export function ContractTimeBlock({ data }: { data: HomeData }) {
-  const t = data.time;
-
-  if (!t.hasDates) {
-    return <Panel title="Contract time" hint="No project timeline recorded." />;
-  }
-
-  // Only ever "past the contract completion date", which is a fact about the
-  // contract, never "behind programme", which would be a judgement about the
-  // works that nothing in Baselinq can support.
-  const overrun = t.overrun && t.remainingDays !== null;
-
-  return (
-    <Panel title="Contract time" action={<ViewAll to="/programme">Programme</ViewAll>}>
-      {/* Three cells, not four. This panel sits in a half-width column, and
-          "15 Nov 2026" beside an extension badge does not fit a quarter of it.
-          Days elapsed was the one figure of the four that decides nothing —
-          remaining is what a reader wants and build length is its context —
-          so it moved to the build-length tooltip, which already carries the
-          two dates it is the difference between. */}
-      <div className="px-4 py-3 grid gap-x-6 gap-y-4 grid-cols-2 sm:grid-cols-3">
-        <Figure
-          label={overrun ? "Past completion" : "Time remaining"}
-          value={t.remainingDays === null ? null : days(Math.abs(t.remainingDays))}
-          danger={overrun}
-          badge={t.notStarted ? <Badge variant="neutral">Not started</Badge> : undefined}
-          caveat="Calendar days against the contract dates. Not a measure of what has been built — Baselinq records none."
-        />
-        <Figure
-          label="Build length"
-          value={t.buildDays === null ? null : days(t.buildDays)}
-          caveat={[
-            t.start && t.contractEnd
-              ? `${formatDateUk(t.start, "short", "—")} – ${formatDateUk(t.contractEnd, "short", "—")}.`
-              : null,
-            t.elapsedDays === null ? null : `${days(t.elapsedDays)} elapsed.`,
-          ]
-            .filter(Boolean)
-            .join(" ") || undefined}
-        />
-        {/* contract_end_date is mutated by a signed variation granting an
-            extension of time (backend: tasks/views_signing.py::
-            _apply_vo_to_project), so a date differing from the one originally
-            agreed is evidence of an EOT and not a typo. The badge is the one
-            movement worth showing. */}
-        <Figure
-          label="Completion"
-          value={t.contractEnd ? formatDateUk(t.contractEnd, "short", "—") : null}
-          badge={
-            // Severity rule 1: an extension of time is a RECORDED FACT — a
-            // signed variation moved the completion date — not a breach and
-            // not a warning. It wore `warning` amber, which put the page's
-            // second-loudest colour on the one figure here that nobody has
-            // done anything wrong to earn. The sign on the number already
-            // says which way the date moved.
-            t.extensionDays !== null && t.originalEnd ? (
-              <Badge variant="neutral">
-                {t.extensionDays > 0
-                  ? `+${days(t.extensionDays)}`
-                  : `−${days(Math.abs(t.extensionDays))}`}
-              </Badge>
-            ) : undefined
-          }
-          caveat={
-            t.originalEnd
-              ? `Originally ${formatDateUk(t.originalEnd, "short", "—")}, moved by a signed extension of time.`
-              : undefined
-          }
-        />
-      </div>
-    </Panel>
-  );
-}
+// Vacating this slot in the right-hand column is what pays for
+// `WhatChangedBlock`, so the page did not grow.
 
 // ── Setup ─────────────────────────────────────────────────────────────────
 

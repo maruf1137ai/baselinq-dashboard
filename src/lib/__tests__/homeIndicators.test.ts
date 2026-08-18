@@ -93,6 +93,8 @@ describe("toVariationRecord", () => {
         status: "Under Review",
         grandTotal: 304_750,
         dateInstructed: "2026-06-28",
+        approvedAt: null,
+        updatedAt: "2026-06-30T09:00:00Z",
       }),
     ).toEqual({
       id: "118",
@@ -100,7 +102,21 @@ describe("toVariationRecord", () => {
       status: "Under Review",
       value: 304_750,
       dateInstructed: "2026-06-28",
+      // Carried for the "What changed" feed, which dates a variation without a
+      // second fetch. Both nullable on the model, and the feed words them
+      // differently: `approved_at` names a transition, `updated_at` says only
+      // that the row moved.
+      approvedAt: null,
+      updatedAt: "2026-06-30T09:00:00Z",
     });
+  });
+
+  it("leaves both feed timestamps null when the payload carries neither", () => {
+    // The feed drops an undated record rather than dating it now, so a null
+    // here must stay a null and must not become "today".
+    const r = toVariationRecord({ _id: "1", voNumber: "VO-001" });
+    expect(r.approvedAt).toBeNull();
+    expect(r.updatedAt).toBeNull();
   });
 
   it("reads the assignment-task route, preferring the variation's own status", () => {

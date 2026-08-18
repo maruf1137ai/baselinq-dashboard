@@ -55,6 +55,20 @@ import {
   summariseVariations,
   toVariationRecord,
 } from "@/lib/homeIndicators";
+import {
+  buildCertificateChanges,
+  buildCertifiedCurve,
+  buildChangeFeed,
+  buildContractTimeline,
+  buildMeetingChanges,
+  buildMilestoneChanges,
+  buildNoticeChanges,
+  buildTaskChanges,
+  buildVariationChanges,
+  splitChangeByStatus,
+  summariseChangePosition,
+  summariseMilestoneDrift,
+} from "@/lib/homeVisuals";
 import { summariseProjectSetup } from "@/lib/homeSetup";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { isMeetingPast } from "@/lib/dateUtils";
@@ -75,6 +89,22 @@ interface RiskSignal {
    */
   source_type: string | null;
   source_id: number | null;
+  /**
+   * `auto_now_add` on the model, so it genuinely dates the signal's
+   * appearance. `last_evaluated_at` is `auto_now` and moves on every rules
+   * run, so it is deliberately NOT read — ordering a feed by it would put the
+   * whole risk register at the top of the page after every evaluation.
+   */
+  first_detected_at?: string | null;
+  /**
+   * The rule's own payload. Read for exactly one field —
+   * `VO_TOLERANCE_BREACH.detail.tolerance_pct` — because that threshold is
+   * this project's risk policy and exists nowhere else on the wire. The rule
+   * emits nothing below the threshold, so the field is absent on a healthy
+   * project and the band draws no tolerance mark rather than substituting the
+   * rule's 10% default, which is a policy default and not this policy.
+   */
+  detail?: Record<string, unknown> | null;
 }
 
 interface SignalsResponse {
@@ -390,6 +420,112 @@ export function useHomeData(projectId: string | undefined) {
   // that the viewer was not already entitled to.
   const riskGroups = useMemo(() => groupRiskSignals(riskSignals), [riskSignals]);
 
+  // ── The visual band ─────────────────────────────────────────────────────
+  //
+  // Four derived shapes, all pure and all tested in
+  // `src/lib/__tests__/homeVisuals.test.ts`. NO NEW FETCH: every one is built
+  // from a payload already requested above, so the band introduces no new
+  // permission surface and a viewer's gates are exactly the ones they had.
+
+  /**
+   * The contract dates as an axis. Off the project object the page header
+   * already reads — no request, and no gate. Dates are not money.
+   */
+  const timeline = useMemo(() => buildContractTimeline(time), [time]);
+
+  /**
+   * Baseline finish against actual finish, across the WHOLE programme —
+   * `milestones.data`, not `milestoneRows`, because that list drops completed
+   * milestones and a completed milestone is precisely the one whose slip is
+   * finally a fact rather than a plan.
+   */
+  const milestoneDrift = useMemo(
+    () => summariseMilestoneDrift(milestones.data ?? []),
+    [milestones.data],
+  );
+
+  /** Cumulative certified value, off the run that had no caller until now. */
+  const certifiedCurve = useMemo(
+    () => buildCertifiedCurve(certificateRun, money.revisedContractSum),
+    [certificateRun, money.revisedContractSum],
+  );
+
+  /**
+   * The VO tolerance, read off the server's own fired signal and nowhere else.
+   *
+   * `visibleRiskSignals` has NOT run on `risk.data.signals` at this point, so
+   * the gate is applied here explicitly: the threshold is only read when the
+   * viewer holds both `compliance.view` (the endpoint's gate) and
+   * `finance.view` (the signal is FINANCIAL and its detail carries amounts) —
+   * the same pairing `visibleRiskSignals` applies. Without both it stays null
+   * and the band draws no tolerance mark.
+   */
+  const tolerancePct = useMemo(() => {
+    if (!canViewCompliance || !canViewFinance) return null;
+    const signal = (risk.data?.signals ?? []).find((s) => s.code === "VO_TOLERANCE_BREACH");
+    const raw = signal?.detail?.tolerance_pct;
+    const n = typeof raw === "number" ? raw : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [risk.data, canViewCompliance, canViewFinance]);
+
+  const changePosition = useMemo(
+    () =>
+      summariseChangePosition(
+        variationRecordList,
+        money.contractSum,
+        money.variations,
+        tolerancePct,
+      ),
+    [variationRecordList, money.contractSum, money.variations, tolerancePct],
+  );
+
+  const changeSplit = useMemo(
+    () => splitChangeByStatus(variationRecordList),
+    [variationRecordList],
+  );
+
+  /**
+   * "What changed", assembled from what the page already holds.
+   *
+   * Every group declares the permissions of the endpoint it came from and
+   * `buildChangeFeed` enforces them, failing closed on an absent flag exactly
+   * as `filterQueueByPermission` does. The finance groups are additionally
+   * EMPTY for a viewer without `finance.view`, because the requests behind
+   * them were never made — the filter is the second line, not the only one.
+   */
+  const changeFeed = useMemo(
+    () =>
+      buildChangeFeed(
+        [
+          buildCertificateChanges(certificateList),
+          buildVariationChanges(variationRecordList),
+          buildNoticeChanges(timeBars.data?.time_bars ?? []),
+          buildMilestoneChanges(milestones.data ?? []),
+          buildMeetingChanges(meetingList),
+          buildTaskChanges(taskList),
+        ],
+        { canViewFinance, canViewCompliance },
+        // FOUR rows, and the number is a measurement rather than a taste.
+        //
+        // The page has to hold one screen at 1440px, and the right-hand column
+        // is what sets its height: the risk register plus this panel. Measured
+        // in the browser at 1440x900, each feed row is 45px and the page came
+        // to 901px at six rows and 856px at four. Four is what fits with the
+        // header, the band and the grid gaps counted in.
+        { limit: 4 },
+      ),
+    [
+      certificateList,
+      variationRecordList,
+      timeBars.data,
+      milestones.data,
+      meetingList,
+      taskList,
+      canViewFinance,
+      canViewCompliance,
+    ],
+  );
+
   // ── Milestones ──────────────────────────────────────────────────────────
   // Only milestones with a real baseline can report slip. The rest are shown
   // with their dates and status and nothing more — no invented percentage.
@@ -472,6 +608,13 @@ export function useHomeData(projectId: string | undefined) {
     queueSummary,
     money,
     time,
+    // The visual band
+    timeline,
+    milestoneDrift,
+    certifiedCurve,
+    changePosition,
+    changeSplit,
+    changeFeed,
     // Key indicators
     variationPosition,
     variationsTruncated: variationRecords.truncated,

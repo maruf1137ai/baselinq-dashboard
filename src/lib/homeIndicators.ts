@@ -58,6 +58,14 @@ export interface VariationRecord {
   status?: string | null;
   value?: number | null;
   dateInstructed?: string | null;
+  /**
+   * `VariationOrder.approved_at` and `updated_at`, carried so the "What
+   * changed" feed can date a variation without a second fetch. Both nullable
+   * on the model, and the feed words them differently: `approved_at` names a
+   * transition, `updated_at` says only that the row moved.
+   */
+  approvedAt?: string | null;
+  updatedAt?: string | null;
 }
 
 /**
@@ -156,6 +164,8 @@ export function toVariationRecord(raw: any): VariationRecord {
     status: nested?.status ?? raw?.status ?? null,
     value: variationValue({ grandTotal: raw?.grandTotal, task: nested }) || null,
     dateInstructed: raw?.dateInstructed ?? nested?.dateInstructed ?? null,
+    approvedAt: raw?.approvedAt ?? nested?.approvedAt ?? null,
+    updatedAt: raw?.updatedAt ?? nested?.updatedAt ?? null,
   };
 }
 
