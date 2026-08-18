@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
 import { CreatePCDrawer, CreatePCApiPayload } from "./createPCDrawer";
 import useFetch from "@/hooks/useFetch";
@@ -10,6 +10,7 @@ import { BarChart2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FinanceToolbar } from "./FinanceToolbar";
+import { findByDeepLinkId } from "@/lib/deepLink";
 
 interface PCListResponse {
   count: number;
@@ -18,7 +19,15 @@ interface PCListResponse {
   results: PCEntry[];
 }
 
-const PaymentCertificate = () => {
+interface PaymentCertificateProps {
+  /** Raw `?pc=` value from /finance, or null. Resolved here rather than on the
+   *  page because this is where the certificate list actually lives — an id is
+   *  only ever matched against certificates already fetched and already on
+   *  screen. */
+  certificateParam?: string | null;
+}
+
+const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps) => {
   const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -31,6 +40,25 @@ const PaymentCertificate = () => {
   );
 
   const certificates: PCEntry[] = data?.results ?? [];
+
+  // Which certificate's details are open. One piece of state, shared by the
+  // in-page click on a PC number and by the ?pc= deep link.
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // A link may name the certificate by its numeric id or by its PC number.
+  // It resolves ONLY against `certificates` — the rows this viewer's request
+  // actually returned. A deleted certificate, or one on a project this user is
+  // not a member of, resolves to null: nothing is selected, nothing is
+  // filtered, and the tab renders precisely as it would with no parameter.
+  // It never says "no certificates" to someone who was simply not shown one.
+  const linkedCertificate = useMemo(
+    () => findByDeepLinkId(certificateParam, certificates, (c) => [c.id, c.pcNumber]),
+    [certificateParam, certificates],
+  );
+
+  useEffect(() => {
+    if (linkedCertificate) setSelectedId(linkedCertificate.id);
+  }, [linkedCertificate]);
 
   // Matches the backend's own check (_can_create_payment_certificate in
   // tasks/views.py): drafting a certificate requires finance.create_certificate
@@ -82,7 +110,12 @@ const PaymentCertificate = () => {
           <AwesomeLoader message="Verifying certificates" />
         </div>
       ) : (
-        <PaymentCertificateTable orders={certificates} search={search} />
+        <PaymentCertificateTable
+          orders={certificates}
+          search={search}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
       )}
 
       <CreatePCDrawer

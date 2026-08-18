@@ -1,5 +1,5 @@
 import { CircleCheck, CalendarIcon, Eye, Pencil, Plus, Trash2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ import {
 } from "@/hooks/useMilestones";
 import { toast } from "sonner";
 import { ViewDetailsDialog } from "./detailsDialog";
+import { findByDeepLinkId } from "@/lib/deepLink";
 
 const STATUS_LABELS: Record<string, string> = {
   planned: "Planned",
@@ -121,9 +122,16 @@ function DatePickerField({
 interface MilestoneProps {
   projectId: string | number | null;
   onAddMilestone?: () => void;
+  /** Raw `?milestone=` value from /programme, or null.
+   *
+   *  A HIGHLIGHT, never a filter: the named phase is marked and scrolled to,
+   *  and every other phase stays exactly where it was. An id that matches
+   *  nothing in the list this viewer's request returned — deleted, or on
+   *  another project — marks nothing and leaves the full list intact. */
+  selectedMilestoneId?: string | null;
 }
 
-const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
+const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: MilestoneProps) => {
   const { data: milestones = [], isLoading } = useMilestones(projectId);
   const updateMutation = useUpdateMilestone(projectId);
   const deleteMutation = useDeleteMilestone(projectId);
@@ -132,6 +140,16 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const selectedRowRef = useRef<HTMLDivElement | null>(null);
+
+  const linkedMilestone = useMemo(
+    () => findByDeepLinkId(selectedMilestoneId, milestones, (m) => [m._id]),
+    [selectedMilestoneId, milestones],
+  );
+
+  useEffect(() => {
+    if (linkedMilestone) selectedRowRef.current?.scrollIntoView({ block: "center" });
+  }, [linkedMilestone]);
 
   function openEdit(m: MilestoneType) {
     setEditingId(m._id);
@@ -260,7 +278,13 @@ const Milestone = ({ projectId, onAddMilestone }: MilestoneProps) => {
           ) : (
             <div
               key={m._id}
-              className="flex items-center gap-4 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted/30 transition-colors">
+              ref={linkedMilestone?._id === m._id ? selectedRowRef : undefined}
+              aria-current={linkedMilestone?._id === m._id ? "true" : undefined}
+              data-highlighted={linkedMilestone?._id === m._id ? "true" : undefined}
+              className={cn(
+                "flex items-center gap-4 px-4 py-3 rounded-xl bg-card border border-border hover:bg-muted/30 transition-colors",
+                linkedMilestone?._id === m._id && "ring-2 ring-ring",
+              )}>
               <CircleCheck
                 className="h-4 w-4 shrink-0"
                 style={{ color: m.status === "completed" ? "#10B981" : "#D1D5DB" }}
