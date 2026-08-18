@@ -511,11 +511,30 @@ export function summariseChangePosition(
   };
 }
 
-/** Counts by contractual status, for the split bar. Approved-set kept in sync. */
+/**
+ * Variation VALUE by contractual status, with the count alongside.
+ *
+ * ── Why value and not count ───────────────────────────────────────────────
+ *
+ * This started as a count split and that made a R50 000 variation and a
+ * R5 000 000 one the same width, which is precisely backwards for the
+ * question the zone is asked: **how much change is still undecided.** Value
+ * answers it; a count answers "how many pieces of paper".
+ *
+ * `count` is kept because it is the honest denominator for the value and
+ * because a value can be null. `value` is null-safe: a variation whose
+ * `grand_total` never arrived contributes to `count` and not to `value`, and
+ * `valuedCount` says how many of the count the value actually covers, so the
+ * caller can disclose the gap instead of drawing a short bar as a whole one.
+ */
 export interface ChangeStatusSlice {
   key: "approved" | "outstanding" | "draft" | "rejected";
   label: string;
   count: number;
+  /** Summed `grand_total` for this status. Null when none carried one. */
+  value: number | null;
+  /** How many of `count` contributed a value. */
+  valuedCount: number;
 }
 
 const CHANGE_DRAFT = new Set(["draft"]);
@@ -525,26 +544,48 @@ export function splitChangeByStatus(variations: ChangeVariationLike[]): ChangeSt
   const list = Array.isArray(variations) ? variations : [];
   const norm = (s: string | null | undefined) => (s ?? "").toString().trim().toLowerCase();
 
-  let approved = 0;
-  let draft = 0;
-  let rejected = 0;
-  let outstanding = 0;
+  const bucket = () => ({ count: 0, value: 0, valuedCount: 0 });
+  const acc: Record<string, ReturnType<typeof bucket>> = {
+    approved: bucket(),
+    outstanding: bucket(),
+    draft: bucket(),
+    rejected: bucket(),
+  };
 
   for (const v of list) {
-    const s = norm(v.status);
-    if (CHANGE_APPROVED.has(s)) approved += 1;
-    else if (CHANGE_DRAFT.has(s)) draft += 1;
-    else if (CHANGE_REJECTED.has(s)) rejected += 1;
-    // Submitted / Under Review / Priced / Recommended, and the assignment
-    // task's todo / in review. Somebody is waiting on a decision.
-    else outstanding += 1;
+    const st = norm(v.status);
+    const key = CHANGE_APPROVED.has(st)
+      ? "approved"
+      : CHANGE_DRAFT.has(st)
+        ? "draft"
+        : CHANGE_REJECTED.has(st)
+          ? "rejected"
+          // Submitted / Under Review / Priced / Recommended, and the
+          // assignment task's todo / in review. Somebody is waiting.
+          : "outstanding";
+    acc[key].count += 1;
+    const n = typeof v.value === "number" ? v.value : Number(v.value);
+    if (Number.isFinite(n) && n !== 0) {
+      acc[key].value += n;
+      acc[key].valuedCount += 1;
+    }
   }
 
+  const slice = (key: ChangeStatusSlice["key"], label: string): ChangeStatusSlice => ({
+    key,
+    label,
+    count: acc[key].count,
+    // Null rather than zero: "no variation in this status carried a value" and
+    // "these variations are worth nothing" are different statements.
+    value: acc[key].valuedCount > 0 ? acc[key].value : null,
+    valuedCount: acc[key].valuedCount,
+  });
+
   return [
-    { key: "approved", label: "Approved", count: approved },
-    { key: "outstanding", label: "Awaiting decision", count: outstanding },
-    { key: "draft", label: "Draft", count: draft },
-    { key: "rejected", label: "Rejected", count: rejected },
+    slice("approved", "Approved"),
+    slice("outstanding", "Awaiting decision"),
+    slice("draft", "Draft"),
+    slice("rejected", "Rejected"),
   ];
 }
 

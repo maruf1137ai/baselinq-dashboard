@@ -280,21 +280,41 @@ describe("summariseChangePosition", () => {
 });
 
 describe("splitChangeByStatus", () => {
-  it("separates committed, awaited, draft and rejected", () => {
+  it("sums VALUE by status, and keeps the count alongside it", () => {
     const s = splitChangeByStatus([
-      { status: "Approved" },
-      { status: "Closed" },
-      { status: "Under Review" },
-      { status: "Priced" },
-      { status: "Draft" },
-      { status: "Rejected" },
+      { status: "Approved", value: 400_000 },
+      { status: "Closed", value: 100_000 },
+      { status: "Under Review", value: 250_000 },
+      { status: "Priced", value: 50_000 },
+      { status: "Draft", value: 90_000 },
+      { status: "Rejected", value: 20_000 },
     ]);
     expect(s).toEqual([
-      { key: "approved", label: "Approved", count: 2 },
-      { key: "outstanding", label: "Awaiting decision", count: 2 },
-      { key: "draft", label: "Draft", count: 1 },
-      { key: "rejected", label: "Rejected", count: 1 },
+      { key: "approved", label: "Approved", count: 2, value: 500_000, valuedCount: 2 },
+      { key: "outstanding", label: "Awaiting decision", count: 2, value: 300_000, valuedCount: 2 },
+      { key: "draft", label: "Draft", count: 1, value: 90_000, valuedCount: 1 },
+      { key: "rejected", label: "Rejected", count: 1, value: 20_000, valuedCount: 1 },
     ]);
+  });
+
+  it("counts an unpriced variation but does not let it claim a zero value", () => {
+    // "No variation in this status carried a value" and "these variations are
+    // worth nothing" are different statements, and a zero would merge them.
+    const s = splitChangeByStatus([{ status: "Under Review" }, { status: "Priced", value: null }]);
+    const out = s.find((x) => x.key === "outstanding")!;
+    expect(out.count).toBe(2);
+    expect(out.value).toBeNull();
+    // The caller needs this to say "2 not priced, so not in the bar".
+    expect(out.valuedCount).toBe(0);
+  });
+
+  it("reports a partly-priced status so the caller can disclose the gap", () => {
+    const s = splitChangeByStatus([
+      { status: "Under Review", value: 250_000 },
+      { status: "Priced" },
+    ]);
+    const out = s.find((x) => x.key === "outstanding")!;
+    expect(out).toMatchObject({ count: 2, value: 250_000, valuedCount: 1 });
   });
 
   it("reads the assignment task's vocabulary too", () => {

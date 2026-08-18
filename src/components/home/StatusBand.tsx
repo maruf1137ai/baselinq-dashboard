@@ -189,20 +189,25 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
     <div className="mt-1">
       <div className="relative h-2" aria-hidden="true">
         {/* The rule itself. */}
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted" />
+        <div
+          className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+          style={{ backgroundColor: "hsl(var(--viz-track))" }}
+        />
 
         {/* Days a signed extension of time moved completion by. No colour —
-            but `bg-muted-foreground` rather than a tint of it, because a tint
-            measured 1.9:1 against the card and this band is a data element,
-            not a ground. At full strength it is 5.47:1 on the card and 4.99:1
-            on the row hover, and it stays distinct from the track beneath it
-            (1.21:1), the overrun beside it and the today marker over it. */}
+            but `--viz-ink` at full strength rather than a tint of it, because
+            a tint measured 1.9:1 against the card and this band is a data
+            element, not a ground. At full strength it is 5.47:1 on the card
+            and 5.01:1 on the row hover, and it stays distinct from the track
+            beneath it, the overrun beside it and the today marker over it. */}
         {timeline.extension && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-muted-foreground"
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+            data-viz="extension"
             style={{
               left: pct(timeline.extension.from),
               width: pct(timeline.extension.to - timeline.extension.from),
+              backgroundColor: "hsl(var(--viz-ink))",
             }}
           />
         )}
@@ -210,11 +215,38 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
         {/* Today, past completion. A breach that has already happened. */}
         {timeline.overrun && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full bg-destructive"
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full"
+            data-viz="overrun"
             style={{
               left: pct(timeline.overrun.from),
               width: pct(timeline.overrun.to - timeline.overrun.from),
+              // `--viz-breach` (6.31:1), not `--destructive` (4.68:1). This is
+              // the one mark on the band that means something has gone wrong
+              // and it is 6px tall, so it takes the darker of the two reds.
+              backgroundColor: "hsl(var(--viz-breach))",
             }}
+          />
+        )}
+
+        {/* ── The completion boundary ───────────────────────────────────
+            Drawn whenever there is an overrun, and it exists for a contrast
+            reason as much as a semantic one.
+
+            The extension band ends exactly where the overrun band begins, so
+            on an extended contract that has then run late the two TOUCH. They
+            measure 1.15:1 against each other — `--viz-ink` and `--viz-breach`
+            are near-identical in luminance — so the join between "days we
+            were granted" and "days we are late" was legible by HUE ALONE, and
+            vanished in greyscale and to a dichromat. This is the same defect
+            that was found on the certified curve and its reference line.
+
+            A 2px cut in the card colour separates them by a channel that is
+            not colour at all, and it lands on the contract completion date,
+            which is the one boundary on this axis worth marking. */}
+        {timeline.overrun && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 w-0.5 -translate-x-1/2 bg-card"
+            style={{ left: pct(timeline.overrun.from) }}
           />
         )}
 
@@ -224,8 +256,8 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
           .map((m) => (
             <div
               key={m.key}
-              className="absolute top-0 h-2 w-px bg-muted-foreground"
-              style={{ left: pct(m.at) }}
+              className="absolute top-0 h-2 w-px"
+              style={{ left: pct(m.at), backgroundColor: "hsl(var(--viz-ink))" }}
             />
           ))}
 
@@ -278,10 +310,17 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
           <p className="text-xs text-foreground truncate w-1/3 shrink-0" title={r.name}>
             {r.name}
           </p>
-          <div className="relative h-1.5 flex-1 rounded-full bg-muted" aria-hidden="true">
+          <div
+            className="relative h-1.5 flex-1 rounded-full"
+            style={{ backgroundColor: "hsl(var(--viz-track))" }}
+            aria-hidden="true"
+          >
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-muted-foreground"
-              style={{ width: `${Math.max(4, (r.slipDays / worst) * 100).toFixed(2)}%` }}
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                width: `${Math.max(4, (r.slipDays / worst) * 100).toFixed(2)}%`,
+                backgroundColor: "hsl(var(--viz-ink))",
+              }}
             />
           </div>
           {/* The figure beside the bar, so nothing is carried by length alone. */}
@@ -312,7 +351,7 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
  * ── Why this is hand-drawn rather than a chart library ────────────────────
  *
  * `recharts` is a dependency of this repo and was the obvious tool. It was
- * measured and rejected on two counts:
+ * measured and rejected on three counts:
  *
  *  1. Its `type="monotone"` and `type="linear"` both draw the interpolation
  *     described above. `type="step"` avoids that, but then the library is
@@ -321,11 +360,28 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
  *     using it here would have moved the whole library into the app's main
  *     chunk — measured at 1,051 kB gzip before and 1,163 kB after — to draw
  *     one 64px sparkline on the landing page.
+ *  3. It fights exactly the cases that matter most here. Empty, one-point,
+ *     all-on-one-date and undated-excluded are four states this mark has to
+ *     handle explicitly and correctly, and each is an early return below.
  *
- * The five `--chart-*` tokens have no Tailwind mapping (there is no
- * `bg-chart-1`, and adding one would be a new token), so `--chart-1` is
- * consumed the way SVG takes colour anyway: `hsl(var(--chart-1))` on the
- * attribute. The dark ramp redefines the same variable and keeps working.
+ * ── Why the series is NEUTRAL and not the brand purple ────────────────────
+ *
+ * It was `--chart-1` (#6b5be6) and that was a bug, caught by measuring the
+ * marks against EACH OTHER rather than only against the ground. Against the
+ * card, purple is 4.80:1 and passes as a mark. Against the dashed reference
+ * line beside it, which has to be `--viz-ink` (#616875) to clear 3:1 itself,
+ * purple is **1.14:1** — the two are within a rounding error of the same
+ * luminance. The series and the contract sum it is measured against were
+ * therefore distinguished by HUE ALONE: identical in greyscale, and
+ * identical to a dichromat.
+ *
+ * Both are now `--viz-ink`, and they are told apart by a channel that is not
+ * colour at all: the series is solid with a fill beneath it, the ceiling is
+ * dashed with nothing beneath it.
+ *
+ * Tokens are consumed through `style={{ stroke: "hsl(var(--viz-ink))" }}`
+ * rather than as `stroke="…"` presentation attributes, because `var()` inside
+ * a presentation attribute is inconsistently supported in older Safari.
  *
  * ── Why the y-domain runs to the ceiling ──────────────────────────────────
  *
@@ -397,16 +453,14 @@ function CertifiedCurve({
       aria-hidden="true"
       focusable="false"
     >
-      <path d={area} fill="hsl(var(--chart-1))" fillOpacity={0.14} />
+      <path d={area} style={{ fill: "hsl(var(--viz-fill))", fillOpacity: 0.18 }} />
       <path
         d={line}
-        fill="none"
-        stroke="hsl(var(--chart-1))"
-        strokeWidth={1.5}
         strokeLinejoin="round"
         // Without this the horizontal scale squashes the stroke to a hairline
         // and the verticals render three times thicker than the flats.
         vectorEffect="non-scaling-stroke"
+        style={{ fill: "none", stroke: "hsl(var(--viz-ink))", strokeWidth: 1.5 }}
       />
       {ceiling !== null && ceiling > 0 && (
         <line
@@ -414,13 +468,15 @@ function CertifiedCurve({
           x2={W}
           y1={y(ceiling)}
           y2={y(ceiling)}
-          // Severity rule 1: the line turns destructive ONLY once it has
-          // actually been crossed. Below the ceiling it is a neutral
-          // reference, and drawing it red would colour a fact, not a breach.
-          stroke={overCeiling ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))"}
-          strokeWidth={1}
           strokeDasharray="3 3"
           vectorEffect="non-scaling-stroke"
+          style={{
+            // Severity rule 1: the line turns to breach red ONLY once it has
+            // actually been crossed. Below the ceiling it is a neutral
+            // reference, and drawing it red would colour a fact, not a breach.
+            stroke: overCeiling ? "hsl(var(--viz-breach))" : "hsl(var(--viz-ink))",
+            strokeWidth: 1,
+          }}
         />
       )}
     </svg>
@@ -430,55 +486,72 @@ function CertifiedCurve({
 // ── The change bar ────────────────────────────────────────────────────────
 
 /**
- * Where change stands, as one proportional bar with all four counts beneath.
+ * Variation VALUE by status — approved, awaiting decision, draft — as one
+ * stacked bar, with every status's value and count printed beneath it.
  *
- * ── Why only TWO of the four statuses are DRAWN ───────────────────────────
+ * ── Why this and not a tolerance gauge ────────────────────────────────────
  *
- * The bar was four segments and is now two, for a contrast reason and a
- * meaning reason, and they happen to agree.
+ * The obvious chart here is cumulative variation value against the risk
+ * policy's tolerance, and it is the weaker of the two. It is ONE number
+ * against ONE threshold, so there is no series in it; the threshold is only
+ * on the wire when the signal has already fired, so on a compliant project —
+ * the common case — the bar has no tick and is a bare bar; and
+ * `variationsTruncated` can be true, so the number itself may be short.
  *
- * The contrast reason: four achromatic segments need four fills that each
- * clear 3:1 against the card AND remain distinguishable from one another.
- * Measured in the browser, the four-step ramp put the lightest two at 1.37:1
- * and 1.9:1 — invisible on white, and encoding a real quantity in something a
- * reader cannot see. Squeezing four steps into the band above 3:1 makes them
- * indistinguishable from each other instead, which is the same failure.
+ * Value by status needs no tolerance, is complete whenever the variation list
+ * is, and answers a question nothing else on this page answers: **how much
+ * change is still undecided.** The tolerance has not been dropped — it is the
+ * zone's footnote, in words, whenever the server has published it.
  *
- * The meaning reason: the two dropped segments are not part of where change
- * stands. A DRAFT is the raiser's own unfinished work and is not sitting with
- * anybody — the same reasoning `summariseVariations` already uses to hold
- * drafts out of "outstanding". A REJECTED variation is settled and carries no
- * value forward. Neither belongs in a bar about committed-versus-awaited.
+ * ── Why three segments and not four ───────────────────────────────────────
  *
- * Both are still COUNTED, in the legend below, which is also why the bar is
- * never the only channel: every segment's figure is printed beside it in
- * words, so nothing here is carried by fill alone.
+ * REJECTED is counted in the legend and not drawn. It is settled and carries
+ * no value forward, so including it in a bar about live change would inflate
+ * the denominator with money nobody is going to spend.
  *
- * The two fills that remain measure 16.5:1 and 5.47:1 on the card, and 4.99:1
- * for the lighter one on the row hover.
+ * ── How three achromatic segments stay distinguishable ────────────────────
+ *
+ * The three fills are 16.5:1, 5.47:1 and ~4.2:1 against the card, so each
+ * clears 3:1 against the GROUND. Two of them are close to each other, which
+ * would normally make an adjacent pair hard to separate — so adjacency is not
+ * what separates them: each segment is divided from the next by a 2px gap in
+ * the card colour. A gap is not a colour channel, so the bar survives
+ * greyscale and dichromacy, and the legend prints every figure in words
+ * regardless.
  */
-function ChangeBar({ slices }: { slices: { key: string; label: string; count: number }[] }) {
-  // The two that are drawn, in the order they are drawn.
-  const DRAWN = ["approved", "outstanding"];
+function ChangeBar({ slices }: { slices: { key: string; label: string; count: number; value: number | null; valuedCount: number }[] }) {
+  /** Drawn, in order. Rejected is deliberately absent — see above. */
+  const DRAWN = ["approved", "outstanding", "draft"];
   const FILL: Record<string, string> = {
-    approved: "bg-foreground",
-    outstanding: "bg-muted-foreground",
+    approved: "hsl(var(--foreground))",
+    outstanding: "hsl(var(--viz-ink))",
+    draft: "hsl(var(--viz-fill))",
   };
 
-  const drawn = slices.filter((s) => DRAWN.includes(s.key) && s.count > 0);
-  const drawnTotal = drawn.reduce((n, s) => n + s.count, 0);
   const counted = slices.filter((s) => s.count > 0);
   if (counted.length === 0) return null;
+
+  const drawn = slices.filter((s) => DRAWN.includes(s.key) && (s.value ?? 0) > 0);
+  const drawnTotal = drawn.reduce((n, s) => n + (s.value ?? 0), 0);
+
+  // How many live variations the bar's widths actually account for. A bar
+  // built from four of nine values is not wrong for showing four; it is wrong
+  // for not saying so.
+  const live = slices.filter((s) => DRAWN.includes(s.key));
+  const unvalued = live.reduce((n, s) => n + (s.count - s.valuedCount), 0);
 
   return (
     <div className="mt-1">
       {drawnTotal > 0 && (
-        <div className="flex h-1.5 rounded-full overflow-hidden bg-muted" aria-hidden="true">
+        <div className="flex h-1.5 gap-0.5" aria-hidden="true">
           {drawn.map((s) => (
             <div
               key={s.key}
-              className={FILL[s.key]}
-              style={{ width: `${((s.count / drawnTotal) * 100).toFixed(2)}%` }}
+              className="rounded-full"
+              style={{
+                width: `${(((s.value ?? 0) / drawnTotal) * 100).toFixed(2)}%`,
+                backgroundColor: FILL[s.key],
+              }}
             />
           ))}
         </div>
@@ -489,13 +562,24 @@ function ChangeBar({ slices }: { slices: { key: string; label: string; count: nu
             {/* A swatch only where there is a segment to point at. A dot for a
                 status the bar does not draw would say the bar has a part the
                 reader cannot find. */}
-            {FILL[s.key] && (
-              <span className={cn("inline-block h-1.5 w-1.5 rounded-full mr-1", FILL[s.key])} />
+            {FILL[s.key] && (s.value ?? 0) > 0 && (
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full mr-1"
+                style={{ backgroundColor: FILL[s.key] }}
+              />
             )}
-            {s.count} {s.label.toLowerCase()}
+            {s.value === null ? s.count : formatZAR(s.value)} {s.label.toLowerCase()}
+            {s.value !== null && s.count > 0 ? ` (${s.count})` : ""}
           </p>
         ))}
       </div>
+      {unvalued > 0 && (
+        // Always visible, never a tooltip: a datum that could not be placed is
+        // counted on the face of the card.
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {unvalued} not priced, so not in the bar
+        </p>
+      )}
     </div>
   );
 }
@@ -647,7 +731,16 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           c.pctOfOriginal === null
             ? null
             : c.tolerancePct === null
-              ? `Approved change ${c.pctOfOriginal}% of the original sum`
+              ? // The COMMON case, and it has to say so rather than stay
+                // quiet. `ProjectRiskPolicy.vo_tolerance_pct` is not on the
+                // project payload; the only route it takes to the client is
+                // inside a FIRED VO_TOLERANCE_BREACH signal's detail. So on a
+                // compliant project we genuinely do not know this project's
+                // threshold, and silence would let a reader assume the figure
+                // beside it had been checked against one. The rule's own 10%
+                // default is a policy default, not this policy, and printing
+                // it would draw a threshold that is not this project's.
+                `Approved change ${c.pctOfOriginal}% of the original sum · tolerance not published for this project`
               : // Worded as a tolerance, never as a breach. `contractual: False`.
                 `Approved change ${c.pctOfOriginal}% of the original sum, ${
                   c.pastTolerance ? "past" : "within"
