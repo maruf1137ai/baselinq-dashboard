@@ -51,6 +51,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { usePermissions } from '@/hooks/usePermissions';
+import { PageHeader } from '@/components/ui/page-header';
 
 const SORT_OPTIONS = [
   { value: 'recently_updated', label: 'Recently updated' },
@@ -276,22 +277,21 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
       <div className="space-y-6">
         <AskRegulationsDrawer isOpen={isAskOpen} onClose={() => setIsAskOpen(false)} />
 
-        {projectId && <PrimaryContractCard projectId={projectId} />}
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-normal tracking-tight text-foreground">Documents</h1>
-            <span className="text-sm text-muted-foreground">
-              {isLoading
-                ? '…'
-                : isSearching
-                  ? `${allFilteredDocs.length} result${allFilteredDocs.length !== 1 ? 's' : ''}`
-                  : `${activeCount} document${activeCount !== 1 ? 's' : ''}`}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
+        {/* Header FIRST. The primary-contract notice used to sit above it,
+            which pushed the word "Documents" ~215px down the page — the
+            single biggest reason this page did not line up with any other.
+            A precondition notice is not a page header; it goes under one. */}
+        <PageHeader
+          title="Documents"
+          meta={
+            isLoading
+              ? '…'
+              : isSearching
+                ? `${allFilteredDocs.length} result${allFilteredDocs.length !== 1 ? 's' : ''}`
+                : `${activeCount} document${activeCount !== 1 ? 's' : ''}`
+          }
+          actions={
+            <>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -317,8 +317,11 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                 Upload
               </Button>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
+
+        {projectId && <PrimaryContractCard projectId={projectId} />}
 
         {isSearching ? (
           <DocumentSearchResults

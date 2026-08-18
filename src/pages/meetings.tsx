@@ -6,6 +6,7 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import { ScheduleNewMeetingDialog } from '@/components/meetings/scheduleMeetingDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '@/hooks/usePermissions';
+import { PageHeader } from '@/components/ui/page-header';
 
 const Meetings = () => {
   const refreshNotifications = useNotificationStore((state) => state.refresh);
@@ -32,10 +33,10 @@ const Meetings = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-normal tracking-tight text-foreground">Meetings</h1>
-          {canScheduleMeeting && <ScheduleNewMeetingDialog onCreated={handleCreated} />}
-        </div>
+        <PageHeader
+          title="Meetings"
+          actions={canScheduleMeeting ? <ScheduleNewMeetingDialog onCreated={handleCreated} /> : undefined}
+        />
         <MeetingsList />
       </div>
     </DashboardLayout>

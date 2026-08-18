@@ -37,6 +37,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Info, ShieldPlus } from "lucide-react";
 
 import useFetch from "@/hooks/useFetch";
+import { PageHeader } from "@/components/ui/page-header";
 
 const PERM_DESCRIPTIONS: Record<string, string> = {
   // Settings
@@ -142,12 +143,10 @@ export default function PermissionsPage() {
   // padding="p-0" to the layout and each sub-page owns its own padding.
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Roles &amp; Permissions</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage roles and what each role can do. Changes take effect immediately.
-        </p>
-      </div>
+      <PageHeader
+        title="Roles & Permissions"
+        description="Manage roles and what each role can do. Changes take effect immediately."
+      />
       <PermissionsContent />
     </div>
   );

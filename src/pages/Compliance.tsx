@@ -316,11 +316,14 @@ const Compliance = () => {
   if (!projectId) {
     return (
       <DashboardLayout>
-        <EmptyState
-          icon={Shield}
-          title="No project selected"
-          description="Choose a project to see the obligations and notice deadlines recorded against it."
-        />
+        <div className="space-y-6">
+          <PageHeader title="Compliance" />
+          <EmptyState
+            icon={Shield}
+            title="No project selected"
+            description="Choose a project to see the obligations and notice deadlines recorded against it."
+          />
+        </div>
       </DashboardLayout>
     );
   }

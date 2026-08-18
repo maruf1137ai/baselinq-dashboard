@@ -187,8 +187,10 @@ const Index = () => {
   return (
     <DashboardLayout>
       {/* DashboardLayout owns the p-6 page padding; a page is a plain
-          space-y-4 wrapper. */}
-      <div className="space-y-4">
+          space-y-6 wrapper — the one page-top rule, documented on
+          `PageHeader`. Home ran at space-y-4 while it was being built to a
+          one-screen budget; it is on the app-wide 24px band gap now. */}
+      <div className="space-y-6">
         {/*
           ── No description, and both halves of it were removed for a reason ──
 

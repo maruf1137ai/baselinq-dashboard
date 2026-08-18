@@ -45,6 +45,19 @@ import CashIcon from "@/components/icons/CashIcon";
 import Asterisk from "@/components/icons/Asterisk";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatDate } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+
+/**
+ * The app's tab strip, expressed for shadcn's <Tabs>. Same geometry as the
+ * bare-<button> strips on Finance, Project Health and Settings → Users:
+ * `text-sm py-4 px-6`, a 2px underline pulled onto the rail's own hairline.
+ */
+const TAB_LIST =
+  "h-auto w-full justify-start gap-2 rounded-none bg-transparent p-0 border-b border-border";
+const TAB_TRIGGER =
+  "text-sm font-normal py-4 px-6 rounded-none border-b-2 border-transparent -mb-px text-muted-foreground " +
+  "data-[state=active]:bg-transparent data-[state=active]:shadow-none " +
+  "data-[state=active]:border-primary data-[state=active]:text-foreground hover:text-foreground";
 
 // JBCC contractual time limits per task type (in calendar days)
 const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: string }[]> = {
@@ -342,38 +355,40 @@ export default function AuditPage() {
   };
 
   return (
-    <DashboardLayout padding="p-0">
-      <div className="min-h-screen">
-        <div className="px-8 py-[17px]">
-          <div className="mb-1">
-            <p className="text-base text-gray3 mb-1">Dashboard</p>
-            <h1 className="text-2xl font-normal tracking-tight text-foreground">Audit & Compliance</h1>
-          </div>
+    <DashboardLayout>
+      {/* Was padding="p-0" plus its own `px-8 py-[17px]` — a 32px left gutter
+          and a 17px top inset that matched no other page in the app, under an
+          eyebrow ("Dashboard") no other page carries. Now the canonical stack:
+          DashboardLayout's p-6, a space-y-6 wrapper, PageHeader first. */}
+      <div className="space-y-6">
+        <PageHeader title="Audit & Compliance" />
 
-          <Tabs defaultValue="overview" className="mt-6">
-            <TabsList className="bg-muted/50 p-1 rounded-lg h-auto">
+        <Tabs defaultValue="overview">
+          {/* Same underline strip as Finance, Project Health and Settings →
+              Users, rather than the grey pill group this page alone used. */}
+          <TabsList className={TAB_LIST}>
               <TabsTrigger
                 value="overview"
-                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                className={TAB_TRIGGER}>
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="audit-trail"
-                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                className={TAB_TRIGGER}>
                 <Activity className="h-4 w-4 mr-2" />
                 Audit Trail
               </TabsTrigger>
               <TabsTrigger
                 value="deadlines"
-                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                className={TAB_TRIGGER}>
                 <Clock className="h-4 w-4 mr-2" />
                 Deadline Tracker
               </TabsTrigger>
               {accessLevel === "full" && (
                 <TabsTrigger
                   value="export"
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-md px-4 py-2 text-sm">
+                  className={TAB_TRIGGER}>
                   <Download className="h-4 w-4 mr-2" />
                   Export & Reports
                 </TabsTrigger>
@@ -834,8 +849,7 @@ export default function AuditPage() {
                 </div>
               </TabsContent>
             )}
-          </Tabs>
-        </div>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
