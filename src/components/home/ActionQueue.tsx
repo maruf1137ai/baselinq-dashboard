@@ -43,6 +43,14 @@
  * a row is the clock chip, and only when the clock has actually run out or runs
  * today. That is a fact, not a gradient.
  *
+ * This is severity rule 1 in `blocks.tsx`, and this file was already keeping
+ * it — a clock that has run out IS a breach that has already happened, and it
+ * is the only thing here allowed to be red. What has changed is that the rest
+ * of the page now keeps the rule too, so a red chip in this list is no longer
+ * competing with six red words in the panel beside it. `SectionHeading` moved
+ * to `blocks.tsx` for the same reason: the risk panel groups and labels its
+ * rows exactly the way this list does, and there must be one heading style.
+ *
  * ── Two things this file is still careful about ───────────────────────────
  *
  *  1. **One action per row, to a route that exists.** Every `href` comes from
@@ -62,7 +70,7 @@ import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import type { HomeData } from "@/hooks/useHomeData";
 
-import { Panel } from "./blocks";
+import { Panel, SectionHeading } from "./blocks";
 
 /**
  * The fixed focus order. Named for what the reader must DO, never for how
@@ -72,7 +80,12 @@ import { Panel } from "./blocks";
  * In `CONSEQUENCE_ORDER`: forfeiture, money, breach, blocking, own-work.
  */
 const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
-  { label: "Notices to serve", kinds: ["time-bar"] },
+  // "Notices to serve" asserted a NOTICE STAGE for every row underneath it,
+  // and the expense-and-loss clock is not necessarily at that stage — the
+  // heading was making a contractual claim about rows it only groups. A
+  // heading names what the rows have in common and nothing more, and what
+  // these have in common is a deadline written into the contract.
+  { label: "Contract deadlines", kinds: ["time-bar"] },
   { label: "Certificates awaiting you", kinds: ["certificate", "rejected"] },
   { label: "Contract obligations", kinds: ["obligation"] },
   { label: "Blocking someone else", kinds: ["rsvp", "meeting-action"] },
@@ -142,23 +155,36 @@ export function QueueRow({ item }: { item: QueueItem }) {
     <Link
       to={item.href}
       title={item.detail ?? undefined}
-      aria-label={`${item.headline}. ${item.action}.`}
+      /*
+        The chip MUST be in here. `aria-label` replaces the accessible name
+        computed from descendants, so a screen-reader user was given the
+        headline and the action and never the clock — and now that the day
+        count lives only in the chip and no longer appears in the headline,
+        that was the whole deadline going missing for exactly the users least
+        able to recover it from a glance.
+      */
+      aria-label={[item.headline, chip?.label, item.action].filter(Boolean).join(". ") + "."}
       className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
-      <p className="text-sm text-foreground truncate min-w-0 flex-1">{item.headline}</p>
+      {/*
+        ── Two lines, and never a broken word ──────────────────────────────
+
+        `truncate` clipped mid-word, and a queue headline is built as
+        "<verb> <object> — <why it is waiting>": the verb and the object are
+        the first few words, so two rows about two certificates arrived as
+        the same sentence with the same ellipsis. `line-clamp-2` breaks at a
+        word and only clips what will not fit two lines.
+
+        A one-line headline still occupies one line, so the common row keeps
+        its 41px pitch and the panel does not grow on a normal day.
+      */}
+      <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">{item.headline}</p>
       {chip && (
         <Badge variant={chip.variant} className="shrink-0 tabular-nums">
           {chip.label}
         </Badge>
       )}
     </Link>
-  );
-}
-
-/** The section heading strip. A row-height label, not a second panel. */
-function SectionHeading({ label }: { label: string }) {
-  return (
-    <p className="px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground">{label}</p>
   );
 }
 
@@ -217,7 +243,9 @@ export function ActionQueueBlock({
   for (const section of SECTIONS) {
     const items = shown.filter((i) => section.kinds.includes(i.kind));
     if (items.length === 0) continue; // Sections only appear when they apply.
-    rows.push(<SectionHeading key={`h-${section.label}`} label={section.label} />);
+    rows.push(
+      <SectionHeading key={`h-${section.label}`} label={section.label} count={items.length} />,
+    );
     for (const item of items) rows.push(<QueueRow key={item.key} item={item} />);
   }
   if (queue.length > shown.length) {

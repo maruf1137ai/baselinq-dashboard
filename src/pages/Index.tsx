@@ -19,7 +19,8 @@
  *
  * ── The layout ───────────────────────────────────────────────────────────
  *
- *   Preconditions   one hairline strip each, above everything. Usually none.
+ *   Preconditions   ONE bounded block of hairline rows, above everything, and
+ *                   nothing at all in the usual case where none apply.
  *   Position strip  full width, six figures in one row. The summary.
  *   ├── LEFT  50%   THE WORK — what needs you, and only what a person can do.
  *   └── RIGHT 50%   THE POSITION — open risk (as condition), contract time.
@@ -51,6 +52,26 @@
  *
  * Nothing removed here was removed from the product; every one of them is a
  * sidebar entry.
+ *
+ * ── Where the eye goes, and the one conflict in this brief ───────────────
+ *
+ * The 50/50 split is an explicit request. NN/g's eyetracking puts roughly
+ * 80% of fixations in the left half of a page, so the right column is held to
+ * PASSIVE REFERENCE only — open risk as a standing condition, and the
+ * contract clock. Neither asks anyone to do anything today; both are things
+ * that are true about the project whether or not anybody acts.
+ *
+ * Everything that asks for a move is on the left: the queue, and the
+ * precondition block above it, which is full-width and therefore begins in
+ * the left half. Nothing actionable was moved right to balance the columns.
+ *
+ * ── The severity rule ────────────────────────────────────────────────────
+ *
+ * Stated in full at the top of `blocks.tsx`, and it governs this whole page:
+ * only a breach that has already happened may carry colour; a tier is named
+ * once at the head of its rows rather than repeated on each; only the worst
+ * tier present is drawn; one coloured element per statement. Everything else
+ * is ranked by position.
  *
  * ── What has not changed ─────────────────────────────────────────────────
  *
@@ -176,9 +197,46 @@ const Index = () => {
           }
         />
 
-        {/* Preconditions for the rest of the screen being trustworthy, so they
-            sit above it — as hairline strips, and usually one line or none. */}
-        <div className="space-y-3">
+        {/*
+          ── The precondition stack: ONE block, not four ────────────────────
+
+          These four are the same kind of thing — "something about this
+          project is not set up yet" — and each one used to draw its own
+          full-width bordered block. On a fresh project a user met a setup
+          line, then a yellow contract banner, then possibly an insurance
+          banner, then possibly a load banner: four containers, four borders,
+          three 12px gaps and roughly 190px of chrome standing between the
+          page header and the first thing anyone came here to read.
+
+          The fix is the one the app already uses everywhere else: a list of
+          related things is ONE bounded container with hairline-divided rows.
+          The Xero finding holds — the container is still visibly bounded, it
+          is just one container instead of four. `divide-y` supplies the rules
+          between rows, and `empty:hidden` means the usual case, where every
+          precondition is satisfied and all four children render null, draws
+          nothing at all rather than a 2px empty box.
+
+          `SetupLineBlock` and `LoadIssueBanner` were changed to draw no
+          chrome of their own. `PrimaryContractAlert` and `InsuranceBanner`
+          are owned elsewhere, so their card, border and radius are stripped
+          here at the composition layer — see the note in the report about
+          the amber fill that properly belongs in their own files.
+        */}
+        <div
+          className={[
+            "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
+            "divide-y divide-border",
+            // Foreign children flatten into rows. `!` because these fight the
+            // child's own utilities at equal specificity, where source order
+            // would otherwise decide. They target only the child's ROOT, and
+            // `divide-y` above is untouched because it applies to the
+            // container, not to a child class.
+            "[&>*]:!rounded-none [&>*]:!border-0 [&>*]:!bg-card",
+            // Restores the row hover the flattening removes, in the same
+            // token every other list row on this page uses.
+            "[&>*]:hover:!bg-muted/50 [&>*]:transition-colors",
+          ].join(" ")}
+        >
           <SetupLineBlock
             data={data}
             onOpen={() => openSetup(null)}

@@ -33,6 +33,42 @@
  * Cutting text has NOT been allowed to turn a caveat into a lie. Where a
  * figure could not be stated briefly and honestly it was cut, not softened —
  * that is why there is no "days overdue" anywhere on this page.
+ *
+ * ── The severity rule ─────────────────────────────────────────────────────
+ *
+ * One rule, applied everywhere on this page, stated so that anyone can apply
+ * it to the next module without asking:
+ *
+ *   **1. Only a breach that has ALREADY HAPPENED may carry colour.** A
+ *        threshold crossed, a date passed, a ceiling exceeded. Not a count,
+ *        not a rating, not a forecast, not a category. "15 open risk signals"
+ *        is a count and gets no colour however large it is; "certified past
+ *        the revised contract sum" is a breach and gets one.
+ *
+ *   **2. A tier is named ONCE, at the head of the rows it governs — never
+ *        repeated on every row.** Six rows sharing a severity is one heading,
+ *        not six chips. Rank inside the tier is carried by POSITION.
+ *
+ *   **3. Within a module, only the WORST tier present is drawn in colour.**
+ *        If anything is critical, the warnings are grey. The reader needs to
+ *        know where the floor is, not to see the whole ladder painted.
+ *
+ *   **4. One coloured element per statement, and it is the element that
+ *        NAMES the breach** — the badge or the tier word if there is one,
+ *        otherwise the figure itself. Never both.
+ *
+ * The arithmetic this replaces: the Open risk panel drew six coloured words
+ * (five "Critical", one "Warning") plus a red count in the strip above it,
+ * so seven of the page's coloured elements said "urgent" at once. Under the
+ * rule above the same data draws ONE — the "Critical" heading. That is the
+ * whole point: alert acceptance falls roughly 30% per additional alert in
+ * clinical decision-support studies, and override rates run 46-96%; colour
+ * that appears on the majority of rows has stopped being a signal and become
+ * a surface treatment.
+ *
+ * It is deliberately NOT "remove all colour" — an earlier revision did that
+ * and read as bland. Colour is kept, and made rare enough to be worth
+ * looking at.
  */
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
@@ -70,6 +106,7 @@ type Tone = keyof typeof TONE;
 export function Panel({
   title,
   lead,
+  leadTone = "muted",
   hint,
   icon: Icon,
   tone = "neutral",
@@ -77,8 +114,15 @@ export function Panel({
   children,
 }: {
   title: string;
-  /** Short quantitative line beside the title — "10 red · 2 amber". */
+  /** Short quantitative line beside the title — "12 critical of 15 open". */
   lead?: string;
+  /**
+   * The panel header is the head of the rows beneath it, so it is a legal
+   * place to name the worst severity tier ONCE (severity rule 2) — and it is
+   * a line the panel already draws, so naming it here costs no height.
+   * `danger` is only ever for a tier that is an actual breach (rule 1).
+   */
+  leadTone?: "muted" | "danger";
   /** A sentence under the title. Reserved for what a figure cannot carry. */
   hint?: string;
   icon?: typeof CalendarClock;
@@ -107,7 +151,14 @@ export function Panel({
             <div className="flex items-baseline gap-3 flex-wrap">
               <h2 className="text-sm font-medium text-foreground">{title}</h2>
               {lead && (
-                <span className="text-xs text-muted-foreground tabular-nums">{lead}</span>
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    leadTone === "danger" ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {lead}
+                </span>
               )}
             </div>
             {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
@@ -120,6 +171,44 @@ export function Panel({
           header, and the lead or hint above has already said so. */}
       {hasBody && <div className="border-t border-border divide-y divide-border">{children}</div>}
     </section>
+  );
+}
+
+/**
+ * A heading strip inside a panel — a row-height label, not a second panel.
+ *
+ * **This is where severity is allowed to be said.** It lives here rather than
+ * in ActionQueue.tsx because both lists on this page now group their rows and
+ * label the group once (severity rule 2), and two lists inside the same panel
+ * grammar must not invent two heading styles.
+ *
+ * **It is never coloured.** Severity rule 3 allows exactly one tier to be
+ * drawn, and that is the worst one present, which is named in the panel
+ * header instead — see `Panel`'s `leadTone`. A heading strip therefore only
+ * ever marks a boundary, never an alarm.
+ */
+export function SectionHeading({
+  label,
+  count,
+}: {
+  label: string;
+  /** Rows under this heading. Said once here instead of on each row. */
+  count?: number;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50">
+      {/*
+        `text-foreground`, not `text-muted-foreground`. Muted grey on this
+        strip computes 4.19:1 against `bg-muted/50` over a card — under the
+        4.5:1 floor for 12px text, and this label is now load-bearing: it is
+        where severity is stated. It is still separated from the rows by size
+        and by the strip's own fill, which is what was doing the work anyway.
+      */}
+      <p className="text-xs text-foreground">{label}</p>
+      {count !== undefined && count > 1 && (
+        <span className="text-xs text-muted-foreground tabular-nums shrink-0">{count}</span>
+      )}
+    </div>
   );
 }
 
@@ -203,9 +292,24 @@ function Figure({
     <>
       <p className="text-xs text-muted-foreground truncate">{label}</p>
       <div className="flex items-baseline gap-2 mt-0.5 min-w-0">
+        {/*
+          ── A number is never truncated ──────────────────────────────────
+
+          This carried `truncate`. At exactly the `lg` breakpoint the strip
+          gave each of five cells about 125px and "R 8 200 000,00" needs
+          about 135px at 18px type, so it rendered as "R 8 200 0…" — a
+          DIFFERENT NUMBER, presented with the same confidence as the right
+          one, and an ellipsis is not a warning that digits are missing.
+
+          A label may be truncated because a clipped word is recoverable from
+          context. A figure may not. `break-words` is the fallback of last
+          resort: if a cell is ever too narrow, the figure wraps and stays
+          whole rather than clipping. The grid below is also fixed so the
+          case does not arise in the first place.
+        */}
         <p
           className={cn(
-            "tabular-nums truncate",
+            "tabular-nums break-words",
             emphasis ? "text-lg" : "text-sm",
             danger ? "text-destructive" : "text-foreground",
           )}
@@ -215,7 +319,12 @@ function Figure({
         {badge}
       </div>
       {compare && (
-        <p className="text-xs text-muted-foreground tabular-nums truncate mt-0.5">{compare}</p>
+        // Same rule as the value above, and for the same reason: a comparison
+        // is a FIGURE ("after R 410 000,00 retention", "82% of R 10 000
+        // 000,00"), so it may wrap but it may never clip. It carried
+        // `truncate` and lost digits off the retention deduction at the `lg`
+        // breakpoint exactly as the value did.
+        <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{compare}</p>
       )}
     </>
   );
@@ -305,7 +414,10 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
         label="Certified to date"
         value={money.certified === null ? null : formatZAR(money.certified)}
         emphasis
-        danger={over}
+        // Severity rule 4: ONE coloured element per statement, and it is the
+        // element that NAMES the breach. "Over" names it; the rand figure is
+        // just the figure. Drawing both red said the same thing twice and
+        // spent two of the page's colour budget on one fact.
         badge={over ? <Badge variant="danger">Over</Badge> : undefined}
         // The comparison that used to be its own "Share of contract sum" cell
         // AND a sentence underneath. Certifying past an agreed sum is the one
@@ -402,8 +514,13 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
           label="Open risk signals"
           value={String(riskCounts.total)}
           emphasis
-          danger={riskCounts.red > 0}
-          compare={`${riskCounts.red} red · ${riskCounts.orange} amber`}
+          // Severity rule 1: a COUNT is not a breach, so it carries no
+          // colour however large it gets. "15" in red asserted an emergency
+          // that the number alone cannot support — fifteen advisory signals
+          // and fifteen tolerance breaches printed identically. The tiers
+          // are stated in the comparison line and worked in the panel below,
+          // where the worst one is named once and drawn once.
+          compare={`${riskCounts.red} critical · ${riskCounts.orange} warning`}
         />
       ),
     );
@@ -414,7 +531,14 @@ export function PositionStripBlock({ data }: { data: HomeData }) {
 
   return (
     <section className="bg-card border border-border rounded-xl px-4 py-3">
-      <div className="grid gap-x-6 gap-y-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">{cells}</div>
+      {/*
+        Five across only from `xl`. It was `lg:grid-cols-5`, which at 1024px
+        left each cell about 125px — too narrow for a rand figure at the stat
+        size (see the note in `Figure`). At `xl` the content area is 976px and
+        a cell is about 176px, which clears it. Between `sm` and `xl` the
+        strip is three across and each cell has 200px or more.
+      */}
+      <div className="grid gap-x-6 gap-y-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">{cells}</div>
     </section>
   );
 }
@@ -446,33 +570,73 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 
   if (riskGroups.length === 0) return null;
 
+  // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
+  // governs, and only the worst tier present is drawn in colour. Groups
+  // already arrive worst-first from `groupRiskSignals`, so a single pass in
+  // fixed tier order preserves that order exactly — no re-sorting here.
+  const TIERS = [
+    { severity: "red" as const, label: "Critical" },
+    { severity: "orange" as const, label: "Warning" },
+    { severity: "green" as const, label: "Advisory" },
+  ];
+  const present = TIERS.map((t) => ({
+    ...t,
+    groups: riskGroups.filter((g) => g.severity === t.severity),
+  })).filter((t) => t.groups.length > 0);
+
+  // The worst tier is named in the panel header rather than in a heading
+  // strip of its own. Two reasons, and the second is the one that decided it:
+  //
+  //   1. The header IS the head of the rows beneath it, so this satisfies
+  //      severity rule 2 exactly as a strip would.
+  //   2. It is a line the panel already draws. A strip for every tier added
+  //      56px to the taller of the two columns and pushed the page past the
+  //      one-screen budget for a label the header had room to carry.
+  //
+  // So the first tier is stated above, and a strip appears only where the
+  // list DROPS a tier — which is the only place a reader needs a boundary.
+  const worst = present[0];
   return (
     <Panel
       title="Open risk"
-      lead={`${riskCounts.red} red · ${riskCounts.orange} amber`}
+      lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open`}
+      leadTone={worst.severity === "red" ? "danger" : "muted"}
       // The one link on this page that is SUPPOSED to go to Project health:
       // "show me every open signal" is a diagnosis, and that is the page that
       // diagnoses. Every ROW below goes to the object instead.
       action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
     >
       {/*
-        ── Colour is on the BREACH, not on the count ────────────────────────
+        ── Six coloured words became one ────────────────────────────────────
 
-        This block used to render the group's TITLE — the sentence that states
-        what has gone wrong — in plain foreground, and put the severity colour
-        on the count badge beside it. That is the inversion: "Cumulative
-        variations at 13.8% of budget (tolerance 10%)" is an actual breach of
-        an actual tolerance and read as neutral body text, while "1" — a count,
-        which has no state at all — was the only red thing on the row.
+        The previous revision drew the whole row in its severity colour AND
+        repeated the severity as a word at the end of it. On project 45 that
+        is five rows of red text each ending in a red "Critical" and one of
+        amber ending in an amber "Warning" — six of six rows coloured, which
+        is a background, not a signal.
 
-        So the colour moved onto the thing that has state. A red or amber group
-        states its severity in words, in its severity colour; the count stays
-        neutral because a count is not a condition. A green group is drawn in
-        neither, because nothing about it has breached anything.
+        Severity now behaves exactly like the queue's sections: the tier is
+        stated once above the rows it governs, the rows themselves are plain,
+        and rank inside the tier is position. The panel header names the worst
+        tier and is the only coloured thing here; a strip marks each drop to a
+        lower tier and is always muted. If the worst thing open is a warning,
+        NOTHING on this panel is coloured, and that is the correct reading.
+
+        `text-destructive` and `text-muted-foreground` are the tokens. The
+        raw `red-700` / `amber-700` palette classes this block used are gone.
       */}
-      {riskGroups.map((g) => {
-        const breached = g.severity === "red" || g.severity === "orange";
-        return (
+      {present.flatMap((tier, tierIndex) => [
+        // The worst tier is already named in the header, so no strip for it.
+        // Every LOWER tier gets one, always muted: rule 3 says only the worst
+        // tier present is drawn in colour, and it has already been drawn.
+        tierIndex === 0 ? null : (
+          <SectionHeading
+            key={`h-${tier.severity}`}
+            label={tier.label}
+            count={tier.groups.reduce((n, g) => n + g.count, 0)}
+          />
+        ),
+        ...tier.groups.map((g) => (
           <Link
             key={g.code}
             /*
@@ -485,16 +649,21 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
             to={riskGroupHref(g)}
             className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
-            <p
-              className={cn(
-                "text-sm truncate min-w-0 flex-1",
-                g.severity === "red"
-                  ? "text-red-700"
-                  : g.severity === "orange"
-                    ? "text-amber-700"
-                    : "text-foreground",
-              )}
-            >
+            {/*
+              ── Two lines, and never a broken word ────────────────────────
+
+              `truncate` cut these mid-word, so "3 variations exceed the
+              principal agent…" and "3 variation tolerance breaches…" arrived
+              as the same row. A risk headline names a rule, a figure and the
+              tolerance it passed, and the distinguishing half is at the END.
+
+              `line-clamp-2` wraps at a word boundary and only clips a headline
+              that will not fit TWO lines, which no current rule produces. It
+              costs nothing on the common case — a one-line row is still one
+              line — and the severity word that used to compete for this space
+              is gone, so the label starts wider than it was as well.
+            */}
+            <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">
               {g.title}
               {/* Stated only when true of every signal in the group, so a
                   folded line never upgrades a commercial guide into a breach. */}
@@ -507,19 +676,9 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
                 {g.count}
               </Badge>
             )}
-            {breached && (
-              <span
-                className={cn(
-                  "text-xs shrink-0",
-                  g.severity === "red" ? "text-red-700" : "text-amber-700",
-                )}
-              >
-                {g.severity === "red" ? "Critical" : "Warning"}
-              </span>
-            )}
           </Link>
-        );
-      })}
+        )),
+      ])}
     </Panel>
   );
 }
@@ -589,8 +748,14 @@ export function ContractTimeBlock({ data }: { data: HomeData }) {
           label="Completion"
           value={t.contractEnd ? formatDateUk(t.contractEnd, "short", "—") : null}
           badge={
+            // Severity rule 1: an extension of time is a RECORDED FACT — a
+            // signed variation moved the completion date — not a breach and
+            // not a warning. It wore `warning` amber, which put the page's
+            // second-loudest colour on the one figure here that nobody has
+            // done anything wrong to earn. The sign on the number already
+            // says which way the date moved.
             t.extensionDays !== null && t.originalEnd ? (
-              <Badge variant={t.extensionDays > 0 ? "warning" : "neutral"}>
+              <Badge variant="neutral">
                 {t.extensionDays > 0
                   ? `+${days(t.extensionDays)}`
                   : `−${days(Math.abs(t.extensionDays))}`}
@@ -614,6 +779,11 @@ export function ContractTimeBlock({ data }: { data: HomeData }) {
  * Project setup as ONE line, at the very top of the page. It is a precondition
  * for the rest of the screen being trustworthy, so it sits above it — but a
  * precondition is not the work, so it gets a hairline strip and nothing more.
+ *
+ * **It draws no container of its own.** It is a ROW inside the single
+ * precondition panel that `Index.tsx` builds — see the note there. It used to
+ * carry `bg-card border border-border rounded-xl` and be one of up to four
+ * separately-bordered full-width blocks stacked above the actual work.
  */
 export function SetupLineBlock({
   data,
@@ -628,7 +798,7 @@ export function SetupLineBlock({
   if (!projectStats || projectStats.percentage === 100) return null;
 
   return (
-    <div className="bg-card border border-border rounded-xl px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
       <p className="text-sm text-muted-foreground min-w-0">
         <span className="text-foreground tabular-nums">
           Project setup {projectStats.filledCount} of {projectStats.totalCount}
@@ -666,7 +836,7 @@ export function SetupLineBlock({
 export function LoadIssueBanner({ data }: { data: HomeData }) {
   if (data.loadIssue.level !== "partial") return null;
   return (
-    <div className="bg-card border border-border rounded-xl px-4 py-2.5 flex items-center justify-between gap-4">
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4">
       <div className="flex items-center gap-3 min-w-0">
         <ShieldAlert className="h-4 w-4 text-muted-foreground shrink-0" />
         <p className="text-sm text-muted-foreground">{data.loadIssue.message}</p>
