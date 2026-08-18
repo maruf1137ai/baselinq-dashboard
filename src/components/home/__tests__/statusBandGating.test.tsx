@@ -66,7 +66,7 @@ const PROJECT = {
 const CERTIFICATES = [
   { id: 1, pcNumber: "PC-001", certificateDate: "2026-03-20", claimAmount: 1_400_000, retentionAmount: 70_000, workflowState: "posted", postedAt: "2026-03-21T09:00:00Z" },
   { id: 2, pcNumber: "PC-002", certificateDate: "2026-04-19", claimAmount: 1_850_000, retentionAmount: 92_500, workflowState: "posted", postedAt: "2026-04-20T09:00:00Z" },
-  { id: 3, pcNumber: "PC-003", certificateDate: "2026-05-19", claimAmount: 2_100_000, retentionAmount: 105_000, workflowState: "posted", postedAt: "2026-05-20T09:00:00Z" },
+  { id: 3, pcNumber: "PC-003", certificateDate: "2026-05-19", claimAmount: 2_100_000, retentionAmount: 105_000, workflowState: "posted", postedAt: "2026-05-20T09:00:00Z", updatedAt: "2026-06-10T09:00:00Z" },
   // Undated and in flight — the two disclosures the curve owes the reader.
   { id: 4, pcNumber: "PC-004", certificateDate: null, claimAmount: 900_000, retentionAmount: 45_000, workflowState: "posted" },
   { id: 5, pcNumber: "PC-005", certificateDate: "2026-06-18", claimAmount: 1_600_000, retentionAmount: 80_000, workflowState: "submitted" },
@@ -128,15 +128,19 @@ function homeData(gates: { canViewFinance: boolean; canViewCompliance: boolean }
       tolerancePct,
     ),
     changeSplit: splitChangeByStatus(variations),
+    // `now` is threaded into every builder AND into the feed: significance
+    // sets an event's shelf life and recency decides whether it is still on
+    // the shelf, so a fixture dated in 2026 read against the real clock ages
+    // out of its own feed and the test would prove nothing.
     changeFeed: buildChangeFeed(
       [
-        buildCertificateChanges(certificates),
-        buildVariationChanges(variations),
-        buildNoticeChanges(TIME_BARS),
-        buildMilestoneChanges(MILESTONES),
+        buildCertificateChanges(certificates, NOW),
+        buildVariationChanges(variations, NOW),
+        buildNoticeChanges(TIME_BARS, NOW),
+        buildMilestoneChanges(MILESTONES, NOW),
       ],
       { canViewFinance, canViewCompliance },
-      { limit: 6 },
+      { now: NOW, limit: 6 },
     ),
     retention: retentionPosition(canViewFinance ? PROJECT : undefined, money.retentionHeld),
     variationPosition: summariseVariations(variations),
@@ -209,11 +213,16 @@ describe("a contractor without finance.view", () => {
 
   it("gets a change feed with the non-financial events still in it", () => {
     const t = text();
-    expect(t).toContain("VO-002 delay notice was served");
-    expect(t).toContain("Frame is 19 days later than baseline");
-    // Nothing financial reaches it: no certificate, no variation.
+    // The programme moved, and a contractor is entitled to know it did.
+    expect(t).toContain("Frame moved out to 20 Jun 2026");
+    expect(t).toContain("Baseline was 1 Jun 2026");
+    // Nothing financial reaches it: no certificate, no variation. Note the
+    // served time bar is not here either, and not because of a gate — nothing
+    // on `projects/{id}/time-bars/` says WHEN it was served, so it is counted
+    // into the disclosure instead of being dated from something else.
     expect(t).not.toContain("PC-");
-    expect(t).not.toContain("VO-001");
+    expect(t).not.toContain("VO-");
+    expect(t).toContain("carry no date");
   });
 });
 
@@ -289,6 +298,8 @@ describe("a project manager holding both gates", () => {
   });
 
   it("sees the financial change events the contractor does not", () => {
-    expect(text()).toContain("PC-003 was certified");
+    const t = text();
+    expect(t).toContain("PC-003 posted");
+    expect(t).toContain("VO-002 under review");
   });
 });

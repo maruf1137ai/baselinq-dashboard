@@ -22,18 +22,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCertificateChanges,
   buildCertifiedCurve,
-  buildChangeFeed,
   buildContractTimeline,
-  buildMilestoneChanges,
-  buildNoticeChanges,
-  buildTaskChanges,
-  buildVariationChanges,
   splitChangeByStatus,
   summariseChangePosition,
   summariseMilestoneDrift,
-  type ChangeEvent,
   type MilestoneLike,
 } from "../homeVisuals";
 import { summariseTime } from "../homeSignals";
@@ -306,99 +299,8 @@ describe("splitChangeByStatus", () => {
 });
 
 // ── 5. What changed ───────────────────────────────────────────────────────
-
-describe("the change feed", () => {
-  it("dates a certificate by posted_at, which NAMES the transition", () => {
-    // `updated_at` says a row moved; `posted_at` says it was certified.
-    const [e] = buildCertificateChanges([
-      { id: 1, pcNumber: "PC-006", postedAt: "2026-06-10T10:00:00Z", updatedAt: "2026-06-12T10:00:00Z" },
-    ]);
-    expect(e.headline).toBe("PC-006 was certified");
-    expect(e.at).toBe("2026-06-10T10:00:00Z");
-    expect(e.requires).toEqual(["finance.view"]);
-  });
-
-  it("keeps ONLY posted certificates — every other state is a queue row", () => {
-    // `buildCertificateQueue` asks the reader to certify a submitted one and
-    // to post an approved one, and `buildRejectedCertificateQueue` handles a
-    // rejected one. Repeating any of those here makes the feed a second copy
-    // of the queue standing beside it.
-    expect(
-      buildCertificateChanges([
-        { id: 2, pcNumber: "PC-007", submittedAt: "2026-06-01T10:00:00Z", updatedAt: "2026-06-12T10:00:00Z" },
-        { id: 3, pcNumber: "PC-008", approvedAt: "2026-06-02T10:00:00Z" },
-        { id: 4, pcNumber: "PC-009", rejectedAt: "2026-06-03T10:00:00Z" },
-      ]),
-    ).toEqual([]);
-  });
-
-  it("drops a record with no usable timestamp rather than dating it now", () => {
-    expect(buildCertificateChanges([{ id: 3, pcNumber: "PC-008" }])).toEqual([]);
-    expect(buildVariationChanges([{ id: 1, ref: "VO-001" }])).toEqual([]);
-  });
-
-  it("keeps only notice deadlines that have STOPPED — an open one is queue work", () => {
-    const events = buildNoticeChanges([
-      { id: 1, label: "VO-012 particulars", status: "open", updated_at: "2026-06-01T10:00:00Z" },
-      { id: 2, label: "VO-013 delay notice", status: "served", served_at: "2026-06-02T10:00:00Z" },
-      { id: 3, label: "VO-014 delay notice", status: "lapsed", updated_at: "2026-06-03T10:00:00Z" },
-    ]);
-    expect(events.map((e) => e.headline)).toEqual([
-      "VO-013 delay notice was served",
-      "VO-014 delay notice lapsed",
-    ]);
-  });
-
-  it("reports a milestone only when its dates actually left baseline", () => {
-    const events = buildMilestoneChanges([
-      { _id: "1", name: "Frame", baselineEnd: "2026-06-01", endDate: "2026-06-01", updatedAt: "2026-06-05T10:00:00Z" },
-      { _id: "2", name: "Roof", baselineEnd: "2026-09-01", endDate: "2026-09-15", updatedAt: "2026-06-06T10:00:00Z" },
-      // Unbaselined: nothing to have moved from.
-      { _id: "3", name: "Fitout", endDate: "2026-11-01", updatedAt: "2026-06-07T10:00:00Z" },
-    ]);
-    expect(events.map((e) => e.headline)).toEqual(["Roof is 14 days later than baseline"]);
-  });
-
-  it("keeps only closed tasks — an open one is queue work, not news", () => {
-    const events = buildTaskChanges([
-      { id: "a", title: "Respond to RFI-004", status: "done", updatedAt: "2026-06-10T10:00:00Z" },
-      { id: "b", title: "Price VO-012", status: "todo", updatedAt: "2026-06-11T10:00:00Z" },
-    ]);
-    expect(events.map((e) => e.headline)).toEqual(["Respond to RFI-004 was closed"]);
-  });
-});
-
-describe("buildChangeFeed", () => {
-  const events: ChangeEvent[] = [
-    { key: "a", kind: "certificate", headline: "PC-006 was certified", detail: null, at: "2026-06-10T10:00:00Z", href: "/finance", requires: ["finance.view"] },
-    { key: "b", kind: "notice", headline: "A notice was served", detail: null, at: "2026-06-12T10:00:00Z", href: "/x", requires: [] },
-    { key: "c", kind: "risk", headline: "A signal", detail: null, at: "2026-06-11T10:00:00Z", href: "/y", requires: ["compliance.view"] },
-  ];
-
-  it("orders newest first", () => {
-    const f = buildChangeFeed([events], { canViewFinance: true, canViewCompliance: true });
-    expect(f.events.map((e) => e.key)).toEqual(["b", "c", "a"]);
-  });
-
-  it("withholds every finance event from a viewer without finance.view", () => {
-    const f = buildChangeFeed([events], { canViewFinance: false, canViewCompliance: true });
-    expect(f.events.map((e) => e.key)).toEqual(["b", "c"]);
-    expect(JSON.stringify(f).toLowerCase()).not.toContain("certified");
-  });
-
-  it("FAILS CLOSED on absent flags — never 'assume yes'", () => {
-    // The bug this defends against is one frame of the employer's certified
-    // values on a contractor's screen while the permission map is in flight.
-    const f = buildChangeFeed([events], {});
-    expect(f.events.map((e) => e.key)).toEqual(["b"]);
-  });
-
-  it("honours the limit and carries the undated disclosure through", () => {
-    const f = buildChangeFeed([events], { canViewFinance: true, canViewCompliance: true }, {
-      limit: 2,
-      undatedCount: 4,
-    });
-    expect(f.events).toHaveLength(2);
-    expect(f.undatedCount).toBe(4);
-  });
-});
+//
+// The feed moved to `src/lib/homeChanges.ts` when the two implementations of
+// it were merged, and its tests moved with it to `homeChanges.test.ts`.
+// `homeVisuals.ts` re-exports the builders because `useHomeData.ts` imports
+// them from there; there is nothing left in this file to test.
