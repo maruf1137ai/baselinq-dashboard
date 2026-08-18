@@ -34,6 +34,7 @@
 import { useMemo } from "react";
 
 import useFetch from "@/hooks/useFetch";
+import { usePagedList } from "@/hooks/usePagedList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProject } from "@/hooks/useProjects";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
@@ -45,9 +46,6 @@ import {
   worstPaymentDelay,
   type ProjectPaymentSummaryLike,
 } from "@/lib/projectPosition";
-
-const listOf = <T,>(payload: any): T[] =>
-  Array.isArray(payload) ? payload : (payload?.results ?? []);
 
 /**
  * The certificate the project is currently working on — the client's "Current
@@ -70,16 +68,32 @@ export function useProjectCommercials(projectId: string | undefined) {
 
   const { data: project, isLoading: projectLoading } = useProject(wants ? projectId : undefined);
 
-  const certificates = useFetch<{ results: CertificateLike[] }>(
-    wants ? `tasks/payment-certificates/?projectId=${projectId}` : "",
-    { enabled: wants },
+  /**
+   * PAGED, and it has to be: `PaymentCertificateViewSet` is router-registered
+   * and DRF pages every such route at twenty with no `page_size` parameter
+   * (`baselink_server/settings.py:268`). A single read returned the twenty most
+   * recently TOUCHED certificates and this page summed them into "Certified to
+   * date" and "Retention held" as though they were the whole set.
+   *
+   * Home was corrected first. Leaving this one short would have recreated the
+   * exact defect that correction closed — the same figure differing between
+   * two screens one click apart — so both now walk the pages. See
+   * `src/lib/fetchAllPages.ts`.
+   */
+  const certificates = usePagedList<CertificateLike>(
+    (page) => `tasks/payment-certificates/?projectId=${projectId}&page=${page}`,
+    wants,
+    ["commercials-certificates", projectId],
   );
 
   // The VO assignment tasks, merged with the variation RECORDS below — neither
-  // route sees everything on its own. See `useProjectVariations`.
-  const variationTasks = useFetch<{ results: any[] }>(
-    wants ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
-    { enabled: wants },
+  // route sees everything on its own. See `useProjectVariations`. PAGED for
+  // the same reason as the certificates above: `TaskViewSet` is router-
+  // registered and stops at twenty.
+  const variationTasks = usePagedList<any>(
+    (page) => `tasks/tasks/?taskType=VO&project=${projectId}&page=${page}`,
+    wants,
+    ["commercials-vo-tasks", projectId],
   );
   const variationRecords = useProjectVariations(projectId, wants);
 
@@ -92,31 +106,48 @@ export function useProjectCommercials(projectId: string | undefined) {
     { enabled: wants },
   );
 
-  const certificateList = useMemo(
-    () => listOf<CertificateLike>(certificates.data),
-    [certificates.data],
-  );
+  const certificateList = certificates.rows;
 
   const variationList = useMemo(() => {
     const merged = [...variationRecords.records];
     const seen = new Set(merged.map((v) => v.ref).filter(Boolean) as string[]);
-    for (const raw of listOf<any>(variationTasks.data)) {
+    for (const raw of variationTasks.rows) {
       const rec = toVariationRecord(raw);
       if (rec.ref && seen.has(rec.ref)) continue;
       if (rec.ref) seen.add(rec.ref);
       merged.push(rec);
     }
     return merged;
-  }, [variationRecords.records, variationTasks.data]);
+  }, [variationRecords.records, variationTasks.rows]);
 
+  /**
+   * NULL, not `[]`, when a list could not be read.
+   *
+   * `summariseMoney` distinguishes "the project has none" from "we were not
+   * told", and every figure it derives depends on it — see its header. Handing
+   * it an empty array on a failed request is what let the homepage print a
+   * balance and a 0% certified share over a job that is 82% certified. This
+   * page shows the same figures off the same function and inherits the same
+   * guard rather than repeating the mistake in a second place.
+   */
   const money = useMemo(
     () =>
       summariseMoney(
         project,
-        certificateList,
-        variationList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value })),
+        certificates.isError ? null : certificateList,
+        variationTasks.isError || variationRecords.isError || variationRecords.truncated
+          ? null
+          : variationList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value })),
       ),
-    [project, certificateList, variationList],
+    [
+      project,
+      certificateList,
+      variationList,
+      certificates.isError,
+      variationTasks.isError,
+      variationRecords.isError,
+      variationRecords.truncated,
+    ],
   );
 
   const variations = useMemo(() => summariseVariations(variationList), [variationList]);
@@ -193,10 +224,12 @@ export function useProjectCommercials(projectId: string | undefined) {
      * variation read makes the revised contract sum incomplete, and the page
      * must say so rather than rendering a short figure as though it were final.
      */
-    certificatesFailed: certificates.isError,
+    certificatesFailed: certificates.isError || certificates.truncated,
     variationsFailed: variationTasks.isError || variationRecords.isError,
     paymentsFailed: payments.isError,
-    variationsTruncated: variationRecords.truncated,
+    variationsTruncated: variationRecords.truncated || variationTasks.truncated,
+    /** True when the certificate page walk was cut short, so the totals are short. */
+    certificatesTruncated: certificates.truncated,
   };
 }
 

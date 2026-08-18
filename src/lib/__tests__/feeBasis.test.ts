@@ -134,9 +134,9 @@ describe("buildBasisFigures", () => {
 describe("baseNarrative", () => {
   it("spells out the certificate arithmetic so it can be checked", () => {
     const lines = baseNarrative(PC_DETAIL, "pc");
-    expect(lines[0]).toContain("R 500 000,00");
-    expect(lines[0]).toContain("R 450 000,00");
-    expect(lines[lines.length - 1]).toContain("R 400 000,00");
+    expect(lines[0]).toContain("R\u00a0500\u00a0000,00");
+    expect(lines[0]).toContain("R\u00a0450\u00a0000,00");
+    expect(lines[lines.length - 1]).toContain("R\u00a0400\u00a0000,00");
   });
 
   it("explains a pro-rata partial approval", () => {
@@ -186,7 +186,7 @@ describe("dedupeView / capView", () => {
       },
     })!;
     expect(capped.capReached).toBe(true);
-    expect(capped.narrative).toContain("R 1 000,00");
+    expect(capped.narrative).toContain("R\u00a01\u00a0000,00");
     expect(capped.narrative).toContain("cap is now reached");
   });
 });

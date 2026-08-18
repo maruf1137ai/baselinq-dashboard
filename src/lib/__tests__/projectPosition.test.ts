@@ -53,7 +53,7 @@ describe("financialOverview", () => {
     // 552 000 + 368 000 + 460 000. The Submitted and Under Review ones are out.
     expect(money.variations).toBe(1_380_000);
     expect(money.revisedContractSum).toBe(11_380_000);
-    expect(row("revised").value).toBe("R 11 380 000,00");
+    expect(row("revised").value).toBe("R\u00a011\u00a0380\u00a0000,00");
   });
 
   it("derives the balance as revised − certified, and does NOT deduct retention", () => {
@@ -61,16 +61,23 @@ describe("financialOverview", () => {
     // already been certified — `claim_amount` is gross of it per
     // pc_integrity.recompute — so it is inside the certified figure and
     // taking it off again removes the same R410 000 twice.
-    expect(row("balance").value).toBe("R 3 180 000,00");
+    expect(row("balance").value).toBe("R\u00a03\u00a0180\u00a0000,00");
     expect(row("balance").label).toBe("Balance still to certify");
     expect(row("balance").formula).toBe("revised sum − certified to date");
   });
 
-  it("is exactly the retention balance above summariseMoney's figure", () => {
-    // The defect, stated as a test: the shared derivation still returns the
-    // double-deducted number, and this page no longer renders it.
-    expect(money.balance).toBe(2_770_000);
-    expect(3_180_000 - money.balance!).toBe(money.retentionHeld);
+  it("is the SAME figure the shared derivation returns — no local rebuild", () => {
+    // This test used to assert the opposite: that `summariseMoney` still
+    // returned the double-deducted R 2 770 000 and that this page quietly
+    // rendered a different number. It existed to keep the defect visible.
+    //
+    // The defect is fixed at the source. `summariseMoney.balance` no longer
+    // deducts retention, `financialOverview` no longer rebuilds it locally,
+    // and Home and Project Health print one number under one name. The gap
+    // this asserted — exactly the retention balance, R 410 000 — is gone.
+    expect(money.balance).toBe(3_180_000);
+    expect(row("balance").value).toBe("R\u00a03\u00a0180\u00a0000,00");
+    expect(money.retentionHeld).toBe(410_000);
   });
 
   it("does not claim a checkable derivation for the revised sum", () => {
@@ -240,7 +247,7 @@ describe("buildKeyIndicators", () => {
 
   it("says nothing about a retention limit, because none is recorded", () => {
     const r = buildKeyIndicators(base).find((i) => i.key === "retention")!;
-    expect(r.state).toBe("R 410 000,00");
+    expect(r.state).toBe("R\u00a0410\u00a0000,00");
     expect(`${r.state} ${r.detail} ${r.caveat}`.toLowerCase()).not.toContain("at limit");
   });
 
@@ -348,7 +355,7 @@ describe("financialOverview — retention releases", () => {
     ]);
     const row = financialOverview(money, basis).find((r) => r.key === "retention")!;
     // 410 000 held less 110 000 released.
-    expect(row.value).toBe("R 300 000,00");
+    expect(row.value).toBe("R\u00a0300\u00a0000,00");
     expect(row.formula).toBe("withheld − released");
     expect(row.warning).toBeUndefined();
   });
@@ -356,7 +363,7 @@ describe("financialOverview — retention releases", () => {
   it("warns rather than silently showing a gross figure as net", () => {
     const basis = summariseCertificateBasis(CERTS_45);
     const row = financialOverview(money, basis).find((r) => r.key === "retention")!;
-    expect(row.value).toBe("R 410 000,00");
+    expect(row.value).toBe("R\u00a0410\u00a0000,00");
     expect(row.warning).toMatch(/retention-release/i);
   });
 

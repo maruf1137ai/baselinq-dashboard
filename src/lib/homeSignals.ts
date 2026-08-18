@@ -34,9 +34,11 @@ export {
   summariseQueue,
 } from "./homeQueueRank";
 export type {
+  ActPermissionCode,
   Clock,
   Consequence,
   PermissionCode,
+  QueueRequirement,
   Pressure,
   QueueItem,
   QueueKind,
@@ -44,11 +46,17 @@ export type {
 } from "./homeQueueRank";
 
 import {
+  ACT_TODAY_BAND,
+  bandOf,
   pressureFromDays,
   type Clock,
   type PermissionCode,
   type QueueItem,
+  type QueueRequirement,
 } from "./homeQueueRank";
+// The app's single currency formatter. A pure function with no DOM in it, so
+// importing it here costs this file none of the testability it protects.
+import { formatZAR } from "./formatCurrency";
 
 /**
  * Finance tab labels, verbatim from `visibleTabs` in `src/pages/finance.tsx`.
@@ -313,8 +321,9 @@ export interface CertificateLike {
  * How long an item has been sitting, in whole days, or null.
  *
  * Used for wording and for the last tiebreak only — never to manufacture a
- * deadline. A certificate has no due date anywhere in the payload, so "waiting
- * eleven days" is a statement about elapsed time and is worded as one.
+ * deadline. The certificate LIST carries no due date, so "waiting eleven days"
+ * is a statement about elapsed time and is worded as one. The PAYMENT due date
+ * is a different fact off a different endpoint — see `PaymentDueLike` below.
  */
 export function daysWaiting(iso: string | null | undefined, now: Date = new Date()): number | null {
   const d = daysUntil(iso, now);
@@ -327,21 +336,48 @@ export function daysWaiting(iso: string | null | undefined, now: Date = new Date
  * `workflowState` is the only field every transition stamps — `approvalStatus`
  * is written once at creation and lies (see paymentCertificateTable.tsx).
  *
- * **No certificate endpoint carries a due date.** There is no `dueDate`, no
- * `rejected_at`, no statutory clock on the row — only `createdAt` and
- * `updatedAt`. So these items have NO clock, and `pressure: "none"` on a
- * `money` consequence is what puts them at band 3 rather than at the bottom.
- * Absence of a date here is a gap in the payload, not evidence of slack: the
- * contract gives the principal agent a fixed period to certify, and Baselinq
- * cannot presently see it. Reported as missing.
+ * ── The clock, corrected ──────────────────────────────────────────────────
  *
- * `subRank` orders the three money states against each other, because the axes
+ * This comment used to read "No certificate endpoint carries a due date" and
+ * hard-coded `pressure: "none"` on every row. That is true of the certificate
+ * LIST and false of the product: `GET projects/{id}/payments/` returns
+ * `due.dueDate`, `isOverdue`, `daysPastDue` and `due.basisIsContractual` per
+ * certificate, computed by `tasks/payment_terms.py` against the project's own
+ * `ProjectPaymentTerms` and the South African working-day calendar.
+ * `useProjectCommercials` has consumed it on Project Health all along.
+ *
+ * That endpoint answers for POSTED certificates only — a certificate that is
+ * not posted is not yet an obligation to pay — so it does not date the two
+ * states below, which genuinely have no deadline on the wire. Those rows keep
+ * `pressure: "none"` and the reason stands: the contract gives the principal
+ * agent a fixed period to CERTIFY, and Baselinq still cannot see it.
+ *
+ * What the endpoint does date is the row that matters most and was not on this
+ * page at all: a posted certificate past its payment due date. See
+ * `buildPaymentOverdueQueue`.
+ *
+ * ── Who each row is for ───────────────────────────────────────────────────
+ *
+ * Every row here used to require nothing but `finance.view`, so "Certify
+ * PC-006", under a heading reading "Certificates awaiting you", rendered
+ * identically for the principal agent, the contractor's QS and any finance
+ * viewer on the project. The transitions are separately permissioned on the
+ * server and always have been — `TRANSITION_PERMISSIONS` in
+ * `tasks/pc_workflow.py` — so each row now declares the permission for the act
+ * it names:
+ *
+ *   Certify  `finance.approve_certificate`  PRINCIPAL_PM alone: the project's
+ *                                           Designated Principal Agent, the
+ *                                           single certifying role.
+ *   Post     `finance.post_certificate`     the client-side roles that pay.
+ *
+ * A viewer who cannot perform the act is not shown the row, which is what the
+ * panel's title claims and what it could not previously support.
+ *
+ * `subRank` orders the money states against each other, because the axes
  * cannot: a rejected certificate is dead in the water and must be reworked by
  * a person; a submitted one is waiting on a signature; an approved one only
  * needs posting.
- *
- * Gated on `finance.view` — the row names a certificate, and the block it
- * links to carries the certified amount. Unchanged from the previous revision.
  */
 export function buildCertificateQueue(
   certificates: CertificateLike[],
@@ -372,15 +408,143 @@ export function buildCertificateQueue(
         pressure: "none" as const,
         daysRemaining: null,
         clock: null,
+        // The certificate LIST carries no date for these two states, and a
+        // certificate that is not posted is not yet an obligation to pay, so
+        // `projects/{id}/payments/` does not date them either. The slot stays
+        // empty rather than borrowing `updatedAt`, which is when somebody last
+        // touched the row and is not a deadline. Reported as a payload gap.
+        date: null,
         overdue: false,
         href: ROUTE.certificate(c.id),
         action: awaitingCertification ? "Open to certify" : "Open to post",
         waitingSince: c.updatedAt ?? null,
         subRank: awaitingCertification ? 1 : 2,
-        requires: ["finance.view"] as PermissionCode[],
+        requires: [
+          "finance.view",
+          awaitingCertification ? "finance.approve_certificate" : "finance.post_certificate",
+        ] as QueueRequirement[],
       };
     });
 }
+
+/**
+ * One posted certificate's payment position, as `tasks/payments.py` returns it.
+ *
+ * A deliberately narrow read of a wide payload: the four fields below and
+ * nothing else. `src/lib/projectPosition.ts` declares the full shape for
+ * Project Health, and `worstPaymentDelay` there is the derivation this file
+ * does NOT duplicate — the queue needs one row per overdue certificate, that
+ * page needs the worst one, and both read the same response.
+ */
+export interface PaymentDueLike {
+  paymentCertificateId?: number;
+  pcNumber?: string | null;
+  isOverdue?: boolean;
+  daysPastDue?: number;
+  outstandingAmount?: string | number | null;
+  due?: {
+    dueDate?: string | null;
+    basisIsContractual?: boolean;
+  } | null;
+}
+
+export interface PaymentSummaryLike {
+  certificates?: PaymentDueLike[];
+}
+
+/**
+ * Certificates past their contractual payment date.
+ *
+ * ── Why this is on the homepage at all ────────────────────────────────────
+ *
+ * A JBCC payment certificate is a liquid document. Once it is overdue the
+ * contractor may proceed by provisional sentence and interest runs from the
+ * due date, so it is the single item a principal agent is personally exposed
+ * on — and it was the one item on this project with a real, server-computed
+ * clock that the homepage did not read. A certificate nineteen days past its
+ * date sat in the queue with no chip at all, ranked beside one submitted this
+ * morning, because `buildCertificateQueue` had no date to rank it by.
+ *
+ * ── Nothing is recomputed ─────────────────────────────────────────────────
+ *
+ * `daysPastDue` and `isOverdue` are the SERVER's. `tasks/payment_terms.py`
+ * resolves the payment period from `ProjectPaymentTerms` — 14 calendar days
+ * from the date for issue on a private JBCC contract, 21 for an Organ of
+ * State, 28 for GCC, and no default at all for NEC4 or FIDIC because there is
+ * no defensible one — and applies the working-day calendar where the period is
+ * counted in working days. Re-deriving any of that in a browser would be a
+ * second implementation of the rule that decides whether a contractor may
+ * claim interest.
+ *
+ * `clock: "calendar"` is therefore what the chip says even where the period
+ * was counted in working days: `daysPastDue` is a plain difference of two
+ * dates, and labelling it "working days" would overstate it by a weekend.
+ *
+ * ── The permission, and why it is `finance.edit` ──────────────────────────
+ *
+ * The move this row names is recording the payment, which
+ * `tasks/views_payments.py` gates on `finance.edit` (line 252). Not
+ * `finance.approve_payment` — that code reverses a recorded payment and is a
+ * different act entirely.
+ *
+ * ── The basis disclosure ──────────────────────────────────────────────────
+ *
+ * `basisIsContractual: false` means the due date was counted from the
+ * certificate or posting date rather than the contractual date FOR issue. That
+ * fallback can only ever move a due date LATER, i.e. in the employer's favour,
+ * so it is stated in `detail` rather than left in the payload.
+ */
+export function buildPaymentOverdueQueue(
+  summary: PaymentSummaryLike | null | undefined,
+): QueueItem[] {
+  const rows = summary?.certificates ?? [];
+  return rows
+    .filter((r) => r.isOverdue === true && (r.daysPastDue ?? 0) > 0)
+    .map((r) => {
+      const ref = r.pcNumber || `PC-${r.paymentCertificateId ?? "?"}`;
+      const days = r.daysPastDue as number;
+      const outstanding = Number(r.outstandingAmount);
+      return {
+        key: `payment-overdue-${r.paymentCertificateId ?? ref}`,
+        // The same kind as the rows above, so it sorts and sections with them
+        // — a reader looking for certificates should find all of them in one
+        // place. `homeQueueRank` is untouched; this row simply carries a real
+        // clock, which is what the ranking has always wanted and never had.
+        kind: "certificate" as const,
+        headline: `Chase payment on ${ref}`,
+        detail:
+          [
+            Number.isFinite(outstanding) && outstanding > 0
+              ? `${formatZAR(outstanding)} outstanding`
+              : null,
+            r.due?.dueDate ? `due ${shortDate(r.due.dueDate) ?? r.due.dueDate}` : null,
+            r.due?.basisIsContractual === false
+              ? "counted from a fallback date, not the contractual date for issue"
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || null,
+        consequence: "money" as const,
+        // Through the shared threshold function rather than hard-coded, so
+        // this row is placed by exactly the rule every other dated row is.
+        // A negative day count is `expired`.
+        pressure: pressureFromDays(-days, "calendar"),
+        daysRemaining: -days,
+        clock: "calendar" as const,
+        // The server's own due date, off `tasks/payment_terms.py`.
+        date: r.due?.dueDate ?? null,
+        overdue: true,
+        href: ROUTE.certificate(r.paymentCertificateId ?? 0),
+        action: "Open to record payment",
+        waitingSince: r.due?.dueDate ?? null,
+        // Ahead of certify and post: this is money already lost, and interest
+        // is running on it.
+        subRank: -1,
+        requires: ["finance.view", "finance.edit"] as QueueRequirement[],
+      };
+    });
+}
+
 
 /**
  * Certificates the payer sent back.
@@ -392,6 +556,12 @@ export function buildCertificateQueue(
  * the only thing that restarts it is somebody reworking the certificate.
  *
  * `subRank: 0` puts it at the head of the money band for that reason.
+ *
+ * Reworking is the PREPARER's act, not a certifier's —
+ * `TRANSITION_PERMISSIONS` maps submit and cancel to
+ * `finance.create_certificate` — so that is the permission the row declares.
+ * It used to declare `finance.view` alone and show the contractor's QS a job
+ * that belongs to whoever raises certificates on this project.
  */
 export function buildRejectedCertificateQueue(
   certificates: CertificateLike[],
@@ -418,12 +588,14 @@ export function buildRejectedCertificateQueue(
         pressure: "none" as const,
         daysRemaining: null,
         clock: null,
+        // No rejection date is returned by any endpoint — see above.
+        date: null,
         overdue: false,
         href: ROUTE.certificate(c.id),
         action: "Open to rework",
         waitingSince: c.updatedAt ?? null,
         subRank: 0,
-        requires: ["finance.view"] as PermissionCode[],
+        requires: ["finance.view", "finance.create_certificate"] as QueueRequirement[],
       };
     });
 }
@@ -618,19 +790,30 @@ function resolveBar(b: TimeBarLike): ResolvedBar {
     pressure: pressureFromDays(days, thresholdClock),
     clause:
       b.clause_verified && b.clause_ref ? `${b.contract_form ?? ""} ${b.clause_ref}`.trim() : null,
-    due: due ? `Due ${due}` : null,
+    // The formatted date, WITHOUT a "Due " prefix. The prefix existed only to
+    // make the headline read as a sentence, and the headline no longer carries
+    // the date. What still uses this is the folded group's `detail`, which
+    // lists its members' dates — "20 Aug 2026, 27 Aug 2026" reads as a list of
+    // dates, where "Due 20 Aug 2026, Due 27 Aug 2026" read as a stutter.
+    due,
     period,
   };
 }
 
 /**
- * The headline for one clock: **the date it falls, then what it is.**
+ * The headline for one clock: **what it is, and nothing else.**
  *
- * The deadline date leads for two reasons at once. It is the only temporal
- * value on the row that is computed correctly (see rule 1), so it is the one
- * the reader should be acting on; and it is what tells five clocks of the same
- * kind apart, because they differ by nothing else a person can read. It does
- * not duplicate the chip — the chip counts down, the headline names a date.
+ * It used to be "Due 5 Aug 2026 — Notice of delay / claim for revision of
+ * completion date". The date was right to be on the row and wrong to be in
+ * this string: rendered as a text prefix in the same weight and colour as the
+ * label behind it, it read as more sentence, and six stacked rows became six
+ * near-identical sentences with the distinguishing half at the far end.
+ *
+ * The date has NOT been removed — `QueueItem.date` carries it and the row
+ * draws it as a date object in a slot of its own, where a column of them can
+ * be scanned without being read. What is removed is the duplication of
+ * register: an absolute date in the prose and a relative countdown in the chip,
+ * two feet apart, saying the same thing twice.
  *
  * `label` is the backend's own wording and is reproduced verbatim: it is the
  * contractual name of the thing and is not ours to paraphrase, nor to
@@ -642,7 +825,7 @@ function resolveBar(b: TimeBarLike): ResolvedBar {
  * lot of them anyway.
  */
 function timeBarHeadline(r: ResolvedBar): string {
-  return r.due ? `${r.due} — ${r.bar.label}` : r.bar.label;
+  return r.bar.label;
 }
 
 function timeBarDetail(r: ResolvedBar): string | null {
@@ -725,6 +908,9 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
     // Never `r.thresholdClock`. The countdown is in calendar days and the
     // chip must not label it in working ones. See rule 1.
     clock: null,
+    // The deadline date, raw. It used to be formatted and glued to the front
+    // of the headline; the row draws it as a date object now.
+    date: r.bar.deadline_date ?? null,
     overdue: r.days !== null && r.days < 0,
     href: ROUTE.timeBars,
     action: "Open the deadline",
@@ -775,6 +961,14 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
       pressure: worst.pressure,
       daysRemaining: worst.days,
       clock: null,
+      // THE SOONEST MEMBER'S DATE, which is the same member the chip and the
+      // pressure already come from — `ordered` is sorted by `days` ascending
+      // and `worst` is `ordered[0]`. A group therefore shows one date and one
+      // countdown belonging to one deadline, rather than a date from one
+      // member beside a countdown from another. Like the chip, it can only
+      // ever overstate the group's urgency, never understate it, and the
+      // remaining dates are listed in `detail` where the tooltip shows them.
+      date: worst.bar.deadline_date ?? null,
       overdue: false,
       href: ROUTE.timeBars,
       action: "Open the deadlines",
@@ -993,6 +1187,7 @@ export function buildObligationQueue(
       pressure: pressureFromDays(days, "calendar"),
       daysRemaining: days,
       clock: "calendar",
+      date: o.dueDate ?? null,
       overdue: days < 0,
       href: ROUTE.obligation(o._id),
       action: "Open the obligation",
@@ -1050,6 +1245,8 @@ export function buildRsvpQueue(meetings: MeetingLike[], now: Date = new Date()):
         pressure: pressureFromDays(days, "calendar"),
         daysRemaining: days,
         clock: days === null ? null : ("calendar" as const),
+        // When the meeting sits, which is the date the answer is needed by.
+        date: m.scheduled_utc || m.date || null,
         overdue: days !== null && days < 0,
         href: ROUTE.meeting(m.id),
         action: "Open to reply",
@@ -1112,6 +1309,10 @@ export function buildMeetingActionQueue(
       pressure: "none",
       daysRemaining: null,
       clock: null,
+      // A proposed action carries no date of its own on the meeting detail
+      // payload. Not borrowed from the meeting: the meeting has happened, and
+      // its date is not a deadline for deciding.
+      date: null,
       overdue: false,
       href: ROUTE.meeting(meeting.id),
       action: "Open to decide",
@@ -1166,6 +1367,10 @@ export function buildTaskQueue(tasks: TaskLike[], now: Date = new Date()): Queue
         pressure: pressureFromDays(days, "calendar"),
         daysRemaining: days,
         clock: days === null ? null : ("calendar" as const),
+        // `dueDate ?? finishDate` as the hook resolves it. Null on a task with
+        // neither, and null is drawn as an empty slot and disclosed by the
+        // chip — see `buildTaskQueue`'s note on the undated-task hole.
+        date: t.due_date ?? null,
         overdue,
         href: ROUTE.task(t.id),
         action: "Open the task",
@@ -1197,12 +1402,58 @@ export function resolveFinanceAccess(perms: {
   canViewFinance: boolean;
   canApprovePayment: boolean;
   isLoading: boolean;
-}): { canViewFinance: boolean; canApprovePayment: boolean } {
-  if (perms.isLoading) return { canViewFinance: false, canApprovePayment: false };
+  /**
+   * The four ACT flags. Optional so that `useProjectCommercials`, which asks
+   * only "may this person see money", keeps its existing call unchanged.
+   */
+  canEditFinance?: boolean;
+  canCertifyCertificate?: boolean;
+  canPostCertificate?: boolean;
+  canPrepareCertificate?: boolean;
+}): FinanceAccess {
+  if (perms.isLoading) {
+    return {
+      canViewFinance: false,
+      canApprovePayment: false,
+      canEditFinance: false,
+      canCertifyCertificate: false,
+      canPostCertificate: false,
+      canPrepareCertificate: false,
+    };
+  }
   return {
     canViewFinance: perms.canViewFinance,
     canApprovePayment: perms.canApprovePayment,
+    canEditFinance: perms.canEditFinance === true,
+    canCertifyCertificate: perms.canCertifyCertificate === true,
+    canPostCertificate: perms.canPostCertificate === true,
+    canPrepareCertificate: perms.canPrepareCertificate === true,
   };
+}
+
+/**
+ * What a viewer may DO with money on this project, as against what they may
+ * see.
+ *
+ * `canApprovePayment` is kept and is deliberately NOT used to gate the
+ * certificate rows. It resolves `finance.approve_payment`, which
+ * `tasks/views_payments.py` documents as "reverse a recorded payment" — an
+ * entirely different act from certifying. Gating "Certify PC-006" on it would
+ * have been a scoping rule invented in the browser, which is exactly what this
+ * change exists to remove.
+ */
+export interface FinanceAccess {
+  canViewFinance: boolean;
+  /** `finance.approve_payment` — reverse a recorded payment. */
+  canApprovePayment: boolean;
+  /** `finance.edit` — record a payment, edit finance data. */
+  canEditFinance: boolean;
+  /** `finance.approve_certificate` — certify or reject. PRINCIPAL_PM alone. */
+  canCertifyCertificate: boolean;
+  /** `finance.post_certificate` — post a certified certificate. */
+  canPostCertificate: boolean;
+  /** `finance.create_certificate` — raise, submit, rework, withdraw. */
+  canPrepareCertificate: boolean;
 }
 
 /** The minimum a signal must carry for the gate below to judge it. */
@@ -1398,17 +1649,38 @@ export interface MoneyPosition {
   certified: number | null;
   retentionHeld: number | null;
   /**
-   * What is left to certify: revised contract sum, less what has been
-   * certified, less what is being held back as retention.
+   * **Balance still to certify** — revised contract sum, less what has been
+   * certified. Nothing else comes off it.
    *
-   * **This used to be `contractSum - certified`, and that was wrong.** It
-   * ignored approved variations, so every approved variation understated the
-   * balance by its own value; and it ignored retention, so it counted money
-   * that is withheld against defects as though it were still available to
-   * certify. On project 45 the two errors ran the same way and the figure was
-   * R 970 000 light.
+   * ── Retention is NOT deducted, and used to be ─────────────────────────
    *
-   * Not a forecast and not cost-to-complete.
+   * This returned `revised − certified − retentionHeld`, which deducts
+   * retention twice. Per `tasks/pc_integrity.py::recompute`, `claim_amount`
+   * is the valuation less penalties and advance recovery — it is GROSS of
+   * retention, and retention is taken out further down the certificate, at
+   * line 4.0, on its way to what is paid. So retention is a SUBSET of the
+   * certified total, not a quantity standing beside it, and taking it off
+   * again removes the same rand a second time. On project 45 that read
+   * R 1 590 000 where the true balance is R 2 000 000, and Project Health —
+   * one click away, off the same payload — printed the right one.
+   *
+   * `financialOverview` in `src/lib/projectPosition.ts` had already rebuilt
+   * the correct figure locally and declined to change this shared one. It no
+   * longer needs to: the derivation and the LABEL now agree across the two
+   * screens, because two names for one figure is its own defect. Both call it
+   * "Balance still to certify".
+   *
+   * ── The figure this is NOT ────────────────────────────────────────────
+   *
+   * Cash still to flow — `revised − paid + retention due for release` —
+   * cannot be computed from this payload: nothing on the certificate list
+   * distinguishes PAID from POSTED (`tasks/payment_terms.py` is explicit that
+   * posting certifies, it does not pay) and no release schedule exists. It is
+   * therefore not stated at all rather than approximated.
+   *
+   * Null when the revised sum is unknown, and null when the certificate list
+   * could not be READ — see the `certificates` parameter of `summariseMoney`.
+   * A failed request must not be spent as a zero.
    */
   balance: number | null;
   /**
@@ -1421,9 +1693,24 @@ export interface MoneyPosition {
    * reports a certificate as over 100% while the server considers it well
    * inside its ceiling. That is a false alarm on the one judgement this figure
    * is used to make.
+   *
+   * Null when the certificate list could not be read: `certified / revised`
+   * over an empty list that only LOOKS empty because the request failed is a
+   * confident 0%, printed beside "100% remaining", on a job that is 82%
+   * certified.
    */
   certifiedPct: number | null;
 }
+
+/**
+ * The one name for `MoneyPosition.balance`, on every screen that shows it.
+ *
+ * "Balance remaining" and "Balance still to certify" were the same number
+ * under two names on two screens one click apart. The second is the true one
+ * — it says WHICH of the two possible balances the figure answers — so it is
+ * the one that survives, and it lives here so it cannot drift again.
+ */
+export const BALANCE_LABEL = "Balance still to certify";
 
 export interface VariationLike {
   status?: string;
@@ -1473,43 +1760,83 @@ export function certifiedValueOf(c: CertificateLike): number {
   return c.claimAmount ?? c.totalPayable ?? c.netAmount ?? 0;
 }
 
+/**
+ * The project's commercial position, from the payloads the page already holds.
+ *
+ * ── `null` MEANS "COULD NOT BE READ", AND IT IS NOT THE SAME AS `[]` ──────
+ *
+ * Both list parameters are nullable, and the two states mean different things:
+ *
+ *   `[]`    the request answered and the project genuinely has none. A project
+ *           with no posted certificate has certified NOTHING, and the whole
+ *           revised sum is still to certify. That is a real zero.
+ *   `null`  the request FAILED, or was never made. Nothing is known. Every
+ *           figure that depends on the list is null and the page prints an
+ *           em dash.
+ *
+ * This distinction is the whole of the fix for the strip that fabricated. The
+ * hook used to hand this function `[]` on a failed certificate read, so
+ * `certified` and `retentionHeld` came back null — correctly — while `balance`
+ * quietly computed `revised − 0 − 0` and `certifiedPct` computed 0. The page
+ * then rendered "R 10 000 000,00 remaining · 0% certified" on a job that is
+ * 82% certified, with nothing but a muted outage line three panels above it to
+ * say otherwise. An absent figure is absent, not zero — and a DERIVED figure
+ * is only as present as the least present of its inputs.
+ *
+ * A null variation list nulls the revised contract sum too, and everything
+ * built on it. An unknown variation total means an unknown contract sum; the
+ * original on its own is a DIFFERENT number, not a safe approximation of it.
+ */
 export function summariseMoney(
   project: any,
-  certificates: CertificateLike[],
-  variations: VariationLike[],
+  certificates: CertificateLike[] | null | undefined,
+  variations: VariationLike[] | null | undefined,
 ): MoneyPosition {
   const rawSum = project?.contractValue ?? project?.contract_value;
   const parsedSum = rawSum === null || rawSum === undefined || rawSum === "" ? NaN : Number(rawSum);
   const contractSum = Number.isFinite(parsedSum) && parsedSum > 0 ? parsedSum : null;
 
-  const approvedVos = variations.filter((v) =>
+  /** True when the list answered. `[]` answered; `null`/`undefined` did not. */
+  const certificatesKnown = Array.isArray(certificates);
+  const variationsKnown = Array.isArray(variations);
+
+  const approvedVos = (variations ?? []).filter((v) =>
     APPROVED_VO.has((v.status || "").toLowerCase()),
   );
   const variationsTotal = approvedVos.reduce((s, v) => s + variationValue(v), 0);
 
-  const certifiedCerts = certificates.filter(certificateIsCertified);
+  const certifiedCerts = (certificates ?? []).filter(certificateIsCertified);
   const certified = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
   const retentionHeld = certifiedCerts.reduce((s, c) => s + (c.retentionAmount ?? 0), 0);
 
   // Original + approved variations. Null on a null original rather than
   // falling back to the variation total on its own, which would present
-  // R 1 380 000 of variations as though it were the contract.
-  const revisedContractSum = contractSum === null ? null : contractSum + variationsTotal;
+  // R 1 380 000 of variations as though it were the contract — and null when
+  // the variations could not be read at all, because an unknown addend makes
+  // an unknown sum.
+  const revisedContractSum =
+    contractSum === null || !variationsKnown ? null : contractSum + variationsTotal;
+
+  // Every figure below is guarded on the inputs it is built from, not on the
+  // shape of the arithmetic. `revisedContractSum !== null` alone is NOT enough
+  // for the balance: it says the contract sum is known, and says nothing about
+  // whether anything has been certified against it.
+  const balance =
+    revisedContractSum === null || !certificatesKnown ? null : revisedContractSum - certified;
 
   return {
     contractSum,
-    variations: approvedVos.length > 0 ? variationsTotal : null,
+    variations: variationsKnown && approvedVos.length > 0 ? variationsTotal : null,
     variationCount: approvedVos.length,
     revisedContractSum,
-    certified: certifiedCerts.length > 0 ? certified : null,
-    retentionHeld: certifiedCerts.length > 0 ? retentionHeld : null,
-    // The QS balance: what remains of the revised sum once certified value and
-    // retention held are taken off. See the field's comment for what this
-    // replaced and by how much it was wrong.
-    balance:
-      revisedContractSum === null ? null : revisedContractSum - certified - retentionHeld,
+    certified: certificatesKnown && certifiedCerts.length > 0 ? certified : null,
+    retentionHeld: certificatesKnown && certifiedCerts.length > 0 ? retentionHeld : null,
+    // Revised sum LESS CERTIFIED, and nothing else. Retention is inside the
+    // certified figure already — see the field's comment for the server chain
+    // that settles it and for the R 410 000 this used to remove twice.
+    balance,
     certifiedPct:
-      revisedContractSum !== null && revisedContractSum > 0
+      revisedContractSum !== null && revisedContractSum > 0 && certificatesKnown
         ? Math.round((certified / revisedContractSum) * 100)
         : null,
   };
@@ -1530,6 +1857,8 @@ export interface HomeLoadState {
   timeBarsFailed: boolean;
   riskFailed: boolean;
   obligationsFailed: boolean;
+  /** `projects/{id}/payments/` — the only source of a certificate's due date. */
+  paymentsFailed: boolean;
 }
 
 export interface HomeLoadIssue {
@@ -1545,6 +1874,7 @@ const EMPTY_LOAD_STATE: HomeLoadState = {
   timeBarsFailed: false,
   riskFailed: false,
   obligationsFailed: false,
+  paymentsFailed: false,
 };
 
 const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
@@ -1555,6 +1885,7 @@ const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
   timeBarsFailed: "notice deadlines",
   riskFailed: "risk signals",
   obligationsFailed: "contract obligations",
+  paymentsFailed: "certificate due dates",
 };
 
 /**
@@ -1589,4 +1920,131 @@ export function summariseHomeLoad(
     level: "partial",
     message: `Could not load ${list}. Anything outstanding there is missing from the queue below.`,
   };
+}
+
+// ── The verdict ───────────────────────────────────────────────────────────
+//
+// The owner's actual complaint about this page was "nothing that tells you
+// where we are". Every fix above makes a figure TRUE; none of them makes the
+// page say anything. Five figures at equal weight is a report, not an answer,
+// and on a healthy project the page draws no coloured element at all — so a
+// reader cannot tell "this project is fine" from "I have not been told
+// anything".
+//
+// So the page states one thing outright, at the top, before any panel: the
+// single worst fact that is TRUE right now, or the plain statement that there
+// is not one.
+//
+// ── The rules this obeys ─────────────────────────────────────────────────
+//
+//  1. **One line.** Not a summary, not a list, not a score. If two things are
+//     bad, the worse one is named and the other is in the queue below where it
+//     already was.
+//
+//  2. **Nothing is invented.** Every candidate below is a fact already derived
+//     elsewhere on this page from a real response — a server-computed days-past-
+//     due, a queue item's own clock. There is no severity model here and no
+//     weighting: the order of the candidates IS the judgement, and it is the
+//     same order `homeQueueRank` already ranks by. This function does not
+//     reorder anything and does not call the ranker; it reads the top of a
+//     list the ranker has already sorted.
+//
+//  3. **Silence is never asserted over an outage.** "Nothing is past a
+//     contractual date" is a claim about every source. If one of them did not
+//     answer, the line says so instead. This is the same discipline the empty
+//     queue state already keeps, applied to the one statement on the page that
+//     covers the whole of it.
+//
+//  4. **Colour only for a breach that has already happened** — severity rule 1
+//     from `blocks.tsx`. A verdict that names something already past a date is
+//     `breach`; a verdict about a deadline still ahead is `pressing` and is
+//     achromatic; "nothing is late" and "we cannot tell" are `clear` and
+//     `unknown`. The call site decides the ink; this function decides the fact.
+
+export type VerdictTone = "breach" | "pressing" | "clear" | "unknown";
+
+export interface HomeVerdict {
+  /** The whole line. One sentence or one clause; never two. */
+  text: string;
+  tone: VerdictTone;
+  /** Where the fact lives, when it has a page of its own. */
+  href?: string;
+}
+
+/**
+ * The single worst true fact about this project, or the statement that there
+ * is not one.
+ *
+ * `queue` must already be ranked and permission-filtered — it is the very list
+ * the panel below renders, so the verdict can never name something the reader
+ * is not shown. `worstOverdueDays` and the rest are read off it rather than
+ * recomputed.
+ */
+export function homeVerdict(input: {
+  /** Ranked and filtered, exactly as rendered. */
+  queue: QueueItem[];
+  /** Whether every source this viewer was to be shown actually answered. */
+  loadLevel: HomeLoadIssue["level"];
+}): HomeVerdict {
+  const { queue, loadLevel } = input;
+
+  // ── 1. Something is already past a date ────────────────────────────────
+  //
+  // `rankQueue` has already put the worst consequence first, so the first
+  // overdue row in the list IS the worst overdue row. Forfeiture outranks
+  // money, money outranks breach; that ordering is `homeQueueRank`'s and is
+  // not restated here.
+  const overdue = queue.filter((i) => i.overdue);
+  if (overdue.length > 0) {
+    const worst = overdue[0];
+    const days = worst.daysRemaining === null ? null : Math.abs(worst.daysRemaining);
+    const unit = worst.clock === "working" ? " working days" : " days";
+    const rest =
+      overdue.length > 1
+        ? ` · ${overdue.length - 1} other${overdue.length === 2 ? "" : "s"} past a date`
+        : "";
+    return {
+      text:
+        days === null
+          ? `${worst.headline} is past its date${rest}`
+          : `${worst.headline} — ${days}${unit} past its date${rest}`,
+      tone: "breach",
+      href: worst.href,
+    };
+  }
+
+  // ── 2. Nothing has been missed, but something closes imminently ────────
+  //
+  // `ACT_TODAY_BAND` is the ranker's own threshold for "this needs you today"
+  // and is not a second opinion about urgency.
+  const acting = queue.filter((i) => bandOf(i) <= ACT_TODAY_BAND);
+  if (acting.length > 0) {
+    const worst = acting[0];
+    const days = worst.daysRemaining;
+    const unit = worst.clock === "working" ? " working days" : " days";
+    // A row with no clock is in the act-today band on consequence alone, so
+    // the line states the consequence and does not invent a countdown.
+    const when =
+      days === null
+        ? "is waiting on you"
+        : days === 0
+          ? "closes today"
+          : `closes in ${days}${unit}`;
+    const rest = acting.length > 1 ? ` · ${acting.length - 1} more need you today` : "";
+    return {
+      text: `${worst.headline} ${when}${rest}`,
+      tone: "pressing",
+      href: worst.href,
+    };
+  }
+
+  // ── 3. Nothing is late, and we are only entitled to say so if we know ──
+  if (loadLevel !== "none") {
+    return {
+      text: "Some of this project's data could not be read — nothing here says it is on time.",
+      tone: "unknown",
+    };
+  }
+
+  return { text: "Nothing is past a contractual date.", tone: "clear" };
 }

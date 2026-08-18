@@ -8,6 +8,8 @@ import {
   filterQueueByPermission,
   rankQueue,
   buildCertificateQueue,
+  buildPaymentOverdueQueue,
+  homeVerdict,
   buildMeetingActionQueue,
   buildRejectedCertificateQueue,
   buildRsvpQueue,
@@ -84,10 +86,16 @@ describe("buildCertificateQueue", () => {
     expect(q[1].headline).toContain("Post PC-002");
   });
 
-  it("gates every certificate row on finance.view, and nothing more", () => {
+  it("gates each row on the permission for the ACT it names", () => {
+    // It used to be `["finance.view"]` on every row, so "Certify PC-003"
+    // rendered identically for the principal agent, the contractor's QS and
+    // any finance viewer on the project — under a heading reading
+    // "Certificates awaiting you". The codes below are the server's own
+    // `TRANSITION_PERMISSIONS` (tasks/pc_workflow.py), and
+    // `finance.approve_certificate` is granted to PRINCIPAL_PM alone.
     expect(buildCertificateQueue(certs).map((i) => i.requires)).toEqual([
-      ["finance.view"],
-      ["finance.view"],
+      ["finance.view", "finance.approve_certificate"],
+      ["finance.view", "finance.post_certificate"],
     ]);
   });
 
@@ -126,14 +134,16 @@ describe("buildCertificateQueue", () => {
 });
 
 describe("buildRejectedCertificateQueue", () => {
-  it("picks up rejected certificates and gates them on finance.view", () => {
+  it("picks up rejected certificates and gates them on the PREPARER's code", () => {
     const q = buildRejectedCertificateQueue([
       { id: 5, pcNumber: "PC-005", workflowState: "rejected" },
       { id: 6, workflowState: "posted" },
     ]);
     expect(q).toHaveLength(1);
     expect(q[0].headline).toBe("Rework PC-005 — it was rejected");
-    expect(q[0].requires).toEqual(["finance.view"]);
+    // Reworking is the preparer's act — `TRANSITION_PERMISSIONS` maps submit
+    // and cancel to `finance.create_certificate` — not a certifier's.
+    expect(q[0].requires).toEqual(["finance.view", "finance.create_certificate"]);
   });
 
   it("leads the money class, because payment on it has stopped dead", () => {
@@ -171,7 +181,9 @@ describe("buildTimeBarQueue", () => {
         contract_form: "JBCC",
       },
     ]);
-    expect(q[0].headline).toBe("Due 24 Aug 2026 — VO-012");
+    expect(q[0].headline).toBe("VO-012");
+    // The date is on the row, in a slot of its own, not glued to the headline.
+    expect(q[0].date).toBe("2026-08-24");
     expect(q[0].detail).toBe("JBCC 26.5 · 20 working days from 4 Aug 2026");
     expect(q[0].consequence).toBe("forfeiture");
     expect(q[0].overdue).toBe(false);
@@ -219,7 +231,7 @@ describe("buildTimeBarQueue", () => {
     const q = buildTimeBarQueue([
       { id: 1, label: "Claim for expense and loss", days_remaining: 40, unit: "working", status: "open", deadline_date: "2026-09-30" },
     ]);
-    expect(q[0].headline).toBe("Due 30 Sep 2026 — Claim for expense and loss");
+    expect(q[0].headline).toBe("Claim for expense and loss");
     expect(q[0].headline.toLowerCase()).not.toContain("notice");
     expect(q[0].action.toLowerCase()).not.toContain("notice");
   });
@@ -229,21 +241,31 @@ describe("buildTimeBarQueue", () => {
     const q = buildTimeBarQueue([
       { id: 1, label, days_remaining: 2, unit: "working", status: "open", deadline_date: "2026-08-20" },
     ]);
-    expect(q[0].headline).toBe(`Due 20 Aug 2026 — ${label}`);
+    expect(q[0].headline).toBe(label);
     expect(q[0].headline).not.toContain("Notice on Notice");
   });
 
-  it("puts no day count in any time-bar headline, whatever the clock says", () => {
+  it("puts no date and no day count in any time-bar headline", () => {
+    // The headline is the label and nothing else, at every point on the clock.
+    // Both temporal values live in their own slots on the row: the deadline in
+    // the date tile, the countdown in the chip. Stating the date in the prose
+    // as well made a row of six read as six near-identical sentences.
     const at = (days: number | null) =>
       buildTimeBarQueue([
         { id: 1, label: "Delay particulars", days_remaining: days, unit: "working", status: "open", deadline_date: "2026-08-24" },
-      ])[0].headline;
+      ])[0];
     for (const days of [null, -4, 0, 2, 9]) {
-      expect(at(days)).toBe("Due 24 Aug 2026 — Delay particulars");
+      expect(at(days).headline).toBe("Delay particulars");
+      expect(at(days).headline).not.toMatch(/\d/);
+      expect(at(days).date).toBe("2026-08-24");
     }
   });
 
-  it("tells five clocks of the same kind apart by their deadline date", () => {
+  it("tells five clocks of the same kind apart by their DATE SLOT", () => {
+    // The deadline date is still what distinguishes three otherwise identical
+    // clocks — it is simply no longer doing that job from inside a sentence.
+    // `QueueRow` draws it as a date object at the head of the row, so a column
+    // of them can be scanned without reading three copies of the same label.
     const label = "Notice of delay / claim for revision of completion date";
     const bar = (id: number, deadline_date: string, days_remaining: number) => ({
       id, label, deadline_date, days_remaining, unit: "working", status: "open",
@@ -253,10 +275,11 @@ describe("buildTimeBarQueue", () => {
       bar(2, "2026-08-27", 4),
       bar(3, "2026-09-03", 5),
     ]);
-    const heads = q.map((i) => i.headline);
-    expect(new Set(heads).size).toBe(3);
-    // …and they are still distinct once the row truncates.
-    expect(new Set(heads.map((h) => h.slice(0, 60))).size).toBe(3);
+    expect(new Set(q.map((i) => i.date)).size).toBe(3);
+    expect(q.map((i) => i.date)).toEqual(["2026-08-20", "2026-08-27", "2026-09-03"]);
+    // The headline is now the same string for all three, deliberately: what
+    // they have in common IS the same, and the row says so once.
+    expect(new Set(q.map((i) => i.headline)).size).toBe(1);
   });
 
   it("falls back to the label alone rather than inventing a date", () => {
@@ -347,14 +370,19 @@ describe("shortDate", () => {
 describe("headlines identify their row when truncated", () => {
   const TRUNCATE = 60;
 
-  it("keeps three same-kind notices apart in their first 60 characters", () => {
+  it("keeps three same-kind notices apart by DATE, the headline being shared", () => {
+    // The truncation rule is about what a reader can tell apart at a glance,
+    // and for these three that is the date — which is why it is now a slot of
+    // its own rather than the first eighteen characters of a sentence. The
+    // headline is shared and fits inside the truncation width whole.
     const label = "Notice of delay / claim for revision of completion date";
     const q = buildTimeBarQueue([
       { id: 1, label, deadline_date: "2026-08-20", days_remaining: 2, unit: "working", status: "open" },
       { id: 2, label, deadline_date: "2026-08-27", days_remaining: 3, unit: "working", status: "open" },
       { id: 3, label, deadline_date: "2026-09-17", days_remaining: 4, unit: "working", status: "open" },
     ]);
-    expect(new Set(q.map((i) => i.headline.slice(0, TRUNCATE))).size).toBe(3);
+    expect(new Set(q.map((i) => i.date)).size).toBe(3);
+    expect(q.every((i) => i.headline.length <= TRUNCATE)).toBe(true);
   });
 
   it("keeps three certificates apart in their first 60 characters", () => {
@@ -478,7 +506,8 @@ describe("buildTimeBarQueue — folding the ones with nothing to do today", () =
     const q = buildTimeBarQueue([bar(7, "Notice of delay", 30, "2026-09-30")]);
     expect(q).toHaveLength(1);
     expect(q[0].key).toBe("time-bar-7");
-    expect(q[0].headline).toBe("Due 30 Sep 2026 — Notice of delay");
+    expect(q[0].headline).toBe("Notice of delay");
+    expect(q[0].date).toBe("2026-09-30");
   });
 
   it("lists the deadlines behind a folded row in its detail, soonest first", () => {
@@ -488,7 +517,24 @@ describe("buildTimeBarQueue — folding the ones with nothing to do today", () =
       bar(2, label, 18, "2026-09-18"),
       bar(3, label, 22, "2026-09-22"),
     ]);
-    expect(q[0].detail).toBe("Due 18 Sep 2026, Due 22 Sep 2026, Due 30 Sep 2026");
+    // A list of dates, no longer a stutter of "Due …, Due …, Due …".
+    expect(q[0].detail).toBe("18 Sep 2026, 22 Sep 2026, 30 Sep 2026");
+  });
+
+  it("gives a folded row the SOONEST member's date, matching its chip", () => {
+    // The group already draws its worst member's clock, so it can only ever
+    // overstate its own urgency. The date slot comes from the SAME member, so
+    // the tile and the chip on a folded row belong to one deadline rather than
+    // to two different ones. The rest are listed in `detail`.
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([
+      bar(1, label, 30, "2026-09-30"),
+      bar(2, label, 18, "2026-09-18"),
+      bar(3, label, 22, "2026-09-22"),
+    ]);
+    expect(q[0].key).toContain("time-bar-group-");
+    expect(q[0].date).toBe("2026-09-18");
+    expect(q[0].daysRemaining).toBe(18);
   });
 
   it("keeps a folded row unable to hide urgency it does not have a chip for", () => {
@@ -740,31 +786,66 @@ describe("buildTaskQueue", () => {
 describe("resolveFinanceAccess", () => {
   // The case that matters: on live project 45, Contractor resolves
   // finance.view = false while Client/Owner and Project Manager resolve true.
+  const NO_ACTS = {
+    canEditFinance: false,
+    canCertifyCertificate: false,
+    canPostCertificate: false,
+    canPrepareCertificate: false,
+  };
+
   it("gives a contractor without finance.view no money and no certification", () => {
     expect(
       resolveFinanceAccess({ canViewFinance: false, canApprovePayment: false, isLoading: false }),
-    ).toEqual({ canViewFinance: false, canApprovePayment: false });
+    ).toEqual({ canViewFinance: false, canApprovePayment: false, ...NO_ACTS });
   });
 
   it("gives a PM who holds finance.view the money blocks", () => {
     expect(
       resolveFinanceAccess({ canViewFinance: true, canApprovePayment: true, isLoading: false }),
-    ).toEqual({ canViewFinance: true, canApprovePayment: true });
+    ).toEqual({ canViewFinance: true, canApprovePayment: true, ...NO_ACTS });
   });
 
   it("FAILS CLOSED while permissions are still loading", () => {
     // usePermissions returns true for every flag while the effective map is in
     // flight, so a route gate does not bounce a legitimate user. Rendering must
     // not inherit that: it would flash the contract sum at a contractor.
+    //
+    // All SIX flags, not just the two: an act gate that failed open would put
+    // "Certify PC-006" in front of somebody who cannot certify, for one frame,
+    // every time the page loads.
     expect(
-      resolveFinanceAccess({ canViewFinance: true, canApprovePayment: true, isLoading: true }),
-    ).toEqual({ canViewFinance: false, canApprovePayment: false });
+      resolveFinanceAccess({
+        canViewFinance: true,
+        canApprovePayment: true,
+        isLoading: true,
+        canEditFinance: true,
+        canCertifyCertificate: true,
+        canPostCertificate: true,
+        canPrepareCertificate: true,
+      }),
+    ).toEqual({ canViewFinance: false, canApprovePayment: false, ...NO_ACTS });
   });
 
   it("keeps view and approve independent", () => {
     expect(
       resolveFinanceAccess({ canViewFinance: true, canApprovePayment: false, isLoading: false }),
-    ).toEqual({ canViewFinance: true, canApprovePayment: false });
+    ).toEqual({ canViewFinance: true, canApprovePayment: false, ...NO_ACTS });
+  });
+
+  it("keeps CERTIFYING independent of approve_payment, which is a different act", () => {
+    // `finance.approve_payment` REVERSES a recorded payment
+    // (tasks/views_payments.py); `finance.approve_certificate` certifies and
+    // is held by PRINCIPAL_PM alone. The homepage used to expose the first and
+    // consume neither, and gating a certification row on it would have been a
+    // scoping rule invented in the browser.
+    const out = resolveFinanceAccess({
+      canViewFinance: true,
+      canApprovePayment: true,
+      isLoading: false,
+      canCertifyCertificate: false,
+    });
+    expect(out.canApprovePayment).toBe(true);
+    expect(out.canCertifyCertificate).toBe(false);
   });
 
   it("hides every finance queue item from a contractor end to end", () => {
@@ -784,7 +865,14 @@ describe("resolveFinanceAccess", () => {
     ]);
     // The contractor holds compliance.view but not finance.view, which is the
     // live configuration on project 45.
-    const visible = filterQueueByPermission(items, { ...access, canViewCompliance: true });
+    const visible = filterQueueByPermission(items, {
+      canViewFinance: access.canViewFinance,
+      canViewCompliance: true,
+      canEditFinance: access.canEditFinance,
+      canCertify: access.canCertifyCertificate,
+      canPostCertificate: access.canPostCertificate,
+      canPrepareCertificate: access.canPrepareCertificate,
+    });
     expect(visible.every((i) => !i.requires.includes("finance.view"))).toBe(true);
     expect(visible.map((i) => i.kind).sort()).toEqual(["task", "time-bar"]);
     // The notice deadline still leads: it is the only thing here that forfeits.
@@ -902,13 +990,64 @@ describe("summariseMoney", () => {
     expect(m.revisedContractSum).toBe(1_050_000);
   });
 
-  it("takes BOTH certified value and retention held off the revised sum", () => {
+  it("takes certified value off the revised sum and does NOT deduct retention", () => {
     const m = summariseMoney(project, certificates, variations);
-    // 1 050 000 revised − 330 000 certified − 30 000 retention.
-    // The old formula was contractSum − certified = 670 000, which ignored
-    // the R50 000 approved variation and the R30 000 retention alike.
-    expect(m.balance).toBe(690_000);
-    expect(m.balance).not.toBe(670_000);
+    // 1 050 000 revised − 330 000 certified. Retention is withheld out of
+    // value that has ALREADY been certified — `claim_amount` is gross of it
+    // per `pc_integrity.recompute` — so it is inside the certified figure and
+    // taking it off again removes the same R30 000 twice.
+    expect(m.balance).toBe(720_000);
+    // The two figures this replaced, both named so neither comes back:
+    expect(m.balance).not.toBe(690_000); // double-deducted retention
+    expect(m.balance).not.toBe(670_000); // ignored the approved variation
+  });
+
+  it("agrees with Project Health, which is the whole point", () => {
+    // Home said R 1 590 000 and Project Health said R 2 000 000 for project 45,
+    // one click apart, because this function deducted retention and
+    // `financialOverview` did not. `financialOverview` now reads this figure
+    // rather than rebuilding it; the arithmetic is asserted from both ends.
+    const m = summariseMoney(project, certificates, variations);
+    expect(m.balance).toBe((m.revisedContractSum as number) - (m.certified as number));
+  });
+
+  it("states NOTHING when the certificate list could not be read", () => {
+    // The strip that fabricated. A failed certificates request used to arrive
+    // here as `[]`: `certified` and `retentionHeld` came back null correctly,
+    // `balance` computed `revised − 0 − 0` and `certifiedPct` computed 0, so
+    // the page rendered "R 1 050 000,00 remaining · 0% certified" over a
+    // project that is 31% certified.
+    const m = summariseMoney(project, null, variations);
+    expect(m.certified).toBeNull();
+    expect(m.retentionHeld).toBeNull();
+    expect(m.balance).toBeNull();
+    expect(m.certifiedPct).toBeNull();
+    // The contract sum itself is NOT from that endpoint and survives.
+    expect(m.contractSum).toBe(1_000_000);
+    expect(m.revisedContractSum).toBe(1_050_000);
+  });
+
+  it("tells an EMPTY certificate list apart from an unread one", () => {
+    // A project with no posted certificate has certified nothing, and the
+    // whole revised sum is still to certify. That is a real zero and must
+    // still produce a balance.
+    const m = summariseMoney(project, [], variations);
+    expect(m.certified).toBeNull();
+    expect(m.balance).toBe(1_050_000);
+    expect(m.certifiedPct).toBe(0);
+  });
+
+  it("states no revised sum when the variations could not be read", () => {
+    // An unknown addend makes an unknown sum. The original on its own is a
+    // DIFFERENT number, not a safe approximation of the revised one.
+    const m = summariseMoney(project, certificates, null);
+    expect(m.contractSum).toBe(1_000_000);
+    expect(m.variations).toBeNull();
+    expect(m.revisedContractSum).toBeNull();
+    expect(m.balance).toBeNull();
+    expect(m.certifiedPct).toBeNull();
+    // What came off the certificates endpoint is still known and still shown.
+    expect(m.certified).toBe(330_000);
   });
 
   it("measures the certified share against the revised sum, not the original", () => {
@@ -1284,5 +1423,171 @@ describe("queue rows name their object", () => {
 
   it("the documents alert names its project", () => {
     expect(documentsHref(45)).toBe("/documents?project=45");
+  });
+});
+
+// ── The certificate clock, at last ────────────────────────────────────────
+
+describe("buildPaymentOverdueQueue", () => {
+  const summary = {
+    overdueCount: 2,
+    certificates: [
+      {
+        paymentCertificateId: 5,
+        pcNumber: "PC-005",
+        isOverdue: true,
+        daysPastDue: 19,
+        outstandingAmount: "1240000.00",
+        due: { dueDate: "2026-07-29", basisIsContractual: true },
+      },
+      {
+        paymentCertificateId: 4,
+        pcNumber: "PC-004",
+        isOverdue: true,
+        daysPastDue: 3,
+        outstandingAmount: "80000.00",
+        due: { dueDate: "2026-08-14", basisIsContractual: false },
+      },
+      // Posted, paid, not overdue. Not a row.
+      { paymentCertificateId: 3, pcNumber: "PC-003", isOverdue: false, daysPastDue: 0 },
+    ],
+  };
+
+  it("gives a certificate a REAL clock, which the list endpoint could not", () => {
+    // `homeSignals` used to assert "No certificate endpoint carries a due
+    // date" and hard-code `pressure: "none"` on every certificate row, so a
+    // certificate 19 days past its contractual due date sat in the queue with
+    // no chip, ranked beside one submitted this morning. The date is the
+    // server's, off `projects/{id}/payments/`.
+    const q = buildPaymentOverdueQueue(summary);
+    expect(q).toHaveLength(2);
+    expect(q[0].daysRemaining).toBe(-19);
+    expect(q[0].clock).toBe("calendar");
+    expect(q[0].date).toBe("2026-07-29");
+    expect(q[0].overdue).toBe(true);
+    expect(q[0].pressure).toBe("expired");
+  });
+
+  it("ranks a certificate past its due date above one merely waiting", () => {
+    const overdue = buildPaymentOverdueQueue(summary)[0];
+    const waiting = buildCertificateQueue([{ id: 6, workflowState: "submitted" }], NOW)[0];
+    const ranked = rankQueue([waiting, overdue]);
+    expect(ranked[0].key).toBe(overdue.key);
+  });
+
+  it("never recomputes the day count from the due date", () => {
+    // `tasks/payment_terms.py` resolves the period from ProjectPaymentTerms and
+    // applies the SA working-day calendar where it is counted in working days.
+    // Re-deriving that in a browser would be a second implementation of the
+    // rule that decides whether a contractor may claim interest.
+    const q = buildPaymentOverdueQueue({
+      certificates: [
+        {
+          paymentCertificateId: 1,
+          pcNumber: "PC-001",
+          isOverdue: true,
+          daysPastDue: 4,
+          // Forty days ago. If the date were subtracted here it would say 40.
+          due: { dueDate: iso(-40).slice(0, 10), basisIsContractual: true },
+        },
+      ],
+    });
+    expect(q[0].daysRemaining).toBe(-4);
+  });
+
+  it("discloses a due date counted from a FALLBACK basis", () => {
+    // The fallback can only ever move a due date later, i.e. in the employer's
+    // favour, so a reader must be told when it was used.
+    const q = buildPaymentOverdueQueue(summary);
+    expect(q[0].detail).not.toContain("fallback");
+    expect(q[1].detail).toContain("fallback");
+  });
+
+  it("names the outstanding amount and gates on the code that records a payment", () => {
+    const q = buildPaymentOverdueQueue(summary);
+    expect(q[0].detail).toContain("1 240 000,00");
+    // `finance.edit` records a payment (tasks/views_payments.py:252).
+    // NOT `finance.approve_payment`, which REVERSES one.
+    expect(q[0].requires).toEqual(["finance.view", "finance.edit"]);
+  });
+
+  it("says nothing at all when the endpoint has not answered", () => {
+    expect(buildPaymentOverdueQueue(undefined)).toEqual([]);
+    expect(buildPaymentOverdueQueue({ certificates: [] })).toEqual([]);
+  });
+});
+
+// ── The verdict ───────────────────────────────────────────────────────────
+
+describe("homeVerdict", () => {
+  const bar = (days: number, label = "Notice of delay") =>
+    buildTimeBarQueue([
+      { id: 1, label, days_remaining: days, unit: "working", status: "open", deadline_date: "2026-08-10" },
+    ])[0];
+
+  it("names the single worst thing already past a date", () => {
+    const q = rankQueue([
+      bar(-8),
+      ...buildTaskQueue([{ id: "t", title: "Reply", needsAction: true, due_date: iso(-2) }], NOW),
+    ]);
+    const v = homeVerdict({ queue: q, loadLevel: "none" });
+    expect(v.tone).toBe("breach");
+    expect(v.text).toContain("Notice of delay");
+    expect(v.text).toContain("8 days past its date");
+    // The second one is not named — it is in the list below, where it was.
+    expect(v.text).toContain("1 other past a date");
+  });
+
+  it("takes the ranker's word for which is worst, and does not re-rank", () => {
+    // Forfeiture outranks own-work in `homeQueueRank`. The verdict reads the
+    // top of the ranked list rather than forming a second opinion.
+    const q = rankQueue([
+      ...buildTaskQueue([{ id: "t", title: "Reply", needsAction: true, due_date: iso(-30) }], NOW),
+      bar(-1),
+    ]);
+    expect(homeVerdict({ queue: q, loadLevel: "none" }).text).toContain("Notice of delay");
+  });
+
+  it("states a deadline that is closing WITHOUT calling it a breach", () => {
+    const v = homeVerdict({ queue: rankQueue([bar(3)]), loadLevel: "none" });
+    expect(v.tone).toBe("pressing");
+    expect(v.text).toContain("closes in 3 days");
+    // Severity rule 1: colour is for what has already happened.
+    expect(v.tone).not.toBe("breach");
+  });
+
+  it("says so plainly when nothing is late", () => {
+    const v = homeVerdict({ queue: [], loadLevel: "none" });
+    expect(v.text).toBe("Nothing is past a contractual date.");
+    expect(v.tone).toBe("clear");
+  });
+
+  it("NEVER asserts an all-clear over a source that did not answer", () => {
+    // The one statement on this page that covers every source. An outage must
+    // not be rendered as "nothing is late" — the same discipline the empty
+    // queue state already keeps.
+    const v = homeVerdict({ queue: [], loadLevel: "partial" });
+    expect(v.tone).toBe("unknown");
+    expect(v.text).not.toContain("Nothing is past");
+    expect(v.text.toLowerCase()).toContain("could not be read");
+  });
+
+  it("still names a real breach when a DIFFERENT source failed", () => {
+    // A partial outage does not suppress a fact we do hold.
+    const v = homeVerdict({ queue: rankQueue([bar(-4)]), loadLevel: "partial" });
+    expect(v.tone).toBe("breach");
+  });
+
+  it("can only name what the reader is shown, because it reads the filtered queue", () => {
+    const contractor = filterQueueByPermission(
+      rankQueue([
+        ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", workflowState: "submitted" }], NOW),
+        ...buildTaskQueue([{ id: "t", title: "Reply", needsAction: true, due_date: iso(-9) }], NOW),
+      ]),
+      { canViewCompliance: true },
+    );
+    const v = homeVerdict({ queue: contractor, loadLevel: "none" });
+    expect(v.text).not.toContain("PC-006");
+    expect(v.text).toContain("Reply");
   });
 });

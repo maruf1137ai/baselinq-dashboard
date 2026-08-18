@@ -81,7 +81,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
-import { FINANCE_TAB } from "@/lib/homeSignals";
+import { BALANCE_LABEL, FINANCE_TAB } from "@/lib/homeSignals";
 import { cn } from "@/lib/utils";
 import type { ContractTimeline, MilestoneDrift } from "@/lib/homeVisuals";
 import type { HomeData } from "@/hooks/useHomeData";
@@ -515,6 +515,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
     retention,
     variationPosition: vos,
     variationsTruncated,
+    certificatesTruncated,
   } = data;
 
   const zones: React.ReactNode[] = [];
@@ -600,14 +601,31 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         badge={
           // Certified past the revised contract sum. A breach that has already
           // happened, and the word carries it so the red line is not alone.
-          curve.overCeiling ? <Badge variant="danger">Over</Badge> : undefined
+          //
+          // The truncation badge comes FIRST when both apply: a total built
+          // from a short list cannot support a claim that it exceeded a
+          // ceiling. Neutral, per severity rule 1 — a short read is not a
+          // breach, it is a gap, and it is the same badge the Change zone
+          // already draws for a short variation walk.
+          certificatesTruncated ? (
+            <Badge variant="neutral">May be short</Badge>
+          ) : curve.overCeiling ? (
+            <Badge variant="danger">Over</Badge>
+          ) : undefined
         }
         caveat="Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
         footnote={footnoteOf([
           // Every disclosure this curve owes the reader.
           curve.undated > 0 ? `${curve.undated} undated, not plotted` : null,
           curve.inFlight !== null ? `${formatZAR(curve.inFlight)} in flight` : null,
-          money.balance === null ? null : `${formatZAR(money.balance)} remaining`,
+          // `BALANCE_LABEL` lower-cased: "R 2 000 000,00 still to certify". It
+          // read "remaining", which named the same number differently from
+          // Project Health one click away, and named the WRONG question —
+          // what remains to be certified is not what remains to be paid, and
+          // the payload cannot answer the second.
+          money.balance === null
+            ? null
+            : `${formatZAR(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
           retention.held === null
             ? null
             : `${formatZAR(retention.held)} retention${retention.ratePct === null ? "" : ` at ${retention.ratePct}%`}`,

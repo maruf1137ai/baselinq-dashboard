@@ -192,8 +192,44 @@ export function pressureFromDays(days: number | null | undefined, clock: Clock):
 
 // ── The item ──────────────────────────────────────────────────────────────
 
-/** A permission the viewer must hold before the row may be built or rendered. */
+/**
+ * A MODULE gate — may this viewer see finance at all, may they see compliance
+ * at all. Two values, and deliberately still two: `buildChangeFeed` in
+ * `homeVisuals.ts` builds a `Record<PermissionCode, boolean>` over exactly
+ * these, and the act codes below have no meaning for a feed of things that
+ * have already happened.
+ */
 export type PermissionCode = "finance.view" | "compliance.view";
+
+/**
+ * An ACT gate — may this viewer perform the move the row names.
+ *
+ * These are the codes the SERVER checks per transition
+ * (`tasks/pc_workflow.py::TRANSITION_PERMISSIONS`) and per payment
+ * (`tasks/views_payments.py`). Nothing here is invented for the UI:
+ *
+ *   finance.approve_certificate  certify or reject — PRINCIPAL_PM alone, the
+ *                                project's Designated Principal Agent
+ *   finance.post_certificate     post, the act that makes a certificate final
+ *   finance.create_certificate   raise, submit, rework, withdraw
+ *   finance.edit                 record a payment against a certificate
+ *
+ * They exist so that a row reading "Certify PC-006", under a heading reading
+ * "Certificates awaiting you", is shown only to somebody who can certify it.
+ * It used to render identically for the principal agent, the contractor's QS
+ * and any finance viewer on the project.
+ *
+ * **Ordering is untouched by any of this.** A permission decides whether an
+ * item is in the list; it never decides where in the list it sits.
+ */
+export type ActPermissionCode =
+  | "finance.edit"
+  | "finance.approve_certificate"
+  | "finance.post_certificate"
+  | "finance.create_certificate";
+
+/** Everything a queue row may require: a module gate, or an act gate. */
+export type QueueRequirement = PermissionCode | ActPermissionCode;
 
 export type QueueKind =
   | "time-bar"
@@ -220,6 +256,29 @@ export interface QueueItem {
   daysRemaining: number | null;
   /** Which calendar `daysRemaining` is counted on. Null when there is none. */
   clock: Clock;
+  /**
+   * THE DATE THIS ROW'S CLOCK FALLS ON — a deadline date, a payment due date,
+   * a task's due date — as the payload gives it, `YYYY-MM-DD` or ISO.
+   *
+   * Null where the source carries none, and null is drawn as an EMPTY slot
+   * rather than a placeholder: a "—" inside a date tile reads as a date that
+   * failed to load, and these dates have not failed to load, they do not
+   * exist. What KIND of absence it is stays where it already was — the chip
+   * says "Not dated" for an undated forfeiture clock, the detail says "No due
+   * date recorded" for a task.
+   *
+   * It exists so the row can draw the date as an OBJECT rather than as a
+   * sentence prefix. It used to be glued to the front of `headline` — "Due 5
+   * Aug 2026 — Notice of delay / claim for revision of completion date" — in
+   * the same weight and colour as the label behind it, so six stacked rows
+   * read as six near-identical sentences and the eye could not scan the dates
+   * as a column. The value is UNCHANGED; only where it is rendered has moved.
+   *
+   * It is presentation, not ranking. `rankQueue` does not read it, and must
+   * not: `daysRemaining` is the server's own count on the right calendar, and
+   * a date subtracted in a browser is a second, worse implementation of it.
+   */
+  date: string | null;
   overdue: boolean;
   /** Where the one action goes. Must be a route that exists (see App.tsx). */
   href: string;
@@ -237,7 +296,7 @@ export interface QueueItem {
    */
   subRank?: number;
   /** Every permission the viewer must hold. Empty means everyone. */
-  requires: PermissionCode[];
+  requires: QueueRequirement[];
 }
 
 /** The band an item lands in. Exported so a row can explain its own position. */
@@ -319,18 +378,37 @@ export function summariseQueue(items: QueueItem[]): QueueSummary {
   };
 }
 
+/** What the viewer holds. Every flag optional, and an absent flag is FALSE. */
+export interface HeldPermissions {
+  canViewFinance?: boolean;
+  canViewCompliance?: boolean;
+  /** Record a payment against a certificate. */
+  canEditFinance?: boolean;
+  /** Certify or reject. PRINCIPAL_PM alone. */
+  canCertify?: boolean;
+  /** Post a certified certificate. */
+  canPostCertificate?: boolean;
+  /** Raise, submit, rework or withdraw a certificate. */
+  canPrepareCertificate?: boolean;
+}
+
 /** Drop everything the viewer is not permitted to see. Fails closed. */
 export function filterQueueByPermission(
   items: QueueItem[],
-  held: { canViewFinance?: boolean; canViewCompliance?: boolean },
+  held: HeldPermissions,
 ): QueueItem[] {
   // Absent flags are FALSE, not "assume yes". `resolveFinanceAccess` already
   // fails closed while the permission map is in flight and this must not undo
   // that: a contractor flashing the employer's certified values for one frame
-  // is the bug this defends against.
-  const grant: Record<PermissionCode, boolean> = {
+  // is the bug this defends against. The act gates below inherit the same
+  // default for the same reason — an unknown authority is not an authority.
+  const grant: Record<QueueRequirement, boolean> = {
     "finance.view": held.canViewFinance === true,
     "compliance.view": held.canViewCompliance === true,
+    "finance.edit": held.canEditFinance === true,
+    "finance.approve_certificate": held.canCertify === true,
+    "finance.post_certificate": held.canPostCertificate === true,
+    "finance.create_certificate": held.canPrepareCertificate === true,
   };
   return items.filter((i) => i.requires.every((code) => grant[code]));
 }

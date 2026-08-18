@@ -17,6 +17,7 @@ import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import useFetch from "@/hooks/useFetch";
+import { usePagedList } from "@/hooks/usePagedList";
 import { fetchData } from "@/lib/Api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -25,6 +26,8 @@ import type { Milestone } from "@/hooks/useMilestones";
 import {
   buildCertificateQueue,
   buildMeetingActionQueue,
+  buildPaymentOverdueQueue,
+  homeVerdict,
   buildObligationQueue,
   buildRejectedCertificateQueue,
   groupRiskSignals,
@@ -44,6 +47,7 @@ import {
   type MeetingActionItemLike,
   type MeetingLike,
   type ObligationLike,
+  type PaymentSummaryLike,
   type QueueItem,
   type TimeBarLike,
   type VariationLike,
@@ -115,6 +119,21 @@ interface SignalsResponse {
 /** `useFetch` does not disable on an empty URL — it needs `enabled` explicitly. */
 const on = (enabled: boolean) => ({ enabled });
 
+/**
+ * Read a single-shot response as a list.
+ *
+ * **Only for endpoints that are not paged.** Every DRF router-registered
+ * viewset in this backend pages at twenty with no `page_size` parameter
+ * (`baselink_server/settings.py:268`), and this helper reads `results` and
+ * silently drops `next` — which is exactly how the money figures on this page
+ * came to be summed over an arbitrary twenty rows. Paged routes go through
+ * `usePagedList` instead; see `src/lib/fetchAllPages.ts`.
+ *
+ * What is left on it is the plain `APIView` routes, which return a wrapper
+ * object with the whole list in it and no pagination at all: time bars, risk
+ * signals, obligations, milestones and `projects/{id}/tasks/`. Each was
+ * checked in the backend rather than assumed.
+ */
 const listOf = <T,>(payload: any): T[] =>
   Array.isArray(payload) ? payload : (payload?.results ?? []);
 
@@ -128,7 +147,14 @@ export function useHomeData(projectId: string | undefined) {
   // `resolveFinanceAccess` fails closed while the map is loading; see its
   // comment. Without it a contractor gets a flash of the contract sum.
   const perms = usePermissions();
-  const { canViewFinance, canApprovePayment } = resolveFinanceAccess(perms);
+  const {
+    canViewFinance,
+    canApprovePayment,
+    canEditFinance,
+    canCertifyCertificate,
+    canPostCertificate,
+    canPrepareCertificate,
+  } = resolveFinanceAccess(perms);
   const canEditByRole = perms.canEditProject;
   const permissionsLoading = perms.isLoading;
 
@@ -139,7 +165,18 @@ export function useHomeData(projectId: string | undefined) {
     has ? `projects/${projectId}/tasks/` : "",
     on(has),
   );
-  const meetings = useFetch<any>(has ? `meetings/?project_id=${projectId}` : "", on(has));
+  /**
+   * PAGED. `MeetingViewSet` is router-registered and sets no
+   * `pagination_class`, so the previous single read returned the twenty most
+   * recent meetings and no more — losing unanswered invitations and pending
+   * meeting actions off the queue, silently, on any project with a real
+   * meeting history.
+   */
+  const meetings = usePagedList<MeetingLike>(
+    (page) => `meetings/?project_id=${projectId}&page=${page}`,
+    has,
+    ["home-meetings", projectId],
+  );
   const timeBars = useFetch<{ time_bars: TimeBarLike[] }>(
     has ? `projects/${projectId}/time-bars/` : "",
     on(has),
@@ -158,21 +195,70 @@ export function useHomeData(projectId: string | undefined) {
     has && canViewCompliance ? `documents/obligations/?project_id=${projectId}` : "",
     on(has && canViewCompliance),
   );
-  const projectList = useFetch<any>(
-    currentUser?.id ? `projects/?userId=${currentUser.id}` : "",
-    on(!!currentUser?.id),
+  /**
+   * PAGED, and this one decided whether the page had a project at all.
+   *
+   * `ProjectViewSet` is router-registered and pages at twenty. The selected
+   * project is found by scanning this list, so a user on their twenty-first
+   * project found NOTHING — `project` was undefined, and every figure derived
+   * from it (contract sum, revised sum, contract dates, retention rate) came
+   * back null on a project that has all four. It reads as an empty project
+   * rather than as an error, which is the worst of the three possible
+   * failures.
+   */
+  const projectList = usePagedList<any>(
+    (page) => `projects/?userId=${currentUser?.id}&page=${page}`,
+    !!currentUser?.id,
+    ["home-projects", currentUser?.id],
   );
   const milestones = useMilestones(has ? projectId : null);
 
   // ── finance.view only ───────────────────────────────────────────────────
   // Not merely hidden — never requested.
   const wantsMoney = has && canViewFinance;
-  const certificates = useFetch<{ results: CertificateLike[] }>(
-    wantsMoney ? `tasks/payment-certificates/?projectId=${projectId}` : "",
-    on(wantsMoney),
+  /**
+   * PAGED, and this is the read every money figure on the page is built from.
+   *
+   * `PaymentCertificateViewSet` sets no `pagination_class` and orders
+   * `-updated_at`, so the single read this replaces returned the twenty most
+   * recently TOUCHED certificates. On a twenty-four-month job that is twenty
+   * of twenty-four, chosen by who edited what last, and "Certified to date",
+   * "Retention held", the balance, the certified percentage and the certified
+   * curve were all summed over that arbitrary subset and printed as totals.
+   */
+  const certificates = usePagedList<CertificateLike>(
+    (page) => `tasks/payment-certificates/?projectId=${projectId}&page=${page}`,
+    wantsMoney,
+    ["home-certificates", projectId],
   );
-  const variations = useFetch<{ results: VariationLike[] }>(
-    wantsMoney ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
+  /**
+   * PAGED. `TaskViewSet` is router-registered and pages at twenty like the
+   * rest, so a project with more than twenty VO assignment tasks was short by
+   * the remainder — and this list feeds the approved-variation total, hence
+   * the revised contract sum, hence the balance and the certified percentage.
+   */
+  const variations = usePagedList<VariationLike>(
+    (page) => `tasks/tasks/?taskType=VO&project=${projectId}&page=${page}`,
+    wantsMoney,
+    ["home-vo-tasks", projectId],
+  );
+  /**
+   * The payment position of every POSTED certificate — due date, days past
+   * due, and the basis the server counted from.
+   *
+   * `tasks/payment_terms.py` resolves the payment period from the project's
+   * own `ProjectPaymentTerms` and applies the South African working-day
+   * calendar where the period is counted in working days.
+   * `useProjectCommercials` has read this for Project Health all along; the
+   * homepage never asked, so a certificate nineteen days past its contractual
+   * due date sat in the queue with no clock, ranked beside one submitted this
+   * morning. It is a plain `APIView`, so it is not paged.
+   *
+   * Same `finance.view` gate as the two reads above — the server enforces it
+   * independently at `tasks/views_payments.py:386.
+   */
+  const payments = useFetch<PaymentSummaryLike>(
+    wantsMoney ? `projects/${projectId}/payments/` : "",
     on(wantsMoney),
   );
   // The variation RECORDS, as distinct from the assignment tasks above. Both
@@ -180,11 +266,11 @@ export function useHomeData(projectId: string | undefined) {
   // alone is sufficient. Same `finance.view` gate: not requested without it.
   const variationRecords = useProjectVariations(projectId, wantsMoney);
 
-  const allProjects = listOf<any>(projectList.data);
+  const allProjects = projectList.rows;
   const project = allProjects.find((p: any) => String(p._id || p.id) === String(projectId));
 
   // ── Meetings ────────────────────────────────────────────────────────────
-  const meetingList = useMemo(() => listOf<MeetingLike>(meetings.data), [meetings.data]);
+  const meetingList = meetings.rows;
 
   const upcomingMeetings = useMemo(
     () =>
@@ -265,11 +351,8 @@ export function useHomeData(projectId: string | undefined) {
   }, [tasks.data, currentUserId]);
 
   // ── The queue ───────────────────────────────────────────────────────────
-  const certificateList = useMemo(
-    () => listOf<CertificateLike>(certificates.data),
-    [certificates.data],
-  );
-  const variationList = useMemo(() => listOf<VariationLike>(variations.data), [variations.data]);
+  const certificateList = certificates.rows;
+  const variationList = variations.rows;
 
   /**
    * The two variation sources, merged and de-duplicated on VO number.
@@ -310,6 +393,9 @@ export function useHomeData(projectId: string | undefined) {
   const queue: QueueItem[] = useMemo(() => {
     const items = [
       ...buildTimeBarQueue(timeBars.data?.time_bars ?? []),
+      // The one dated certificate row, and the reason the payments endpoint is
+      // now requested: a posted certificate past its contractual due date.
+      ...buildPaymentOverdueQueue(payments.data),
       ...buildCertificateQueue(certificateList),
       ...buildRejectedCertificateQueue(certificateList),
       ...buildObligationQueue(obligations.data?.obligations ?? []),
@@ -317,16 +403,32 @@ export function useHomeData(projectId: string | undefined) {
       ...buildMeetingActionQueue(meetingsWithActions),
       ...buildTaskQueue(taskList),
     ];
-    // Unchanged gating: finance rows need finance.view, compliance rows need
-    // compliance.view, and a financial risk signal needs both. `canViewFinance`
-    // has already been through `resolveFinanceAccess`, so it is false while the
-    // permission map is in flight — this filter inherits that fail-closed
-    // behaviour rather than reopening the hole.
+    // ── Gating, now down to the ACT and not just the module ──────────────
+    //
+    // The module gates are unchanged: finance rows need finance.view,
+    // compliance rows need compliance.view. What is new is that a certificate
+    // row also declares the permission for the transition it names, so
+    // "Certify PC-006" reaches the principal agent and not the contractor's
+    // QS. Those codes are the server's own `TRANSITION_PERMISSIONS`; see
+    // `buildCertificateQueue`.
+    //
+    // Every flag here has been through `resolveFinanceAccess`, so all six are
+    // false while the permission map is in flight. `filterQueueByPermission`
+    // treats an absent flag as false for the same reason: an unknown authority
+    // is not an authority.
     return rankQueue(
-      filterQueueByPermission(items, { canViewFinance, canViewCompliance }),
+      filterQueueByPermission(items, {
+        canViewFinance,
+        canViewCompliance,
+        canEditFinance,
+        canCertify: canCertifyCertificate,
+        canPostCertificate,
+        canPrepareCertificate,
+      }),
     );
   }, [
     certificateList,
+    payments.data,
     timeBars.data,
     obligations.data,
     meetingList,
@@ -334,19 +436,47 @@ export function useHomeData(projectId: string | undefined) {
     taskList,
     canViewFinance,
     canViewCompliance,
+    canEditFinance,
+    canCertifyCertificate,
+    canPostCertificate,
+    canPrepareCertificate,
   ]);
 
   const queueSummary = useMemo(() => summariseQueue(queue), [queue]);
 
   // ── Money ───────────────────────────────────────────────────────────────
+  //
+  // ── EVERY DERIVED FIGURE IS GUARDED ON ITS INPUTS ─────────────────────
+  //
+  // `summariseMoney` takes NULL for "this list could not be read" and `[]` for
+  // "the project has none of these", and the two produce different answers.
+  // Handing it `[]` on a failed request is what made the strip fabricate: the
+  // certificates request would fail, `certified` and `retentionHeld` came back
+  // null correctly, and `balance` quietly computed `revised − 0 − 0` while
+  // `certifiedPct` computed 0 — so the page rendered "R 10 000 000,00
+  // remaining · 100% remaining" on a job that is 82% certified, with nothing
+  // but a muted grey outage line three panels above it.
+  //
+  // A truncated walk counts as unreadable for the same reason: a total summed
+  // over the first five hundred of an unknown number of certificates is not a
+  // total. It cannot happen at PAGE_LIMIT on any project this platform has,
+  // and it is guarded anyway rather than trusted not to.
+  const certificatesReadable = !certificates.isError && !certificates.truncated;
+  // EITHER variation source failing makes the approved-variation total short,
+  // and the revised contract sum is built on it.
+  const variationsReadable =
+    !variations.isError && !variations.truncated && !variationRecords.isError;
+
   const money = useMemo(
     () =>
       summariseMoney(
         project,
-        certificateList,
-        variationRecordList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value })),
+        certificatesReadable ? certificateList : null,
+        variationsReadable
+          ? variationRecordList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value }))
+          : null,
       ),
-    [project, certificateList, variationRecordList],
+    [project, certificateList, variationRecordList, certificatesReadable, variationsReadable],
   );
 
   // ── Key indicators ──────────────────────────────────────────────────────
@@ -543,21 +673,33 @@ export function useHomeData(projectId: string | undefined) {
     // failed for data they were never going to see.
     const base: (keyof HomeLoadState)[] = ["tasksFailed", "meetingsFailed", "timeBarsFailed"];
     if (canViewCompliance) base.push("riskFailed", "obligationsFailed");
-    return canViewFinance ? [...base, "certificatesFailed", "variationsFailed"] : base;
+    return canViewFinance
+      ? [...base, "certificatesFailed", "variationsFailed", "paymentsFailed"]
+      : base;
   }, [canViewFinance, canViewCompliance]);
 
   const loadIssue = summariseHomeLoad(
     {
       tasksFailed: tasks.isError,
       meetingsFailed: meetings.isError,
-      certificatesFailed: certificates.isError,
+      // A TRUNCATED walk is a failed read for this purpose. It means the list
+      // is short by an unknown amount, and a short list under a total is the
+      // defect this whole change exists to close — the badge is the fallback
+      // disclosure, and the banner is how it reaches somebody who is not
+      // looking at that zone.
+      certificatesFailed: certificates.isError || certificates.truncated,
       // Either variation source failing means the variation figures are
       // incomplete, and the banner must say so rather than showing a short
       // count as though it were the whole picture.
-      variationsFailed: variations.isError || variationRecords.isError,
+      variationsFailed:
+        variations.isError ||
+        variations.truncated ||
+        variationRecords.isError ||
+        variationRecords.truncated,
       timeBarsFailed: timeBars.isError,
       riskFailed: risk.isError,
       obligationsFailed: obligations.isError,
+      paymentsFailed: payments.isError,
     },
     visibleSources,
   );
@@ -568,6 +710,7 @@ export function useHomeData(projectId: string | undefined) {
     if (certificates.isError) certificates.refetch();
     if (variations.isError) variations.refetch();
     if (variationRecords.isError) variationRecords.refetch();
+    if (payments.isError) payments.refetch();
     if (timeBars.isError) timeBars.refetch();
     if (risk.isError) risk.refetch();
     if (obligations.isError) obligations.refetch();
@@ -585,8 +728,27 @@ export function useHomeData(projectId: string | undefined) {
     timeBars.isLoading ||
     (wantsMoney && certificates.isLoading);
 
+  /**
+   * ── The one line that states where the project is ─────────────────────
+   *
+   * Built from the ranked, permission-filtered queue and the load state, so
+   * it can never name something the reader is not shown, and never asserts
+   * "nothing is late" over a source that did not answer. See `homeVerdict`.
+   */
+  const verdict = useMemo(
+    () =>
+      // NULL WHILE LOADING, and this is the important half of the guard. An
+      // in-flight page has an empty queue and no load issue yet, and
+      // `homeVerdict` over that returns "Nothing is past a contractual date."
+      // — a confident all-clear about a project nothing has been read from.
+      // The line simply is not there until the page can answer.
+      isLoading ? null : homeVerdict({ queue, loadLevel: loadIssue.level }),
+    [isLoading, queue, loadIssue.level],
+  );
+
   const projectStats = useMemo(() => summariseProjectSetup(project), [project]);
   const isProjectCreator = !!currentUser?.id && String(project?.userId) === String(currentUser.id);
+
 
   return {
     // identity + permissions
@@ -597,17 +759,35 @@ export function useHomeData(projectId: string | undefined) {
     // rendering that as a zero would assert a clear project to somebody who was
     // simply not shown it.
     canViewCompliance,
+    /**
+     * `finance.approve_payment` — REVERSING a recorded payment, per
+     * `tasks/views_payments.py`. Kept and exposed, and deliberately not used
+     * to scope the certificate rows: the acts those rows name are
+     * `finance.approve_certificate`, `finance.post_certificate` and
+     * `finance.create_certificate`, which are the three flags below.
+     */
     canApprovePayment,
+    canCertifyCertificate,
+    canPostCertificate,
+    canPrepareCertificate,
     canEditProject: canEditByRole || isProjectCreator,
     // project
     project,
     allProjects,
     projectStats,
     // derived
+    /** The single worst true fact, or the statement that there is not one. */
+    verdict,
     queue,
     queueSummary,
     money,
     time,
+    /**
+     * True when the certificate page walk hit its limit, so every money figure
+     * on this page is short by an unknown amount. Rendered as a badge on the
+     * money zone, the same disclosure `variationsTruncated` already drives.
+     */
+    certificatesTruncated: certificates.truncated,
     // The visual band
     timeline,
     milestoneDrift,
@@ -617,7 +797,7 @@ export function useHomeData(projectId: string | undefined) {
     changeFeed,
     // Key indicators
     variationPosition,
-    variationsTruncated: variationRecords.truncated,
+    variationsTruncated: variationRecords.truncated || variations.truncated,
     certificateRun,
     awaitingCertification,
     retention,

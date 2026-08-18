@@ -101,6 +101,7 @@ import {
   LoadIssueBanner,
   RiskConditionBlock,
   SetupLineBlock,
+  VerdictLine,
 } from "@/components/home/blocks";
 import { StatusBandBlock } from "@/components/home/StatusBand";
 import { WhatChangedBlock } from "@/components/home/WhatChanged";
@@ -229,7 +230,25 @@ const Index = () => {
           What this bought back is roughly two lines of the one screen this
           page is held to.
         */}
-        <PageHeader title="Home" />
+        {/*
+          ── The verdict, on the title row ─────────────────────────────────
+
+          The page states one thing outright before any panel: the single
+          worst fact that is true right now, or the plain statement that there
+          is not one. See `VerdictLine`.
+
+          It rides in the header's `actions` slot rather than on a line of its
+          own, and that is a height decision rather than a layout preference:
+          the page is held to one screen at 1440px, the title row is already
+          drawn, and a line of its own costs the line plus a 16px stack gap for
+          a sentence the header has room to carry. `actions` is a flex row that
+          shrinks nothing, and the verdict is one short clause.
+
+          `data.verdict` is null while the page is loading and `VerdictLine`
+          renders nothing for it, so the header never carries an all-clear
+          about data that has not arrived. See the guard in `useHomeData`.
+        */}
+        <PageHeader title="Home" actions={<VerdictLine data={data} />} />
 
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
