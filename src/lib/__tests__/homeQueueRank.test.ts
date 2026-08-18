@@ -23,6 +23,8 @@ const item = (over: Partial<QueueItem> & { key: string }): QueueItem => ({
   pressure: "none",
   daysRemaining: null,
   clock: null,
+  // Presentation only — `rankQueue` never reads it. See the field's comment.
+  date: null,
   overdue: false,
   href: "/tasks/1",
   action: "Open",

@@ -43,7 +43,12 @@
  */
 
 import { formatZAR } from "./formatCurrency";
-import { certificateIsCertified, type CertificateLike, type MoneyPosition } from "./homeSignals";
+import {
+  BALANCE_LABEL,
+  certificateIsCertified,
+  type CertificateLike,
+  type MoneyPosition,
+} from "./homeSignals";
 import type { RetentionPosition, VariationPosition } from "./homeIndicators";
 
 // ── What the certificate rows say about their own basis ───────────────────
@@ -160,17 +165,22 @@ export interface OverviewRow {
  *                           retentionRelease over POSTED certificates
  *   Balance still to certify  derived: revised − certified
  *
- * ── THE BALANCE, AND WHY IT IS NO LONGER `money.balance` ──────────────────
+ * ── THE BALANCE, AND WHY IT IS `money.balance` AGAIN ──────────────────────
  *
- * `summariseMoney` returns `revised − certified − retention`. That deducts
- * retention twice. Per the server chain in `tasks/pc_integrity.py::recompute`,
- * `claim_amount` is the VALUATION less penalties and advance recovery — it is
- * GROSS of retention; retention is taken out further down the certificate, at
- * line 4.0, on its way to what is paid. So retention is a SUBSET of the
- * certified total, not a quantity sitting alongside it, and taking it off
- * again removes the same rand a second time. The figure was understated by the
- * whole retention balance, and the caveat asserted the wrong arithmetic out
- * loud — "less certified value, less retention held".
+ * `summariseMoney` used to return `revised − certified − retention`, which
+ * deducts retention twice. Per the server chain in
+ * `tasks/pc_integrity.py::recompute`, `claim_amount` is the VALUATION less
+ * penalties and advance recovery — it is GROSS of retention; retention is
+ * taken out further down the certificate, at line 4.0, on its way to what is
+ * paid. So retention is a SUBSET of the certified total, not a quantity
+ * sitting alongside it, and taking it off again removes the same rand twice.
+ *
+ * This file used to rebuild the figure locally and leave the shared derivation
+ * wrong, on the grounds that changing it was not this page's call. The result
+ * was that Home said R 1 590 000 and Project Health said R 2 000 000 for the
+ * same project, one click apart. `summariseMoney` is fixed, so the local
+ * rebuild is gone and both screens now read the same function AND the same
+ * label — `BALANCE_LABEL`, which is exported for exactly that reason.
  *
  * There are two defensible figures and they answer different questions:
  *
@@ -190,11 +200,8 @@ export interface OverviewRow {
  * forecast with no cash data in it.
  *
  * So the row is labelled "Balance still to certify", not "Balance remaining":
- * the label now says which of the two questions the number answers.
- *
- * `summariseMoney.balance` is left alone. It is the homepage's figure as well
- * as this page's, and changing what a shared derivation returns is not this
- * page's call — it is reported for that file's owner.
+ * the label says which of the two questions the number answers, and it is the
+ * name the homepage uses for the same figure.
  */
 export function financialOverview(
   money: MoneyPosition,
@@ -204,14 +211,12 @@ export function financialOverview(
 
   const retentionNet = netRetentionHeld(money.retentionHeld, basis?.retentionReleased ?? null);
 
-  // (a) above. Recomputed here rather than taken from `money.balance`.
-  // A null revised sum cannot produce a balance. A null CERTIFIED means no
-  // certificate has been posted, which is a real zero rather than an unknown —
-  // the whole revised sum is still to certify.
-  const balanceToCertify =
-    money.revisedContractSum === null
-      ? null
-      : money.revisedContractSum - (money.certified ?? 0);
+  // (a) above, straight off the shared derivation. `summariseMoney` already
+  // guards it on BOTH its inputs — null when the revised sum is unknown, and
+  // null when the certificate list could not be READ, which is not the same
+  // as a project with no posted certificate. Recomputing it here is how the
+  // two screens drifted in the first place.
+  const balanceToCertify = money.balance;
 
   const mixedBasis = (basis?.vatInclusiveRows ?? 0) > 0;
 
@@ -301,7 +306,7 @@ export function financialOverview(
     },
     {
       key: "balance",
-      label: "Balance still to certify",
+      label: BALANCE_LABEL,
       value: zar(balanceToCertify),
       derived: true,
       formula: "revised sum − certified to date",

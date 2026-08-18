@@ -340,6 +340,70 @@ function Figure({
   );
 }
 
+// ── The verdict ───────────────────────────────────────────────────────────
+
+/**
+ * One line at the top of the page, naming the single worst true fact.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────
+ *
+ * The owner's complaint about this page was that there is "nothing that tells
+ * you where we are". Everything above states a figure; nothing above states a
+ * CONCLUSION. Five figures at equal weight is a report, and on a project where
+ * nothing is wrong the page drew no coloured element at all — so a reader had
+ * no way to tell "this project is fine" from "I have not been told anything".
+ *
+ * The fact itself is chosen by `homeVerdict` in `homeSignals.ts`, off the same
+ * ranked, permission-filtered queue the panel below renders. It can therefore
+ * never name something the reader is not shown, and never says "nothing is
+ * late" over a source that did not answer.
+ *
+ * ── Colour ────────────────────────────────────────────────────────────────
+ *
+ * Severity rule 1: only a breach that has ALREADY HAPPENED may carry colour.
+ * `breach` — something past a contractual date — is `text-destructive`.
+ * Everything else is achromatic, including "closes in 3 days", which is a
+ * deadline and not yet a breach.
+ *
+ * Severity rule 4 is why the line carries no badge, no icon and no tile: this
+ * IS the element that names the breach, so it is the one that gets the ink,
+ * and it gets it once.
+ *
+ * ── Height ────────────────────────────────────────────────────────────────
+ *
+ * One line of `text-sm` and nothing else. The page is held to one screen at
+ * 1440px and this is the only thing added to it, so it draws no container,
+ * no border and no vertical padding of its own.
+ */
+export function VerdictLine({ data }: { data: HomeData }) {
+  const { verdict } = data;
+  if (!verdict) return null;
+
+  const body = (
+    <span
+      className={cn(
+        "text-sm",
+        verdict.tone === "breach" ? "text-destructive" : "text-muted-foreground",
+      )}
+    >
+      {verdict.text}
+    </span>
+  );
+
+  // A verdict that names an object links to it, for the same reason every
+  // queue row does: the reader's next question is always "show me".
+  return verdict.href ? (
+    <Link
+      to={verdict.href}
+      className="inline-block rounded-sm outline-none hover:underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {body}
+    </Link>
+  ) : (
+    body
+  );
+}
+
 // ── Action queue ──────────────────────────────────────────────────────────
 //
 // The queue is the page's reason to exist and lives in its own file, next to
