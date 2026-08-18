@@ -335,17 +335,35 @@ export function useHomeData(projectId: string | undefined) {
       const rawType = (item.taskType || "").toString().toUpperCase();
       const type = rawType === "CRITICALPATHITEM" ? "CPI" : rawType;
       const status = (item.status || item.task?.status || "todo").toLowerCase();
+      const open = status !== "done" && status !== "closed";
+      const assignees = (item.assignedTo || []) as any[];
+      const assignedToMe =
+        !!currentUserId && assignees.some((u: any) => String(u.userId) === currentUserId);
+      // Who the backend actually notified when it escalated. Recorded at
+      // escalation time and read back here, rather than re-deriving "who is
+      // the PM" in the client: the row on the homepage and the notification in
+      // the bell must be the same claim to the same people.
+      const escalatedTo = (item.escalatedTo || item.escalated_to || []) as any[];
       return {
         id: String(item.taskId || item.task?._id || ""),
         title: item.task?.subject || item.task?.title || item.task?.taskActivityName || "",
         type: type || undefined,
         status,
         due_date: item.task?.dueDate || item.task?.finishDate || null,
-        needsAction:
-          status !== "done" &&
-          status !== "closed" &&
+        needsAction: open && assignedToMe,
+        // Escalation does not reassign, so this is deliberately NOT folded
+        // into `needsAction`: the task remains the assignee's to do and
+        // becomes the PM's to chase. Two different claims, two different rows.
+        escalatedToMe:
+          open &&
           !!currentUserId &&
-          (item.assignedTo || []).some((u: any) => String(u.userId) === currentUserId),
+          !!(item.isEscalated ?? item.is_escalated) &&
+          escalatedTo.some((id: any) => String(id) === currentUserId),
+        escalatedAt: item.escalatedAt || item.escalated_at || null,
+        // The person who is late — the one to call. Named from the assignee
+        // list; left null rather than guessed when the payload has no name.
+        awaiting:
+          assignees.map((u: any) => u?.name).filter(Boolean).join(", ") || null,
       };
     });
   }, [tasks.data, currentUserId]);

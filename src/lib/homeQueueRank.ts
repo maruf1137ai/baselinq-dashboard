@@ -239,7 +239,14 @@ export type QueueKind =
   | "obligation"
   | "meeting-action"
   | "rsvp"
-  | "task";
+  | "task"
+  // A task assigned to someone ELSE that has gone more than three days past
+  // its due date and escalated to you. Its own kind, not a variant of "task",
+  // because it makes a different claim on the reader: "task" means the work is
+  // yours, this means somebody else is late and chasing them is now yours. The
+  // kind is presentation only — `rankQueue` never reads it — so this adds a
+  // section heading, not a rule.
+  | "task-escalated";
 
 export interface QueueItem {
   key: string;

@@ -1328,6 +1328,76 @@ export interface TaskLike {
   type?: string;
   due_date?: string | null;
   needsAction: boolean;
+  /**
+   * True when this task went more than three days past its due date and the
+   * backend escalated it TO the current viewer. It is a separate flag from
+   * `needsAction` on purpose: escalation does not reassign the task, so an
+   * instruction sitting with a late contractor is escalated to the PM while
+   * `assignedTo` still names the contractor. Folding it into `needsAction`
+   * would have claimed the PM was the one who owed the work.
+   */
+  escalatedToMe?: boolean;
+  /** When the escalation was raised. Drives "escalated N days ago". */
+  escalatedAt?: string | null;
+  /** Who is actually late — the person to chase. Omitted when unnamed. */
+  awaiting?: string | null;
+}
+
+/**
+ * The row for a task that was escalated to you because somebody else let it
+ * run late.
+ *
+ * WORDING. This row must not read as "your task". Nobody has asked the PM to
+ * do the work; the work is still the contractor's. What has landed on the PM
+ * is the chase. So the headline names the person who owes the response, and
+ * the verb is "chase", not "open" — an escalation that reads like an
+ * assignment invites the reader to do somebody else's job, or to dismiss it as
+ * a duplicate of a task they know is not theirs.
+ *
+ * RANK. `blocking`, not `own-work`. The reasoning `buildTaskQueue` gives for
+ * putting ordinary tasks in `own-work` — "nothing is forfeited and nobody else
+ * is blocked by it" — is exactly what stops being true here. This row exists
+ * only because a party has gone silent past the SLA, which is the definition
+ * of the works waiting on somebody. It stays below `forfeiture`, `money` and
+ * `breach`: no deadline has lapsed and no contractual term is broken yet, and
+ * the escalation is precisely the mechanism for stopping it becoming one.
+ * Against `own-work` it wins, and it should — a stranger's silence is worse
+ * than your own late paperwork, because you cannot simply sit down and clear
+ * it. In the existing band matrix that is band 4 versus band 5, one step up.
+ *
+ * The ordering model is untouched: this classifies a row within the existing
+ * consequence axis and adds no term to it.
+ */
+function escalatedTaskRow(t: TaskLike, now: Date): QueueItem {
+  const days = daysUntil(t.due_date, now);
+  const overdue = days !== null && days < 0;
+  const label = t.type ? `${t.type}: ${t.title}` : t.title;
+  const since = daysUntil(t.escalatedAt ?? null, now);
+
+  return {
+    key: `task-escalated-${t.id}`,
+    kind: "task-escalated" as const,
+    // Names who is late, so the reader knows who to call. The count of days
+    // stays in the chip, as on every other row.
+    headline: t.awaiting ? `${label} — awaiting ${t.awaiting}` : label,
+    detail: [
+      t.awaiting ? `No response from ${t.awaiting}` : "No response from the assignee",
+      days === null ? null : `${Math.abs(days)} days past the due date`,
+      since === null ? null : `escalated to you ${relativeDays(since)}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    consequence: "blocking" as const,
+    pressure: pressureFromDays(days, "calendar"),
+    daysRemaining: days,
+    clock: days === null ? null : ("calendar" as const),
+    date: t.due_date ?? null,
+    overdue,
+    href: ROUTE.task(t.id),
+    // Not "Open the task". The move is to chase the person who owes it.
+    action: "Chase the response",
+    requires: [] as PermissionCode[],
+  };
 }
 
 /**
@@ -1344,8 +1414,13 @@ export interface TaskLike {
  */
 export function buildTaskQueue(tasks: TaskLike[], now: Date = new Date()): QueueItem[] {
   return tasks
-    .filter((t) => t.needsAction)
+    .filter((t) => t.needsAction || t.escalatedToMe)
     .map((t) => {
+      // An escalation is a different row with a different claim, so it is
+      // built separately rather than by decorating the assigned row. A task
+      // that is both assigned to you AND escalated to you resolves to the
+      // escalation: it is the more urgent reading of the same fact.
+      if (t.escalatedToMe) return escalatedTaskRow(t, now);
       const days = daysUntil(t.due_date, now);
       const overdue = days !== null && days < 0;
       const label = t.type ? `${t.type}: ${t.title}` : t.title;
