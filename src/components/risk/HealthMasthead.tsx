@@ -1,7 +1,8 @@
 /**
- * The page masthead — the verdict and the position, above the tab strip.
+ * The page masthead — the verdict and the position, directly under the tab
+ * strip and shared by every tab.
  *
- * ── Why it is above the tabs ──────────────────────────────────────────────
+ * ── Why it is not inside a tab ────────────────────────────────────────────
  *
  * It used to be the first thing INSIDE the "Risk signals" tab, which had two
  * consequences. A reader who followed a homepage link to `?tab=commercial` or
@@ -9,12 +10,22 @@
  * the page had no shared element, so five tabs on one route read as five
  * unrelated screens that happened to share a heading.
  *
- * Lifting it out is the move that makes this one surface rather than blocks
- * bolted together, and it is also the one thing Project Health's two readers
+ * Lifting it out of the tab is the move that makes this one surface rather
+ * than blocks bolted together, and it is also the one thing Project Health's two readers
  * agree on. An insurer asks "is this project being competently administered";
  * a principal agent asks "where do I stand". Posture, the engine's own
- * sentence, and four indicators answer both. Everything BELOW the strip is
- * where the two diverge, which is exactly what tabs are for.
+ * sentence, and four indicators answer both. The tab BODY is where the two
+ * diverge, which is exactly what tabs are for.
+ *
+ * ── Why it is below the strip and not above it ────────────────────────────
+ *
+ * It sat between the page title and the tabs, and it is ~200px tall, so
+ * Project Health's tab strip began 210px lower than Finance's and
+ * Programme's. The page-top rule (documented on `PageHeader`) is that nothing
+ * comes between the title and the tab strip, so the strip lands on the same
+ * line on every tabbed page. Sitting under the strip costs this block
+ * nothing: it is still on screen on all five tabs, still the first thing
+ * read after the lens is chosen.
  *
  * ── Colour ────────────────────────────────────────────────────────────────
  *

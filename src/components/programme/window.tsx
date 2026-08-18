@@ -60,7 +60,7 @@ const Window = () => {
           <button
             key={tab}
             onClick={() => chooseTab(tab)}
-            className={`text-base py-4 px-6 border-b-2 transition-all ${
+            className={`text-sm py-4 px-6 border-b-2 -mb-px transition-all ${
               activeTab === tab
                 ? "border-primary text-foreground"
                 : "text-muted-foreground border-transparent"

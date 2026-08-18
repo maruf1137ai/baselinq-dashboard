@@ -276,29 +276,32 @@ export default function ProjectHealth() {
             signals that feed the masthead, and the masthead is on every tab —
             so the button no longer appears and disappears as the reader moves
             across the strip. */}
+        {/* No `description`. The page-top rule (see `PageHeader`) is that
+            nothing sits between the page title and the tab strip, and that
+            the title band is one line high everywhere. The sentence that used
+            to sit here — "live risk signals across programme, financial and
+            contractual data" — is the masthead's job, and the masthead says
+            it with the actual figures rather than in the abstract.
+
+            Refresh is `h-8`, the header-action height Documents and Meetings
+            use, so the strip below lands on the same 80px line as Finance's
+            and Programme's. */}
         <PageHeader
           title="Project Health"
-          description="Live risk signals across programme, financial and contractual data."
           actions={
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+            <Button
+              variant="outline"
+              className="h-8 text-xs rounded-lg"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
               <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
               Refresh
             </Button>
           }
         />
 
-        {/* ── 2. Verdict and position ───────────────────────────────────── */}
-        {isLoading ? (
-          <AwesomeLoader message="Evaluating project risk" />
-        ) : (
-          <HealthMasthead
-            counts={counts}
-            summary={forecast?.ai_summary}
-            indicators={indicators}
-          />
-        )}
-
-        {/* ── 3. Lens ───────────────────────────────────────────────────── */}
+        {/* ── 2. Lens ───────────────────────────────────────────────────── */}
         {/* Same tab strip as Finance and Programme: text-sm py-4 px-6,
             border-b-2 underline pulled onto the container's own hairline.
 
@@ -346,6 +349,33 @@ export default function ProjectHealth() {
             ))}
           </div>
         </div>
+
+        {/* ── 3. Verdict and position ───────────────────────────────────── */}
+        {/* BELOW the strip, not above it.
+
+            It stays a page-level band rather than moving inside a tab, for
+            the reason it was lifted out of "Risk signals" in the first place:
+            it is the one element all five tabs share, and a reader who
+            follows a deep link to `?tab=commercial` or `?tab=insurer` still
+            has to be told whether the project is in trouble. Putting it in
+            the Risk signals tab alone would take the posture verdict and the
+            payment-delay figure away from four of the five tabs.
+
+            What changes is only its position relative to the strip. It was
+            ~200px of card between the title and the tabs, which put this
+            page's tab strip 210px below Finance's and Programme's — the one
+            thing no amount of padding could reconcile. Under the strip it
+            keeps every reader it had, and the strip lands on the same line as
+            every other tabbed page's. */}
+        {isLoading ? (
+          <AwesomeLoader message="Evaluating project risk" />
+        ) : (
+          <HealthMasthead
+            counts={counts}
+            summary={forecast?.ai_summary}
+            indicators={indicators}
+          />
+        )}
 
         {/* ── 4. Detail ─────────────────────────────────────────────────── */}
         {/* One tabpanel per tab, named by the tab that controls it. The strip

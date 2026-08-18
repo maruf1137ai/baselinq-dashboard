@@ -355,20 +355,33 @@ const Compliance = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* No `description`. The page-top rule (see `PageHeader`) puts the
+            title band on one line everywhere; a paragraph under the title that
+            only two pages carried pushed everything below it 24px down and
+            read as an explanation the other seven pages did without. What it
+            said — obligations come from this project's documents, deadlines
+            are tracked against them — is already said by the rows themselves,
+            which each carry their source document or clause reference, and by
+            the empty state for a project with nothing tracked yet.
+
+            Header actions are `h-8`, the height Documents and Meetings use,
+            so the counts row below starts on the same 80px line as every
+            other untabbed page's first content band. */}
         <PageHeader
           title="Compliance"
-          description="Obligations extracted from this project's documents, and the notice deadlines being tracked against it."
           actions={
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
-                className="text-foreground hover:bg-muted"
+                className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
                 onClick={handleAnalyseWithAI}
               >
                 <AiMark className="mr-1.5" /> Analyse with AI
               </Button>
-              <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Button
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setCreateOpen(true)}
+              >
                 Track obligation
               </Button>
             </div>
