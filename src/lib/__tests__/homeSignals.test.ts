@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   actionItemIsPending,
+  bandOf,
   buildObligationQueue,
   groupRiskSignals,
   filterQueueByPermission,
@@ -20,6 +21,7 @@ import {
   riskGroupHref,
   riskSignalHref,
   resolveFinanceAccess,
+  shortDate,
   summariseHomeLoad,
   summariseMoney,
   summariseTime,
@@ -130,7 +132,7 @@ describe("buildRejectedCertificateQueue", () => {
       { id: 6, workflowState: "posted" },
     ]);
     expect(q).toHaveLength(1);
-    expect(q[0].headline).toContain("PC-005 was rejected");
+    expect(q[0].headline).toBe("Rework PC-005 — it was rejected");
     expect(q[0].requires).toEqual(["finance.view"]);
   });
 
@@ -153,24 +155,113 @@ describe("buildRejectedCertificateQueue", () => {
 });
 
 describe("buildTimeBarQueue", () => {
-  it("states the clock, its unit and the thing it protects", () => {
+  it("leads with the deadline date — the one temporal value that is correct", () => {
     const q = buildTimeBarQueue([
       {
         id: 1,
         label: "VO-012",
         days_remaining: 14,
         unit: "working",
+        duration: 20,
         status: "open",
+        awareness_date: "2026-08-04",
+        deadline_date: "2026-08-24",
         clause_ref: "26.5",
         clause_verified: true,
         contract_form: "JBCC",
       },
     ]);
-    expect(q[0].headline).toBe("14 working days left to serve notice on VO-012");
-    expect(q[0].detail).toBe("JBCC 26.5");
-    expect(q[0].clock).toBe("working");
+    expect(q[0].headline).toBe("Due 24 Aug 2026 — VO-012");
+    expect(q[0].detail).toBe("JBCC 26.5 · 20 working days from 4 Aug 2026");
     expect(q[0].consequence).toBe("forfeiture");
     expect(q[0].overdue).toBe(false);
+  });
+
+  // ── The countdown-unit bug ───────────────────────────────────────────────
+  //
+  // `days_remaining` is `(deadline_date - localdate()).days` on the server —
+  // plain date subtraction — while `unit` describes the notice PERIOD. The row
+  // used to print one with the other and claim "6 working days left" for a
+  // deadline four working days away.
+  it("never publishes a clock unit, because the countdown is calendar days", () => {
+    const q = buildTimeBarQueue([
+      { id: 1, label: "Notice of delay", days_remaining: 6, unit: "working", status: "open", deadline_date: "2026-08-24" },
+    ]);
+    // ActionQueue's chip only writes " working" when `clock === "working"`, so
+    // this is what makes it render the truthful "6 days left".
+    expect(q[0].clock).toBeNull();
+    expect(q[0].daysRemaining).toBe(6);
+  });
+
+  it("keeps the working-day THRESHOLDS, so no row moves band because of that", () => {
+    // 6 days against the forfeiture thresholds (<=5 critical, <=10 soon) is
+    // "soon"; against calendar thresholds it would be "later" — band 2 versus
+    // band 5. Erring towards urgency is the safe direction while the count
+    // itself is wrong.
+    const q = buildTimeBarQueue([
+      { id: 1, label: "Notice of delay", days_remaining: 6, unit: "working", status: "open" },
+    ]);
+    expect(q[0].pressure).toBe("soon");
+    expect(bandOf(q[0])).toBe(2);
+  });
+
+  it("says 'working days' only of the notice period, never of the countdown", () => {
+    const q = buildTimeBarQueue([
+      { id: 1, label: "Notice of delay", days_remaining: 6, unit: "working", duration: 20, status: "open", awareness_date: "2026-08-04", deadline_date: "2026-08-24" },
+    ]);
+    expect(q[0].detail).toContain("20 working days from 4 Aug 2026");
+    expect(q[0].headline).not.toContain("working");
+  });
+
+  it("never calls a clock a notice the label did not call a notice", () => {
+    // The expense-and-loss clock is a single 40-day period; whether it is a
+    // notice stage is a backend definition, not something this row may assert.
+    const q = buildTimeBarQueue([
+      { id: 1, label: "Claim for expense and loss", days_remaining: 40, unit: "working", status: "open", deadline_date: "2026-09-30" },
+    ]);
+    expect(q[0].headline).toBe("Due 30 Sep 2026 — Claim for expense and loss");
+    expect(q[0].headline.toLowerCase()).not.toContain("notice");
+    expect(q[0].action.toLowerCase()).not.toContain("notice");
+  });
+
+  it("never prepends 'Notice on' to a label that already says Notice", () => {
+    const label = "Notice of delay / claim for revision of completion date";
+    const q = buildTimeBarQueue([
+      { id: 1, label, days_remaining: 2, unit: "working", status: "open", deadline_date: "2026-08-20" },
+    ]);
+    expect(q[0].headline).toBe(`Due 20 Aug 2026 — ${label}`);
+    expect(q[0].headline).not.toContain("Notice on Notice");
+  });
+
+  it("puts no day count in any time-bar headline, whatever the clock says", () => {
+    const at = (days: number | null) =>
+      buildTimeBarQueue([
+        { id: 1, label: "Delay particulars", days_remaining: days, unit: "working", status: "open", deadline_date: "2026-08-24" },
+      ])[0].headline;
+    for (const days of [null, -4, 0, 2, 9]) {
+      expect(at(days)).toBe("Due 24 Aug 2026 — Delay particulars");
+    }
+  });
+
+  it("tells five clocks of the same kind apart by their deadline date", () => {
+    const label = "Notice of delay / claim for revision of completion date";
+    const bar = (id: number, deadline_date: string, days_remaining: number) => ({
+      id, label, deadline_date, days_remaining, unit: "working", status: "open",
+    });
+    const q = buildTimeBarQueue([
+      bar(1, "2026-08-20", 2),
+      bar(2, "2026-08-27", 4),
+      bar(3, "2026-09-03", 5),
+    ]);
+    const heads = q.map((i) => i.headline);
+    expect(new Set(heads).size).toBe(3);
+    // …and they are still distinct once the row truncates.
+    expect(new Set(heads.map((h) => h.slice(0, 60))).size).toBe(3);
+  });
+
+  it("falls back to the label alone rather than inventing a date", () => {
+    const q = buildTimeBarQueue([{ id: 1, label: "VO-012", days_remaining: 2, status: "open" }]);
+    expect(q[0].headline).toBe("VO-012");
   });
 
   it("uses the backend's days_remaining verbatim and never the deadline date", () => {
@@ -203,12 +294,13 @@ describe("buildTimeBarQueue", () => {
     const q = buildTimeBarQueue([{ id: 3, label: "VO-014", days_remaining: -4, status: "open" }]);
     expect(q[0].overdue).toBe(true);
     expect(q[0].pressure).toBe("expired");
-    expect(q[0].headline).toContain("passed its deadline 4 working days ago");
+    expect(q[0].daysRemaining).toBe(-4);
   });
 
-  it("says a deadline falling today must be served today", () => {
+  it("keeps a deadline falling today expired and on its own row", () => {
     const q = buildTimeBarQueue([{ id: 10, label: "VO-021", days_remaining: 0, status: "open" }]);
-    expect(q[0].headline).toBe("Notice on VO-021 must be served today");
+    expect(q).toHaveLength(1);
+    expect(q[0].key).toBe("time-bar-10");
     expect(q[0].pressure).toBe("expired");
   });
 
@@ -217,6 +309,7 @@ describe("buildTimeBarQueue", () => {
     expect(q).toHaveLength(1);
     expect(q[0].daysRemaining).toBeNull();
     expect(q[0].clock).toBeNull();
+    expect(q[0].pressure).toBe("none");
     expect(q[0].pressure).toBe("none");
     expect(q[0].detail).toContain("treat it as live");
   });
@@ -229,6 +322,187 @@ describe("buildTimeBarQueue", () => {
     const q = buildTimeBarQueue([{ id: 6, label: "x", days_remaining: 2, status: "open" }]);
     expect(q[0].requires).toEqual([]);
     expect(q[0].href).toBe("/project-health?tab=notice-deadlines");
+  });
+});
+
+describe("shortDate", () => {
+  it("reads a bare date without letting a timezone move it a day", () => {
+    expect(shortDate("2026-08-04")).toBe("4 Aug 2026");
+    expect(shortDate("2026-01-31T00:00:00Z")).toBe("31 Jan 2026");
+    expect(shortDate("2026-12-01")).toBe("1 Dec 2026");
+  });
+
+  it("returns null rather than guessing at something it cannot read", () => {
+    for (const v of [null, undefined, "", "not a date", "2026-13-01"]) {
+      expect(shortDate(v)).toBeNull();
+    }
+  });
+});
+
+/**
+ * The rule the whole queue is built to: a row must still say WHICH row it is
+ * once the column truncates it. Sixty characters is roughly where `QueueRow`
+ * cuts at the narrowest layout the homepage lays out.
+ */
+describe("headlines identify their row when truncated", () => {
+  const TRUNCATE = 60;
+
+  it("keeps three same-kind notices apart in their first 60 characters", () => {
+    const label = "Notice of delay / claim for revision of completion date";
+    const q = buildTimeBarQueue([
+      { id: 1, label, deadline_date: "2026-08-20", days_remaining: 2, unit: "working", status: "open" },
+      { id: 2, label, deadline_date: "2026-08-27", days_remaining: 3, unit: "working", status: "open" },
+      { id: 3, label, deadline_date: "2026-09-17", days_remaining: 4, unit: "working", status: "open" },
+    ]);
+    expect(new Set(q.map((i) => i.headline.slice(0, TRUNCATE))).size).toBe(3);
+  });
+
+  it("keeps three certificates apart in their first 60 characters", () => {
+    const q = [
+      ...buildCertificateQueue(
+        [
+          { id: 1, pcNumber: "PC-006", workflowState: "submitted" },
+          { id: 2, pcNumber: "PC-007", workflowState: "approved" },
+        ],
+        NOW,
+      ),
+      ...buildRejectedCertificateQueue([{ id: 3, pcNumber: "PC-005", workflowState: "rejected" }], NOW),
+    ];
+    expect(new Set(q.map((i) => i.headline.slice(0, TRUNCATE))).size).toBe(3);
+    for (const item of q) expect(item.headline.length).toBeLessThanOrEqual(TRUNCATE);
+  });
+
+  it("keeps two long-titled meetings apart in their first 60 characters", () => {
+    const long = (n: string) => `${n} progress and coordination meeting, all consultants`;
+    const rsvps = buildRsvpQueue(
+      [
+        { id: 1, title: long("Monday"), status: "scheduled", my_rsvp: "invited", scheduled_utc: iso(2) },
+        { id: 2, title: long("Thursday"), status: "scheduled", my_rsvp: "invited", scheduled_utc: iso(4) },
+      ],
+      NOW,
+    );
+    expect(new Set(rsvps.map((i) => i.headline.slice(0, TRUNCATE))).size).toBe(2);
+
+    const actions = buildMeetingActionQueue([
+      { id: 1, title: long("Monday"), action_items: [{ id: 1, text: "a" }] },
+      { id: 2, title: long("Thursday"), action_items: [{ id: 2, text: "b" }] },
+    ]);
+    expect(new Set(actions.map((i) => i.headline.slice(0, TRUNCATE))).size).toBe(2);
+  });
+
+  it("puts no day count in any headline the queue can build", () => {
+    const items = [
+      ...buildTimeBarQueue([
+        { id: 1, label: "Notice of delay", deadline_date: "2026-08-04", days_remaining: -4, unit: "working", status: "open" },
+      ]),
+      ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", workflowState: "submitted", updatedAt: iso(-11) }], NOW),
+      ...buildRejectedCertificateQueue([{ id: 2, pcNumber: "PC-005", workflowState: "rejected", updatedAt: iso(-4) }], NOW),
+      ...buildObligationQueue([{ _id: "o", title: "Submit the OHS file", isOverdue: true, daysOverdue: 9, dueDate: iso(-9) }], NOW),
+      ...buildTaskQueue([{ id: "t", title: "Late", type: "VO", due_date: iso(-3), needsAction: true }], NOW),
+    ];
+    expect(items).toHaveLength(5);
+    for (const item of items) {
+      expect(item.headline).not.toMatch(/\bdays?\b/i);
+      expect(item.headline).not.toMatch(/\btoday\b|\btomorrow\b|\byesterday\b/i);
+    }
+  });
+});
+
+describe("buildTimeBarQueue — folding the ones with nothing to do today", () => {
+  const bar = (id: number, label: string, days_remaining: number | null, deadline_date?: string) => ({
+    id, label, days_remaining, deadline_date, unit: "working", status: "open",
+  });
+
+  it("folds same-kind clocks that are all beyond their pressure window", () => {
+    const label = "Claim for expense and loss";
+    const q = buildTimeBarQueue([
+      bar(1, label, 30, "2026-08-04"),
+      bar(2, label, 18, "2026-08-11"),
+      bar(3, label, 22, "2026-08-20"),
+    ]);
+    expect(q).toHaveLength(1);
+    expect(q[0].key).toBe("time-bar-group-claim-for-expense-and-loss");
+    expect(q[0].headline).toBe("3 deadlines — Claim for expense and loss");
+  });
+
+  it("draws the folded row with the SOONEST clock in the group", () => {
+    const label = "Delay particulars";
+    const q = buildTimeBarQueue([bar(1, label, 30), bar(2, label, 18), bar(3, label, 22)]);
+    expect(q[0].daysRemaining).toBe(18);
+    // Not "working": the folded row is under the same countdown-unit rule.
+    expect(q[0].clock).toBeNull();
+    expect(q[0].pressure).toBe("later");
+    expect(q[0].overdue).toBe(false);
+  });
+
+  it("never folds a clock that needs acting on — that is the whole risk", () => {
+    // Two days left must not disappear behind four sixteen-day clocks.
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([
+      bar(1, label, 2, "2026-08-04"),
+      bar(2, label, 16, "2026-08-11"),
+      bar(3, label, 17, "2026-08-12"),
+      bar(4, label, 18, "2026-08-13"),
+      bar(5, label, 19, "2026-08-14"),
+    ]);
+    const urgent = q.find((i) => i.key === "time-bar-1");
+    expect(urgent).toBeDefined();
+    expect(urgent?.daysRemaining).toBe(2);
+    expect(urgent?.pressure).toBe("critical");
+    // The four with nothing to do about them today fold into one.
+    expect(q).toHaveLength(2);
+    expect(q[1].headline).toBe("4 deadlines — Notice of delay");
+  });
+
+  it("leaves an expired, critical, soon or undated clock on its own row", () => {
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([
+      bar(1, label, -3), bar(2, label, 1), bar(3, label, 8), bar(4, label, null),
+    ]);
+    expect(q).toHaveLength(4);
+    expect(q.every((i) => !i.key.startsWith("time-bar-group-"))).toBe(true);
+  });
+
+  it("does not fold across different notices", () => {
+    const q = buildTimeBarQueue([
+      bar(1, "Notice of delay", 20), bar(2, "Notice of delay", 21),
+      bar(3, "Delay particulars", 22), bar(4, "Delay particulars", 23),
+    ]);
+    expect(q.map((i) => i.headline).sort()).toEqual([
+      "2 deadlines — Delay particulars",
+      "2 deadlines — Notice of delay",
+    ]);
+  });
+
+  it("leaves a lone distant clock as itself rather than a group of one", () => {
+    const q = buildTimeBarQueue([bar(7, "Notice of delay", 30, "2026-09-30")]);
+    expect(q).toHaveLength(1);
+    expect(q[0].key).toBe("time-bar-7");
+    expect(q[0].headline).toBe("Due 30 Sep 2026 — Notice of delay");
+  });
+
+  it("lists the deadlines behind a folded row in its detail, soonest first", () => {
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([
+      bar(1, label, 30, "2026-09-30"),
+      bar(2, label, 18, "2026-09-18"),
+      bar(3, label, 22, "2026-09-22"),
+    ]);
+    expect(q[0].detail).toBe("Due 18 Sep 2026, Due 22 Sep 2026, Due 30 Sep 2026");
+  });
+
+  it("keeps a folded row unable to hide urgency it does not have a chip for", () => {
+    // Folding must never move a row between bands: every member is `later`,
+    // so the group is `later`, which homeQueueRank puts at band 5.
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([bar(1, label, 40), bar(2, label, 45)]);
+    expect(bandOf(q[0])).toBe(5);
+  });
+
+  it("still shows every folded clock in the count, so none is lost", () => {
+    const label = "Notice of delay";
+    const q = buildTimeBarQueue([bar(1, label, 20), bar(2, label, 21), bar(3, label, 22)]);
+    expect(q[0].headline).toBe("3 deadlines — Notice of delay");
   });
 });
 
@@ -332,11 +606,13 @@ describe("buildObligationQueue", () => {
     const late = buildObligationQueue([ob({ isOverdue: true, daysOverdue: 9, dueDate: iso(-9) })], NOW);
     expect(late[0].daysRemaining).toBe(-9);
     expect(late[0].overdue).toBe(true);
-    expect(late[0].headline).toBe("Submit the OHS file — 9 days past its date");
+    expect(late[0].headline).toBe("Submit the OHS file");
+    expect(late[0].detail).toContain("9 days past its date");
 
     const soon = buildObligationQueue([ob({ _id: "o2", daysUntilDue: 3, dueDate: iso(3) })], NOW);
     expect(soon[0].daysRemaining).toBe(3);
-    expect(soon[0].headline).toBe("Submit the OHS file — due in 3 days");
+    expect(soon[0].headline).toBe("Submit the OHS file");
+    expect(soon[0].detail).toContain("due in 3 days");
   });
 
   it("falls back to the due date only when the server supplied no count", () => {
@@ -363,7 +639,7 @@ describe("buildObligationQueue", () => {
   it("names the responsible ROLE without implying the row is yours", () => {
     // The payload carries no assignee id, so these cannot be narrowed to "mine".
     const q = buildObligationQueue([ob({ daysUntilDue: 2, dueDate: iso(2) })], NOW);
-    expect(q[0].detail).toBe("JBCC PBA 6.2 · responsible: Contractor");
+    expect(q[0].detail).toBe("JBCC PBA 6.2 · responsible: Contractor · due in 2 days");
     expect(q[0].requires).toEqual(["compliance.view"]);
     expect(q[0].consequence).toBe("breach");
   });
@@ -384,7 +660,7 @@ describe("buildRsvpQueue", () => {
 
   it("never renders an inviter name, because no payload carries one", () => {
     const q = buildRsvpQueue(meetings, NOW);
-    expect(q[0].headline).toBe("Reply to the invitation for Site meeting");
+    expect(q[0].headline).toBe("Site meeting — reply to the invitation");
     expect(q[0].detail).toBe("Meets in 2 days");
   });
 });
@@ -411,7 +687,7 @@ describe("meeting action items", () => {
       },
     ]);
     expect(q).toHaveLength(1);
-    expect(q[0].headline).toBe("Approve 2 actions proposed in Tuesday's site meeting");
+    expect(q[0].headline).toBe("Tuesday's site meeting — approve 2 proposed actions");
   });
 
   it("omits items the backend says this user cannot approve", () => {
@@ -425,7 +701,7 @@ describe("meeting action items", () => {
     const q = buildMeetingActionQueue([
       { id: 9, title: "M", action_items: [{ id: 1, text: "Price the roof variation" }] },
     ]);
-    expect(q[0].headline).toBe("Approve one action proposed in M");
+    expect(q[0].headline).toBe("M — approve 1 proposed action");
     expect(q[0].detail).toBe("Price the roof variation");
   });
 });
@@ -443,10 +719,11 @@ describe("buildTaskQueue", () => {
     expect(q[0].headline).toBe("RFI: Respond");
   });
 
-  it("says so plainly when a task is overdue", () => {
+  it("says so in the detail when a task is overdue, not twice on the row", () => {
     const q = buildTaskQueue([{ id: "c", title: "Late", type: "VO", due_date: iso(-3), needsAction: true }], NOW);
     expect(q[0].overdue).toBe(true);
-    expect(q[0].headline).toContain("3 days past its due date");
+    expect(q[0].headline).toBe("VO: Late");
+    expect(q[0].detail).toBe("3 days past its due date");
   });
 
   it("states that no due date was recorded rather than inventing one", () => {

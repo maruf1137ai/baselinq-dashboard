@@ -218,11 +218,71 @@ export function relativeDays(days: number | null): string | null {
   return `${Math.abs(days)} days ago`;
 }
 
+/**
+ * A bare `YYYY-MM-DD` (or the date part of a datetime) as `4 Aug 2026`.
+ *
+ * Parsed by pattern rather than by `new Date(...)` for the reason
+ * `compliance.ts` gives: applying a timezone offset to a bare date can move it
+ * onto the previous day, and on this page a day either side of a notice period
+ * is the whole point. Null in, null out — a date we cannot read is never
+ * guessed at.
+ */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function shortDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/.exec(value.trim());
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const month = Number(mo);
+  if (month < 1 || month > 12) return null;
+  return `${Number(d)} ${MONTHS[month - 1]} ${y}`;
+}
+
 // ── Queue builders ────────────────────────────────────────────────────────
 //
 // Each builder takes one API payload and returns the items it justifies. They
 // are separate so a failing source contributes nothing rather than collapsing
 // the whole queue.
+//
+// ── The headline rule ─────────────────────────────────────────────────────
+//
+// Every headline below obeys one structure, and it exists because of a real
+// defect: on project 45 the queue rendered fifteen notice rows reading
+// "2 working days left to serve notice on Notice of delay / claim for revision
+// of completion date", "16 working days left to serve notice on Notice of
+// delay / claim for revision of completion date", and so on. Three things were
+// wrong with that at once.
+//
+//  1. **The countdown was stated twice.** `QueueRow` already draws a chip from
+//     `daysRemaining` and `clock` — "2 working days left", "4 working days
+//     over", "Today", "Not dated". Repeating it in the headline spent the
+//     row's most valuable characters on a fact already rendered eight pixels
+//     to the right, in the same unit, from the same field.
+//
+//  2. **The countdown LED**, so the part that differed between rows was what
+//     the row's `truncate` threw away. Fifteen rows read as one row.
+//
+//  3. **The kind was stated twice too.** `SECTIONS` in `ActionQueue.tsx` puts
+//     "Notices to serve" above these rows and "Certificates awaiting you"
+//     above those, so a headline beginning "Notice on …" or ending "— it needs
+//     reworking before it can be certified" is re-typing its own heading.
+//
+// So:
+//
+//   **Whatever distinguishes this row from the one under it comes first, and
+//   nothing temporal appears in a headline at all.**
+//
+// A headline must identify its row when cut at 60 characters, which is roughly
+// where the row truncates at the narrowest column the homepage lays out. Time
+// lives in the chip; state and provenance live in `detail`, which is the row's
+// tooltip; the kind lives in the section heading; the verb lives in `action`,
+// which is what the row announces to a screen reader.
+//
+// One consequence worth naming: a time bar's headline is now the SAME string
+// whether it is four days out, due today or a week overdue. That is deliberate
+// — the chip carries all three states and colours two of them — and it is why
+// these rows can be compared to each other at a glance at last.
 
 export interface CertificateLike {
   id: number;
@@ -289,9 +349,12 @@ export function buildCertificateQueue(
       return {
         key: `certificate-${c.id}`,
         kind: "certificate" as const,
-        headline: awaitingCertification
-          ? `Certify ${ref} — submitted and waiting on you`
-          : `Post ${ref} to release payment`,
+        // The verb leads and the reference is the third word, so the row is
+        // still "Certify PC-006" when it truncates. "— submitted and waiting
+        // on you" went: "submitted" is the state the section heading and the
+        // verb already imply, and "waiting" is time, which `detail` counts
+        // exactly ("In this state for 11 days") rather than gesturing at.
+        headline: awaitingCertification ? `Certify ${ref}` : `Post ${ref} to release payment`,
         detail:
           waited === null
             ? null
@@ -334,7 +397,11 @@ export function buildRejectedCertificateQueue(
       return {
         key: `rejected-certificate-${c.id}`,
         kind: "rejected" as const,
-        headline: `${c.pcNumber || `PC-${c.id}`} was rejected — it needs reworking before it can be certified`,
+          // Was "PC-005 was rejected — it needs reworking before it can be
+        // certified": sixty-six characters, of which the last forty restate
+        // the section heading and the `action`. The verb leads now, which also
+        // separates this row from the "Certify PC-005" one at a glance.
+        headline: `Rework ${c.pcNumber || `PC-${c.id}`} — it was rejected`,
         // The reason is not returned by the API, so none is shown.
         detail:
           waited === null || waited <= 0
@@ -360,11 +427,40 @@ export interface TimeBarLike {
   clause_ref?: string;
   clause_verified?: boolean;
   contract_form?: string;
+  /**
+   * The date the event the clock runs from became known — JBCC's "became aware
+   * of" date, which is what the period is measured from. Already on the wire:
+   * `TimeBarsTab.tsx` reads and renders it off the same
+   * `projects/{id}/time-bars/` response. It was simply never typed here, which
+   * is why the queue had nothing to tell one delay notice from another.
+   *
+   * **This is the only thing on the payload that distinguishes two clocks of
+   * the same kind.** See the note above `buildTimeBarQueue`.
+   */
+  awareness_date?: string | null;
+  /** Free text a person typed against the clock. Usually empty. */
+  notes?: string | null;
   deadline_date?: string | null;
-  /** Null in practice on a bar the backend could not date (see compliance.ts). */
+  /**
+   * **A CALENDAR-day count, whatever `unit` says.** Both places the backend
+   * writes it — `risk/models_evidence.py:267` and `risk/rules/time_bar.py:37`
+   * — compute `(deadline_date - timezone.localdate()).days`, which is plain
+   * date subtraction with no working-day calendar applied. See the
+   * countdown note above `buildTimeBarQueue`.
+   *
+   * Null in practice on a bar the backend could not date (see compliance.ts).
+   */
   days_remaining?: number | null;
-  /** "working" or "calendar" — the calendar the backend counted on. */
+  /**
+   * The unit of the NOTICE PERIOD — "working" or "calendar" — not the unit of
+   * `days_remaining`. A JBCC clock is a 20-working-day period, so this reads
+   * "working", and `deadline_date` is correctly computed from it by
+   * `risk/timebars.py::add_working_days`. It says nothing about how the
+   * countdown above was counted, and must never be printed against it.
+   */
   unit?: string;
+  /** The length of the notice period, in `unit`s. */
+  duration?: number | null;
   status: string;
 }
 
@@ -373,63 +469,313 @@ export interface TimeBarLike {
  *
  * Three rules, all of which matter legally:
  *
- *  1. **`days_remaining` is never recomputed.** The backend counts it on the
- *     South African working-day calendar — public holidays and the builders'
- *     break included. Deriving it here from `deadline_date` would silently
- *     substitute calendar days and hand somebody four days they do not have
- *     over an Easter weekend. When the backend could not compute it, the row
- *     says the deadline is undated and `pressureFromDays` returns "none",
- *     which the band matrix treats as live-and-unknown rather than as safe.
+ *  1. **The countdown is not in working days, and this file no longer says it
+ *     is.** The docblock that used to sit here asserted the opposite — that
+ *     `days_remaining` was counted on the South African working-day calendar,
+ *     holidays and the builders' break included, and that deriving it locally
+ *     "would silently substitute calendar days and hand somebody four days
+ *     they do not have over an Easter weekend". That is exactly what shipped.
+ *     `risk/models_evidence.py:267` and `risk/rules/time_bar.py:37` both write
+ *     `days_remaining = (deadline_date - timezone.localdate()).days`: plain
+ *     date subtraction. The row then printed it with `unit`, which is
+ *     `"working"` on every JBCC clock, so a deadline six calendar days out —
+ *     four working days — rendered as "6 working days left". The overstatement
+ *     is about a third in an ordinary week and far more across the
+ *     mid-December builders' break, and a JBCC notice served late forfeits the
+ *     claim outright.
+ *
+ *     The client cannot fix the count. South African public holidays, computed
+ *     Easter and the per-project builders' break all live server-side in
+ *     `risk/timebars.py`, and a browser-side working-day count would be a
+ *     second wrong answer rather than a right one. So this file stops
+ *     asserting a unit it cannot verify:
+ *
+ *       - `clock` is published as `null` on every time bar. Its only render
+ *         consumer is the chip's unit word in `ActionQueue.tsx:110`, so the
+ *         chip now reads "6 days left" — which is TRUE, because the number
+ *         genuinely is a calendar-day countdown — instead of "6 working days
+ *         left", which is not.
+ *       - `deadline_date` is correct (`add_working_days` computes it properly)
+ *         and is therefore promoted to the FRONT of the headline. It is the
+ *         one temporal value on the row that can be relied on, and it is also
+ *         what tells five delay clocks apart.
+ *       - The notice PERIOD, which is genuinely in working days, is stated as
+ *         such in `detail`: "20 working days from 4 Aug 2026".
+ *
+ *     Relabelling the unit is deliberately NOT the whole fix — it is the
+ *     honest floor while the backend is corrected. `pressureFromDays` is still
+ *     given the bar's declared unit, so the working-day thresholds still
+ *     apply and the ranking is bit-for-bit what it was: treating a calendar
+ *     count against working-day thresholds errs towards urgency, which is the
+ *     safe direction to be wrong in while the count itself is wrong.
+ *
+ *     When the backend could not date the bar at all, the chip reads "Not
+ *     dated" and `pressureFromDays` returns "none", which the band matrix
+ *     treats as live-and-unknown rather than as safe.
  *
  *  2. **The clause reference is shown only when verified** against the
  *     contract corpus. An invented clause number on a legally consequential
  *     deadline is worse than none — the rule TimeBarsTab already follows.
  *
- *  3. **The unit is named.** "7 days left" reads as a week; on the working-day
- *     calendar it is nine or ten. The row says "working days" when the backend
- *     says the count is in working days.
+ *  3. **No row calls a clock a notice.** The old headline read "40 working
+ *     days left to serve notice on Claim for expense and loss" — but the
+ *     expense-and-loss clock is a single 40-working-day period in
+ *     `risk/timebars.py`, and if that entitlement is in fact two-stage (a
+ *     20-working-day notice then 40 working days of particulars, as the delay
+ *     claim is) then that sentence put a notice deadline a month later than it
+ *     truly falls. The row now says only what `label` says, and `action` is
+ *     "Open the deadline" rather than "serve the notice". Whether a given
+ *     clock is a notice stage is a backend definition, not a frontend
+ *     inference. Reported.
+ *
+ *  4. **`consequence` is `forfeiture` on every bar, and that is an assertion
+ *     this file cannot presently justify per clock.** The backend hedges —
+ *     late notice *may* forfeit the entitlement — and not every JBCC period is
+ *     a condition precedent; `delay_particulars` very likely is not. Nothing
+ *     on `projects/{id}/time-bars/` distinguishes them, so the uniform, more
+ *     urgent classification is kept rather than a guessed-at softer one, and
+ *     the gap is reported. See the note on what the payload would need.
+ *
+ * ── Telling one notice from another ───────────────────────────────────────
+ *
+ * Project 45 carries fifteen open clocks: five delay claims × three JBCC
+ * clock types (notice of delay, delay particulars, claim for expense and
+ * loss). Five of those rows therefore share a `label`, a `clause_ref`, a
+ * `contract_form`, a `unit` and a `clock_type`, and the ONLY fields that
+ * differ are `id`, `awareness_date`, `deadline_date` and `days_remaining`.
+ *
+ * Of those, `awareness_date` is the only one that names the underlying event
+ * to a human: it is the date the delay became known, so "Aware 4 Aug 2026" and
+ * "Aware 20 Aug 2026" are two different delay events on the same contract.
+ * `deadline_date` is derived from it and is temporal (the chip's territory),
+ * and `id` is a database number. So the awareness date LEADS the headline.
+ *
+ * It is not a perfect key and this is worth knowing: two delay claims raised
+ * on the same day produce two rows that read identically. The clock's FK to
+ * the claim it was raised from is not published on
+ * `projects/{id}/time-bars/` — nothing on that response names the delay event,
+ * its reference or its description — so there is no better string available
+ * and none is invented here. Reported as a payload gap.
  *
  * Not gated: a notice deadline is not commercial information and every party
  * to the contract is prejudiced by it lapsing. `/project-health` is behind
  * `compliance.view`, which is a real dead end for a viewer without it — see
  * the report; the fix belongs on the route, not in a hidden row.
  */
-export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
-  return bars
-    .filter((b) => b.status === "open")
-    .map((b) => {
-      const raw = b.days_remaining;
-      const days = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-      const unit = (b.unit ?? "working").toLowerCase() === "calendar" ? "calendar" : "working";
-      const clock: Clock = days === null ? null : (unit as Clock);
-      const clause =
-        b.clause_verified && b.clause_ref
-          ? `${b.contract_form ?? ""} ${b.clause_ref}`.trim()
-          : null;
-      const undatedNote = "Deadline could not be dated — treat it as live, not as clear";
 
-      return {
-        key: `time-bar-${b.id}`,
-        kind: "time-bar" as const,
-        headline:
-          days === null
-            ? `Serve notice on ${b.label} — its deadline is not dated`
-            : days < 0
-              ? `Notice on ${b.label} passed its deadline ${Math.abs(days)} ${unit} days ago`
-              : days === 0
-                ? `Notice on ${b.label} must be served today`
-                : `${days} ${unit} days left to serve notice on ${b.label}`,
-        detail: days === null ? [clause, undatedNote].filter(Boolean).join(" · ") : clause,
-        consequence: "forfeiture" as const,
-        pressure: pressureFromDays(days, clock),
-        daysRemaining: days,
-        clock,
-        overdue: days !== null && days < 0,
-        href: ROUTE.timeBars,
-        action: "Open the deadline",
-        requires: [] as PermissionCode[],
-      };
+/** One open bar, resolved against its own clock, before grouping. */
+interface ResolvedBar {
+  bar: TimeBarLike;
+  /** The backend's countdown. Calendar days, whatever `unit` claims. */
+  days: number | null;
+  /**
+   * The unit the notice PERIOD is expressed in — fed to `pressureFromDays` so
+   * the thresholds are unchanged, and deliberately never published on the
+   * item, because it is not the unit `days` was counted in.
+   */
+  thresholdClock: Clock;
+  pressure: ReturnType<typeof pressureFromDays>;
+  clause: string | null;
+  /** "Due 24 Aug 2026", or null when the backend could not date the bar. */
+  due: string | null;
+  /** "20 working days from 4 Aug 2026", as much of it as the payload supports. */
+  period: string | null;
+}
+
+const UNDATED_NOTE = "Deadline could not be dated — treat it as live, not as clear";
+
+function resolveBar(b: TimeBarLike): ResolvedBar {
+  const raw = b.days_remaining;
+  const days = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  const unit = (b.unit ?? "working").toLowerCase() === "calendar" ? "calendar" : "working";
+  const thresholdClock: Clock = days === null ? null : (unit as Clock);
+  const due = shortDate(b.deadline_date);
+  const aware = shortDate(b.awareness_date);
+  const duration =
+    typeof b.duration === "number" && Number.isFinite(b.duration) && b.duration > 0
+      ? b.duration
+      : null;
+  // "20 working days from 4 Aug 2026" — the period IS in working days and the
+  // backend applies the calendar to it correctly. This is the one place the
+  // word "working" may still appear on a row.
+  const span = duration === null ? null : `${duration} ${unit} day${duration === 1 ? "" : "s"}`;
+  const period =
+    span && aware ? `${span} from ${aware}` : span ? span : aware ? `Aware ${aware}` : null;
+
+  return {
+    bar: b,
+    days,
+    thresholdClock,
+    // Unchanged from the previous revision on purpose: the bar's declared unit
+    // still chooses the thresholds, so no row moves band because of this fix.
+    pressure: pressureFromDays(days, thresholdClock),
+    clause:
+      b.clause_verified && b.clause_ref ? `${b.contract_form ?? ""} ${b.clause_ref}`.trim() : null,
+    due: due ? `Due ${due}` : null,
+    period,
+  };
+}
+
+/**
+ * The headline for one clock: **the date it falls, then what it is.**
+ *
+ * The deadline date leads for two reasons at once. It is the only temporal
+ * value on the row that is computed correctly (see rule 1), so it is the one
+ * the reader should be acting on; and it is what tells five clocks of the same
+ * kind apart, because they differ by nothing else a person can read. It does
+ * not duplicate the chip — the chip counts down, the headline names a date.
+ *
+ * `label` is the backend's own wording and is reproduced verbatim: it is the
+ * contractual name of the thing and is not ours to paraphrase, nor to
+ * embellish with "serve notice on", which is a claim about the clock's stage
+ * that this file cannot make (rule 3). Note the row no longer prepends
+ * "Notice on" either — every JBCC delay label already begins with "Notice", so
+ * the old template produced "Notice on Notice of delay / claim for revision of
+ * completion date", and the section heading says "Notices to serve" above the
+ * lot of them anyway.
+ */
+function timeBarHeadline(r: ResolvedBar): string {
+  return r.due ? `${r.due} — ${r.bar.label}` : r.bar.label;
+}
+
+function timeBarDetail(r: ResolvedBar): string | null {
+  const note =
+    typeof r.bar.notes === "string" && r.bar.notes.trim() !== "" ? r.bar.notes.trim() : null;
+  return (
+    [r.clause, r.period, note, r.days === null ? UNDATED_NOTE : null]
+      .filter(Boolean)
+      .join(" · ") || null
+  );
+}
+
+/**
+ * How many clocks of one kind must be sitting out beyond their pressure window
+ * before they are folded into a single row. Two is the smallest number where
+ * folding removes anything.
+ */
+const TIME_BAR_GROUP_MIN = 2;
+
+/** Stable, human-free key for a group: the label, flattened. */
+const groupKey = (label: string) =>
+  label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unlabelled";
+
+/**
+ * Contractual notice deadlines still open, one row each — except for the ones
+ * with nothing to do about them this morning, which are folded.
+ *
+ * ── Why these are grouped, and why only these ─────────────────────────────
+ *
+ * Fifteen clocks on one project is not a rendering problem, it is a queue
+ * problem: `ActionQueue` caps at twelve rows, so a project with fifteen open
+ * notices could push every certificate, obligation and task off the homepage
+ * entirely — while eleven of those fifteen were a month out and needed nothing
+ * doing today.
+ *
+ * `groupRiskSignals` is the precedent, but it does not transfer wholesale. A
+ * risk signal is a standing condition; a time bar is a forfeiture clock, and
+ * folding five of them into "5 notices due" hides the one with two days left
+ * behind four with sixteen. That is the worst outcome this page can produce.
+ *
+ * So the fold is bounded by the ranking model rather than by a row count:
+ *
+ *  - A clock at `expired`, `critical` or `soon` pressure — anything inside ten
+ *    working days, plus everything already overdue — **always keeps its own
+ *    row**. Those are bands 0–2, the ones `summariseQueue` counts as needing
+ *    you today. Nothing urgent is ever folded, by construction rather than by
+ *    care.
+ *  - A clock with NO computed deadline keeps its own row too. An unknown
+ *    forfeiture clock must not be tidied away; that is exactly the case where
+ *    the number that would justify folding it is missing.
+ *  - Only clocks at `later` pressure fold, and only with others of the same
+ *    label. Those are the rows `homeQueueRank` has already placed at band 5,
+ *    below unsigned certificates, on the stated grounds that "there is nothing
+ *    to do about it this morning".
+ *
+ * A folded row still carries a clock, and it is the SOONEST clock in the group
+ * — chip, `daysRemaining`, `clock` and `pressure` all come from the worst
+ * member — so the group can only ever overstate its own urgency, never
+ * understate it. And because every member is `later`, the group's own pressure
+ * is `later` too: folding cannot move a row between bands.
+ *
+ * The group's destination is `/project-health?tab=notice-deadlines`, which is
+ * where each of its members went individually — a group loses no navigation
+ * here, unlike `riskGroupHref`, which has to fall back to a list page.
+ */
+export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
+  const resolved = bars.filter((b) => b.status === "open").map(resolveBar);
+
+  const single = (r: ResolvedBar): QueueItem => ({
+    key: `time-bar-${r.bar.id}`,
+    kind: "time-bar" as const,
+    headline: timeBarHeadline(r),
+    detail: timeBarDetail(r),
+    // Uniform, and knowingly so — see rule 4. Nothing on the payload says
+    // which clocks are conditions precedent, and the more urgent class is the
+    // safe one to be wrong in.
+    consequence: "forfeiture" as const,
+    pressure: r.pressure,
+    daysRemaining: r.days,
+    // Never `r.thresholdClock`. The countdown is in calendar days and the
+    // chip must not label it in working ones. See rule 1.
+    clock: null,
+    overdue: r.days !== null && r.days < 0,
+    href: ROUTE.timeBars,
+    action: "Open the deadline",
+    requires: [] as PermissionCode[],
+  });
+
+  const out: QueueItem[] = [];
+  const foldable = new Map<string, ResolvedBar[]>();
+
+  for (const r of resolved) {
+    if (r.pressure !== "later") {
+      out.push(single(r));
+      continue;
+    }
+    const bucket = foldable.get(r.bar.label);
+    if (bucket) bucket.push(r);
+    else foldable.set(r.bar.label, [r]);
+  }
+
+  for (const [label, group] of [...foldable.entries()].sort((a, b) =>
+    a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
+  )) {
+    if (group.length < TIME_BAR_GROUP_MIN) {
+      out.push(single(group[0]));
+      continue;
+    }
+    // Worst first. Every member has a finite `days` — `later` cannot be
+    // reached without one — so the soonest is well defined.
+    const ordered = [...group].sort((a, b) => (a.days as number) - (b.days as number));
+    const worst = ordered[0];
+    const dues = ordered.map((r) => r.due).filter((d): d is string => d !== null);
+    const shown = dues.slice(0, 3).join(", ");
+    const more = dues.length > 3 ? ` +${dues.length - 3} more` : "";
+
+    out.push({
+      key: `time-bar-group-${groupKey(label)}`,
+      kind: "time-bar",
+      // The count leads because it is what separates a folded row from a
+      // single one; the label follows because it is what separates one folded
+      // row from the next.
+      headline: `${ordered.length} deadlines — ${label}`,
+      detail:
+        [worst.clause, dues.length > 0 ? `${shown}${more}` : null].filter(Boolean).join(" · ") ||
+        null,
+      consequence: "forfeiture",
+      // The worst clock in the group, in full: the chip a folded row draws is
+      // the chip its most urgent member would have drawn on its own.
+      pressure: worst.pressure,
+      daysRemaining: worst.days,
+      clock: null,
+      overdue: false,
+      href: ROUTE.timeBars,
+      action: "Open the deadlines",
+      requires: [],
     });
+  }
+
+  return out;
 }
 
 export interface RiskSignalLike {
@@ -623,13 +969,19 @@ export function buildObligationQueue(
     out.push({
       key: `obligation-${o._id}`,
       kind: "obligation",
-      headline:
-        days < 0
-          ? `${o.title} — ${Math.abs(days)} days past its date`
-          : `${o.title} — due ${relativeDays(days)}`,
-      detail: [source, o.responsibleRole ? `responsible: ${o.responsibleRole}` : null]
-        .filter(Boolean)
-        .join(" · ") || null,
+      // The obligation's own title is the whole of the headline. Both tails it
+      // used to carry — "— 9 days past its date", "— due in 3 days" — are the
+      // chip, in the chip's own words, and they were pushing the title out of
+      // the row on the long extracted obligations that need it most.
+      headline: o.title,
+      detail:
+        [
+          source,
+          o.responsibleRole ? `responsible: ${o.responsibleRole}` : null,
+          days < 0 ? `${Math.abs(days)} days past its date` : `due ${relativeDays(days)}`,
+        ]
+          .filter(Boolean)
+          .join(" · ") || null,
       consequence: "breach",
       pressure: pressureFromDays(days, "calendar"),
       daysRemaining: days,
@@ -681,7 +1033,9 @@ export function buildRsvpQueue(meetings: MeetingLike[], now: Date = new Date()):
       return {
         key: `rsvp-${m.id}`,
         kind: "rsvp" as const,
-        headline: `Reply to the invitation for ${m.title}`,
+        // The meeting's name is the distinguishing part and it used to start
+        // at character 28, so two invitations truncated to the same sentence.
+        headline: `${m.title} — reply to the invitation`,
         detail: when ? `Meets ${when}` : "No date recorded",
         // Blocking, not own-work: the organiser is holding a room and an
         // agenda on an answer only this person can give.
@@ -734,10 +1088,13 @@ export function buildMeetingActionQueue(
     out.push({
       key: `meeting-actions-${meeting.id}`,
       kind: "meeting-action",
+      // Meeting first, for the same reason as the RSVP row above: with two
+      // meetings open, "Approve 2 actions proposed in …" is two rows that read
+      // alike until the part that truncates.
       headline:
         pending.length === 1
-          ? `Approve one action proposed in ${meeting.title}`
-          : `Approve ${pending.length} actions proposed in ${meeting.title}`,
+          ? `${meeting.title} — approve 1 proposed action`
+          : `${meeting.title} — approve ${pending.length} proposed actions`,
       detail:
         pending.length === 1
           ? pending[0].text
@@ -787,10 +1144,17 @@ export function buildTaskQueue(tasks: TaskLike[], now: Date = new Date()): Queue
       return {
         key: `task-${t.id}`,
         kind: "task" as const,
-        headline: overdue
-          ? `${label} — ${Math.abs(days as number)} days past its due date`
-          : label,
-        detail: days === null ? "No due date recorded" : `Due ${relativeDays(days)}`,
+        // The task's own label, and nothing else. An overdue task used to
+        // append "— 12 days past its due date" while the chip beside it read
+        // "12 days over"; the count is the chip's job and the title is the
+        // row's.
+        headline: label,
+        detail:
+          days === null
+            ? "No due date recorded"
+            : overdue
+              ? `${Math.abs(days)} days past its due date`
+              : `Due ${relativeDays(days)}`,
         consequence: "own-work" as const,
         pressure: pressureFromDays(days, "calendar"),
         daysRemaining: days,
