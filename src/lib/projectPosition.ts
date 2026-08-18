@@ -43,8 +43,81 @@
  */
 
 import { formatZAR } from "./formatCurrency";
-import type { MoneyPosition } from "./homeSignals";
+import { certificateIsCertified, type CertificateLike, type MoneyPosition } from "./homeSignals";
 import type { RetentionPosition, VariationPosition } from "./homeIndicators";
+
+// ── What the certificate rows say about their own basis ───────────────────
+
+export interface CertificateBasis {
+  /**
+   * Σ `retention_release` over posted certificates, or null where no posted
+   * certificate carries the field at all — which is a different statement from
+   * "nothing has been released" and must not be rendered as a zero.
+   */
+  retentionReleased: number | null;
+  /**
+   * How many posted certificates had no `claimAmount` and so contributed a
+   * VAT-INCLUSIVE figure to the certified total through `certifiedValueOf`'s
+   * legacy fallback.
+   */
+  vatInclusiveRows: number;
+  /** Posted certificates counted, so the mix can be described honestly. */
+  certifiedRows: number;
+}
+
+/** Rows carry more than `CertificateLike` declares; these are the extras read here. */
+type CertificateRow = CertificateLike & { retentionRelease?: number | null };
+
+/**
+ * Two facts about the posted certificates that `summariseMoney` does not
+ * report, and that the Financial Overview must not state a figure without.
+ *
+ * Neither is recomputed money — this only reads fields the payload already
+ * carries, so that the rows above can say what basis they are on.
+ */
+export function summariseCertificateBasis(
+  certificates: CertificateRow[] | null | undefined,
+): CertificateBasis {
+  const posted = (certificates ?? []).filter(certificateIsCertified);
+
+  const withRelease = posted.filter(
+    (c) => typeof c.retentionRelease === "number" && Number.isFinite(c.retentionRelease),
+  );
+
+  return {
+    retentionReleased:
+      withRelease.length === 0
+        ? null
+        : withRelease.reduce((s, c) => s + (c.retentionRelease as number), 0),
+    // `certifiedValueOf` is `claimAmount ?? totalPayable ?? netAmount ?? 0`.
+    // The two fallbacks are VAT-inclusive; a row that took one of them put a
+    // figure on a different basis into the same total.
+    vatInclusiveRows: posted.filter(
+      (c) => typeof c.claimAmount !== "number" && (c.totalPayable != null || c.netAmount != null),
+    ).length,
+    certifiedRows: posted.length,
+  };
+}
+
+/**
+ * Retention held, less what has been released.
+ *
+ * Null in, null out. A null `released` means no posted certificate carried the
+ * field, so the gross figure is returned unchanged and the caller states that
+ * releases could not be read rather than implying there were none.
+ */
+export function netRetentionHeld(
+  held: number | null,
+  released: number | null,
+): number | null {
+  if (held === null) return null;
+  if (released === null) return held;
+  // A release cannot take the balance below nothing; `pc_integrity` already
+  // bounds `retention_release` by `retention_held()` server-side, so a
+  // negative here means the payload disagrees with itself, not that the
+  // employer holds negative security.
+  return Math.max(0, held - released);
+}
 
 // ── Financial Overview ────────────────────────────────────────────────────
 
@@ -55,34 +128,92 @@ export interface OverviewRow {
   value: string | null;
   /** True for the two rows the client marks as auto-calculated. */
   derived: boolean;
-  /** How it was derived — shown against the derived rows so the sum is checkable. */
+  /**
+   * How it was derived — shown against a derived row so the reader can check
+   * it. Present ONLY where the stated working is actually true of the figure.
+   * A formula that does not hold is worse than no formula: it invites the
+   * reader to stop checking. See the `revised` row.
+   */
   formula?: string;
+  /** Hover detail. Never the only place a correctness problem is stated. */
   caveat?: string;
+  /**
+   * A known problem with this figure, rendered VISIBLY under the label rather
+   * than hidden in a tooltip. Reserved for cases where the number on screen
+   * may be wrong and the reader cannot tell from looking at it.
+   */
+  warning?: string;
 }
 
 /**
  * The client's six financial fields, in his order.
  *
- * Rows 3 and 6 are the two he marks auto-calculated, and they are the two this
- * codebase got wrong: `Revised Contract Sum` did not exist at all, and
- * `Balance` was `contract sum − certified`, which ignored both the variations
- * that raised the sum and the retention that is not available to certify. Both
- * now come off `summariseMoney`, which is the single place either is computed.
+ * Every figure traces to a named response:
  *
- * Every figure traces to one of two responses:
+ *   Original contract sum   `projects/{id}/` → contractValue
+ *   Approved variations     `tasks/variation-orders/` (+ the VO assignment
+ *                           tasks, merged) → grandTotal on approved/closed rows
+ *   Revised contract sum    derived: original + approved variations
+ *   Certified to date       `tasks/payment-certificates/?projectId={id}`
+ *                           → Σ claimAmount over POSTED certificates
+ *   Retention held          same response → Σ retentionAmount − Σ
+ *                           retentionRelease over POSTED certificates
+ *   Balance still to certify  derived: revised − certified
  *
- *   Original Contract Sum        `projects/{id}/`      → contractValue
- *   Approved Variations to Date  `tasks/variation-orders/` (+ the VO
- *                                assignment tasks, merged) → grandTotal on the
- *                                rows whose status is approved/closed
- *   Revised Contract Sum         derived: 1 + 2
- *   Payments Certified to Date   `tasks/payment-certificates/?projectId={id}`
- *                                → Σ claimAmount over POSTED certificates
- *   Retention Held               same response → Σ retentionAmount over POSTED
- *   Balance Remaining            derived: 3 − 4 − 5
+ * ── THE BALANCE, AND WHY IT IS NO LONGER `money.balance` ──────────────────
+ *
+ * `summariseMoney` returns `revised − certified − retention`. That deducts
+ * retention twice. Per the server chain in `tasks/pc_integrity.py::recompute`,
+ * `claim_amount` is the VALUATION less penalties and advance recovery — it is
+ * GROSS of retention; retention is taken out further down the certificate, at
+ * line 4.0, on its way to what is paid. So retention is a SUBSET of the
+ * certified total, not a quantity sitting alongside it, and taking it off
+ * again removes the same rand a second time. The figure was understated by the
+ * whole retention balance, and the caveat asserted the wrong arithmetic out
+ * loud — "less certified value, less retention held".
+ *
+ * There are two defensible figures and they answer different questions:
+ *
+ *   (a) BALANCE TO CERTIFY  = revised − certified.
+ *       How much of the contract sum has not yet been certified. Retention has
+ *       no place in it, because retention is withheld from money that has
+ *       already been certified.
+ *
+ *   (b) CASH STILL TO FLOW  = revised − paid + retention due for release.
+ *       What the contractor can still expect to receive.
+ *
+ * **(a) is what this page shows**, for the plain reason that (b) cannot be
+ * computed from what the payload carries: nothing on the certificate list
+ * distinguishes PAID from POSTED — `tasks/payment_terms.py` is explicit that
+ * posted means certified, not paid — and no release schedule exists to say
+ * when retention falls due. Guessing (b) from (a)'s inputs would be a cash
+ * forecast with no cash data in it.
+ *
+ * So the row is labelled "Balance still to certify", not "Balance remaining":
+ * the label now says which of the two questions the number answers.
+ *
+ * `summariseMoney.balance` is left alone. It is the homepage's figure as well
+ * as this page's, and changing what a shared derivation returns is not this
+ * page's call — it is reported for that file's owner.
  */
-export function financialOverview(money: MoneyPosition): OverviewRow[] {
+export function financialOverview(
+  money: MoneyPosition,
+  basis?: CertificateBasis,
+): OverviewRow[] {
   const zar = (n: number | null) => (n === null ? null : formatZAR(n));
+
+  const retentionNet = netRetentionHeld(money.retentionHeld, basis?.retentionReleased ?? null);
+
+  // (a) above. Recomputed here rather than taken from `money.balance`.
+  // A null revised sum cannot produce a balance. A null CERTIFIED means no
+  // certificate has been posted, which is a real zero rather than an unknown —
+  // the whole revised sum is still to certify.
+  const balanceToCertify =
+    money.revisedContractSum === null
+      ? null
+      : money.revisedContractSum - (money.certified ?? 0);
+
+  const mixedBasis = (basis?.vatInclusiveRows ?? 0) > 0;
 
   return [
     {
@@ -110,30 +241,76 @@ export function financialOverview(money: MoneyPosition): OverviewRow[] {
       label: "Revised contract sum",
       value: zar(money.revisedContractSum),
       derived: true,
-      formula: "original + approved variations",
+      /*
+        NO `formula` HERE, DELIBERATELY.
+
+        It read "original + approved variations", which is what the figure is
+        computed as and is NOT reliably true of it.
+        `tasks/views_signing.py::_apply_vo_to_project` adds an approved
+        variation's amount into `project.contract_value` AND leaves the
+        variation's status APPROVED, in one transaction — so a variation signed
+        through that flow is inside both operands and the sum counts it twice.
+        Nothing on either payload distinguishes the signed population from the
+        rest, so it cannot be corrected client-side.
+
+        Stating working that does not hold is worse than stating none: it
+        invites the reader to check the arithmetic, find it consistent, and
+        stop looking. The overstatement is named in `warning` instead, where
+        the reader can see it without hovering.
+      */
+      warning:
+        money.variationCount > 0
+          ? "May double-count any variation signed through the sign-and-issue flow — the server adds those to the original sum as well."
+          : undefined,
+      caveat:
+        "Original contract sum plus approved variations. See the warning: the " +
+        "two operands can overlap and the payload does not say when they do.",
     },
     {
       key: "certified",
-      label: "Payments certified to date",
+      // NOT "Payments certified to date". Nothing here has been PAID —
+      // `tasks/payment_terms.py` is explicit that posting a certificate
+      // certifies it and starts the payment clock. This is also the name the
+      // homepage uses for the same number, so one figure now has one name.
+      label: "Certified to date",
       value: zar(money.certified),
       derived: false,
+      warning: mixedBasis
+        ? `${basis?.vatInclusiveRows} of ${basis?.certifiedRows} posted certificates carry no ex-VAT claim value, so their VAT-inclusive total is in this figure. It reads high against an ex-VAT contract sum.`
+        : undefined,
       caveat:
-        "Value of work certified, excluding VAT, across posted certificates. " +
-        "A commercial measure, not physical progress.",
+        "Σ claim_amount over posted certificates — the value of work " +
+        "certified, excluding VAT. Certified, not paid. A commercial measure, " +
+        "not physical progress.",
     },
     {
       key: "retention",
       label: "Retention held",
-      value: zar(money.retentionHeld),
+      value: zar(retentionNet),
       derived: false,
-      caveat: "Withheld against defects liability across posted certificates.",
+      // Stated as working only where the release figure was actually readable.
+      formula:
+        basis?.retentionReleased != null ? "withheld − released" : undefined,
+      warning:
+        basis && basis.retentionReleased === null && basis.certifiedRows > 0
+          ? "No posted certificate carries a retention-release figure, so nothing has been deducted for releases. If retention has been released, this reads high."
+          : undefined,
+      caveat:
+        "Withheld against defects liability across posted certificates, less " +
+        "any retention_release on those certificates.",
     },
     {
       key: "balance",
-      label: "Balance remaining",
-      value: zar(money.balance),
+      label: "Balance still to certify",
+      value: zar(balanceToCertify),
       derived: true,
-      formula: "revised sum − certified − retention",
+      formula: "revised sum − certified to date",
+      caveat:
+        "What remains of the revised contract sum to be certified. Retention " +
+        "is NOT deducted: it is withheld out of value that has already been " +
+        "certified, so it is inside the certified figure already. This is not " +
+        "cash still to flow — the payload does not distinguish paid from " +
+        "posted, so that figure cannot be stated.",
     },
   ];
 }
@@ -405,14 +582,20 @@ export function buildKeyIndicators(input: IndicatorInputs): Indicator[] {
       label: "Risk alerts",
       state:
         c.total === 0
-          ? "Clear"
+          ? "None detected"
           : c.red > 0
             ? `${c.red} critical`
             : `${c.orange} warning`,
-      tone: c.red > 0 ? "red" : c.orange > 0 ? "amber" : "neutral",
+      // NEUTRAL, ALWAYS. This is a COUNT, and a count is not a breach: "12"
+      // painted red says nothing about what the twelve are, while the sentence
+      // naming the actual breach sits in the feed below. The twelve are drawn
+      // where they can be read — in the feed, under a tier heading that says
+      // in words what they are. Colouring the tally as well would be the same
+      // ink spent twice, on the less informative of the two.
+      tone: "neutral",
       detail:
         c.total === 0
-          ? undefined
+          ? "The engine found nothing; that is not the same as nothing being there"
           : `${c.red} critical · ${c.orange} warning`,
     });
   }
@@ -451,8 +634,9 @@ export function buildKeyIndicators(input: IndicatorInputs): Indicator[] {
       tone: "neutral",
       detail: r.ratePct === null ? undefined : `withheld at ${r.ratePct}%`,
       caveat:
-        "Withheld across posted certificates. No retention limit is recorded " +
-        "on this contract, so no limit is stated.",
+        "Withheld across posted certificates, net of any retention released " +
+        "on them. No retention limit is recorded on this contract, so no " +
+        "limit is stated.",
     });
   }
 

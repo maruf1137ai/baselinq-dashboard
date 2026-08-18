@@ -41,12 +41,23 @@ interface TimeBar {
   notes: string;
 }
 
+/**
+ * A time bar is drawn ONLY once its deadline has passed.
+ *
+ * This used to paint four states — red under three days, amber under
+ * fourteen, emerald beyond — which put a colour on every row on the tab and
+ * spent the loudest one on deadlines that had not arrived. Under the severity
+ * rule this page now follows, only a breach that has ALREADY HAPPENED may
+ * carry colour, and a notice period with six days left has not been missed.
+ *
+ * Nothing is lost by it: `days_remaining` is printed on the row as a number,
+ * the rows are ordered by it, and a passed deadline is the one state that
+ * genuinely cannot be recovered — which is why it is the one that is drawn.
+ */
 function urgencyClass(days: number, status: string) {
   if (status !== "open") return "bg-muted text-muted-foreground border-border";
   if (days < 0) return "bg-red-50 text-red-700 border-red-200";
-  if (days <= 3) return "bg-red-50 text-red-700 border-red-200";
-  if (days <= 14) return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  return "bg-muted text-muted-foreground border-border";
 }
 
 export default function TimeBarsTab({ projectId }: { projectId: string }) {

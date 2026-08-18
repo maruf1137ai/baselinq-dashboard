@@ -29,7 +29,7 @@
  * Progress" line. Baselinq holds no measure of physical completion — see the
  * header of `src/lib/projectPosition.ts`.
  */
-import { Banknote } from "lucide-react";
+import { AlertTriangle, Banknote } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -74,6 +74,7 @@ function Row({
   label,
   value,
   note,
+  warning,
   strong = false,
   danger = false,
   caveat,
@@ -81,6 +82,12 @@ function Row({
   label: string;
   value: string | null;
   note?: string;
+  /**
+   * A known problem with the figure beside it. Rendered VISIBLY, never as a
+   * tooltip: a number that may be overstated is not something a reader should
+   * have to hover to discover, and a hover reveals nothing on a touch device.
+   */
+  warning?: string;
   strong?: boolean;
   danger?: boolean;
   caveat?: string;
@@ -88,10 +95,21 @@ function Row({
   return (
     <div className="flex items-baseline justify-between gap-4 px-4 py-2.5" title={caveat}>
       <div className="min-w-0">
-        <p className={cn("text-sm truncate", strong ? "text-foreground" : "text-muted-foreground")}>
+        <p className={cn("text-sm", strong ? "text-foreground" : "text-muted-foreground")}>
           {label}
         </p>
         {note && <p className="text-xs text-muted-foreground mt-0.5">{note}</p>}
+        {warning && (
+          /* Full contrast, no hue. This is a correctness warning, not a
+             severity — the figure beside it may be wrong. Colour on this page
+             is reserved for a breach that has already happened, so the warning
+             is made unmissable by being at foreground contrast with an icon
+             rather than by taking amber off the severity scale. */
+          <p className="flex items-start gap-1.5 text-xs text-foreground mt-1">
+            <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground" aria-hidden="true" />
+            <span className="leading-relaxed">{warning}</span>
+          </p>
+        )}
       </div>
       <p
         className={cn(
@@ -115,7 +133,7 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
   // refuses independently rather than trusting its caller.
   if (!data.canViewFinance) return null;
 
-  const rows = financialOverview(money);
+  const rows = financialOverview(money, data.certificateBasis);
   const adjustments = certificateAdjustments(pc);
 
   // Nothing at all to show: no contract sum, no certificate. An empty state,
@@ -147,6 +165,7 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
             label={r.label}
             value={r.value}
             note={r.formula}
+            warning={r.warning}
             strong={r.derived}
             caveat={r.caveat}
           />

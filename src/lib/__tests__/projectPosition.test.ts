@@ -4,6 +4,8 @@ import {
   buildKeyIndicators,
   certificateAdjustments,
   financialOverview,
+  netRetentionHeld,
+  summariseCertificateBasis,
   worstPaymentDelay,
 } from "../projectPosition";
 import { summariseMoney } from "../homeSignals";
@@ -54,17 +56,35 @@ describe("financialOverview", () => {
     expect(row("revised").value).toBe("R 11 380 000,00");
   });
 
-  it("derives the balance as revised − certified − retention", () => {
-    // 11 380 000 − 8 200 000 − 410 000.
-    expect(money.balance).toBe(2_770_000);
-    expect(row("balance").value).toBe("R 2 770 000,00");
+  it("derives the balance as revised − certified, and does NOT deduct retention", () => {
+    // 11 380 000 − 8 200 000. Retention is withheld out of value that has
+    // already been certified — `claim_amount` is gross of it per
+    // pc_integrity.recompute — so it is inside the certified figure and
+    // taking it off again removes the same R410 000 twice.
+    expect(row("balance").value).toBe("R 3 180 000,00");
+    expect(row("balance").label).toBe("Balance still to certify");
+    expect(row("balance").formula).toBe("revised sum − certified to date");
   });
 
-  it("is not the old contract_value − certified figure", () => {
-    // The formula this replaced gave 1 800 000 on exactly this data — light by
-    // R 970 000, being the variations it ignored less the retention it ignored.
-    expect(money.balance).not.toBe(1_800_000);
-    expect(money.revisedContractSum! - money.certified! - money.retentionHeld!).toBe(2_770_000);
+  it("is exactly the retention balance above summariseMoney's figure", () => {
+    // The defect, stated as a test: the shared derivation still returns the
+    // double-deducted number, and this page no longer renders it.
+    expect(money.balance).toBe(2_770_000);
+    expect(3_180_000 - money.balance!).toBe(money.retentionHeld);
+  });
+
+  it("does not claim a checkable derivation for the revised sum", () => {
+    // `original + approved variations` is how it is computed and is not
+    // reliably TRUE of it: _apply_vo_to_project puts a signed variation into
+    // both operands. Wrong working is worse than none.
+    expect(row("revised").formula).toBeUndefined();
+    expect(row("revised").warning).toMatch(/double-count/i);
+  });
+
+  it("does not call certified value a payment", () => {
+    // Nothing here has been paid; posted means certified.
+    expect(row("certified").label).toBe("Certified to date");
+    expect(rows.some((r) => /payment/i.test(r.label))).toBe(false);
   });
 
   it("counts only posted certificates towards certified and retention", () => {
@@ -204,9 +224,14 @@ describe("buildKeyIndicators", () => {
   it("colours only what has breached something", () => {
     const out = buildKeyIndicators(base);
     const tone = (k: string) => out.find((i) => i.key === k)!.tone;
-    // A due date has passed, and risk rules have fired: both are breaches.
+    // A due date has passed. That is a breach that has already happened, and
+    // it is the only indicator that carries colour.
     expect(tone("payment-delay")).toBe("red");
-    expect(tone("risk")).toBe("red");
+    // A COUNT is not a breach. "12" in red says nothing about what the twelve
+    // are; the twelve are drawn in the feed, under a tier heading that names
+    // them in words. Colouring the tally too spends the ink twice, on the less
+    // informative of the two.
+    expect(tone("risk")).toBe("neutral");
     // A pending variation is work in progress, and retention held is simply a
     // fact about the contract. Neither is a breach, so neither is coloured.
     expect(tone("variations")).toBe("neutral");
@@ -247,13 +272,100 @@ describe("buildKeyIndicators", () => {
     expect(out.map((i) => i.key)).toEqual(["risk"]);
   });
 
-  it("reads a clear project as clear and in no colour", () => {
+  it("does not read an empty result as a clear project", () => {
+    // "Clear" is a claim about the works. A project with no milestones loaded
+    // produces the same zero as one being run immaculately.
     const out = buildKeyIndicators({
       ...base,
       riskCounts: { red: 0, orange: 0, total: 0 },
     });
     const r = out.find((i) => i.key === "risk")!;
-    expect(r.state).toBe("Clear");
+    expect(r.state).toBe("None detected");
+    expect(r.detail).toMatch(/not the same as nothing being there/);
     expect(r.tone).toBe("neutral");
+  });
+});
+
+// ── The basis the certificate rows are on ─────────────────────────────────
+
+describe("summariseCertificateBasis", () => {
+  it("sums retention released across posted certificates only", () => {
+    const b = summariseCertificateBasis([
+      { id: 1, workflowState: "posted", claimAmount: 100, retentionRelease: 40 },
+      { id: 2, workflowState: "posted", claimAmount: 100, retentionRelease: 10 },
+      { id: 3, workflowState: "submitted", claimAmount: 100, retentionRelease: 999 },
+    ]);
+    expect(b.retentionReleased).toBe(50);
+    expect(b.certifiedRows).toBe(2);
+  });
+
+  it("reports null, not zero, when no certificate carries a release figure", () => {
+    // An absent column is not a statement that nothing was released.
+    const b = summariseCertificateBasis([
+      { id: 1, workflowState: "posted", claimAmount: 100 },
+    ]);
+    expect(b.retentionReleased).toBeNull();
+  });
+
+  it("counts the rows that put a VAT-inclusive figure into the certified total", () => {
+    // certifiedValueOf falls back to totalPayable / netAmount, both of which
+    // are VAT-inclusive, on legacy rows with no claimAmount.
+    const b = summariseCertificateBasis([
+      { id: 1, workflowState: "posted", claimAmount: 100 },
+      { id: 2, workflowState: "posted", netAmount: 115 },
+      { id: 3, workflowState: "posted", totalPayable: 115 },
+    ]);
+    expect(b.vatInclusiveRows).toBe(2);
+    expect(b.certifiedRows).toBe(3);
+  });
+});
+
+describe("netRetentionHeld", () => {
+  it("takes releases off the held balance", () => {
+    expect(netRetentionHeld(410_000, 150_000)).toBe(260_000);
+  });
+
+  it("returns the gross figure unchanged when releases could not be read", () => {
+    expect(netRetentionHeld(410_000, null)).toBe(410_000);
+  });
+
+  it("never reports negative security held", () => {
+    expect(netRetentionHeld(100, 250)).toBe(0);
+  });
+
+  it("stays null when nothing is held", () => {
+    expect(netRetentionHeld(null, 50)).toBeNull();
+  });
+});
+
+describe("financialOverview — retention releases", () => {
+  const money = summariseMoney(PROJECT_45, CERTS_45, VOS_45);
+
+  it("subtracts released retention and states the working", () => {
+    const basis = summariseCertificateBasis([
+      ...CERTS_45.map((c) => ({ ...c, retentionRelease: 0 })),
+      { id: 99, workflowState: "posted", claimAmount: 0, retentionRelease: 110_000 },
+    ]);
+    const row = financialOverview(money, basis).find((r) => r.key === "retention")!;
+    // 410 000 held less 110 000 released.
+    expect(row.value).toBe("R 300 000,00");
+    expect(row.formula).toBe("withheld − released");
+    expect(row.warning).toBeUndefined();
+  });
+
+  it("warns rather than silently showing a gross figure as net", () => {
+    const basis = summariseCertificateBasis(CERTS_45);
+    const row = financialOverview(money, basis).find((r) => r.key === "retention")!;
+    expect(row.value).toBe("R 410 000,00");
+    expect(row.warning).toMatch(/retention-release/i);
+  });
+
+  it("warns when the certified total mixed VAT bases", () => {
+    const basis = summariseCertificateBasis([
+      { id: 1, workflowState: "posted", claimAmount: 100 },
+      { id: 2, workflowState: "posted", netAmount: 115 },
+    ]);
+    const row = financialOverview(money, basis).find((r) => r.key === "certified")!;
+    expect(row.warning).toMatch(/VAT-inclusive/i);
   });
 });

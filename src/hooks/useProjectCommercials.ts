@@ -40,6 +40,8 @@ import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { resolveFinanceAccess, summariseMoney, type CertificateLike } from "@/lib/homeSignals";
 import { retentionPosition, summariseVariations, toVariationRecord } from "@/lib/homeIndicators";
 import {
+  netRetentionHeld,
+  summariseCertificateBasis,
   worstPaymentDelay,
   type ProjectPaymentSummaryLike,
 } from "@/lib/projectPosition";
@@ -119,9 +121,40 @@ export function useProjectCommercials(projectId: string | undefined) {
 
   const variations = useMemo(() => summariseVariations(variationList), [variationList]);
 
+  /**
+   * Two facts about the certificate rows that `summariseMoney` does not report
+   * and that this page must not present a figure without.
+   *
+   * Derived HERE rather than in `homeSignals.ts` because `summariseMoney` is
+   * the homepage's function too and changing what it returns is not this
+   * page's decision to take. Both are read off the same rows it read.
+   */
+  const certificateBasis = useMemo(
+    () => summariseCertificateBasis(certificateList),
+    [certificateList],
+  );
+
+  /**
+   * Retention held, NET OF RELEASES.
+   *
+   * `money.retentionHeld` is Σ `retentionAmount` over posted certificates with
+   * nothing subtracted, so from the first release at practical completion it
+   * is permanently overstated — it reports money the employer no longer holds.
+   * `retention_release` is a real column on the certificate, is the same field
+   * `certificateAdjustments` already reads with the same sign, and is
+   * subtracted here.
+   *
+   * Where NO posted certificate carries the field at all, `released` is null
+   * and the gross figure is shown with that stated — an absent field is not a
+   * zero release.
+   */
   const retention = useMemo(
-    () => retentionPosition(project, money.retentionHeld),
-    [project, money.retentionHeld],
+    () =>
+      retentionPosition(
+        project,
+        netRetentionHeld(money.retentionHeld, certificateBasis.retentionReleased),
+      ),
+    [project, money.retentionHeld, certificateBasis.retentionReleased],
   );
 
   const currentCertificate = useMemo(
@@ -140,6 +173,8 @@ export function useProjectCommercials(projectId: string | undefined) {
   return {
     canViewFinance,
     money,
+    /** Σ retention_release, and whether the certified total mixed VAT bases. */
+    certificateBasis,
     variations,
     retention,
     currentCertificate,

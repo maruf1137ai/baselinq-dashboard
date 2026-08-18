@@ -1,19 +1,65 @@
 /**
- * Project Health — the risk dashboard.
+ * Project Health.
  *
  * Every number on this page is live. Nothing here is mock data: the signals
- * come from the backend risk engine (`/api/projects/{id}/risk-signals/`) and
- * the narrative summary from the existing risk-forecast engine.
+ * come from the backend risk engine (`projects/{id}/risk-signals/`), the
+ * narrative sentence from the risk-forecast engine, and the commercial figures
+ * from the project, certificate, variation and payment routes — each named
+ * against the row it produces in `lib/projectPosition.ts`.
  *
- * Layout follows the "one number, one sentence, then the feed" shape: a user
- * arriving at this page should know whether to worry within two seconds, and
- * be able to act on the worst item without scrolling.
+ * ── THE PAGE HAS TWO JOBS ─────────────────────────────────────────────────
+ *
+ * It was built against an insurance requirements document: it is what an
+ * insurer, or a principal agent diagnosing a project, reads to judge whether
+ * the contract is being competently administered. It has since been given a
+ * second job — carrying the project's commercial position, the six-field
+ * financial overview and the current certificate.
+ *
+ * These are not the same document and were not merged into one. They are
+ * layered:
+ *
+ *   ABOVE the tab strip, shared by both readers: the verdict and the
+ *   indicators. "Is this project in trouble" and "what is the position" are
+ *   the one question the insurer and the principal agent ask identically, and
+ *   the answer belongs to the page rather than to any one tab. This is also
+ *   what stops a homepage deep link to `?tab=insurer` landing a reader on a
+ *   screen that never tells them the project is at risk.
+ *
+ *   BELOW it, where the two diverge: five surfaces. The first four are the
+ *   insurer's argument in sequence — what the administration found, whether
+ *   notice was served in time, whether the record is sealed and verifiable,
+ *   what was disclosed and on whose consent. The fifth is the principal
+ *   agent's commercial position, appended rather than inserted so it does not
+ *   break that sequence in half. See `components/risk/tabs.ts`.
+ *
+ * ── READING ORDER ─────────────────────────────────────────────────────────
+ *
+ *   1. Verdict      posture, live count, the engine's own sentence
+ *   2. Position     the four key indicators
+ *   3. Lens         the tab strip
+ *   4. Detail       the selected surface, itself ordered worst-first
+ *
+ * This is a page you READ, not a queue you scan, so it is not made to fit one
+ * screen. It is made so that a reader who stops after the first 200px has the
+ * verdict, one who stops after 400px has the position, and one who reads on
+ * gets the evidence in decreasing order of seriousness.
+ *
+ * ── WHAT IS DELIBERATELY NOT BUILT ────────────────────────────────────────
+ *
+ * The mock's two gauges ("70% Spent", "65% Complete") and its "Program
+ * Progress" line. Baselinq records no measure of physical completion — there
+ * is no field on any model that says how much of the works has been built. The
+ * previous homepage approximated it from elapsed calendar time and that was
+ * removed as a fabrication. Not even a placeholder: an `UpcomingFeature` card
+ * would promise a figure this platform has no route to, on the one page whose
+ * entire claim is that its numbers are real. See the header of
+ * `lib/projectPosition.ts`.
  */
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -22,76 +68,25 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
-import {
-  AlertTriangle, CheckCircle2, ChevronDown, ChevronRight,
-  RefreshCw, ShieldAlert, TrendingUp, Clock, Banknote, FileWarning, Info,
-} from "lucide-react";
+import { CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  buildFigures, getCaveat, getCalculation, getMilestoneBreakdown,
-} from "@/lib/riskFormat";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import TimeBarsTab from "@/components/risk/TimeBarsTab";
 import EvidenceTab from "@/components/risk/EvidenceTab";
 import InsurerTab from "@/components/risk/InsurerTab";
 import CommercialTab from "@/components/risk/CommercialTab";
-import KeyIndicators from "@/components/risk/KeyIndicators";
+import HealthMasthead, { type SignalCounts } from "@/components/risk/HealthMasthead";
+import {
+  AcknowledgedList, SignalFeed, type RiskSignal,
+} from "@/components/risk/SignalFeed";
+import { type TabKey, resolveTab, slugFor, tabsFor } from "@/components/risk/tabs";
 import { useProjectCommercials } from "@/hooks/useProjectCommercials";
 import { buildKeyIndicators } from "@/lib/projectPosition";
 
-/**
- * "Commercial position" is appended rather than inserted, and it is only in
- * this array for a viewer holding `finance.view` — see `tabsFor` below. A
- * contractor without it never sees the tab, and `useProjectCommercials` never
- * requests the figures behind it.
- */
-const BASE_TABS = ["Risk signals", "Notice deadlines", "Evidence", "Insurer"] as const;
-const TABS = [...BASE_TABS, "Commercial position"] as const;
-type TabKey = (typeof TABS)[number];
-
-const tabsFor = (canViewFinance: boolean): readonly TabKey[] =>
-  canViewFinance ? TABS : BASE_TABS;
-
-/**
- * `?tab=` slugs, so another page can link to a specific tab.
- *
- * The homepage action queue needs this: a notice-deadline row is the highest
- * stakes thing it renders, and landing the user on "Risk signals" and leaving
- * them to find the right tab is not an action — it is a maze. Slugs rather
- * than the labels themselves so the URL survives a change of wording.
- */
-const TAB_SLUG: Record<string, TabKey> = {
-  "risk-signals": "Risk signals",
-  "notice-deadlines": "Notice deadlines",
-  evidence: "Evidence",
-  insurer: "Insurer",
-  commercial: "Commercial position",
-};
-
-// ── Types (mirror the backend serializer) ─────────────────────────────
-
-interface RiskSignal {
-  id: number;
-  code: string;
-  category: "delay" | "financial" | "compliance" | "claim";
-  severity: "green" | "orange" | "red";
-  status: "open" | "acknowledged" | "resolved" | "muted";
-  title: string;
-  detail: Record<string, any>;
-  evidence: string;
-  source_type: string | null;
-  source_id: number | null;
-  first_detected_at: string;
-  acknowledged_at: string | null;
-  acknowledged_by_name: string | null;
-  acknowledgement_note: string;
-  is_contractual: boolean;
-}
-
 interface SignalsResponse {
   signals: RiskSignal[];
-  counts: { red: number; orange: number; green: number; total: number };
+  counts: SignalCounts;
 }
 
 interface RiskForecast {
@@ -100,229 +95,10 @@ interface RiskForecast {
   recommendations: string[];
 }
 
-// ── Presentation helpers ──────────────────────────────────────────────
-
-const SEVERITY_STYLES: Record<string, string> = {
-  red: "bg-red-50 text-red-700 border-red-200",
-  orange: "bg-amber-50 text-amber-700 border-amber-200",
-  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-const CATEGORY_ICON: Record<string, typeof Clock> = {
-  delay: Clock,
-  financial: Banknote,
-  compliance: FileWarning,
-  claim: ShieldAlert,
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  delay: "Programme",
-  financial: "Financial",
-  compliance: "Compliance",
-  claim: "Claim",
-};
-
-/** Overall posture derived from the worst live signal. */
-function posture(counts: SignalsResponse["counts"]) {
-  if (counts.red > 0)
-    return { label: "At risk", tone: "red", icon: AlertTriangle };
-  if (counts.orange > 0)
-    return { label: "Watch", tone: "orange", icon: TrendingUp };
-  return { label: "Healthy", tone: "green", icon: CheckCircle2 };
-}
-
-// ── Signal row ────────────────────────────────────────────────────────
-
-function SignalRow({
-  signal,
-  onAcknowledge,
-}: {
-  signal: RiskSignal;
-  onAcknowledge: (s: RiskSignal) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const Icon = CATEGORY_ICON[signal.category] ?? FileWarning;
-  const isAcknowledged = signal.status === "acknowledged";
-
-  // Detail is formatted for humans rather than rendered raw — see
-  // lib/riskFormat.ts for the field metadata driving labels and units.
-  const figures = useMemo(() => buildFigures(signal.detail), [signal.detail]);
-  const caveat = getCaveat(signal.detail);
-  const calculation = getCalculation(signal.detail);
-  const milestoneRows = getMilestoneBreakdown(signal.detail);
-
-  return (
-    <div
-      className={cn(
-        "bg-card border border-border rounded-xl p-4 transition-colors",
-        isAcknowledged && "opacity-60"
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div className={cn("mt-0.5 p-1.5 rounded-md border", SEVERITY_STYLES[signal.severity])}>
-          <Icon className="h-4 w-4" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">{signal.title}</p>
-              {/*
-                The evidence line is the whole credibility of the row: it shows
-                the user the numbers behind the claim.
-
-                ── Why it carries the severity colour ────────────────────────
-
-                It used to be `text-muted-foreground` at every severity, which
-                meant "Cumulative variations at 13.8% of budget (tolerance
-                10%)" — a real figure over a real tolerance, i.e. the breach
-                itself — was drawn in exactly the grey used for an ordinary
-                caption, while the only coloured thing in view was a count.
-                Colour belongs on the state, so the sentence that STATES the
-                breach is what gets it.
-
-                Red and amber only. A green signal has breached nothing and
-                stays neutral, which is the whole point of the rule: if
-                everything is coloured, nothing is.
-              */}
-              {signal.evidence && (
-                <p
-                  className={cn(
-                    "text-xs mt-0.5",
-                    signal.severity === "red"
-                      ? "text-red-700"
-                      : signal.severity === "orange"
-                        ? "text-amber-700"
-                        : "text-muted-foreground",
-                  )}
-                >
-                  {signal.evidence}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant="outline" className="text-xs">
-                {CATEGORY_LABEL[signal.category] ?? signal.category}
-              </Badge>
-              {/* Distinguishing a real contractual breach from a commercial
-                  heuristic matters — see the risk rules' legal notes. */}
-              {signal.is_contractual && (
-                <Badge variant="outline" className="text-xs border-red-200 text-red-700">
-                  Contractual
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 mt-2">
-            <button
-              onClick={() => setExpanded(v => !v)}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-            >
-              {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              Why this fired
-            </button>
-
-            {!isAcknowledged ? (
-              <button
-                onClick={() => onAcknowledge(signal)}
-                className="text-xs text-primary hover:underline"
-              >
-                Acknowledge
-              </button>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                Acknowledged{signal.acknowledged_by_name ? ` by ${signal.acknowledged_by_name}` : ""}
-              </span>
-            )}
-          </div>
-
-          {/* The detail panel is a recessed well, not a second bordered card:
-              a bordered box inside a bordered card double-lines the edge. */}
-          {expanded && (
-            <div className="mt-3 rounded-xl bg-muted/50 overflow-hidden">
-              {/* Figures — the numbers behind the finding, formatted for a
-                  construction professional rather than dumped as raw keys. */}
-              {figures.length > 0 && (
-                <div className="flex flex-wrap gap-x-8 gap-y-4 p-4">
-                  {figures.map(f => (
-                    <div key={f.key}>
-                      <p className="text-xs text-muted-foreground">{f.label}</p>
-                      <p className={cn(
-                        "text-sm mt-0.5 tabular-nums",
-                        f.emphasis ? "font-semibold text-foreground" : "text-foreground"
-                      )}>
-                        {f.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Plain-English calculation, where the rule provides one. */}
-              {calculation && (
-                <div className="px-4 pb-4 -mt-1">
-                  <p className="text-xs text-muted-foreground leading-relaxed">{calculation}</p>
-                </div>
-              )}
-
-              {/* Milestone breakdown for certification divergence. */}
-              {milestoneRows && (
-                <div className="px-4 pb-4 -mt-1 space-y-1">
-                  {milestoneRows.map((m: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{m.milestone}</span>
-                      <span className="text-foreground tabular-nums">
-                        {m.percent_complete !== null && m.percent_complete !== undefined
-                          ? `${m.percent_complete}% complete`
-                          : "progress not tracked"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* The legal caveat. Given real visual weight because several
-                  rules report things that look contractual but are not — that
-                  distinction must survive all the way to the screen. */}
-              {caveat && (
-                <div className="flex gap-2.5 px-4 py-3 bg-amber-50/60 border-t border-amber-100">
-                  <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-amber-900">
-                      {signal.is_contractual
-                        ? "Contractual breach"
-                        : "Commercial guide — not a contract breach"}
-                    </p>
-                    <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">{caveat}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="px-4 py-2 border-t border-border">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Rule {signal.code}
-                </p>
-              </div>
-
-              {signal.acknowledgement_note && (
-                <p className="text-xs text-foreground px-4 py-3 border-t border-border">
-                  <span className="text-muted-foreground">
-                    Note from {signal.acknowledged_by_name || "team"}:{" "}
-                  </span>
-                  {signal.acknowledgement_note}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────
+/** Stable DOM ids so each tab can name the panel it controls, and vice versa. */
+const slugId = (t: string) => t.toLowerCase().replace(/[^a-z]+/g, "-");
+const tabId = (t: TabKey) => `health-tab-${slugId(t)}`;
+const panelId = (t: TabKey) => `health-panel-${slugId(t)}`;
 
 export default function ProjectHealth() {
   const projectId = localStorage.getItem("selectedProjectId");
@@ -330,24 +106,12 @@ export default function ProjectHealth() {
   const [ackNote, setAckNote] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<TabKey>(
-    () => TAB_SLUG[searchParams.get("tab") ?? ""] ?? "Risk signals",
-  );
-
-  // Keep the URL in step so the tab is shareable and survives a reload.
-  const chooseTab = (next: TabKey) => {
-    setTab(next);
-    const slug = Object.keys(TAB_SLUG).find(k => TAB_SLUG[k] === next);
-    const params = new URLSearchParams(searchParams);
-    if (slug) params.set("tab", slug);
-    setSearchParams(params, { replace: true });
-  };
 
   const { data, isLoading, isError, refetch } = useFetch<SignalsResponse>(
     projectId ? `projects/${projectId}/risk-signals/?refresh=true` : null
   );
 
-  // The narrative summary reuses the pre-existing risk-forecast engine.
+  // The narrative sentence reuses the pre-existing risk-forecast engine.
   const { data: forecast } = useFetch<RiskForecast>(
     projectId ? `projects/${projectId}/risk-forecast/?ai=false` : null
   );
@@ -360,19 +124,55 @@ export default function ProjectHealth() {
   const commercials = useProjectCommercials(projectId ?? undefined);
   const visibleTabs = tabsFor(commercials.canViewFinance);
 
-  // `?tab=commercial` is a shareable URL and can be pasted to anybody. A
-  // viewer who may not see finance data falls back to the first tab rather
-  // than landing on an empty one, and the tab's data was never requested for
-  // them in the first place.
-  const activeTab: TabKey = visibleTabs.includes(tab) ? tab : "Risk signals";
+  // Deep-link behaviour is unchanged and must stay so: `?tab=` on this route
+  // is consumed by homepage links. `resolveTab` is the same rule as before —
+  // slug to tab, falling back to the first tab when the slug is unknown or the
+  // viewer may not see that tab — moved into `components/risk/tabs.ts` where
+  // it can be tested without mounting the page.
+  const [tab, setTab] = useState<TabKey>(() =>
+    resolveTab(searchParams.get("tab"), true),
+  );
+  const activeTab = visibleTabs.includes(tab) ? tab : "Risk signals";
 
-  const counts = data?.counts ?? { red: 0, orange: 0, green: 0, total: 0 };
-  const signals = data?.signals ?? [];
-  const state = posture(counts);
-  const StateIcon = state.icon;
+  // Keep the URL in step so the tab is shareable and survives a reload.
+  const chooseTab = (next: TabKey) => {
+    setTab(next);
+    const slug = slugFor(next);
+    const params = new URLSearchParams(searchParams);
+    if (slug) params.set("tab", slug);
+    setSearchParams(params, { replace: true });
+  };
 
   /**
-   * The client's four Key Indicators.
+   * Arrow-key navigation across the strip, per the WAI-ARIA tabs pattern.
+   *
+   * `role="tablist"` is a promise that left/right move between tabs and that
+   * the strip is a single tab stop. It was declared without either, so a
+   * keyboard user was told to press an arrow key that did nothing.
+   */
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+    if (!keys.includes(e.key)) return;
+    e.preventDefault();
+
+    const i = visibleTabs.indexOf(activeTab);
+    const last = visibleTabs.length - 1;
+    const next =
+      e.key === "Home" ? 0
+      : e.key === "End" ? last
+      : e.key === "ArrowLeft" ? (i <= 0 ? last : i - 1)
+      : (i >= last ? 0 : i + 1);
+
+    chooseTab(visibleTabs[next]);
+    // Selection follows focus, so focus has to follow selection back.
+    document.getElementById(tabId(visibleTabs[next]))?.focus();
+  };
+
+  const counts: SignalCounts = data?.counts ?? { red: 0, orange: 0, green: 0, total: 0 };
+  const signals = data?.signals ?? [];
+
+  /**
+   * The four Key Indicators.
    *
    * `counts` is the risk engine's own count for a viewer who holds
    * `compliance.view` — which everybody on this page does, it is the route's
@@ -416,6 +216,8 @@ export default function ProjectHealth() {
   const submitAcknowledge = async () => {
     if (!ackTarget) return;
     try {
+      // No permission check, on either side of the wire. See the note at the
+      // Acknowledge button in `components/risk/SignalFeed.tsx`.
       await post({
         url: `risk-signals/${ackTarget.id}/acknowledge/`,
         data: { note: ackNote },
@@ -447,7 +249,7 @@ export default function ProjectHealth() {
   // The risk engine is a separate backend app. If it is absent or erroring,
   // say so — never fall through to posture(), which reports "Healthy" for
   // all-zero counts and would tell a user there are no risks when we simply
-  // could not read them. Sits above the tab dispatch so it also covers the
+  // could not read them. Sits above everything else so it also covers the
   // deadlines, evidence and insurer tabs.
   if (isError) {
     return (
@@ -467,144 +269,123 @@ export default function ProjectHealth() {
   return (
     <DashboardLayout>
       {/* No padding or max-width here: DashboardLayout already applies p-6,
-          and every other page runs full width with a plain space-y-6 wrapper.
-          Adding either double-pads the page and leaves a dead gutter on the
-          right that no other screen has. */}
+          and every other page runs full width with a plain space-y-6 wrapper. */}
       <div className="space-y-6">
-        {/* Header */}
+        {/* ── 1. Header ─────────────────────────────────────────────────── */}
+        {/* Refresh is a page action, not a tab action. It refetches the
+            signals that feed the masthead, and the masthead is on every tab —
+            so the button no longer appears and disappears as the reader moves
+            across the strip. */}
         <PageHeader
           title="Project Health"
           description="Live risk signals across programme, financial and contractual data."
           actions={
-            activeTab === "Risk signals" ? (
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
-                Refresh
-              </Button>
-            ) : undefined
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+              Refresh
+            </Button>
           }
         />
 
-        {/* Tabs */}
-        {/* Same tab strip as Finance and Programme: text-sm py-4 px-6,
-            border-b-2 underline pulled onto the container's own hairline. */}
-        <div className="flex items-center gap-2 border-b border-border" role="tablist">
-          {visibleTabs.map(t => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={activeTab === t}
-              onClick={() => chooseTab(t)}
-              className={cn(
-                "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none",
-                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
-                activeTab === t
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t}
-              {t === "Risk signals" && counts.total > 0 && (
-                <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{counts.total}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "Notice deadlines" && <TimeBarsTab projectId={projectId} />}
-        {activeTab === "Evidence" && <EvidenceTab projectId={projectId} />}
-        {activeTab === "Insurer" && <InsurerTab projectId={projectId} />}
-
-        {activeTab === "Commercial position" &&
-          (commercials.isLoading ? (
-            <AwesomeLoader message="Reading the commercial position" />
-          ) : (
-            <CommercialTab data={commercials} />
-          ))}
-
-        {activeTab === "Risk signals" && (isLoading ? (
+        {/* ── 2. Verdict and position ───────────────────────────────────── */}
+        {isLoading ? (
           <AwesomeLoader message="Evaluating project risk" />
         ) : (
-          <>
-            {/* Hero: one posture, one sentence */}
-            <div className="bg-card border border-border rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className={cn("p-2.5 rounded-lg border", SEVERITY_STYLES[state.tone])}>
-                  <StateIcon className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-lg font-medium text-foreground">{state.label}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {counts.total} live signal{counts.total === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                    {forecast?.ai_summary ||
-                      (counts.total === 0
-                        ? "No risks detected. Programme, payments and variations are within tolerance."
-                        : "Review the signals below.")}
-                  </p>
-                </div>
-              </div>
+          <HealthMasthead
+            counts={counts}
+            summary={forecast?.ai_summary}
+            indicators={indicators}
+          />
+        )}
 
-              {/*
-                The client's Key Indicators, in the slot the three severity
-                count chips used to occupy — "8 critical / 2 warning / 0 clear",
-                three bare counts each painted in a severity colour.
+        {/* ── 3. Lens ───────────────────────────────────────────────────── */}
+        {/* Same tab strip as Finance and Programme: text-sm py-4 px-6,
+            border-b-2 underline pulled onto the container's own hairline.
 
-                That row was the colour inversion in miniature: a count is not a
-                condition, so painting "2" amber said nothing about what the two
-                WERE, while the sentence naming the actual breach sat in grey in
-                the feed below. Nothing it said is lost — the red and amber
-                counts are the Risk alerts cell's second line — and in its place
-                are four indicators that each name a state.
+            The strip SCROLLS. Five tabs at px-6 are ~190px wider than `main`
+            at 390px and ~67px wider at 768px, and without an overflow
+            container that surplus does not clip — it widens the flex parent
+            and drags the whole page sideways, so every panel below inherits a
+            horizontal scroll it did not ask for. `overflow-x-auto` with
+            `min-w-max` inside keeps the overflow inside the strip. */}
+        <div className="overflow-x-auto border-b border-border">
+          <div
+            className="flex items-center gap-2 min-w-max"
+            role="tablist"
+            aria-label="Project Health views"
+            onKeyDown={onTabKeyDown}
+          >
+            {visibleTabs.map(t => (
+              <button
+                key={t}
+                id={tabId(t)}
+                role="tab"
+                type="button"
+                aria-selected={activeTab === t}
+                aria-controls={panelId(t)}
+                // Roving tabindex: the strip is one tab stop and the arrow
+                // keys move within it, which is what `role="tablist"` promises
+                // a screen-reader user and what this strip did not deliver.
+                tabIndex={activeTab === t ? 0 : -1}
+                onClick={() => chooseTab(t)}
+                className={cn(
+                  "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none whitespace-nowrap",
+                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
+                  activeTab === t
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t}
+                {t === "Risk signals" && counts.total > 0 && (
+                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                    {counts.total}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                Rendered only when there is at least one. A project with no
-                variations, nothing overdue and no risk data does not get a row
-                of zeroes; it gets no row.
-              */}
-              {indicators.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <KeyIndicators indicators={indicators} />
-                </div>
+        {/* ── 4. Detail ─────────────────────────────────────────────────── */}
+        {/* One tabpanel per tab, named by the tab that controls it. The strip
+            declared `role="tablist"` with nothing on the other end of it. */}
+        <div
+          role="tabpanel"
+          id={panelId(activeTab)}
+          aria-labelledby={tabId(activeTab)}
+          tabIndex={-1}
+          className="space-y-6"
+        >
+          {activeTab === "Notice deadlines" && <TimeBarsTab projectId={projectId} />}
+          {activeTab === "Evidence" && <EvidenceTab projectId={projectId} />}
+          {activeTab === "Insurer" && <InsurerTab projectId={projectId} />}
+
+          {activeTab === "Commercial position" &&
+            (commercials.isLoading ? (
+              <AwesomeLoader message="Reading the commercial position" />
+            ) : (
+              <CommercialTab data={commercials} />
+            ))}
+
+          {activeTab === "Risk signals" && !isLoading && (
+            <>
+              <SignalFeed signals={live} onAcknowledge={setAckTarget} />
+              <AcknowledgedList signals={acknowledged} onAcknowledge={setAckTarget} />
+
+              {counts.total === 0 && (
+                <EmptyState
+                  icon={CheckCircle2}
+                  title="No live risk signals"
+                  // Not "everything is within tolerance". A rule with no
+                  // milestones, no certificates and no variations to read
+                  // produces this same empty list.
+                  description="No rule fired against this project. That is not the same as a clear project — a rule with nothing to read reports nothing."
+                />
               )}
-            </div>
-
-            {/* Signal feed */}
-            {live.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-medium text-foreground">Needs attention</h2>
-                <div className="space-y-3">
-                  {live.map(s => (
-                    <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {acknowledged.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  Acknowledged ({acknowledged.length})
-                </h2>
-                <div className="space-y-3">
-                  {acknowledged.map(s => (
-                    <SignalRow key={s.id} signal={s} onAcknowledge={setAckTarget} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {counts.total === 0 && (
-              <EmptyState
-                icon={CheckCircle2}
-                title="No live risk signals"
-                description="Milestones, payment certificates and variation orders are all within their configured tolerances."
-              />
-            )}
-          </>
-        ))}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Acknowledge dialog — the note becomes part of the contemporaneous record */}
