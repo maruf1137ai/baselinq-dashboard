@@ -140,6 +140,24 @@ All colors MUST be HSL.
        red-700 and amber-800 this app already uses as severity TEXT,
        promoted to tokens so a mark can reach them. Both clear 4.5:1 on
        both grounds, so they are safe as text as well as marks. */
+    /* BRAND, and it is the only token here that means "Baselinq" rather
+       than "this is the state of things". The primary data series wears it:
+       the certified curve, the today marker on the contract rail, the
+       approved segment of the variations bar, the milestone slip bars.
+
+       It NEVER carries severity. That is what keeps it compatible with the
+       page's rule that only a breach which has already happened may be
+       coloured — purple is a different hue family from --viz-breach and
+       --viz-caution, it appears on the data in every state including a
+       perfectly healthy one, and it is therefore not readable as a warning.
+
+       4.80:1 on the card and 4.40:1 on hover, so it clears 3:1 as a mark
+       comfortably. It does NOT clear 4.5:1 on hover, so it is never used
+       for text. Note it is 1.14:1 against --viz-ink: purple and neutral ink
+       are nearly the same luminance, so wherever the two are adjacent they
+       must also be separated by a shape channel — a dash pattern, or a gap.
+       See the notes in StatusBand.tsx. */
+    --viz-brand: 247 74% 63%;     /* #6b5be6 — the primary data series 4.80 / 4.40 */
     --viz-ink: 220 9% 42%;        /* #616875 — series lines, labels   5.47 / 5.01 */
     --viz-fill: 220 9% 50%;       /* #737b8a — area fills under a line           */
     --viz-track: 220 13% 90%;     /* #e0e3e8 — the empty part of a bar           */
@@ -218,6 +236,9 @@ All colors MUST be HSL.
        the one part of the app that breaks the day someone wires the
        toggle up. Ink and fill lighten; breach and caution lighten a long
        way, because red-700 on a #1d212b card is 2.1:1 and unreadable. */
+    /* Lightened from 63% to 70%: the light-mode purple on a #1d212b card is
+       about 2.4:1 and would fail 3:1 as a mark. At 70% it clears it. */
+    --viz-brand: 247 74% 70%;
     --viz-ink: 220 10% 66%;
     --viz-fill: 220 10% 58%;
     --viz-track: 220 17% 24%;
