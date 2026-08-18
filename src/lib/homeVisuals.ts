@@ -18,7 +18,7 @@
  *   `buildCertifiedCurve`      → `undated`, `inFlight`
  *   `summariseMilestoneDrift`  → `untracked`
  *   `summariseChangePosition`  → `undated`
- *   `buildChangeFeed`          → `undatedCount`
+ *   `buildChangeFeed`          → `undated`, `aged`, `taskOverflow` (in `./homeChanges`)
  *
  * Four files were deleted from `src/components/` in the same change that
  * added this one — `BudgetBreakdownCard`, `OverviewChart`,
@@ -590,344 +590,58 @@ export function splitChangeByStatus(variations: ChangeVariationLike[]): ChangeSt
 }
 
 // ── 5. What changed ───────────────────────────────────────────────────────
-
-export type ChangeEventKind =
-  | "certificate"
-  | "variation"
-  | "notice"
-  | "milestone"
-  | "meeting"
-  | "task"
-  | "obligation"
-  | "risk";
-
-/**
- * One thing that moved, recently, that this viewer is entitled to know about.
- *
- * ── Why this is built from what the page already fetched ──────────────────
- *
- * The obvious implementation is an activity endpoint, and there isn't one.
- * The backend has no `django-simple-history` and no generic audit model
- * spanning the app. The two append-only histories that WOULD serve this —
- * `PaymentCertificateAudit` and `MilestoneDateChange` — exist as models with
- * the right ordering indexes and have **no HTTP surface at all**; they would
- * need new views, which is a backend change and out of scope here.
- *
- * So the feed is assembled client-side from the payloads `useHomeData` has
- * already requested, each carrying its own `updated_at` or a workflow
- * timestamp. That has one property worth more than the convenience: **it
- * introduces no new fetch and therefore no new permission surface.** Every
- * event inherits the gate of the endpoint it came from, declared in `requires`
- * and enforced by `filterChangeFeed`, which is `filterQueueByPermission`'s
- * rule applied to a second list.
- *
- * ── Its limit, stated rather than hidden ──────────────────────────────────
- *
- * `updated_at` says a row moved; it does not say WHAT changed on it. So an
- * event here is worded as "PC-006 was certified" where a workflow timestamp
- * makes the transition explicit, and as "VO-014 was updated" where only
- * `updated_at` is available. It never invents the specific field that moved.
- */
-export interface ChangeEvent {
-  key: string;
-  kind: ChangeEventKind;
-  /** What moved. Names the object and the movement, never a bare status. */
-  headline: string;
-  /** Reference, value or clause behind it. Null when the payload gave none. */
-  detail: string | null;
-  /** ISO timestamp the event is ordered by. */
-  at: string;
-  /** Where the reader goes to see it. */
-  href: string;
-  requires: PermissionCode[];
-}
-
-const iso = (v: unknown): string | null =>
-  typeof v === "string" && v.trim() !== "" && Number.isFinite(new Date(v).getTime()) ? v : null;
-
-/**
- * The payload shapes the feed reads, one per source.
- *
- * Each is the narrowest thing that source must supply, and each accepts BOTH
- * casings, because this app's responses are not consistent about it: the
- * `project` and `tasks` apps serialise camelCase, while the `risk` app returns
- * hand-built dicts with raw field names (see the note on `ProgrammeBaseline`
- * in `useMilestones.ts`). Reading only one casing silently produced an empty
- * feed rather than a visible error.
- */
-export interface CertificateChangeLike {
-  id: number | string;
-  pcNumber?: string | null;
-  postedAt?: string | null;
-  posted_at?: string | null;
-  approvedAt?: string | null;
-  approved_at?: string | null;
-  submittedAt?: string | null;
-  submitted_at?: string | null;
-  rejectedAt?: string | null;
-  rejected_at?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-}
-
-export interface VariationChangeLike {
-  id?: number | string;
-  ref?: string | null;
-  voNumber?: string | null;
-  vo_number?: string | null;
-  approvedAt?: string | null;
-  approved_at?: string | null;
-  dateInstructed?: string | null;
-  date_instructed?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-}
-
-export interface NoticeChangeLike {
-  id: number | string;
-  label?: string | null;
-  status?: string | null;
-  clause_ref?: string | null;
-  served_at?: string | null;
-  servedAt?: string | null;
-  updated_at?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface MilestoneChangeLike extends MilestoneLike {
-  id?: number | string;
-  baseline_end?: string | null;
-  actual_end?: string | null;
-  end_date?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-}
-
-export interface MeetingChangeLike {
-  id: number | string;
-  title?: string | null;
-  artefact_status?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-}
-
-export interface TaskChangeLike {
-  id: string | number;
-  title?: string | null;
-  type?: string | null;
-  status?: string | null;
-  updatedAt?: string | null;
-  updated_at?: string | null;
-}
-
-/**
- * The most recent timestamp on a certificate, and what it means.
- *
- * Workflow timestamps are preferred over `updated_at` because they name the
- * transition — `posted_at` means "was certified", where `updated_at` means
- * only "something on this row moved". All of them are nullable.
- */
-function certificateEvent(c: CertificateChangeLike): ChangeEvent | null {
-  const ref = c.pcNumber || `PC-${c.id}`;
-  // POSTED ONLY, and this is the same rule the notices and tasks follow.
-  //
-  // Every other certificate state is a QUEUE ROW: `buildCertificateQueue`
-  // asks the reader to certify a submitted one and to post an approved one,
-  // and `buildRejectedCertificateQueue` asks them to deal with a rejected one.
-  // Repeating those here made the feed a second copy of the queue sitting
-  // beside it, which is how the panel stops being read at all. Posting is the
-  // one certificate transition that closes the loop and is therefore news.
-  const at = iso(c.postedAt ?? c.posted_at);
-  if (!at) return null;
-
-  return {
-    key: `cert-${c.id}`,
-    kind: "certificate",
-    headline: `${ref} was certified`,
-    detail: null,
-    at,
-    href: ROUTE.certificate(c.id),
-    requires: ["finance.view"],
-  };
-}
-
-export function buildCertificateChanges(certificates: CertificateChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(certificates) ? certificates : [])
-    .map(certificateEvent)
-    .filter(Boolean) as ChangeEvent[];
-}
-
-export function buildVariationChanges(variations: VariationChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(variations) ? variations : [])
-    .map((v) => {
-      const ref = v.ref || v.voNumber || v.vo_number || null;
-      // `approved_at` names the transition; `date_instructed` names the
-      // instruction. Both nullable, so `updated_at` is the fallback and is
-      // worded as the weaker claim it is.
-      const approvedAt = iso(v.approvedAt ?? v.approved_at);
-      const instructed = iso(v.dateInstructed ?? v.date_instructed);
-      const at = approvedAt ?? instructed ?? iso(v.updatedAt ?? v.updated_at);
-      if (!at) return null;
-      const verb = approvedAt ? "was approved" : instructed ? "was instructed" : "was updated";
-      return {
-        key: `vo-${v.id ?? ref ?? at}`,
-        kind: "variation" as const,
-        headline: `${ref ?? "A variation"} ${verb}`,
-        detail: null,
-        at,
-        href: ref ? ROUTE.variation(ref) : ROUTE.variations,
-        requires: ["finance.view"] as PermissionCode[],
-      };
-    })
-    .filter(Boolean) as ChangeEvent[];
-}
-
-/**
- * Notice deadlines that have MOVED — served, lapsed or cancelled.
- *
- * An open time bar is not a change, it is a standing obligation, and it is
- * already the highest-ranked row of the action queue. Only a clock that has
- * stopped belongs in a feed of what changed.
- */
-export function buildNoticeChanges(timeBars: NoticeChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(timeBars) ? timeBars : [])
-    .map((t) => {
-      const status = (t.status ?? "").toString().toLowerCase();
-      if (status === "open") return null;
-      const at = iso(t.served_at ?? t.servedAt) ?? iso(t.updated_at ?? t.updatedAt);
-      if (!at) return null;
-      const verb = status === "served" ? "was served" : status === "lapsed" ? "lapsed" : "was cancelled";
-      return {
-        key: `bar-${t.id}`,
-        kind: "notice" as const,
-        headline: `${t.label ?? "A notice deadline"} ${verb}`,
-        detail: t.clause_ref || null,
-        at,
-        href: ROUTE.timeBars,
-        requires: [] as PermissionCode[],
-      };
-    })
-    .filter(Boolean) as ChangeEvent[];
-}
-
-/**
- * Milestones whose dates have moved away from baseline.
- *
- * `MilestoneDateChange` is the append-only record of exactly this and has no
- * endpoint, so the movement is inferred from the milestone's own
- * `baseline_end` against its live end and ordered by `updated_at`. That is
- * weaker — it says the row moved, not when the dates did — and it is worded
- * accordingly.
- */
-export function buildMilestoneChanges(milestones: MilestoneChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(milestones) ? milestones : [])
-    .map((m) => {
-      const at = iso(m.updatedAt ?? m.updated_at);
-      const baselineEnd = iso(m.baselineEnd ?? m.baseline_end);
-      const liveEnd = iso(m.actualEnd ?? m.actual_end) ?? iso(m.endDate ?? m.end_date);
-      if (!at || !baselineEnd || !liveEnd) return null;
-      const slip = dayDiff(baselineEnd, liveEnd);
-      if (slip === null || slip === 0) return null;
-      return {
-        key: `ms-${m._id ?? m.id}`,
-        kind: "milestone" as const,
-        headline: `${(m.name ?? "A milestone").toString().trim() || "A milestone"} is ${Math.abs(slip)} day${Math.abs(slip) === 1 ? "" : "s"} ${slip > 0 ? "later" : "earlier"} than baseline`,
-        detail: null,
-        at,
-        href: ROUTE.milestone(m._id ?? m.id),
-        requires: [] as PermissionCode[],
-      };
-    })
-    .filter(Boolean) as ChangeEvent[];
-}
-
-/** Meetings whose notes have landed — the decisions are readable from now on. */
-export function buildMeetingChanges(meetings: MeetingChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(meetings) ? meetings : [])
-    .map((m) => {
-      if ((m.artefact_status ?? "") !== "notes_ready") return null;
-      const at = iso(m.updated_at ?? m.updatedAt);
-      if (!at) return null;
-      return {
-        key: `meet-${m.id}`,
-        kind: "meeting" as const,
-        headline: `Notes are ready for ${m.title ?? "a meeting"}`,
-        detail: null,
-        at,
-        href: ROUTE.meeting(m.id),
-        requires: [] as PermissionCode[],
-      };
-    })
-    .filter(Boolean) as ChangeEvent[];
-}
-
-/** Tasks and RFIs that were closed. An open task is queue work, not news. */
-export function buildTaskChanges(tasks: TaskChangeLike[]): ChangeEvent[] {
-  return (Array.isArray(tasks) ? tasks : [])
-    .map((t) => {
-      const status = (t.status ?? "").toString().toLowerCase();
-      if (status !== "done" && status !== "closed") return null;
-      const at = iso(t.updatedAt ?? t.updated_at);
-      if (!at) return null;
-      return {
-        key: `task-${t.id}`,
-        kind: "task" as const,
-        headline: `${t.title || "A task"} was closed`,
-        detail: t.type ?? null,
-        at,
-        href: ROUTE.task(String(t.id)),
-        requires: [] as PermissionCode[],
-      };
-    })
-    .filter(Boolean) as ChangeEvent[];
-}
-
-// ── Risk signals are NOT in this feed, deliberately ───────────────────────
 //
-// A `buildRiskChanges` was written and then deleted, because on the page it
-// renders into, `RiskConditionBlock` sits DIRECTLY ABOVE this panel and lists
-// exactly the same rules. Measured on the real layout, the feed repeated the
-// risk panel almost line for line — "Envelope is past its baseline finish"
-// from the register above, then "Envelope is 18 days later than baseline"
-// from the milestone below, then "VO-003 particulars due in 4 working days",
-// which is ALSO the first row of the queue in the left-hand column. One fact,
-// three panels.
+// The feed itself lives in `./homeChanges`, and this file only re-exports it.
 //
-// So the rule that governs this feed is stated once and applied everywhere:
-// **an item that is already somewhere else on this page does not appear
-// here.** Risk signals are the register; open notices, open tasks and
-// certificates awaiting the reader are the queue; what is left — and what
-// this panel is for — is the record of things that have MOVED.
+// Two implementations of it were written in parallel: one here, against the
+// payloads `useHomeData` had already fetched and with the rendered page in
+// front of its author, and one as a standalone module with a much more
+// developed model of what a change IS. They have been merged into
+// `homeChanges.ts`, which took the second one's event model, its
+// significance/shelf-life split and its disclosure counts, and this one's
+// page-level rules — the queue-disjointness rule of §5 there, `ROUTE` rather
+// than the risk-signal resolver for deep links, and `actual_end ?? end_date`
+// for a milestone's live finish, which is what `summariseMilestoneDrift`
+// directly above it uses.
+//
+// The re-export exists because `useHomeData.ts` imports these seven names from
+// THIS file. Nothing else is served by making that file's import list a
+// dependency of where the code lives, and the module boundary is what matters:
+// `homeVisuals.ts` is the arithmetic behind the visual band, and a feed is not
+// arithmetic.
 
-/**
- * The feed, newest first, with everything the viewer may not see removed.
- *
- * Identical rule to `filterQueueByPermission`, and identical failure mode
- * defended against: an absent flag is FALSE, never "assume yes", so a viewer
- * whose permission map is still in flight is served nothing rather than one
- * frame of the employer's certified values.
- */
-export interface ChangeFeed {
-  events: ChangeEvent[];
-  /** Records dropped for having no usable timestamp. The disclosure. */
-  undatedCount: number;
-}
+export {
+  buildCertificateChanges,
+  buildChangeFeed,
+  buildChangeGroups,
+  buildDocumentChanges,
+  buildMeetingChanges,
+  buildMilestoneChanges,
+  buildNoticeChanges,
+  buildTaskChanges,
+  buildVariationChanges,
+  filterChangesByPermission,
+  isComplianceRestrictedText,
+  isFinanceRestrictedText,
+  isOnTheShelf,
+  rankChanges,
+  SHELF_LIFE_DAYS,
+  TASK_FOLD_MIN,
+  TASK_STREAM_CAP,
+} from "./homeChanges";
 
-export function buildChangeFeed(
-  groups: ChangeEvent[][],
-  held: { canViewFinance?: boolean; canViewCompliance?: boolean },
-  options: { limit?: number; undatedCount?: number } = {},
-): ChangeFeed {
-  const grant: Record<PermissionCode, boolean> = {
-    "finance.view": held.canViewFinance === true,
-    "compliance.view": held.canViewCompliance === true,
-  };
-
-  const events = groups
-    .flat()
-    .filter((e) => e.requires.every((code) => grant[code]))
-    .sort((a, b) => (ms(b.at) ?? 0) - (ms(a.at) ?? 0))
-    .slice(0, options.limit ?? 6);
-
-  return { events, undatedCount: options.undatedCount ?? 0 };
-}
+export type {
+  CertificateChangeLike,
+  ChangeFeed,
+  ChangeGroup,
+  ChangeItem,
+  ChangeSource,
+  ChangeSourcePayloads,
+  DocumentChangeLike,
+  MeetingChangeLike,
+  MilestoneChangeLike,
+  NoticeChangeLike,
+  Significance,
+  TaskChangeLike,
+  VariationChangeLike,
+} from "./homeChanges";
