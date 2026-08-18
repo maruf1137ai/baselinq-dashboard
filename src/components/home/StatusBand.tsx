@@ -1,6 +1,54 @@
 /**
  * The status band — the visual layer across the top of Home.
  *
+ * ── Two kinds of colour, and they do not compete ──────────────────────────
+ *
+ * **BRAND is identity. SEMANTIC is state.** Conflating them is what made an
+ * earlier revision of this band entirely greyscale, which read as unfinished
+ * beside every other surface in the app.
+ *
+ *   BRAND     `--viz-brand`, #6b5be6, the product's single accent. It marks
+ *             the PRIMARY DATA SERIES in every zone — the certified curve,
+ *             today on the contract rail, the approved segment of the
+ *             variations bar, the milestone slip bars. It appears on a
+ *             perfectly healthy project exactly as much as on a failing one,
+ *             so it carries NO severity information and cannot be misread as
+ *             a warning.
+ *   SEMANTIC  `--viz-breach` and `--viz-caution`. State, and only state. Red
+ *             still means a breach that has ALREADY happened and nothing
+ *             else, and it is still drawn on one element at a time.
+ *   FRAME     `--viz-track`, `--viz-rule`, `--viz-ink`. Tracks, empty spans,
+ *             ceiling rules and axis text. The purple marks the data; the
+ *             greys mark the frame it is read against.
+ *
+ * The page's severity rule survives intact, because it was always a rule
+ * about SEVERITY colour: a reader cannot mistake a purple mark for a warning
+ * when the warning colours are a different hue family entirely.
+ *
+ * ── Purple is 1.14:1 against neutral ink, and that is handled by SHAPE ────
+ *
+ * #6b5be6 is 4.80:1 on the card — comfortably over the 3:1 a non-text mark
+ * needs — so purple as a mark was never the problem. The problem is purple
+ * ADJACENT TO `--viz-ink` (#616875) with nothing but hue between them: the
+ * two are within a rounding error of the same luminance, so that pairing
+ * disappears in greyscale and to a dichromat.
+ *
+ * The answer is not to drain the colour out of both. It is that **every
+ * purple mark is also separated from its neighbour by a channel that is not
+ * colour**, and those channels are load-bearing and must not be removed on
+ * the grounds that the hues now differ:
+ *
+ *   certified curve vs its ceiling   solid with a fill under it, vs dashed
+ *                                    with nothing under it
+ *   extension span vs overrun span   a 2px cut in the card colour, on the
+ *                                    contract completion date
+ *   the three variations segments    2px gaps between every pair
+ *   today marker vs whatever it      a 2px card-coloured ring around it
+ *   sits on
+ *
+ * The greyscale and dichromatic reading of this band still works. That is
+ * the test any future change to it has to pass.
+ *
  * ── What it replaces, and why that is not a loss ──────────────────────────
  *
  * It replaces `PositionStripBlock`, which was six figures in a row. The figures
@@ -195,11 +243,10 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
         />
 
         {/* Days a signed extension of time moved completion by. No colour —
-            but `--viz-ink` at full strength rather than a tint of it, because
-            a tint measured 1.9:1 against the card and this band is a data
-            element, not a ground. At full strength it is 5.47:1 on the card
-            and 5.01:1 on the row hover, and it stays distinct from the track
-            beneath it, the overrun beside it and the today marker over it. */}
+            it is DATA — a quantity of days a signed variation granted — so it
+            takes the brand colour, not the frame grey. It abuts the overrun
+            band, and purple against breach red is separated there by the 2px
+            card-coloured cut below, not by hue. */}
         {timeline.extension && (
           <div
             className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
@@ -207,7 +254,7 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
             style={{
               left: pct(timeline.extension.from),
               width: pct(timeline.extension.to - timeline.extension.from),
-              backgroundColor: "hsl(var(--viz-ink))",
+              backgroundColor: "hsl(var(--viz-brand))",
             }}
           />
         )}
@@ -261,11 +308,28 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
             />
           ))}
 
-        {/* Today. The one mark a reader looks for. */}
+        {/* ── Today. The one mark a reader looks for, and the rail's
+            primary datum — so it is the rail's brand mark.
+
+            THERE IS STILL NO FILL FROM START TO TODAY, and there must never
+            be one. A bar filled to today is elapsed calendar time, and a
+            reader will take it for progress: `ProjectTimelineCard.tsx` did
+            exactly that and was deleted for it. Baselinq records no measure
+            of what has been built. A marker states a POSITION ON A CALENDAR,
+            which is a fact; a fill states a PROPORTION OF THE WORKS, which is
+            a claim nothing here can support.
+
+            The ring is the shape channel: at an overrun the marker sits on
+            top of the red overrun band, and #6b5be6 against #b91c1c is close
+            enough that hue alone would not separate them. */}
         {timeline.todayAt !== null && (
           <div
-            className="absolute top-0 h-2 w-0.5 -translate-x-1/2 rounded-full bg-foreground"
-            style={{ left: pct(timeline.todayAt) }}
+            className="absolute top-0 h-2 w-0.5 -translate-x-1/2 rounded-full"
+            style={{
+              left: pct(timeline.todayAt),
+              backgroundColor: "hsl(var(--viz-brand))",
+              boxShadow: "0 0 0 2px hsl(var(--card))",
+            }}
           />
         )}
       </div>
@@ -319,7 +383,10 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
               className="absolute inset-y-0 left-0 rounded-full"
               style={{
                 width: `${Math.max(4, (r.slipDays / worst) * 100).toFixed(2)}%`,
-                backgroundColor: "hsl(var(--viz-ink))",
+                // The programme zone's primary series. Slip is a fact about
+                // dates, not a severity — a milestone past baseline is not a
+                // contract breach — so this is brand, never `--viz-breach`.
+                backgroundColor: "hsl(var(--viz-brand))",
               }}
             />
           </div>
@@ -364,20 +431,31 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
  *     all-on-one-date and undated-excluded are four states this mark has to
  *     handle explicitly and correctly, and each is an early return below.
  *
- * ── Why the series is NEUTRAL and not the brand purple ────────────────────
+ * ── The series is BRAND purple; its ceiling is neutral ink ────────────────
  *
- * It was `--chart-1` (#6b5be6) and that was a bug, caught by measuring the
- * marks against EACH OTHER rather than only against the ground. Against the
- * card, purple is 4.80:1 and passes as a mark. Against the dashed reference
- * line beside it, which has to be `--viz-ink` (#616875) to clear 3:1 itself,
- * purple is **1.14:1** — the two are within a rounding error of the same
- * luminance. The series and the contract sum it is measured against were
- * therefore distinguished by HUE ALONE: identical in greyscale, and
- * identical to a dichromat.
+ * The curve is the primary datum of this zone, so it wears `--viz-brand`
+ * (4.80:1 on the card, 4.40:1 on hover — well over the 3:1 a mark needs). The
+ * ceiling is a REFERENCE, so it stays `--viz-ink` with the rest of the frame.
  *
- * Both are now `--viz-ink`, and they are told apart by a channel that is not
- * colour at all: the series is solid with a fill beneath it, the ceiling is
- * dashed with nothing beneath it.
+ * The two are 1.14:1 against each other — purple and neutral ink are nearly
+ * the same luminance — so hue is not what separates them and must never be
+ * the only thing that does. **The shape channel is what makes the purple
+ * safe:** the series is solid with a fill beneath it, the ceiling is dashed
+ * with nothing beneath it. Read in greyscale, one is a solid line over a
+ * shaded area and the other is a dashed rule, which is the whole distinction
+ * intact. That fill and that dash pattern are load-bearing and are not
+ * decoration to be tidied away later.
+ *
+ * ── The fill is a PURPLE TINT, and that is a judgement ────────────────────
+ *
+ * A neutral fill under a purple line was the alternative, on the argument
+ * that it keeps the line the loudest thing in the box. It was rejected: the
+ * line and the area beneath it are ONE datum — cumulative certified value —
+ * and giving them two different hues reads as two series, which is a worse
+ * error than a slightly quieter line. At 16% opacity the tint is a very
+ * light lilac and the stroke is still comfortably the most salient mark in
+ * the zone; and the fill is also what distinguishes the series from the
+ * dashed ceiling in greyscale, so it is doing structural work either way.
  *
  * Tokens are consumed through `style={{ stroke: "hsl(var(--viz-ink))" }}`
  * rather than as `stroke="…"` presentation attributes, because `var()` inside
@@ -453,14 +531,14 @@ function CertifiedCurve({
       aria-hidden="true"
       focusable="false"
     >
-      <path d={area} style={{ fill: "hsl(var(--viz-fill))", fillOpacity: 0.18 }} />
+      <path d={area} style={{ fill: "hsl(var(--viz-brand))", fillOpacity: 0.16 }} />
       <path
         d={line}
         strokeLinejoin="round"
         // Without this the horizontal scale squashes the stroke to a hairline
         // and the verticals render three times thicker than the flats.
         vectorEffect="non-scaling-stroke"
-        style={{ fill: "none", stroke: "hsl(var(--viz-ink))", strokeWidth: 1.5 }}
+        style={{ fill: "none", stroke: "hsl(var(--viz-brand))", strokeWidth: 1.5 }}
       />
       {ceiling !== null && ceiling > 0 && (
         <line
@@ -509,21 +587,27 @@ function CertifiedCurve({
  * no value forward, so including it in a bar about live change would inflate
  * the denominator with money nobody is going to spend.
  *
- * ── How three achromatic segments stay distinguishable ────────────────────
+ * ── How three segments stay distinguishable ───────────────────────────────
  *
- * The three fills are 16.5:1, 5.47:1 and ~4.2:1 against the card, so each
- * clears 3:1 against the GROUND. Two of them are close to each other, which
- * would normally make an adjacent pair hard to separate — so adjacency is not
- * what separates them: each segment is divided from the next by a 2px gap in
- * the card colour. A gap is not a colour channel, so the bar survives
- * greyscale and dichromacy, and the legend prints every figure in words
- * regardless.
+ * The three fills are 4.80:1, 5.47:1 and 4.10:1 against the card, so each
+ * clears 3:1 against the GROUND. Against EACH OTHER they are 1.14:1 and
+ * 1.33:1 — so adjacency is not what separates them, and could not be made to:
+ * three fills that are all mutually distinguishable AND all above 3:1 on a
+ * white card do not exist. Each segment is instead divided from the next by a
+ * 2px gap in the card colour. A gap is not a colour channel, so the bar
+ * survives greyscale and dichromacy, and the legend prints every figure in
+ * words regardless.
  */
 function ChangeBar({ slices }: { slices: { key: string; label: string; count: number; value: number | null; valuedCount: number }[] }) {
   /** Drawn, in order. Rejected is deliberately absent — see above. */
   const DRAWN = ["approved", "outstanding", "draft"];
+  // Approved is the committed value and the segment the eye should find, so
+  // it is this zone's brand mark. The other two are the frame greys.
+  // Approved-vs-awaiting is 1.14:1 and awaiting-vs-draft is 1.33:1, so NONE
+  // of the three pairs is separated by hue — the 2px gaps below are what
+  // separate them, in greyscale and to a dichromat alike.
   const FILL: Record<string, string> = {
-    approved: "hsl(var(--foreground))",
+    approved: "hsl(var(--viz-brand))",
     outstanding: "hsl(var(--viz-ink))",
     draft: "hsl(var(--viz-fill))",
   };
