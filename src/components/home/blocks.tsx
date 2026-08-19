@@ -73,7 +73,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
@@ -95,6 +94,48 @@ const TONE: Record<string, string> = {
 type Tone = keyof typeof TONE;
 
 /**
+ * **What KIND of panel this is, and it is the only thing that ranks them.**
+ *
+ * ── The regression this exists to undo ───────────────────────────────────
+ *
+ * Three panels sat on one screen — the queue, open risk, what changed — in
+ * one identical treatment: same header, same title weight, same card surface,
+ * same leading date pill, same row shape. The owner's words looking at the
+ * live page were "very samey samey", and he was right. An information-design
+ * pass had put the pill on all three to get them into horizontal register,
+ * and register bought at the price of making three different KINDS of list
+ * interchangeable is a bad trade: the reader then has to READ a heading to
+ * know which list they are in, on a page whose whole argument is that you
+ * should not have to.
+ *
+ * ── The two classes ──────────────────────────────────────────────────────
+ *
+ *   `primary`    The work. Exactly ONE panel on this page is this, and it is
+ *                the queue — the page's reason to exist. Card surface kept,
+ *                and a heavier title than anything else on the screen.
+ *   `reference`  True whether or not anybody acts today. Its header sits on
+ *                the WELL fill, which is the elevation ramp already documented
+ *                in BRAND-GUIDELINES §1 (card 99% → page 95% → well 91%) and
+ *                already drawn by `SectionHeading` a few pixels below it. A
+ *                recessed header reads as recessed before a word of it is
+ *                read, and it recesses the whole panel by association.
+ *
+ * Both are zero-height: a fill and a font weight on a line the panel already
+ * draws. No token is introduced, no colour is spent, and the severity rule is
+ * untouched — `bg-muted` is the neutral surface in the ramp, not a status.
+ *
+ * **It is a property of the PANEL, not of its state.** Every state the queue
+ * can be in — populated, loading, empty, degraded — is `primary`, and every
+ * state of `Open risk` and `What changed` is `reference`. A panel that changed
+ * rank when its data went quiet would teach the reader nothing, and an empty
+ * queue is still the thing you came to the page to check.
+ *
+ * Omitting the prop leaves a panel exactly as it was, for call sites off this
+ * page that have no such hierarchy to express.
+ */
+type Emphasis = "primary" | "reference";
+
+/**
  * A titled container.
  *
  * **`icon` is for the states where the icon IS the message** — an outage, an
@@ -102,6 +143,8 @@ type Tone = keyof typeof TONE;
  * lead and no graphic: NN/g's finding is that superfluous graphics slow visual
  * search and that removing them makes the numbers more salient, and a bordered
  * container already says where the module starts and stops.
+ *
+ * `emphasis` ranks one panel against another — see the note above `Emphasis`.
  */
 export function Panel({
   title,
@@ -110,6 +153,7 @@ export function Panel({
   hint,
   icon: Icon,
   tone = "neutral",
+  emphasis,
   action,
   children,
 }: {
@@ -127,6 +171,8 @@ export function Panel({
   hint?: string;
   icon?: typeof CalendarClock;
   tone?: Tone;
+  /** See the note above: `primary` is the work, `reference` is everything else. */
+  emphasis?: Emphasis;
   action?: React.ReactNode;
   children?: React.ReactNode;
 }) {
@@ -140,7 +186,18 @@ export function Panel({
 
   return (
     <section className="bg-card border border-border rounded-xl overflow-hidden">
-      <header className="flex items-center justify-between gap-3 px-4 py-3">
+      <header
+        className={cn(
+          "flex items-center justify-between gap-3 px-4 py-3",
+          // The recessed header. `bg-muted/50` is the well fill this page
+          // already uses for `SectionHeading`, at the same opacity, so a
+          // reference panel's header and its own heading strips are one
+          // material and the primary panel is the only card-surfaced header
+          // on the screen. Separated from a strip by height and title size,
+          // which is what was distinguishing them anyway.
+          emphasis === "reference" && "bg-muted/50",
+        )}
+      >
         <div className="flex items-center gap-3 min-w-0">
           {Icon && (
             <div className={cn("p-1.5 rounded-md border shrink-0", TONE[tone])}>
@@ -149,7 +206,27 @@ export function Panel({
           )}
           <div className="min-w-0">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-sm font-medium text-foreground">{title}</h2>
+              {/*
+                `font-semibold` on the primary panel and nowhere else.
+
+                The queue's ROWS already took `font-medium` — the page's one
+                content weight — in the previous change, on the argument that
+                the list which asks a person to move is the list that gets the
+                weight. Carrying that up to its own title is the same argument
+                applied one level higher: the queue's heading now outranks the
+                two headings beside it by exactly the step its rows outrank
+                their rows. No new size, and `font-semibold` is already in the
+                app; this page simply had no use for it until there was a
+                genuine top of the hierarchy to mark.
+              */}
+              <h2
+                className={cn(
+                  "text-sm text-foreground",
+                  emphasis === "primary" ? "font-semibold" : "font-medium",
+                )}
+              >
+                {title}
+              </h2>
               {lead && (
                 <span
                   className={cn(
@@ -213,22 +290,43 @@ export function SectionHeading({
 }
 
 /**
- * **The leading date slot every list row on this page starts with.**
+ * **The leading DEADLINE slot. The queue draws it. Nothing else does.**
  *
- * ── Why it lives here and not in `ActionQueue.tsx` ────────────────────────
+ * ── It was given to all three lists, and that was the error ──────────────
  *
- * It was the queue's private `DateTile`, and that is what put three lists out
- * of register. The queue's headlines began at x≈108px — an 80px tile plus a
- * 12px gap — while the risk rows and the change rows, drawn in the same panel
- * grammar sixteen pixels to the right, began at x≈16px. Two visually identical
+ * The reasoning that spread it is preserved here because it was half right
+ * and the half that was right still holds. The queue's headlines began at
+ * x≈108px — an 80px tile plus a 12px gap — while risk rows and change rows,
+ * drawn in the same panel grammar, began at x≈16px. Two visually identical
  * lists, 92px apart at the one edge the eye uses to tell a list is a list.
+ * That ragged edge was real.
  *
- * Registering them was a choice between deleting the queue's tile and giving
- * the other two lists one, and the tile is not decoration: it carries the row's
- * date as an OBJECT in a fixed, tabular, achromatic column that can be scanned
- * without being read. Both other lists have a real date to put in it — a risk
- * condition has the day it appeared, a change has the day it moved — so both
- * get the column and all three now start their text on one vertical line.
+ * What was wrong was the remedy. Registering three lists by giving all three
+ * the same leading object made them **identical**, and they are not the same
+ * kind of thing. Worse, two of the three pills carried nothing: `Open risk`
+ * printed `first_detected_at`, which on the live project reads "17 Aug" on
+ * every one of five rows, and `What changed` printed the event date, likewise
+ * identical down the column — and to make room for it, that panel's relative
+ * time ("yesterday", "6 days ago"), which is the only recency statement a
+ * reader of a history actually uses, was deleted. **A column of identical
+ * values occupying the strongest position in every row is not register, it is
+ * noise with good posture.**
+ *
+ * So the register requirement is met where it is real and dropped where it is
+ * not. **Risk and change are stacked in the SAME column, one directly above
+ * the other, and they align with each other exactly** — both start their text
+ * at the panel's left edge, both terminate at the right, and that is where a
+ * ragged edge would actually have been read as one. The queue is alone in the
+ * other column with nothing above or below it, and reads at its own indent
+ * because it is a different kind of list.
+ *
+ * Register is a within-column obligation. Across a 16px gutter, between two
+ * lists that are not the same kind of thing, it is a false one — and paying
+ * for it in sameness is the trade the owner objected to.
+ *
+ * It stays exported from here rather than moving back into `ActionQueue.tsx`
+ * because the deletion note directly below is the other half of this argument
+ * and the two belong on one screen.
  *
  * ── What the tile shows ──────────────────────────────────────────────────
  *
@@ -260,6 +358,12 @@ export function SectionHeading({
  * user must not be handed "5 Aug" as a second, worse copy of it — and must
  * never be handed a bare date with no word saying whether it is a deadline or
  * a day something happened.
+ *
+ * ── Now that only one list draws it, it means one thing ──────────────────
+ *
+ * A pill at the head of a row on this page is a DEADLINE. It was ambiguous
+ * while three lists drew it and a reader had to know which panel they were in
+ * to know whether "17 Aug" was a date to hit or a date something happened.
  */
 export const ROW_DATE_SLOT = "w-20 shrink-0";
 
@@ -283,6 +387,31 @@ export function RowDate({ date }: { date: string | null | undefined }) {
     </div>
   );
 }
+
+/*
+  ── `RowTally` WAS HERE, AND IS DELETED ───────────────────────────────────
+
+  A leading slot on the risk rows carrying "×3" for a folded group — the
+  replacement for the useless `first_detected_at` pill, on the reasoning that
+  a risk row is a standing condition and the fact distinguishing one line from
+  the next is how many signals it folds.
+
+  It was built, rendered and then removed, because seen on the page it printed
+  the number TWICE:
+
+      ×3   3 variations exceed the principal agent's authority tolerance
+
+  `groupRiskSignals` writes the count into the title of every folded group —
+  through `RISK_GROUP_TITLE[code](n)`, or through the `· +N more` fallback —
+  so the count is already the sentence's own first token in exactly the rows a
+  tally would appear on, and absent from exactly the rows where it would be
+  blank. A leading column of it is redundant on every row it draws and empty on
+  every row it does not, which is a worse version of the pill it replaced.
+
+  The trailing `Badge` holding the same count is gone for the same reason and
+  is not coming back either. So `Open risk` leads with the SENTENCE and ends
+  with nothing, which is what the row actually has to say.
+*/
 
 /**
  * When the condition appeared — `RiskSignal.first_detected_at`, which is
@@ -456,6 +585,28 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 // The signals are not lost and not summarised away: every one of them is on
 // `/project-health`, in full, with its evidence and an Acknowledge control,
 // and the panel's only action goes there.
+//
+// ── Its row grammar, and how it differs from the other two lists ──────────
+//
+//   deadline · verb · clock chip     ← the queue. Bracketed at both ends: a
+//                                      date to hit, a move to make, and how
+//                                      long is left to make it.
+//   sentence                         ← HERE. Nothing but the condition, full
+//                                      width, one weight, under a tier
+//                                      heading that governs several of them.
+//   sentence · relative time         ← what changed. Right-weighted; the age
+//                                      is the only thing anyone asks of a
+//                                      history and it is quiet metadata.
+//
+// Three shapes, deliberately, because these are three kinds of thing and the
+// page had made them one — all three leading with the same grey date pill, of
+// which only the queue's carried a value that differed row to row.
+//
+// This list is the plain one on purpose. A standing condition has no clock, no
+// deadline and no count that its own sentence does not already state, so
+// anything drawn at either end of the row would be decoration or repetition.
+// Its distinguishing marks are the ones it earns: uniform full-width prose, a
+// tier heading above each block of it, and the page's only "All signals" link.
 
 export function RiskConditionBlock({ data }: { data: HomeData }) {
   const { riskGroups, riskCounts, riskUnavailable } = data;
@@ -465,6 +616,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     return (
       <Panel
         title="Risk"
+        emphasis="reference"
         icon={ShieldQuestion}
         tone="orange"
         hint="The risk engine did not respond — posture unknown, not clear."
@@ -503,8 +655,13 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
   return (
     <Panel
       title="Open risk"
-      lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open`}
+      // "of 11 open" said what the number was OF only if you already knew what
+      // this panel counts. The unit is named now — the rows below are folded
+      // SIGNALS, and the tally at the head of each says how many it folds, so
+      // the header and the column agree on what they are counting.
+      lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open signals`}
       leadTone={worst.severity === "red" ? "danger" : "muted"}
+      emphasis="reference"
       // The one link on this page that is SUPPOSED to go to Project health:
       // "show me every open signal" is a diagnosis, and that is the page that
       // diagnoses. Every ROW below goes to the object instead.
@@ -561,14 +718,36 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               is not asking anyone to move gives some back.
             */
             className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-            /* The tile is `aria-hidden` and a bare date must never be left to
-               imply a deadline. This is a condition's APPEARANCE date, and the
-               word is here, in the tooltip and in the accessible name. */
+            /*
+              ── Where the detection date went ────────────────────────────
+
+              Here, and only here. It was a pill at the head of the row and it
+              read "17 Aug" on every one of the live project's five rows — the
+              same value five times in the strongest position a row has. As a
+              tooltip it costs nothing, it keeps the word that says what kind
+              of date it is, and it is stated in full with its year, which the
+              pill never was.
+            */
             title={firstDetected(g) ? `Open since ${formatDateUk(firstDetected(g), "long")}` : undefined}
+            /*
+              The row's own sentence already names the count where there is
+              one to name, so this adds only the fact the row shows nowhere: the
+              date, in words, behind the word that says what kind of date it is.
+              Without it a screen-reader user gets the condition and nothing
+              about how long it has stood, because `title` is not reliably
+              announced on a link that already has an accessible name.
+            */
+            aria-label={
+              [
+                g.title,
+                g.contractual ? "contractual" : null,
+                g.count > 1 ? `${g.count} signals` : null,
+                firstDetected(g) ? `open since ${formatDateUk(firstDetected(g), "long")}` : null,
+              ]
+                .filter(Boolean)
+                .join(". ") + "."
+            }
           >
-            {/* The same leading slot the queue and the change feed draw, so
-                three lists on one screen start their text on one line. */}
-            <RowDate date={firstDetected(g)} />
             {/*
               ── Two lines, and never a broken word ────────────────────────
 
@@ -589,13 +768,19 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
                   folded line never upgrades a commercial guide into a breach. */}
               {g.contractual && <span className="text-muted-foreground"> · contractual</span>}
             </p>
-            {/* Only ever more than one signal folded into a line needs saying;
-                a bare "1" beside a single sentence was decoration. */}
-            {g.count > 1 && (
-              <Badge variant="neutral" className="shrink-0 tabular-nums">
-                {g.count}
-              </Badge>
-            )}
+            {/*
+              ── The trailing count badge is GONE, and nothing replaced it ──
+
+              Two reasons, either of which is sufficient. It restated a number
+              the sentence beside it already opens with (see the deletion note
+              on `RowTally`). And it sat in exactly the position the queue puts
+              its clock chip, so two lists on one screen both terminated in a
+              small bordered pill meaning two unrelated things.
+
+              **The right edge of a row on this page is now a clock or nothing,
+              and only the queue has clocks.** That is the rule; a future count,
+              rating or status pill on a risk row breaks it.
+            */}
           </Link>
         )),
       ])}
