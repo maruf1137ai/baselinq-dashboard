@@ -40,6 +40,7 @@ import { useS3Upload } from "@/hooks/useS3Upload";
 import { useRoles } from "@/hooks/useRoles";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { INPUT_BASE, SELECT_BASE, TEXTAREA_BASE } from "@/lib/constants";
+import { PageHeader } from "@/components/ui/page-header";
 
 const qInputCls = INPUT_BASE;
 const qSelectCls = SELECT_BASE + " appearance-none";
@@ -472,6 +473,11 @@ const Index = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Home was the one page in the app with no page title, so its first
+            band was a banner and its top line sat where every other page's
+            title sits. It now opens on the same header as everywhere else. */}
+        <PageHeader title="Home" />
+
         <InsuranceBanner />
 
         {/* AI MVP — nudge owners/admins to mark the project's primary

@@ -261,8 +261,10 @@ export default function UploadDocumentWizard() {
 
   return (
     <DashboardLayout>
-      {/* Canonical page wrapper — DashboardLayout supplies p-6, no max-w. */}
-      <div className="space-y-4">
+      {/* Canonical page wrapper — DashboardLayout supplies p-6, no max-w.
+          space-y-6, not space-y-4: the band gap under a page header is 24px
+          everywhere else, and this page was the only one at 16px. */}
+      <div className="space-y-6">
         {/* Header — canonical (text-2xl title, h-8 buttons, no subtitle) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

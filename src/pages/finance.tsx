@@ -191,7 +191,7 @@ const Finance = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`text-sm py-3 px-5 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
@@ -202,7 +202,7 @@ const Finance = () => {
           </header>
 
           {activeTab === "Variation Orders" && (
-            <main className="pt-4 space-y-4">
+            <main className="pt-6 space-y-4">
               {/* One toolbar row, same shape as the other three finance tabs:
                   search grows on the left, actions right-aligned beside it. */}
               {/* No "New Variation Order" here, deliberately.

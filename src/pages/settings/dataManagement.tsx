@@ -10,6 +10,7 @@
 // import { Input } from '@/components/ui/input';
 
 import UpcomingFeature from "@/components/settings/UpcomingFeature";
+import { PageHeader } from "@/components/ui/page-header";
 
 const DataManagement = () => {
   // const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
@@ -18,10 +19,7 @@ const DataManagement = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Data Management</h2>
-        <p className="text-sm text-muted-foreground mt-1">Export, import, and manage your project data.</p>
-      </div>
+      <PageHeader title="Data Management" description="Export, import, and manage your project data." />
       <UpcomingFeature title="Data Management" />
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 

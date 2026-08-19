@@ -51,18 +51,40 @@ describe("formatCertDate", () => {
 // ── formatCertCurrency ─────────────────────────────────────────────────────
 
 describe("formatCertCurrency", () => {
-  // The helper uses Intl en-ZA (South African) — space thousands separator,
-  // comma decimal. That's deliberate (this is a JBCC / ZAR product).
+  // South African convention: space thousands separator, comma decimal. The
+  // format is pinned in the helper rather than taken from the reader's ICU
+  // locale data — a certificate has to read the same on every machine, and
+  // `250,000.00` on a ZAR certificate can be read as a thousandth of itself.
+  //
+  // Every space here is U+00A0, INCLUDING the one after the currency code.
+  // These assertions are the record of that: an ASCII space would let the
+  // figure wrap at a thousands separator, leaving a complete, plausible,
+  // wrong number on one line.
   it("formats a string amount with currency prefix", () => {
-    expect(formatCertCurrency("250000", "ZAR")).toBe("ZAR 250 000,00");
+    expect(formatCertCurrency("250000", "ZAR")).toBe("ZAR 250 000,00");
   });
 
   it("formats a numeric amount", () => {
-    expect(formatCertCurrency(250000, "ZAR")).toBe("ZAR 250 000,00");
+    expect(formatCertCurrency(250000, "ZAR")).toBe("ZAR 250 000,00");
+  });
+
+  it("uses no-break spaces throughout, so a figure never wraps mid-number", () => {
+    const out = formatCertCurrency(108500000, "ZAR");
+    expect(out).toBe("ZAR 108 500 000,00");
+    expect(out).not.toMatch(/ /); // no ASCII space anywhere
+    expect([...out].filter(c => c === " ")).toHaveLength(3); // one after ZAR, two grouping
   });
 
   it("preserves cents", () => {
-    expect(formatCertCurrency("250000.5", "ZAR")).toBe("ZAR 250 000,50");
+    expect(formatCertCurrency("250000.5", "ZAR")).toBe("ZAR 250 000,50");
+  });
+
+  it("keeps the sign on a negative amount", () => {
+    expect(formatCertCurrency(-1500.25, "ZAR")).toBe("ZAR -1 500,25");
+  });
+
+  it("does not group below a thousand", () => {
+    expect(formatCertCurrency(999.99, "ZAR")).toBe("ZAR 999,99");
   });
 
   it("falls back to no symbol when currency is missing", () => {

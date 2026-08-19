@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { PageHeader } from "@/components/ui/page-header";
 
 // "+ Action" menu — order matches Werner's spec (rev G):
 //   SI → VO → RFI → GI
@@ -895,17 +896,23 @@ export default function Task() {
           </div>
         ) : (
           <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-normal tracking-tight text-foreground">Tasks</h1>
-              <Link
-                to="/help/tasks"
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                title="Who can create / reply / sign / close / escalate each task type"
-              >
-                <HelpCircle className="h-4 w-4" />
-                Workflow reference
-              </Link>
-            </div>
+            {/* The board is a fixed-height flex column rather than the usual
+                `space-y-6` stack, so the 24px band gap under the header is
+                carried by `mb-6` here. Same 24px, same baseline. */}
+            <PageHeader
+              className="mb-6"
+              title="Tasks"
+              actions={
+                <Link
+                  to="/help/tasks"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  title="Who can create / reply / sign / close / escalate each task type"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  Workflow reference
+                </Link>
+              }
+            />
             <TaskFilterBar
               filters={filters}
               onFiltersChange={setFilters}

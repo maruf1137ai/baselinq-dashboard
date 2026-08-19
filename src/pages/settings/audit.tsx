@@ -27,6 +27,7 @@
 
 import UpcomingFeature from "@/components/settings/UpcomingFeature";
 import { formatDate } from "@/lib/dateUtils";
+import { PageHeader } from "@/components/ui/page-header";
 
 // // JBCC contractual time limits per task type (in calendar days)
 // const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: string }[]> = {
@@ -198,10 +199,7 @@ const Audit = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Audit Logs & Compliance</h2>
-        <p className="text-sm text-muted-foreground mt-1">Track all system actions, JBCC compliance, and contractual deadlines.</p>
-      </div>
+      <PageHeader title="Audit Logs & Compliance" description="Track all system actions, JBCC compliance, and contractual deadlines." />
       <UpcomingFeature title="Audit & Compliance" />
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 
