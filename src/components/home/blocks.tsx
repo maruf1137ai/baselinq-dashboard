@@ -212,6 +212,90 @@ export function SectionHeading({
   );
 }
 
+/**
+ * **The leading date slot every list row on this page starts with.**
+ *
+ * ── Why it lives here and not in `ActionQueue.tsx` ────────────────────────
+ *
+ * It was the queue's private `DateTile`, and that is what put three lists out
+ * of register. The queue's headlines began at x≈108px — an 80px tile plus a
+ * 12px gap — while the risk rows and the change rows, drawn in the same panel
+ * grammar sixteen pixels to the right, began at x≈16px. Two visually identical
+ * lists, 92px apart at the one edge the eye uses to tell a list is a list.
+ *
+ * Registering them was a choice between deleting the queue's tile and giving
+ * the other two lists one, and the tile is not decoration: it carries the row's
+ * date as an OBJECT in a fixed, tabular, achromatic column that can be scanned
+ * without being read. Both other lists have a real date to put in it — a risk
+ * condition has the day it appeared, a change has the day it moved — so both
+ * get the column and all three now start their text on one vertical line.
+ *
+ * ── What the tile shows ──────────────────────────────────────────────────
+ *
+ * Day and short month, on `bg-muted` in `text-foreground`. The YEAR appears
+ * only when the date falls outside the current year: four characters on every
+ * row for a fact identical on nearly all of them is exactly the noise this
+ * page is removing, and a deadline eighteen months out must never be mistaken
+ * for one this year.
+ *
+ * ── What it does NOT show ────────────────────────────────────────────────
+ *
+ * Nothing at all when the row has no date. Not a dash, not a placeholder: "—"
+ * in a date tile reads as a date that failed to load, and these have not
+ * failed to load — a certificate awaiting certification genuinely has no due
+ * date anywhere in the payload. The slot keeps its width so the headlines
+ * still align, and the row says which kind of absence it is elsewhere (the
+ * queue's chip reads "Not dated" or "No date").
+ *
+ * ── Colour ───────────────────────────────────────────────────────────────
+ *
+ * None, ever. Severity rule 4 gives the ink to the element that NAMES the
+ * breach — the chip, which knows whether the clock has run out. A date is a
+ * fact about the calendar and is the same fact whether it has passed or not.
+ *
+ * ── Accessibility ────────────────────────────────────────────────────────
+ *
+ * `aria-hidden`, always. Every row that draws one states the date in full, in
+ * words and with its year, in its own `aria-label` or `title`. A screen-reader
+ * user must not be handed "5 Aug" as a second, worse copy of it — and must
+ * never be handed a bare date with no word saying whether it is a deadline or
+ * a day something happened.
+ */
+export const ROW_DATE_SLOT = "w-20 shrink-0";
+
+export function RowDate({ date }: { date: string | null | undefined }) {
+  const parsed = date ? new Date(date) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    return <div className={ROW_DATE_SLOT} aria-hidden />;
+  }
+
+  const day = parsed.getDate();
+  const month = parsed.toLocaleDateString("en-GB", { month: "short" });
+  const sameYear = parsed.getFullYear() === new Date().getFullYear();
+  const year = String(parsed.getFullYear()).slice(2);
+
+  return (
+    <div
+      className={`${ROW_DATE_SLOT} rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-foreground text-center`}
+      aria-hidden
+    >
+      {`${day} ${month}${sameYear ? "" : ` ${year}`}`}
+    </div>
+  );
+}
+
+/**
+ * When the condition appeared — `RiskSignal.first_detected_at`, which is
+ * `auto_now_add` on the model and therefore genuinely dates the signal.
+ *
+ * The worst signal in the group, which is the same member every other value on
+ * the row already comes from (`groupRiskSignals` returns `signals` worst
+ * first). Never `last_evaluated_at`: that is `auto_now` and moves on every
+ * rules run, so a column of it would redate the whole register nightly.
+ */
+const firstDetected = (g: { signals: { first_detected_at?: string }[] }): string | null =>
+  g.signals[0]?.first_detected_at ?? null;
+
 function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
@@ -224,170 +308,89 @@ function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
   );
 }
 
-/**
- * Label · figure · what it is measured against. Three lines, no prose.
- *
- * ── Why `compare` exists ──────────────────────────────────────────────────
- *
- * It is the replacement for the sentence that used to sit under every number.
- * Stripe makes the comparison range a first-class control and every Xero
- * Business Snapshot figure carries a prior-period delta; none of them writes
- * prose beneath a value. So wherever a figure previously needed explaining, it
- * now prints its **baseline** instead: not "Certified value against the
- * contract sum — a commercial measure, not physical progress" but
- * `82% of R 10 000 000,00`.
- *
- * A comparison is a figure, not prose, and it is held to that: one clause, no
- * verb, no caveat smuggled in. It also earns its line back — stating certified
- * against the contract sum here deleted a whole separate "Share of contract
- * sum" cell.
- *
- * `caveat` is the tooltip, and only for what neither the label nor the
- * comparison can carry honestly — that this contract records a retention rate
- * but no retention limit, for instance. It never holds anything the face of
- * the cell needed in order to be true.
- *
- * **No icon.** NN/g measured this directly: elements carrying superfluous
- * graphics make visual search harder, and elements without them make the
- * numbers more salient. Icons on this page appear only where they are the
- * control or the whole message (an outage, an empty queue).
- */
-function Figure({
-  label,
-  value,
-  compare,
-  caveat,
-  badge,
-  emphasis = false,
-  danger = false,
-  to,
-}: {
-  /** Five words at most. */
-  label: string;
-  value: string | null;
-  /** One comparison clause — a baseline, a rate, a split. Never a sentence. */
-  compare?: string;
-  caveat?: string;
-  badge?: React.ReactNode;
-  /** The figures a reader looks for first, at the stat size. */
-  emphasis?: boolean;
-  danger?: boolean;
-  /**
-   * Where the figure came from. A summary you cannot open is a poster: every
-   * number here is the total of a list the app already has a page for, and
-   * the reader's next question is always "which ones". Omitted only where no
-   * list exists to open — a figure the engine could not compute.
-   *
-   * The gate is NOT here. Each cell is pushed inside the permission branch
-   * that already decided the figure may be shown at all, so a link can never
-   * become a way in to something the viewer was not served.
-   */
-  to?: string;
-}) {
-  // The row hover already used by every list on this page. Layout is
-  // unchanged: the padding it needs is cancelled by an equal negative margin.
-  const interactive =
-    "rounded-lg -mx-2 px-2 -my-1 py-1 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring";
-  const inner = (
-    <>
-      <p className="text-xs text-muted-foreground truncate">{label}</p>
-      <div className="flex items-baseline gap-2 mt-0.5 min-w-0">
-        {/*
-          ── A number is never truncated ──────────────────────────────────
+/*
+  ── `Figure` WAS HERE, AND IS DELETED ─────────────────────────────────────
 
-          This carried `truncate`. At exactly the `lg` breakpoint the strip
-          gave each of five cells about 125px and "R 8 200 000,00" needs
-          about 135px at 18px type, so it rendered as "R 8 200 0…" — a
-          DIFFERENT NUMBER, presented with the same confidence as the right
-          one, and an ellipsis is not a warning that digits are missing.
+  A label / value / comparison cell with an `emphasis` flag that set its value
+  in `text-lg`. It had ZERO importers: `PositionStripBlock` was its only call
+  site and moved into `StatusBand.tsx`'s zones months ago, and nothing has
+  used it since.
 
-          A label may be truncated because a clipped word is recoverable from
-          context. A figure may not. `break-words` is the fallback of last
-          resort: if a cell is ever too narrow, the figure wraps and stays
-          whole rather than clipping. The grid below is also fixed so the
-          case does not arise in the first place.
-        */}
-        <p
-          className={cn(
-            "tabular-nums break-words",
-            emphasis ? "text-lg" : "text-sm",
-            danger ? "text-destructive" : "text-foreground",
-          )}
-        >
-          {value ?? "—"}
-        </p>
-        {badge}
-      </div>
-      {compare && (
-        // Same rule as the value above, and for the same reason: a comparison
-        // is a FIGURE ("after R 410 000,00 retention", "82% of R 10 000
-        // 000,00"), so it may wrap but it may never clip. It carried
-        // `truncate` and lost digits off the retention deduction at the `lg`
-        // breakpoint exactly as the value did.
-        <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{compare}</p>
-      )}
-    </>
-  );
+  Dead code is reason enough, but it was specifically this dead code's
+  `emphasis` prop that had to go. It was one of exactly two `text-lg`
+  treatments in the whole homepage, and it existed to make several figures
+  co-equally large — the arrangement the page was rebuilt to get away from,
+  where five numbers at one weight say nothing about which of them matters.
+  Left in the file it is a working, documented, importable way for the next
+  person to recreate that.
 
-  return to ? (
-    <Link to={to} className={cn("min-w-0 block", interactive)} title={caveat}>
-      {inner}
-    </Link>
-  ) : (
-    <div className="min-w-0" title={caveat}>
-      {inner}
-    </div>
-  );
-}
+  Nothing is lost: `Zone` in `StatusBand.tsx` renders the same three parts —
+  name, figure, comparison — with a shape underneath, and is the only cell
+  grammar this page now has.
+*/
 
 // ── The verdict ───────────────────────────────────────────────────────────
 
 /**
- * One line at the top of the page, naming the single worst true fact.
+ * **The page's title.** The single worst true fact, or the statement that
+ * there is not one.
  *
- * ── Why this exists ───────────────────────────────────────────────────────
+ * ── Why this is the h1 and "Home" is deleted ─────────────────────────────
  *
- * The owner's complaint about this page was that there is "nothing that tells
- * you where we are". Everything above states a figure; nothing above states a
- * CONCLUSION. Five figures at equal weight is a report, and on a project where
- * nothing is wrong the page drew no coloured element at all — so a reader had
- * no way to tell "this project is fine" from "I have not been told anything".
+ * This was `text-sm text-muted-foreground`, in `PageHeader`'s `actions` slot —
+ * top-RIGHT, the position every other page in this app fills with buttons and
+ * which users are therefore trained to skip. Meanwhile the largest element on
+ * the page, at 24px, was the word "Home": a constant string, identical on
+ * every project on every day, carrying exactly zero information. The page
+ * applied hierarchy rigorously inside each module and inverted it between
+ * them.
  *
- * The fact itself is chosen by `homeVerdict` in `homeSignals.ts`, off the same
- * ranked, permission-filtered queue the panel below renders. It can therefore
- * never name something the reader is not shown, and never says "nothing is
- * late" over a source that did not answer.
+ * So the two swap. The verdict is the h1, at 24px, top-left, first in reading
+ * order — and "Home" is gone rather than demoted, because there is nowhere on
+ * a page it belongs. The project's name is already in the sidebar switcher,
+ * where it is also the control that changes it.
  *
- * ── Colour ────────────────────────────────────────────────────────────────
+ * The page now leads with "PC-006 — 9 days past its date · 2 others past a
+ * date", or with "Nothing is past a contractual date." Both are answers. The
+ * word "Home" was not.
  *
- * Severity rule 1: only a breach that has ALREADY HAPPENED may carry colour.
- * `breach` — something past a contractual date — is `text-destructive`.
- * Everything else is achromatic, including "closes in 3 days", which is a
- * deadline and not yet a breach.
+ * ── It also fixes an overflow ────────────────────────────────────────────
  *
- * Severity rule 4 is why the line carries no badge, no icon and no tile: this
- * IS the element that names the breach, so it is the one that gets the ink,
- * and it gets it once.
+ * `actions` is `flex items-center gap-2 shrink-0`. A headline plus a "· N
+ * others" tail could not wrap inside it and pushed the header wider than the
+ * column at and below 1280px. The title slot is `min-w-0` and wraps, so the
+ * bug goes with the move rather than needing a rule of its own.
  *
- * ── Height ────────────────────────────────────────────────────────────────
+ * ── The split between `lead` and `tail` ──────────────────────────────────
  *
- * One line of `text-sm` and nothing else. The page is held to one screen at
- * 1440px and this is the only thing added to it, so it draws no container,
- * no border and no vertical padding of its own.
+ * `homeVerdict` returns them apart. The lead names ONE object and is the
+ * sentence; the tail is a count of rows already listed in the queue below. A
+ * subordinate count set at 24px would compete with the fact it qualifies, so
+ * the tail rides beside the title in `text-sm`, on the same baseline —
+ * `PageHeader`'s existing `meta` grammar, unchanged.
+ *
+ * ── Colour ───────────────────────────────────────────────────────────────
+ *
+ * Severity rule 1, exactly as before: only a breach that has ALREADY HAPPENED
+ * carries colour. `breach` is `text-destructive`; everything else, including
+ * "closes in 3 days", is the plain title colour. Rule 4 is why there is no
+ * badge, icon or tile beside it — this IS the element that names the breach.
+ *
+ * A `clear` verdict is deliberately NOT green. "Nothing is past a contractual
+ * date." at title size, in the page's own ink, is the whole message; tinting
+ * it would spend the page's one colour channel on the absence of news.
  */
-export function VerdictLine({ data }: { data: HomeData }) {
+export function VerdictTitle({ data }: { data: HomeData }) {
   const { verdict } = data;
-  if (!verdict) return null;
+
+  // NOTHING is asserted while the page is loading — `useHomeData` holds
+  // `verdict` at null until every source has answered, precisely so the title
+  // never reads as an all-clear about data that has not arrived. The h1 says
+  // what the page is doing instead, which is a state and not a label.
+  if (!verdict) return <span className="text-muted-foreground">Reading this project</span>;
 
   const body = (
-    <span
-      className={cn(
-        "text-sm",
-        verdict.tone === "breach" ? "text-destructive" : "text-muted-foreground",
-      )}
-    >
-      {verdict.text}
-    </span>
+    <span className={cn(verdict.tone === "breach" && "text-destructive")}>{verdict.lead}</span>
   );
 
   // A verdict that names an object links to it, for the same reason every
@@ -395,13 +398,19 @@ export function VerdictLine({ data }: { data: HomeData }) {
   return verdict.href ? (
     <Link
       to={verdict.href}
-      className="inline-block rounded-sm outline-none hover:underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-sm outline-none hover:underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring"
     >
       {body}
     </Link>
   ) : (
     body
   );
+}
+
+/** The "· N others past a date" clause, for `PageHeader`'s `meta` slot. */
+export function VerdictTail({ data }: { data: HomeData }) {
+  const tail = data.verdict?.tail;
+  return tail ? <>· {tail}</> : null;
 }
 
 // ── Action queue ──────────────────────────────────────────────────────────
@@ -542,8 +551,24 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               usable source falls back to Project health.
             */
             to={riskGroupHref(g)}
-            className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            /*
+              `py-2` where the queue keeps `py-2.5`. Four pixels a row is not a
+              refinement, it is the priority made geometric: measured on the
+              real layout the right column ran ~464px of passive reference
+              against ~368px of the work, on a page whose own comment holds the
+              right column to passive reference because 80% of fixations land
+              left. The queue keeps its pitch and its weight; the column that
+              is not asking anyone to move gives some back.
+            */
+            className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            /* The tile is `aria-hidden` and a bare date must never be left to
+               imply a deadline. This is a condition's APPEARANCE date, and the
+               word is here, in the tooltip and in the accessible name. */
+            title={firstDetected(g) ? `Open since ${formatDateUk(firstDetected(g), "long")}` : undefined}
           >
+            {/* The same leading slot the queue and the change feed draw, so
+                three lists on one screen start their text on one line. */}
+            <RowDate date={firstDetected(g)} />
             {/*
               ── Two lines, and never a broken word ────────────────────────
 

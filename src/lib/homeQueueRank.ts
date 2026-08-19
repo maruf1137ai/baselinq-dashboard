@@ -264,6 +264,25 @@ export interface QueueItem {
   /** Which calendar `daysRemaining` is counted on. Null when there is none. */
   clock: Clock;
   /**
+   * **The countdown as a finished sentence, written by the server.**
+   *
+   * "12 working days remaining", "2 working days overdue", "due today". Where
+   * a source publishes one, every renderer must print it VERBATIM and must
+   * never rebuild the same sentence out of `daysRemaining` and `clock`.
+   *
+   * That is not a style preference. Pairing a number with a unit in the client
+   * is the exact operation that produced the countdown defect this field
+   * exists to close — a calendar-day count printed beside the word "working",
+   * overstating a JBCC notice period by about a third — and the server now
+   * owns the pairing so it cannot be got wrong a second time. See
+   * `risk/models_evidence.py::days_remaining_label` and `TimeBarLike`.
+   *
+   * Null on sources that publish no such string. Those rows fall back to
+   * `daysRemaining` + `clock`, which is safe for them precisely because their
+   * count and their unit come from one derivation.
+   */
+  countdownLabel?: string | null;
+  /**
    * THE DATE THIS ROW'S CLOCK FALLS ON — a deadline date, a payment due date,
    * a task's due date — as the payload gives it, `YYYY-MM-DD` or ISO.
    *

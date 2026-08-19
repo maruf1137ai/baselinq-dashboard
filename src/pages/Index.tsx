@@ -101,7 +101,8 @@ import {
   LoadIssueBanner,
   RiskConditionBlock,
   SetupLineBlock,
-  VerdictLine,
+  VerdictTail,
+  VerdictTitle,
 } from "@/components/home/blocks";
 import { StatusBandBlock } from "@/components/home/StatusBand";
 import { WhatChangedBlock } from "@/components/home/WhatChanged";
@@ -135,7 +136,9 @@ const Index = () => {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <PageHeader title="Home" />
+          {/* The title states the state. "Home" said nothing about either of
+              the two situations below, both of which have a fix. */}
+          <PageHeader title={hasNoProjects ? "No projects yet" : "No project selected"} />
           {hasNoProjects ? (
             <EmptyState
               icon={FolderOpen}
@@ -168,7 +171,7 @@ const Index = () => {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <PageHeader title="Home" />
+          <PageHeader title="This project's data could not be loaded" />
           <EmptyState
             icon={ShieldAlert}
             title="This project's data could not be loaded"
@@ -233,24 +236,30 @@ const Index = () => {
           page is held to.
         */}
         {/*
-          ── The verdict, on the title row ─────────────────────────────────
+          ── The verdict IS the title ──────────────────────────────────────
 
           The page states one thing outright before any panel: the single
           worst fact that is true right now, or the plain statement that there
-          is not one. See `VerdictLine`.
+          is not one. See `VerdictTitle`.
 
-          It rides in the header's `actions` slot rather than on a line of its
-          own, and that is a height decision rather than a layout preference:
-          the page is held to one screen at 1440px, the title row is already
-          drawn, and a line of its own costs the line plus a 16px stack gap for
-          a sentence the header has room to carry. `actions` is a flex row that
-          shrinks nothing, and the verdict is one short clause.
+          It used to ride in the header's `actions` slot at `text-sm`, muted —
+          top-right, where every other page in this app puts buttons and where
+          readers have learnt not to look — while the biggest element on the
+          screen was the word "Home". That is hierarchy applied inside every
+          module and inverted between them, and it is the page's whole 7/10.
 
-          `data.verdict` is null while the page is loading and `VerdictLine`
-          renders nothing for it, so the header never carries an all-clear
-          about data that has not arrived. See the guard in `useHomeData`.
+          So the two swapped and "Home" is deleted outright: the project's name
+          is already in the sidebar switcher, and a page does not need to tell
+          a reader which page it is when its title can tell them where the
+          project is instead. The `· N others` clause rides in `meta`, beside
+          the title on the same baseline, because it qualifies the fact rather
+          than being one.
+
+          `data.verdict` is null while the page is loading and `VerdictTitle`
+          says so rather than asserting an all-clear about data that has not
+          arrived. See the guard in `useHomeData`.
         */}
-        <PageHeader title="Home" actions={<VerdictLine data={data} />} />
+        <PageHeader title={<VerdictTitle data={data} />} meta={<VerdictTail data={data} />} />
 
         {/*
           ── The precondition stack: ONE block, not four ────────────────────

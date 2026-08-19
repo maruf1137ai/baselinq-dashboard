@@ -129,7 +129,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
-import { BALANCE_LABEL, FINANCE_TAB } from "@/lib/homeSignals";
+import { BALANCE_LABEL, FINANCE_TAB, REVISED_SUM_DOUBLE_COUNT } from "@/lib/homeSignals";
 import { cn } from "@/lib/utils";
 import type { ContractTimeline, MilestoneDrift } from "@/lib/homeVisuals";
 import type { HomeData } from "@/hooks/useHomeData";
@@ -157,6 +157,7 @@ function Zone({
   compare,
   badge,
   caveat,
+  note,
   children,
   footnote,
 }: {
@@ -166,7 +167,26 @@ function Zone({
   value: string | null;
   compare?: string | null;
   badge?: React.ReactNode;
+  /**
+   * The long form, on `title`. Kept for the reader who wants the full
+   * derivation — but nothing load-bearing may live here alone. See `note`.
+   */
   caveat?: string;
+  /**
+   * **The load-bearing caveat, ON THE PAGE.**
+   *
+   * "Certified, not paid", "a commercial measure, not physical progress" and
+   * "ex-VAT" were `title` attributes, and a `title` attribute does not exist on
+   * a touch device, in print, in a screenshot, or in the PDF somebody sends an
+   * insurer — which are four of the ways these figures actually travel. A
+   * caveat that changes what a number MEANS is not a hover affordance;
+   * `CommercialTab` already argues this and renders its `warning` visibly, and
+   * this is the same rule applied to the same figures on the other screen.
+   *
+   * Held to one short line. What was cut to pay for it is the Money zone's
+   * fourth footnote clause — see below.
+   */
+  note?: string | null;
   children?: React.ReactNode;
   /** What this series could not show. Printed, never swallowed. */
   footnote?: string | null;
@@ -197,7 +217,12 @@ function Zone({
 
       {children}
 
-      {footnote && <p className="text-xs text-muted-foreground mt-auto">{footnote}</p>}
+      {(footnote || note) && (
+        <div className="mt-auto">
+          {footnote && <p className="text-xs text-muted-foreground">{footnote}</p>}
+          {note && <p className="text-xs text-muted-foreground">{note}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -362,8 +387,23 @@ function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
  * making. It is deliberately NOT scaled against the milestone's own duration,
  * which would read as a proportion of the work done.
  */
+/** How many slipped milestones the bar draws. The rest are counted, not hidden. */
+const MILESTONE_ROWS = 4;
+
+/**
+ * "showing 4 of 9 slipped", or null when the bar draws all of them.
+ *
+ * The bar took the worst four and said nothing, so a programme with nine
+ * slipped milestones rendered as a programme with four. A chart that shows a
+ * subset is not wrong for showing a subset; it is wrong for not saying so.
+ */
+export function milestoneCapNote(drift: MilestoneDrift): string | null {
+  const n = drift.rows.filter((r) => r.slipDays > 0).length;
+  return n > MILESTONE_ROWS ? `showing ${MILESTONE_ROWS} of ${n} slipped` : null;
+}
+
 function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
-  const slipped = drift.rows.filter((r) => r.slipDays > 0).slice(0, 4);
+  const slipped = drift.rows.filter((r) => r.slipDays > 0).slice(0, MILESTONE_ROWS);
   if (slipped.length === 0) return null;
   const worst = drift.worstSlipDays ?? 1;
 
@@ -475,6 +515,37 @@ function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
  * there is no planned S-curve to draw against this one, and a flat line must
  * never be read as a plan. It is a ceiling.
  */
+/**
+ * **Why the curve is not drawn**, in the reader's words, or null when it is.
+ *
+ * `CertifiedCurve` returns null in three separate cases and each of them left
+ * the zone with a headline figure and an empty 64px hole under it. A reader
+ * cannot tell a chart that has nothing to say from a chart that failed, and
+ * the difference matters most on the zone that carries the money. Each reason
+ * is a fact about the data, so each is stated as one.
+ *
+ * These conditions mirror the early returns in `CertifiedCurve` exactly; they
+ * are computed here rather than reported back out of the component because a
+ * child that renders null cannot hand its parent a reason.
+ */
+export function certifiedCurveNote(
+  points: { date: string; cumulative: number }[],
+  ceiling: number | null,
+): string | null {
+  if (points.length === 0) return null; // The zone's own figure already says it.
+  if (points.length === 1) return "one certificate — no curve to draw yet";
+  const t = (d: string) => new Date(d).getTime();
+  const first = t(points[0].date);
+  const last = t(points[points.length - 1].date);
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) {
+    return "every certificate carries one date — no time axis to draw on";
+  }
+  const latest = points[points.length - 1].cumulative;
+  const top = ceiling !== null && ceiling > 0 ? Math.max(ceiling, latest) : latest;
+  if (!(top > 0)) return "nothing certified yet — no curve to draw";
+  return null;
+}
+
 function CertifiedCurve({
   points,
   ceiling,
@@ -684,6 +755,9 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
     variationPosition: vos,
     variationsTruncated,
     certificatesTruncated,
+    retentionReleaseKnown,
+    projectUnavailable,
+    milestonesUnavailable,
   } = data;
 
   const zones: React.ReactNode[] = [];
@@ -693,7 +767,9 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
   // when the works are due.
   const overrun = time.overrun && time.remainingDays !== null;
   const driftLine =
-    milestoneDrift.tracked === 0 && milestoneDrift.untracked === 0
+    milestonesUnavailable
+      ? "Milestones could not be read"
+      : milestoneDrift.tracked === 0 && milestoneDrift.untracked === 0
       ? null
       : footnoteOf([
           milestoneDrift.tracked > 0
@@ -714,7 +790,14 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           : days(Math.abs(time.remainingDays))
       }
       compare={
-        !time.hasDates
+        // ── AN OUTAGE IS NOT AN EMPTY PROJECT ────────────────────────────
+        // `project` comes from a paged walk that can fail or truncate, and
+        // when it does `summariseTime` reports no dates — which read as
+        // "No project timeline recorded", a confident statement about a
+        // project nothing was read from. The two are now distinguished.
+        projectUnavailable
+          ? "This project's record could not be read"
+          : !time.hasDates
           ? "No project timeline recorded"
           : overrun
             ? "past the contract completion date"
@@ -745,6 +828,9 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         ) : undefined
       }
       caveat="Calendar days against the contract dates. Not a measure of what has been built — Baselinq records none."
+      // On the page, not on a tooltip: the whole risk with a date axis is
+      // that a reader takes elapsed time for progress.
+      note="Calendar days — not a measure of what has been built."
       footnote={canViewFinance ? driftLine : null}
     >
       {timeline.hasAxis ? <ContractAxis timeline={timeline} /> : null}
@@ -782,10 +868,23 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           ) : undefined
         }
         caveat="Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
+        /*
+          ── THE FOOTNOTE, CUT FROM FOUR CLAUSES TO TWO FIGURES ────────────
+
+          It ran "N undated, not plotted · R X in flight · R Y still to
+          certify · R Z retention at 5%" — four clauses in 11px grey, of which
+          a reader took the first they could parse and stopped. Two survive,
+          and they are the two that are FIGURES the reader came for: the
+          balance still to certify, and retention. `in flight` went to
+          /finance, where the certificates it counts are listed; it is a
+          figure about work in progress, not about the position.
+
+          What replaced the two clauses is not more prose — it is the
+          disclosures that were missing (`note` below, and the unpriced and
+          unplotted counts), which are the ones a reader cannot recover from
+          anywhere else on the page.
+        */
         footnote={footnoteOf([
-          // Every disclosure this curve owes the reader.
-          curve.undated > 0 ? `${curve.undated} undated, not plotted` : null,
-          curve.inFlight !== null ? `${formatZAR(curve.inFlight)} in flight` : null,
           // `BALANCE_LABEL` lower-cased: "R 2 000 000,00 still to certify". It
           // read "remaining", which named the same number differently from
           // Project Health one click away, and named the WRONG question —
@@ -796,8 +895,43 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             : `${formatZAR(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
           retention.held === null
             ? null
-            : `${formatZAR(retention.held)} retention${retention.ratePct === null ? "" : ` at ${retention.ratePct}%`}`,
+            : // "gross" is said outright where no posted certificate carried a
+              // `retention_release`, because the figure then reports money the
+              // employer may no longer hold. Project Health has stated this
+              // all along; Home printed the gross figure unqualified.
+              `${formatZAR(retention.held)} retention${
+                retention.ratePct === null ? "" : ` at ${retention.ratePct}%`
+              }${retentionReleaseKnown ? "" : ", gross — no releases recorded"}`,
+          // What the curve could not draw, and why it drew nothing at all.
+          curve.undated > 0 ? `${curve.undated} undated, not plotted` : null,
+          certifiedCurveNote(curve.points, curve.ceiling),
+          // An approved variation with no `grand_total` is inside the revised
+          // sum at R0 — hence inside the percentage above and inside this
+          // curve's ceiling. Counted here rather than left silent, the same
+          // way the run discloses what it could not date.
+          money.variationsUnpriced > 0
+            ? `${money.variationsUnpriced} approved variation${
+                money.variationsUnpriced === 1 ? "" : "s"
+              } not priced, so counted at zero in the sum above`
+            : null,
         ])}
+        /*
+          ── The two caveats that change what these numbers MEAN ───────────
+
+          Both were `title` attributes. The first is the one Project Health
+          renders as a visible `warning` on the same figure and Home did not:
+          the revised sum can count a signed variation twice, and Home prints
+          that sum in the percentage above AND draws the curve's dashed
+          ceiling from it. Same number, two screens, and only one of them said
+          so. The second is the certified basis, which decides whether "82%"
+          is a claim about money or about building.
+        */
+        note={[
+          money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : null,
+          "Certified, not paid. Ex-VAT — a commercial measure, not physical progress.",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <CertifiedCurve
           points={curve.points}
@@ -830,7 +964,23 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             : "Approved variation value against the original contract sum. The tolerance is a commercial and underwriting heuristic set on this project's risk policy — no JBCC, NEC, FIDIC or GCC clause is breached at it. The contractual ceiling is the principal agent's mandate."
         }
         footnote={footnoteOf([
-          c.pctOfOriginal === null
+          /*
+            ── "of the original sum" WAS WRONG, AND THE LABEL IS WHAT WAS
+               FIXED ────────────────────────────────────────────────────────
+
+            The denominator is `Project.contract_value`, and
+            `tasks/views_signing.py::_apply_vo_to_project` adds a signed
+            variation's amount INTO that field. So it grows with the numerator
+            and it is not the original sum on any project that uses the
+            sign-and-issue flow.
+
+            The denominator cannot be repaired here — nothing on either payload
+            marks which variations took that flow, so the pre-variation sum is
+            not recoverable client-side — so the LABEL was repaired instead:
+            the figure is named against the sum as recorded, which is exactly
+            what it is measured against. See `ChangePosition`.
+          */
+          c.pctOfContractSum === null
             ? null
             : c.tolerancePct === null
               ? // The COMMON case, and it has to say so rather than stay
@@ -842,13 +992,25 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
                 // beside it had been checked against one. The rule's own 10%
                 // default is a policy default, not this policy, and printing
                 // it would draw a threshold that is not this project's.
-                `Approved change ${c.pctOfOriginal}% of the original sum · tolerance not published for this project`
+                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded · tolerance not published for this project`
               : // Worded as a tolerance, never as a breach. `contractual: False`.
-                `Approved change ${c.pctOfOriginal}% of the original sum, ${
+                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded, ${
                   c.pastTolerance ? "past" : "within"
                 } the ${c.tolerancePct}% tolerance`,
           c.undated > 0 ? `${c.undated} with no instruction date` : null,
         ])}
+        // Two sentences a reader must not have to hover for: that the
+        // denominator moves, and that the tolerance is not a contract term.
+        note={[
+          c.pctOfContractSum === null
+            ? null
+            : "Signed variations are added into the recorded sum, so this share reads low.",
+          c.tolerancePct === null
+            ? null
+            : "The tolerance is an underwriting heuristic, not a contract term.",
+        ]
+          .filter(Boolean)
+          .join(" ") || null}
       >
         <ChangeBar slices={changeSplit} />
       </Zone>,
@@ -865,14 +1027,20 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         to="/programme"
         linkLabel="Milestones"
         value={
-          milestoneDrift.tracked === 0
+          milestonesUnavailable
+            ? null
+            : milestoneDrift.tracked === 0
             ? milestoneDrift.untracked === 0
               ? null
               : "Not baselined"
             : String(milestoneDrift.slipped)
         }
         compare={
-          milestoneDrift.tracked === 0
+          // The same distinction the TIME zone now makes: a failed read is not
+          // a project without milestones.
+          milestonesUnavailable
+            ? "The programme could not be read"
+            : milestoneDrift.tracked === 0
             ? milestoneDrift.untracked === 0
               ? "No milestones recorded"
               : `${milestoneDrift.untracked} milestones, none with a baseline to measure against`
@@ -886,7 +1054,11 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           milestoneDrift.worstSlipDays === null
             ? null
             : `worst ${days(milestoneDrift.worstSlipDays)}`,
+          // The bar draws four rows; a programme with nine slipped milestones
+          // was rendered as one with four and said nothing about it.
+          milestoneCapNote(milestoneDrift),
         ])}
+        note="Dates only — no measure of physical progress."
       >
         <MilestoneDrift drift={milestoneDrift} />
       </Zone>,

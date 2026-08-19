@@ -190,20 +190,84 @@ describe("buildTimeBarQueue", () => {
     expect(q[0].overdue).toBe(false);
   });
 
-  // ── The countdown-unit bug ───────────────────────────────────────────────
+  // ── The countdown-unit bug, and its correction ───────────────────────────
   //
-  // `days_remaining` is `(deadline_date - localdate()).days` on the server —
-  // plain date subtraction — while `unit` describes the notice PERIOD. The row
-  // used to print one with the other and claim "6 working days left" for a
-  // deadline four working days away.
-  it("never publishes a clock unit, because the countdown is calendar days", () => {
+  // `days_remaining` USED to be `(deadline_date - localdate()).days` — plain
+  // date subtraction — while `unit` described the notice PERIOD. The row
+  // printed one with the other and claimed "6 working days left" for a
+  // deadline four working days away, so this file suppressed the unit.
+  //
+  // The backend now counts in the clock's own unit on the SA working-day
+  // calendar and publishes `days_remaining_unit` and `days_remaining_label`
+  // with it. The suppression is therefore what would now be wrong, and these
+  // tests pin the new contract in both directions.
+  it("carries the server's countdown SENTENCE verbatim, and builds none of its own", () => {
+    const q = buildTimeBarQueue([
+      {
+        id: 1,
+        label: "Notice of delay",
+        days_remaining: 4,
+        days_remaining_unit: "working",
+        days_remaining_label: "4 working days remaining",
+        unit: "working",
+        status: "open",
+        deadline_date: "2026-08-24",
+      },
+    ]);
+    // Verbatim. Not reformatted, not abbreviated, not re-paired with a unit —
+    // that pairing in a client is the whole defect this field closes.
+    expect(q[0].countdownLabel).toBe("4 working days remaining");
+    expect(q[0].daysRemaining).toBe(4);
+    expect(q[0].clock).toBe("working");
+  });
+
+  it("still publishes NO unit when the server does not say what it counted in", () => {
+    // No `days_remaining_unit` means an uncorrected server, whose count really
+    // is a bare calendar subtraction. `unit` describes the notice PERIOD and
+    // must never be borrowed to label the countdown. This is the old
+    // suppression, kept exactly where it is still true.
     const q = buildTimeBarQueue([
       { id: 1, label: "Notice of delay", days_remaining: 6, unit: "working", status: "open", deadline_date: "2026-08-24" },
     ]);
-    // ActionQueue's chip only writes " working" when `clock === "working"`, so
-    // this is what makes it render the truthful "6 days left".
     expect(q[0].clock).toBeNull();
+    expect(q[0].countdownLabel).toBeNull();
     expect(q[0].daysRemaining).toBe(6);
+  });
+
+  it("takes the overdue phrase from the server too", () => {
+    const q = buildTimeBarQueue([
+      {
+        id: 1,
+        label: "Notice of delay",
+        days_remaining: -2,
+        days_remaining_unit: "working",
+        days_remaining_label: "2 working days overdue",
+        unit: "working",
+        status: "open",
+        deadline_date: "2026-08-10",
+      },
+    ]);
+    expect(q[0].countdownLabel).toBe("2 working days overdue");
+    expect(q[0].overdue).toBe(true);
+  });
+
+  it("folds a group onto the SOONEST member's countdown sentence", () => {
+    const bar = (id: number, days: number, deadline_date: string) => ({
+      id,
+      label: "Delay particulars",
+      days_remaining: days,
+      days_remaining_unit: "working",
+      days_remaining_label: `${days} working days remaining`,
+      unit: "working",
+      status: "open",
+      deadline_date,
+    });
+    // Both `later`, so they fold. The group must state ONE clock, and it must
+    // be the worst member's — chip, date and countdown from one row.
+    const q = buildTimeBarQueue([bar(1, 30, "2026-09-30"), bar(2, 22, "2026-09-20")]);
+    const group = q.find((i) => i.key.startsWith("time-bar-group-"))!;
+    expect(group.countdownLabel).toBe("22 working days remaining");
+    expect(group.daysRemaining).toBe(22);
   });
 
   it("keeps the working-day THRESHOLDS, so no row moves band because of that", () => {
@@ -1170,6 +1234,33 @@ describe("summariseMoney", () => {
   });
 });
 
+describe("an approved variation with no price", () => {
+  // `variationValue` coalesces a missing `grand_total` to zero — right for a
+  // sum, wrong as a claim about a variation. The zero stays (there is no
+  // honest number to put there) and the COUNT is published, so the Money zone
+  // can say the revised sum, the certified percentage and the curve's ceiling
+  // are all short by an unknown amount.
+  const project = { contractValue: 10_000_000 };
+
+  it("counts it rather than letting it contribute R0 in silence", () => {
+    const m = summariseMoney(project, [], [
+      { status: "approved", grandTotal: 500_000 },
+      { status: "approved", grandTotal: null },
+      { status: "approved" },
+    ]);
+    expect(m.variationCount).toBe(3);
+    expect(m.variationsUnpriced).toBe(2);
+    // The zero is still in the sum — the disclosure is the fix, not a guess.
+    expect(m.revisedContractSum).toBe(10_500_000);
+  });
+
+  it("reports none when the variation list did not answer at all", () => {
+    // An unread list has no unpriced rows to report; saying "0 unpriced" over
+    // it would be a fact about nothing.
+    expect(summariseMoney(project, [], null).variationsUnpriced).toBe(0);
+  });
+});
+
 describe("summariseHomeLoad", () => {
   it("reports nothing wrong when every source answered", () => {
     expect(summariseHomeLoad({}).level).toBe("none");
@@ -1196,6 +1287,29 @@ describe("summariseHomeLoad", () => {
     expect(issue.level).toBe("none");
   });
 });
+describe("the two reads that used to fail silently", () => {
+  // `projectList` was read as `.rows` only and `milestones` as `.data` only,
+  // so a FAILED read rendered as "No project timeline recorded" and "No
+  // milestones recorded" — absence asserted as fact, with no banner over it
+  // and nothing for "Try again" to retry. Same class of defect as the money
+  // strip that fabricated, moved from money to dates.
+  it("names this project's own record when the project walk failed", () => {
+    const issue = summariseHomeLoad({ projectFailed: true }, ["projectFailed", "tasksFailed"]);
+    expect(issue.level).toBe("partial");
+    expect(issue.message).toContain("this project's own record");
+  });
+
+  it("names the programme when the milestone read failed", () => {
+    const issue = summariseHomeLoad({ milestonesFailed: true }, ["milestonesFailed", "tasksFailed"]);
+    expect(issue.level).toBe("partial");
+    expect(issue.message).toContain("milestones");
+  });
+
+  it("is silent about both when they answered", () => {
+    expect(summariseHomeLoad({}, ["projectFailed", "milestonesFailed"]).level).toBe("none");
+  });
+});
+
 
 describe("summariseProjectSetup", () => {
   it("returns null with no project rather than a misleading zero", () => {
@@ -1626,6 +1740,43 @@ describe("homeVerdict", () => {
     expect(v.text).toContain("closes in 3 days");
     // Severity rule 1: colour is for what has already happened.
     expect(v.tone).not.toBe("breach");
+  });
+
+  it("states an overdue clock in the SERVER'S words where it has them", () => {
+    // The title of the page is built from this string. It must not rebuild
+    // "N working days past its date" out of a number and a unit — see
+    // `countdownLabel`.
+    const q = rankQueue(
+      buildTimeBarQueue([
+        {
+          id: 1,
+          label: "Notice of delay",
+          days_remaining: -2,
+          days_remaining_unit: "working",
+          days_remaining_label: "2 working days overdue",
+          unit: "working",
+          status: "open",
+          deadline_date: "2026-08-10",
+        },
+      ]),
+    );
+    const v = homeVerdict({ queue: q, loadLevel: "none" });
+    expect(v.lead).toBe("Notice of delay — 2 working days overdue");
+    expect(v.tail).toBeNull();
+  });
+
+  it("splits the '· N others' tail off the lead, for the title and its meta", () => {
+    const q = rankQueue([
+      bar(-8),
+      ...buildTaskQueue([{ id: "t", title: "Reply", needsAction: true, due_date: iso(-2) }], NOW),
+    ]);
+    const v = homeVerdict({ queue: q, loadLevel: "none" });
+    // The lead names ONE object and is what goes in the h1; the tail counts
+    // rows already listed in the queue and rides beside it as small print.
+    expect(v.lead).not.toContain("other past a date");
+    expect(v.tail).toBe("1 other past a date");
+    // `text` is still the whole line, so nothing that read it has changed.
+    expect(v.text).toBe(`${v.lead} · ${v.tail}`);
   });
 
   it("says so plainly when nothing is late", () => {

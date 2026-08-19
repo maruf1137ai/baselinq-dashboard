@@ -170,6 +170,9 @@ describe("the empty states, which are two different sentences", () => {
         <WhatChangedBlock feed={feed} />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/1 older change is off the list/i)).toBeTruthy();
+    // The disclosure was cut from a 130-character sentence to a count list.
+    // The COUNT is what is load-bearing and it survives verbatim; the prose
+    // explaining it moved into `changeFeedDisclosure`'s comment.
+    expect(screen.getByText(/1 older not listed/i)).toBeTruthy();
   });
 });

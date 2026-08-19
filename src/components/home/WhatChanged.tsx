@@ -48,8 +48,9 @@
  */
 import { Link } from "react-router-dom";
 
-import { Panel } from "./blocks";
+import { Panel, RowDate } from "./blocks";
 import { relativeDays } from "@/lib/homeSignals";
+import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import type { ChangeFeed, ChangeItem } from "@/lib/homeChanges";
 
 /**
@@ -60,9 +61,23 @@ import type { ChangeFeed, ChangeItem } from "@/lib/homeChanges";
  * carried by weight and by the two text colours the rest of the page uses.
  */
 const HEADLINE_CLASS: Record<ChangeItem["significance"], string> = {
-  decisive: "text-sm text-foreground font-medium",
-  material: "text-sm text-foreground",
-  routine: "text-sm text-muted-foreground",
+  // ── ALL THREE STEPPED DOWN ONE NOTCH, AND THE `font-medium` IS GONE ─────
+  //
+  // `decisive` carried `font-medium`, and it was the ONLY `font-medium`
+  // content row on the whole homepage — in the panel whose own header comment
+  // says these rows are explicitly not what you must do. The page's single
+  // heaviest content row belonged to the thing nobody has to act on, while the
+  // queue's rows, which are the only rows that ask a person to move, were
+  // plain `text-sm`. The weight moved to `QueueRow`, where it earns its keep.
+  //
+  // The three tiers survive, because the weight was never the only channel
+  // and the tier is what explains an order that is not newest-first. They are
+  // now colour-then-size — foreground, muted, muted-and-smaller — all existing
+  // tokens, and `text-xs` on the routine tier also takes a little height off
+  // the taller of the two columns, which is where it was needed.
+  decisive: "text-sm text-foreground",
+  material: "text-sm text-muted-foreground",
+  routine: "text-xs text-muted-foreground",
 };
 
 function ChangeRow({ item }: { item: ChangeItem }) {
@@ -70,11 +85,31 @@ function ChangeRow({ item }: { item: ChangeItem }) {
   // until, so it is negated. The same vocabulary the queue uses for its
   // clocks, so two panels side by side do not date things two different ways.
   const when = relativeDays(-item.ageDays);
+  const full = formatDateUk(item.at, "long");
   return (
     <Link
       to={item.href}
-      className="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:-ring-offset-1"
+      /* `py-2`, matching the risk rows. The right-hand column is passive
+         reference by this page's own argument, so it is the column that gives
+         height back to the one that is not. */
+      className="flex items-baseline gap-3 px-4 py-2 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:-ring-offset-1"
+      /* The tile is `aria-hidden`; the date in words, with its year and with
+         the word that says what kind of date it is, lives here. */
+      title={[full ? `Moved ${full}` : null, when].filter(Boolean).join(" · ") || undefined}
+      aria-label={[item.headline, when ? `moved ${when}` : null].filter(Boolean).join(". ") + "."}
     >
+      {/*
+        ── The date moved to the FRONT, into the shared slot ───────────────
+
+        It was a right-aligned "6 days ago". The queue sixteen pixels to the
+        left starts every row with an 80px date tile, so two visually identical
+        lists sat 92px out of register at the one edge the eye uses to read a
+        list as a list. Same slot, same grammar, same column — and the relative
+        phrase is not lost, it is in the tooltip and the accessible name, where
+        "6 days ago" is a better sentence than it ever was as a right-hand
+        stub.
+      */}
+      <RowDate date={item.at} />
       {/* ONE LINE PER ROW, and the detail runs on inside it rather than under
           it. The page has to hold one screen at 1440px and the right-hand
           column is what sets its height: measured on the real layout, a
@@ -89,9 +124,6 @@ function ChangeRow({ item }: { item: ChangeItem }) {
           <span className="text-muted-foreground font-normal"> · {item.detail}</span>
         )}
       </p>
-      {when && (
-        <p className="text-xs text-muted-foreground tabular-nums shrink-0">{when}</p>
-      )}
     </Link>
   );
 }
@@ -99,26 +131,28 @@ function ChangeRow({ item }: { item: ChangeItem }) {
 /**
  * The disclosure line, or nothing.
  *
- * Three counts, one sentence, because the panel header has room for one line
- * and the page has to hold one screen. Each clause is only present when its
- * count is, and each says what the reader would otherwise wrongly conclude
- * from a short list.
+ * ── Cut from about 130 characters to about 40 ─────────────────────────────
+ *
+ * It read, in full: "3 carry no date this page can read and cannot be placed
+ * in this order; 12 older changes are off the list; 4 further task rows." Two
+ * things were wrong with that. It was the longest sentence on the homepage,
+ * set in 11px grey under a panel title, competing for attention with the
+ * queue. And it was self-doubt about facts the reader cannot act on — a
+ * knowing that some rows are not in a list is not a move, and there is no
+ * control anywhere on this page for showing them.
+ *
+ * The counts THEMSELVES are kept, because a reader drawing "nothing much
+ * happened" off a short list needs to know the list is short. What is cut is
+ * the explanation of why, which belongs in this comment and not in the
+ * interface: "3 undated · 12 older · 4 more tasks" carries the same warning at
+ * a third of the length.
  */
 function changeFeedDisclosure(feed: ChangeFeed): string | undefined {
   const parts: string[] = [];
-  if (feed.undated > 0) {
-    parts.push(
-      `${feed.undated} carry no date this page can read and cannot be placed in this order`,
-    );
-  }
-  if (feed.aged > 0) {
-    parts.push(`${feed.aged} older ${feed.aged === 1 ? "change is" : "changes are"} off the list`);
-  }
-  if (feed.taskOverflow > 0) {
-    parts.push(`${feed.taskOverflow} further task ${feed.taskOverflow === 1 ? "row" : "rows"}`);
-  }
-  if (parts.length === 0) return undefined;
-  return `${parts.join("; ")}.`;
+  if (feed.undated > 0) parts.push(`${feed.undated} undated`);
+  if (feed.aged > 0) parts.push(`${feed.aged} older`);
+  if (feed.taskOverflow > 0) parts.push(`${feed.taskOverflow} more tasks`);
+  return parts.length === 0 ? undefined : `${parts.join(" · ")} not listed`;
 }
 
 export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {

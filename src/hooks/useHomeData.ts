@@ -59,6 +59,7 @@ import {
   summariseVariations,
   toVariationRecord,
 } from "@/lib/homeIndicators";
+import { netRetentionHeld, summariseCertificateBasis } from "@/lib/projectPosition";
 import {
   buildCertificateChanges,
   buildCertifiedCurve,
@@ -525,9 +526,38 @@ export function useHomeData(projectId: string | undefined) {
     [certificateList],
   );
 
+  /**
+   * Two facts about the certificate rows that `summariseMoney` does not report
+   * — releases, and mixed VAT basis. Read off the SAME rows it read, and only
+   * when those rows are trustworthy: a truncated or failed walk is handed `[]`
+   * here for the same reason `summariseMoney` is handed `null`.
+   */
+  const certificateBasis = useMemo(
+    () => summariseCertificateBasis(certificatesReadable ? certificateList : []),
+    [certificateList, certificatesReadable],
+  );
+
+  /**
+   * Retention held, NET OF RELEASES — the same figure Project Health prints.
+   *
+   * `money.retentionHeld` is Σ `retentionAmount` over posted certificates with
+   * nothing subtracted. Home printed exactly that, so from the first release at
+   * practical completion it permanently overstated money the employer no longer
+   * holds — while `useProjectCommercials`, one click away and off the same
+   * payload, netted it. One figure, one function, both screens.
+   *
+   * Where NO posted certificate carries `retention_release` at all,
+   * `netRetentionHeld` returns the gross figure unchanged and
+   * `retentionReleaseKnown` below is false, so the band says releases could not
+   * be read rather than implying there were none.
+   */
   const retention = useMemo(
-    () => retentionPosition(project, money.retentionHeld),
-    [project, money.retentionHeld],
+    () =>
+      retentionPosition(
+        project,
+        netRetentionHeld(money.retentionHeld, certificateBasis.retentionReleased),
+      ),
+    [project, money.retentionHeld, certificateBasis.retentionReleased],
   );
 
   // ── Contract time ───────────────────────────────────────────────────────
@@ -591,6 +621,18 @@ export function useHomeData(projectId: string | undefined) {
     () => summariseMilestoneDrift(milestones.data ?? []),
     [milestones.data],
   );
+
+  /**
+   * The two reads whose failure this page used to render as a fact.
+   *
+   * `milestonesUnavailable` and `projectUnavailable` exist so the band can say
+   * "could not be read" where it would otherwise say "No milestones recorded"
+   * and "No project timeline recorded". A truncated project walk counts as
+   * unavailable for the same reason a truncated certificate walk does: the
+   * selected project may simply not be in the rows that arrived.
+   */
+  const milestonesUnavailable = milestones.isError;
+  const projectUnavailable = projectList.isError || projectList.truncated;
 
   /** Cumulative certified value, off the run that had no caller until now. */
   const certifiedCurve = useMemo(
@@ -689,7 +731,15 @@ export function useHomeData(projectId: string | undefined) {
     // Only sources this viewer was actually going to be shown count towards
     // the outage message — a contractor is not told the certificates endpoint
     // failed for data they were never going to see.
-    const base: (keyof HomeLoadState)[] = ["tasksFailed", "meetingsFailed", "timeBarsFailed"];
+    // `projectFailed` and `milestonesFailed` are ungated: dates are not money,
+    // and every viewer is shown the contract axis and the programme.
+    const base: (keyof HomeLoadState)[] = [
+      "tasksFailed",
+      "meetingsFailed",
+      "timeBarsFailed",
+      "projectFailed",
+      "milestonesFailed",
+    ];
     if (canViewCompliance) base.push("riskFailed", "obligationsFailed");
     return canViewFinance
       ? [...base, "certificatesFailed", "variationsFailed", "paymentsFailed"]
@@ -718,6 +768,11 @@ export function useHomeData(projectId: string | undefined) {
       riskFailed: risk.isError,
       obligationsFailed: obligations.isError,
       paymentsFailed: payments.isError,
+      // A TRUNCATED project walk is a failed read: the selected project is
+      // found by scanning these rows, so a short list is indistinguishable
+      // from a project that does not exist.
+      projectFailed: projectUnavailable,
+      milestonesFailed: milestonesUnavailable,
     },
     visibleSources,
   );
@@ -732,6 +787,10 @@ export function useHomeData(projectId: string | undefined) {
     if (timeBars.isError) timeBars.refetch();
     if (risk.isError) risk.refetch();
     if (obligations.isError) obligations.refetch();
+    // Both were unretryable until now — "Try again" left the two reads that
+    // date this page exactly where they were.
+    if (projectUnavailable) projectList.refetch();
+    if (milestones.isError) void milestones.refetch();
   };
 
   // Permissions are part of loading: until the map lands we do not know
@@ -806,6 +865,15 @@ export function useHomeData(projectId: string | undefined) {
      * money zone, the same disclosure `variationsTruncated` already drives.
      */
     certificatesTruncated: certificates.truncated,
+    /**
+     * False when NO posted certificate carried `retention_release`, so
+     * `retention.held` is gross and the band must say so. True is not a claim
+     * that every release is in it — only that at least one was readable.
+     */
+    retentionReleaseKnown: certificateBasis.retentionReleased !== null,
+    /** The two reads whose absence must never be printed as a fact. */
+    projectUnavailable,
+    milestonesUnavailable,
     // The visual band
     timeline,
     milestoneDrift,

@@ -439,7 +439,7 @@ export interface ChangeVariationLike {
 }
 
 /**
- * Where change stands against the original contract sum.
+ * Where change stands against the contract sum as the server records it.
  *
  * ── The tolerance, and the sentence that must go with it ──────────────────
  *
@@ -466,10 +466,32 @@ export interface ChangeVariationLike {
 export interface ChangePosition {
   /** Approved variation value. `summariseMoney`'s figure, passed through. */
   approvedValue: number | null;
-  /** Original contract sum — `Project.contract_value`, pre-variation. */
-  originalSum: number | null;
-  /** Approved value as a percentage of the original sum. */
-  pctOfOriginal: number | null;
+  /**
+   * `Project.contract_value`, exactly as the server holds it.
+   *
+   * ── IT IS NOT RELIABLY THE ORIGINAL SUM, AND THIS FIELD NO LONGER SAYS
+   *    IT IS ────────────────────────────────────────────────────────────
+   *
+   * It was named `originalSum` and the footnote built on it read "Approved
+   * change N% of the original sum". Both were wrong in the same way:
+   * `tasks/views_signing.py::_apply_vo_to_project` ADDS an approved
+   * variation's amount into `contract_value` when a VO is signed through the
+   * sign-and-issue endpoint. So on any project using that flow the denominator
+   * GROWS WITH THE NUMERATOR, and the label named a quantity the arithmetic
+   * does not compute.
+   *
+   * **The label is what was fixed, not the denominator, and that is a forced
+   * choice rather than a preference.** Nothing on either payload marks which
+   * variations took the signing flow, so the pre-variation sum cannot be
+   * recovered client-side; subtracting the approved total would be right on a
+   * project that uses the flow for everything and wrong on one that uses it
+   * for nothing, and neither is knowable here. What CAN be done is to name the
+   * figure correctly and disclose the direction of the error: the share reads
+   * LOW wherever the flow has been used, never high.
+   */
+  contractSumAsRecorded: number | null;
+  /** Approved value as a percentage of `contractSumAsRecorded`. */
+  pctOfContractSum: number | null;
   /** From the server's fired VO_TOLERANCE_BREACH signal. Null when unfired. */
   tolerancePct: number | null;
   /** Past the underwriting tolerance. NOT a contract breach — see above. */
@@ -484,7 +506,7 @@ const CHANGE_APPROVED = new Set(["approved", "closed"]);
 
 export function summariseChangePosition(
   variations: ChangeVariationLike[],
-  originalSum: number | null,
+  contractSumAsRecorded: number | null,
   approvedValue: number | null,
   tolerancePct: number | null,
 ): ChangePosition {
@@ -494,18 +516,26 @@ export function summariseChangePosition(
     (v) => typeof v.dateInstructed !== "string" || v.dateInstructed.trim() === "",
   ).length;
 
-  const pctOfOriginal =
-    approvedValue !== null && originalSum !== null && originalSum > 0
-      ? Math.round((approvedValue / originalSum) * 1000) / 10
+  const pctOfContractSum =
+    approvedValue !== null && contractSumAsRecorded !== null && contractSumAsRecorded > 0
+      ? Math.round((approvedValue / contractSumAsRecorded) * 1000) / 10
       : null;
 
   return {
     approvedValue,
-    originalSum,
-    pctOfOriginal,
+    contractSumAsRecorded,
+    pctOfContractSum,
     tolerancePct,
+    // Unchanged: the tolerance is compared against the same share the reader is
+    // shown, so the comparison and the printed figure cannot disagree. It
+    // inherits the understatement described on `contractSumAsRecorded`, which
+    // errs towards NOT crying breach — the safe direction for a figure the
+    // rule itself marks `contractual: False`.
     pastTolerance:
-      pctOfOriginal !== null && tolerancePct !== null && tolerancePct > 0 && pctOfOriginal > tolerancePct,
+      pctOfContractSum !== null &&
+      tolerancePct !== null &&
+      tolerancePct > 0 &&
+      pctOfContractSum > tolerancePct,
     undated,
     total: list.length,
   };

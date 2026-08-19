@@ -621,21 +621,64 @@ export interface TimeBarLike {
   notes?: string | null;
   deadline_date?: string | null;
   /**
-   * **A CALENDAR-day count, whatever `unit` says.** Both places the backend
-   * writes it — `risk/models_evidence.py:267` and `risk/rules/time_bar.py:37`
-   * — compute `(deadline_date - timezone.localdate()).days`, which is plain
-   * date subtraction with no working-day calendar applied. See the
-   * countdown note above `buildTimeBarQueue`.
+   * **The countdown, counted in this clock's OWN unit.**
+   *
+   * ── DO NOT RESTORE THE OLD COMMENT ─────────────────────────────────────
+   *
+   * This field was documented here, at length and correctly for its time, as
+   * "a CALENDAR-day count, whatever `unit` says", because both places that
+   * wrote it computed `(deadline_date - timezone.localdate()).days`. On that
+   * basis this file suppressed the unit everywhere — `clock: null` on every
+   * bar — so the chip read "6 days left" rather than the false "6 working
+   * days left".
+   *
+   * **That is no longer true and the suppression is no longer honest.**
+   * `risk/models_evidence.py::days_remaining` now counts in `unit`, on the
+   * South African working-day calendar, including the project's own shutdown
+   * dates, using the same `count_days_in_unit` the deadline itself was
+   * computed with. Suppressing the unit today understates a JBCC clock in the
+   * opposite direction: "6 days left" against six WORKING days is nine or ten
+   * calendar days, and a reader planning around the wrong one still serves
+   * late. Late service forfeits the claim outright.
+   *
+   * So the countdown is published again — but it is published as the SERVER'S
+   * OWN SENTENCE and never re-assembled here. See `days_remaining_label`.
    *
    * Null in practice on a bar the backend could not date (see compliance.ts).
    */
   days_remaining?: number | null;
   /**
-   * The unit of the NOTICE PERIOD — "working" or "calendar" — not the unit of
-   * `days_remaining`. A JBCC clock is a 20-working-day period, so this reads
-   * "working", and `deadline_date` is correctly computed from it by
-   * `risk/timebars.py::add_working_days`. It says nothing about how the
-   * countdown above was counted, and must never be printed against it.
+   * The unit `days_remaining` was counted in. Travels with it, always.
+   *
+   * Absent on a server that predates the correction, which is exactly when
+   * `days_remaining` IS still a calendar subtraction — so its absence is the
+   * signal to suppress the unit, and `resolveBar` uses it that way.
+   */
+  days_remaining_unit?: string | null;
+  /**
+   * **The countdown as a finished, self-describing phrase** — "12 working days
+   * remaining", "2 working days overdue", "due today".
+   *
+   * `risk/models_evidence.py` states plainly why it exists: so that a client
+   * can render the countdown "without ever combining a number with a unit
+   * itself — the exact operation that produced the original defect". This file
+   * therefore READS it and does not parse it, reformat it, or rebuild it from
+   * `days_remaining` and `days_remaining_unit`. The server owns the pairing.
+   *
+   * Served on `projects/{id}/time-bars/` beside `days_remaining` and
+   * `days_remaining_unit` (`risk/views_evidence.py`).
+   */
+  days_remaining_label?: string | null;
+  /**
+   * The unit of the NOTICE PERIOD — "working" or "calendar". A JBCC clock is a
+   * 20-working-day period, so this reads "working", and `deadline_date` is
+   * computed from it by `risk/timebars.py::add_working_days`.
+   *
+   * It is now the same value as `days_remaining_unit` (the backend asserts
+   * `row["unit"] == row["days_remaining_unit"]` in its own tests), but the two
+   * are still read separately: this one describes the PERIOD, that one
+   * describes the COUNTDOWN, and only the second of them is evidence that the
+   * countdown was counted correctly.
    */
   unit?: string;
   /** The length of the notice period, in `unit`s. */
@@ -648,45 +691,55 @@ export interface TimeBarLike {
  *
  * Three rules, all of which matter legally:
  *
- *  1. **The countdown is not in working days, and this file no longer says it
- *     is.** The docblock that used to sit here asserted the opposite — that
- *     `days_remaining` was counted on the South African working-day calendar,
- *     holidays and the builders' break included, and that deriving it locally
- *     "would silently substitute calendar days and hand somebody four days
- *     they do not have over an Easter weekend". That is exactly what shipped.
- *     `risk/models_evidence.py:267` and `risk/rules/time_bar.py:37` both write
- *     `days_remaining = (deadline_date - timezone.localdate()).days`: plain
- *     date subtraction. The row then printed it with `unit`, which is
- *     `"working"` on every JBCC clock, so a deadline six calendar days out —
- *     four working days — rendered as "6 working days left". The overstatement
- *     is about a third in an ordinary week and far more across the
- *     mid-December builders' break, and a JBCC notice served late forfeits the
- *     claim outright.
+ *  1. **The countdown is the server's sentence, printed verbatim.**
  *
- *     The client cannot fix the count. South African public holidays, computed
- *     Easter and the per-project builders' break all live server-side in
- *     `risk/timebars.py`, and a browser-side working-day count would be a
- *     second wrong answer rather than a right one. So this file stops
- *     asserting a unit it cannot verify:
+ *     ── THE HISTORY, SO NOBODY RESTORES THE SUPPRESSION ────────────────────
  *
- *       - `clock` is published as `null` on every time bar. Its only render
- *         consumer is the chip's unit word in `ActionQueue.tsx:110`, so the
- *         chip now reads "6 days left" — which is TRUE, because the number
- *         genuinely is a calendar-day countdown — instead of "6 working days
- *         left", which is not.
- *       - `deadline_date` is correct (`add_working_days` computes it properly)
- *         and is therefore promoted to the FRONT of the headline. It is the
- *         one temporal value on the row that can be relied on, and it is also
- *         what tells five delay clocks apart.
- *       - The notice PERIOD, which is genuinely in working days, is stated as
- *         such in `detail`: "20 working days from 4 Aug 2026".
+ *     `days_remaining` used to be `(deadline_date - timezone.localdate()).days`
+ *     — plain date subtraction — while `unit` read "working" on every JBCC
+ *     clock. The row printed one with the other, so a deadline four WORKING
+ *     days away rendered as "6 working days left": an overstatement of about a
+ *     third in an ordinary week and far more across the mid-December builders'
+ *     break, on the one figure in this product where being wrong forfeits the
+ *     claim.
  *
- *     Relabelling the unit is deliberately NOT the whole fix — it is the
- *     honest floor while the backend is corrected. `pressureFromDays` is still
- *     given the bar's declared unit, so the working-day thresholds still
- *     apply and the ranking is bit-for-bit what it was: treating a calendar
- *     count against working-day thresholds errs towards urgency, which is the
- *     safe direction to be wrong in while the count itself is wrong.
+ *     The revision before this one could not fix the count — the SA holiday
+ *     calendar, computed Easter and the per-project shutdown all live in
+ *     `risk/timebars.py` — so it did the only honest thing available and
+ *     SUPPRESSED the unit: `clock: null` on every bar, chip reading "6 days
+ *     left", which was true of a calendar count.
+ *
+ *     **The backend has since been corrected, and the suppression is now the
+ *     defect.** `risk/models_evidence.py::days_remaining` counts in the clock's
+ *     own unit via `count_days_in_unit`, on the same calendar and the same
+ *     project shutdown dates the deadline was computed on. It publishes
+ *     `days_remaining_unit` alongside it, and `days_remaining_label` — a
+ *     finished phrase — with the model's own reason attached: so that "no
+ *     client can ever pair the two incorrectly again". `risk/views_evidence.py`
+ *     serves all three. Against a corrected six-WORKING-day count, "6 days
+ *     left" now understates by four calendar days, which is the same class of
+ *     error pointing the other way.
+ *
+ *     So:
+ *
+ *       - `countdownLabel` carries `days_remaining_label` UNPARSED and
+ *         UNREFORMATTED, and the chip prints it. Nothing in the client
+ *         concatenates a number with a unit; that concatenation is what broke
+ *         this figure the first time and the server now owns it.
+ *       - `clock` is published from `days_remaining_unit` — the countdown's own
+ *         unit, never `unit`, which describes the notice PERIOD. It is a
+ *         FALLBACK for consumers with no label to print, and it stays `null`
+ *         when `days_remaining_unit` is absent, because an absent
+ *         `days_remaining_unit` means an uncorrected server whose count really
+ *         is calendar days.
+ *       - `deadline_date` is still correct and still leads the row as a date
+ *         object, and the notice PERIOD is still stated in `detail` as "20
+ *         working days from 4 Aug 2026".
+ *
+ *     `pressureFromDays` is still given the bar's declared unit, so no row
+ *     moves band as a result of this change — and it is now right for the
+ *     better reason: a working-day count is being measured against
+ *     working-day thresholds.
  *
  *     When the backend could not date the bar at all, the chip reads "Not
  *     dated" and `pressureFromDays` returns "none", which the band matrix
@@ -745,14 +798,23 @@ export interface TimeBarLike {
 /** One open bar, resolved against its own clock, before grouping. */
 interface ResolvedBar {
   bar: TimeBarLike;
-  /** The backend's countdown. Calendar days, whatever `unit` claims. */
+  /** The backend's countdown, counted in `countdownClock`. */
   days: number | null;
   /**
-   * The unit the notice PERIOD is expressed in — fed to `pressureFromDays` so
-   * the thresholds are unchanged, and deliberately never published on the
-   * item, because it is not the unit `days` was counted in.
+   * The unit the notice PERIOD is expressed in. Feeds `pressureFromDays` so the
+   * thresholds are unchanged from every previous revision.
    */
   thresholdClock: Clock;
+  /**
+   * The unit the COUNTDOWN was counted in, off `days_remaining_unit` — the
+   * server's own statement about its own number, and the only field entitled
+   * to describe it. Null when the payload does not carry one, which means an
+   * uncorrected server whose count is a bare calendar subtraction; the row then
+   * publishes no unit at all rather than guessing one.
+   */
+  countdownClock: Clock;
+  /** `days_remaining_label`, verbatim. Never rebuilt here. */
+  countdownLabel: string | null;
   pressure: ReturnType<typeof pressureFromDays>;
   clause: string | null;
   /** "Due 24 Aug 2026", or null when the backend could not date the bar. */
@@ -768,6 +830,26 @@ function resolveBar(b: TimeBarLike): ResolvedBar {
   const days = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
   const unit = (b.unit ?? "working").toLowerCase() === "calendar" ? "calendar" : "working";
   const thresholdClock: Clock = days === null ? null : (unit as Clock);
+  // The countdown's OWN unit, and only where the server states it. Its absence
+  // is evidence, not an omission: a payload with no `days_remaining_unit` comes
+  // from a server whose `days_remaining` is still a calendar subtraction, and
+  // labelling that "working" is the original defect. See rule 1.
+  const rawCountdownUnit =
+    typeof b.days_remaining_unit === "string" ? b.days_remaining_unit.toLowerCase() : null;
+  const countdownClock: Clock =
+    days === null || rawCountdownUnit === null
+      ? null
+      : rawCountdownUnit === "calendar"
+        ? "calendar"
+        : rawCountdownUnit === "working"
+          ? "working"
+          : null;
+  // Read, never parsed and never reassembled. The whole point of the field is
+  // that the server owns the pairing of the number with its unit.
+  const countdownLabel =
+    typeof b.days_remaining_label === "string" && b.days_remaining_label.trim() !== ""
+      ? b.days_remaining_label.trim()
+      : null;
   const due = shortDate(b.deadline_date);
   const aware = shortDate(b.awareness_date);
   const duration =
@@ -785,8 +867,12 @@ function resolveBar(b: TimeBarLike): ResolvedBar {
     bar: b,
     days,
     thresholdClock,
-    // Unchanged from the previous revision on purpose: the bar's declared unit
-    // still chooses the thresholds, so no row moves band because of this fix.
+    countdownClock,
+    countdownLabel,
+    // Unchanged from every previous revision on purpose: the bar's declared
+    // unit still chooses the thresholds, so no row moves band because of this
+    // fix. It is now right for the better reason as well — a working-day count
+    // measured against working-day thresholds.
     pressure: pressureFromDays(days, thresholdClock),
     clause:
       b.clause_verified && b.clause_ref ? `${b.contract_form ?? ""} ${b.clause_ref}`.trim() : null,
@@ -905,9 +991,12 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
     consequence: "forfeiture" as const,
     pressure: r.pressure,
     daysRemaining: r.days,
-    // Never `r.thresholdClock`. The countdown is in calendar days and the
-    // chip must not label it in working ones. See rule 1.
-    clock: null,
+    // Never `r.thresholdClock` — that describes the notice PERIOD. This is the
+    // countdown's own unit, as the server states it, and null where it does
+    // not state one. See rule 1.
+    clock: r.countdownClock,
+    // The server's finished phrase. The chip prints it; nothing here builds it.
+    countdownLabel: r.countdownLabel,
     // The deadline date, raw. It used to be formatted and glued to the front
     // of the headline; the row draws it as a date object now.
     date: r.bar.deadline_date ?? null,
@@ -960,7 +1049,10 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
       // the chip its most urgent member would have drawn on its own.
       pressure: worst.pressure,
       daysRemaining: worst.days,
-      clock: null,
+      clock: worst.countdownClock,
+      // The soonest member's own countdown sentence — the same member the chip,
+      // the date and the pressure all come from, so the row states one clock.
+      countdownLabel: worst.countdownLabel,
       // THE SOONEST MEMBER'S DATE, which is the same member the chip and the
       // pressure already come from — `ordered` is sorted by `days` ascending
       // and `worst` is `ordered[0]`. A group therefore shows one date and one
@@ -1712,6 +1804,16 @@ export interface MoneyPosition {
   variations: number | null;
   variationCount: number;
   /**
+   * How many of `variationCount` carried no `grand_total`.
+   *
+   * Each of those contributes R0 to `variations`, hence to
+   * `revisedContractSum`, hence to `balance`, `certifiedPct` and the certified
+   * curve's ceiling. The zero is unavoidable — nothing on the payload prices
+   * them — but it must not be silent, so the count is published and the Money
+   * zone prints it. Same discipline as `buildCertificateRun`'s `undated`.
+   */
+  variationsUnpriced: number;
+  /**
    * Original contract sum plus approved variations — the sum the works are
    * actually being carried out for, and the figure a QS means by "the contract
    * sum" once variations have been approved.
@@ -1804,6 +1906,41 @@ const APPROVED_VO = new Set(["done", "approved", "completed"]);
 export function variationValue(v: VariationLike): number {
   return v.task?.grandTotal ?? v.grandTotal ?? 0;
 }
+
+/**
+ * Whether a variation carried a value at all.
+ *
+ * `variationValue` above coalesces a missing `grand_total` to zero, which is
+ * the right shape for a sum and the wrong claim about a variation: an approved
+ * VO with no price contributes R0 to the revised contract sum, to the certified
+ * percentage and to the certified curve's ceiling, and does it silently. The
+ * zero is kept — there is no honest number to substitute — but it is COUNTED,
+ * and the count is printed, the way `buildCertificateRun` already prints the
+ * certificates it could not date.
+ */
+export function variationIsPriced(v: VariationLike): boolean {
+  const raw = v.task?.grandTotal ?? v.grandTotal;
+  return typeof raw === "number" && Number.isFinite(raw);
+}
+
+/**
+ * **The revised contract sum can count a variation twice, and both screens
+ * that print it must say so.**
+ *
+ * `tasks/views_signing.py::_apply_vo_to_project` adds an approved variation's
+ * amount into `project.contract_value` AND leaves the variation's status
+ * APPROVED, in one transaction. So a variation signed through that flow is
+ * inside both operands of `contractSum + variationsTotal`, and nothing on
+ * either payload distinguishes the signed population from the rest — it cannot
+ * be corrected client-side, only disclosed.
+ *
+ * This string lives here, beside the figure, because it was previously stated
+ * on Project Health (`projectPosition.ts`) and NOT on Home, which printed the
+ * same number — as "certified — N% of R X" and as the certified curve's
+ * dashed ceiling — in silence. One caveat, one wording, both screens.
+ */
+export const REVISED_SUM_DOUBLE_COUNT =
+  "May double-count any variation signed through the sign-and-issue flow — the server adds those to the original sum as well.";
 
 /** A certificate counts as certified once it is posted. */
 export function certificateIsCertified(c: CertificateLike): boolean {
@@ -1903,6 +2040,11 @@ export function summariseMoney(
     contractSum,
     variations: variationsKnown && approvedVos.length > 0 ? variationsTotal : null,
     variationCount: approvedVos.length,
+    // Zero when the list did not answer at all: an unread list has no unpriced
+    // rows to report, and reporting one would be a fact about nothing.
+    variationsUnpriced: variationsKnown
+      ? approvedVos.filter((v) => !variationIsPriced(v)).length
+      : 0,
     revisedContractSum,
     certified: certificatesKnown && certifiedCerts.length > 0 ? certified : null,
     retentionHeld: certificatesKnown && certifiedCerts.length > 0 ? retentionHeld : null,
@@ -1934,6 +2076,25 @@ export interface HomeLoadState {
   obligationsFailed: boolean;
   /** `projects/{id}/payments/` — the only source of a certificate's due date. */
   paymentsFailed: boolean;
+  /**
+   * `projects/?userId=` — the read the whole page's PROJECT comes from.
+   *
+   * It was absent from this state, and that absence had teeth. The hook read
+   * `projectList.rows` only; a failed or truncated walk yielded an empty list,
+   * `project` came back undefined, and `summariseTime(undefined)` reported
+   * `hasDates: false` — which the band prints as "No project timeline
+   * recorded". A failed read was rendered as a statement about the project,
+   * with no banner over it and no source for "Try again" to retry. It is the
+   * same class of defect as the fabricated money strip, moved from money to
+   * dates.
+   */
+  projectFailed: boolean;
+  /**
+   * `projects/{id}/milestones/`, and the same defect: read as `.data` only, so
+   * a failure rendered as "No milestones recorded" and as a programme with no
+   * drift, rather than as an outage.
+   */
+  milestonesFailed: boolean;
 }
 
 export interface HomeLoadIssue {
@@ -1950,6 +2111,8 @@ const EMPTY_LOAD_STATE: HomeLoadState = {
   riskFailed: false,
   obligationsFailed: false,
   paymentsFailed: false,
+  projectFailed: false,
+  milestonesFailed: false,
 };
 
 const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
@@ -1961,6 +2124,8 @@ const SOURCE_LABEL: Record<keyof HomeLoadState, string> = {
   riskFailed: "risk signals",
   obligationsFailed: "contract obligations",
   paymentsFailed: "certificate due dates",
+  projectFailed: "this project's own record",
+  milestonesFailed: "the programme milestones",
 };
 
 /**
@@ -2041,6 +2206,19 @@ export type VerdictTone = "breach" | "pressing" | "clear" | "unknown";
 export interface HomeVerdict {
   /** The whole line. One sentence or one clause; never two. */
   text: string;
+  /**
+   * `text` without its trailing "· N others past a date" clause.
+   *
+   * The verdict is the page's TITLE now, set at 24px, and the two halves are
+   * not the same kind of statement: the lead names one object and is what the
+   * reader must read, the tail is a count of things already listed in the
+   * queue below. Splitting them lets the title carry the fact at title size
+   * and the count ride beside it as small print, instead of putting a
+   * subordinate clause into an h1.
+   */
+  lead: string;
+  /** The "· N others…" clause on its own, or null when there is not one. */
+  tail: string | null;
   tone: VerdictTone;
   /** Where the fact lives, when it has a page of its own. */
   href?: string;
@@ -2076,13 +2254,20 @@ export function homeVerdict(input: {
     const unit = worst.clock === "working" ? " working days" : " days";
     const rest =
       overdue.length > 1
-        ? ` · ${overdue.length - 1} other${overdue.length === 2 ? "" : "s"} past a date`
-        : "";
+        ? `${overdue.length - 1} other${overdue.length === 2 ? "" : "s"} past a date`
+        : null;
+    // The server's own phrase where there is one — see `countdownLabel`. It
+    // already reads "2 working days overdue", so it replaces the whole clause
+    // rather than being spliced into one.
+    const lead = worst.countdownLabel
+      ? `${worst.headline} — ${worst.countdownLabel}`
+      : days === null
+        ? `${worst.headline} is past its date`
+        : `${worst.headline} — ${days}${unit} past its date`;
     return {
-      text:
-        days === null
-          ? `${worst.headline} is past its date${rest}`
-          : `${worst.headline} — ${days}${unit} past its date${rest}`,
+      text: rest === null ? lead : `${lead} · ${rest}`,
+      lead,
+      tail: rest,
       tone: "breach",
       href: worst.href,
     };
@@ -2099,15 +2284,24 @@ export function homeVerdict(input: {
     const unit = worst.clock === "working" ? " working days" : " days";
     // A row with no clock is in the act-today band on consequence alone, so
     // the line states the consequence and does not invent a countdown.
-    const when =
-      days === null
-        ? "is waiting on you"
-        : days === 0
-          ? "closes today"
-          : `closes in ${days}${unit}`;
-    const rest = acting.length > 1 ? ` · ${acting.length - 1} more need you today` : "";
+    //
+    // `countdownLabel` again takes precedence, and again is not spliced: it is
+    // a complete phrase ("4 working days remaining"), so it follows an em dash
+    // rather than being poured into "closes in …".
+    const lead = worst.countdownLabel
+      ? `${worst.headline} — ${worst.countdownLabel}`
+      : `${worst.headline} ${
+          days === null
+            ? "is waiting on you"
+            : days === 0
+              ? "closes today"
+              : `closes in ${days}${unit}`
+        }`;
+    const rest = acting.length > 1 ? `${acting.length - 1} more need you today` : null;
     return {
-      text: `${worst.headline} ${when}${rest}`,
+      text: rest === null ? lead : `${lead} · ${rest}`,
+      lead,
+      tail: rest,
       tone: "pressing",
       href: worst.href,
     };
@@ -2115,11 +2309,10 @@ export function homeVerdict(input: {
 
   // ── 3. Nothing is late, and we are only entitled to say so if we know ──
   if (loadLevel !== "none") {
-    return {
-      text: "Some of this project's data could not be read — nothing here says it is on time.",
-      tone: "unknown",
-    };
+    const lead = "Some of this project's data could not be read — nothing here says it is on time.";
+    return { text: lead, lead, tail: null, tone: "unknown" };
   }
 
-  return { text: "Nothing is past a contractual date.", tone: "clear" };
+  const clear = "Nothing is past a contractual date.";
+  return { text: clear, lead: clear, tail: null, tone: "clear" };
 }

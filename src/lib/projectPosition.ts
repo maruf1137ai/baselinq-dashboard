@@ -45,6 +45,7 @@
 import { formatZAR } from "./formatCurrency";
 import {
   BALANCE_LABEL,
+  REVISED_SUM_DOUBLE_COUNT,
   certificateIsCertified,
   type CertificateLike,
   type MoneyPosition,
@@ -263,10 +264,10 @@ export function financialOverview(
         stop looking. The overstatement is named in `warning` instead, where
         the reader can see it without hovering.
       */
-      warning:
-        money.variationCount > 0
-          ? "May double-count any variation signed through the sign-and-issue flow — the server adds those to the original sum as well."
-          : undefined,
+      // The one wording, shared with Home, which prints the same revised sum
+      // as its certified percentage and as the certified curve's ceiling and
+      // said nothing about it until now. Two screens, one caveat, one string.
+      warning: money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : undefined,
       caveat:
         "Original contract sum plus approved variations. See the warning: the " +
         "two operands can overlap and the payload does not say when they do.",

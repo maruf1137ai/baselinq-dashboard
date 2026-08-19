@@ -246,7 +246,7 @@ describe("summariseChangePosition", () => {
 
   it("states approved change as a percentage of the ORIGINAL sum", () => {
     const c = summariseChangePosition(vos, 10_000_000, 800_000, null);
-    expect(c.pctOfOriginal).toBe(8);
+    expect(c.pctOfContractSum).toBe(8);
   });
 
   it("draws no tolerance when the server has not fired the signal", () => {
@@ -266,8 +266,8 @@ describe("summariseChangePosition", () => {
   });
 
   it("computes no percentage against an unknown or zero original sum", () => {
-    expect(summariseChangePosition(vos, null, 800_000, 5).pctOfOriginal).toBeNull();
-    expect(summariseChangePosition(vos, 0, 800_000, 5).pctOfOriginal).toBeNull();
+    expect(summariseChangePosition(vos, null, 800_000, 5).pctOfContractSum).toBeNull();
+    expect(summariseChangePosition(vos, 0, 800_000, 5).pctOfContractSum).toBeNull();
     expect(summariseChangePosition(vos, 0, 800_000, 5).pastTolerance).toBe(false);
   });
 });

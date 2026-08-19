@@ -82,7 +82,7 @@ import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import type { HomeData } from "@/hooks/useHomeData";
 
-import { Panel, SectionHeading } from "./blocks";
+import { Panel, RowDate, SectionHeading } from "./blocks";
 
 /**
  * The fixed focus order. Named for what the reader must DO, never for how
@@ -159,8 +159,34 @@ const CAP = 12;
  * row used to state the date twice — an absolute date at the head of the
  * headline and a relative countdown here — which is the redundancy behind the
  * wall of text. It states each once now, in the register that suits it.
+ *
+ * ── `countdownLabel` wins, and this file does not second-guess it ─────────
+ *
+ * Where the source published a finished countdown phrase, it is printed
+ * VERBATIM and nothing here reassembles one. The most expensive defect this
+ * page has had was a client pairing a number with a unit that did not belong
+ * to it — a calendar-day count beside the word "working" on a JBCC notice —
+ * and `risk/models_evidence.py` now publishes `days_remaining_label` expressly
+ * so that pairing cannot happen in a client again. Reformatting the phrase
+ * into something terser would put the pairing straight back here, which is why
+ * the chip carries "12 working days remaining" in full rather than trimming it
+ * to fit an idea of how wide a badge should be.
+ *
+ * The number-plus-unit branch below survives for the sources that publish no
+ * such phrase — tasks, obligations, certificate due dates — where the count
+ * and the unit come out of one derivation and cannot disagree.
  */
 function clockChip(item: QueueItem): { label: string; variant: "danger" | "warning" | "neutral" } | null {
+  if (item.countdownLabel) {
+    // The variant is decided from the SIGN of the count, not by reading the
+    // phrase — parsing the server's words to colour them would be the same
+    // mistake in a different costume.
+    const d = item.daysRemaining;
+    return {
+      label: item.countdownLabel,
+      variant: d !== null && d <= 0 ? "danger" : "neutral",
+    };
+  }
   if (item.daysRemaining === null) {
     // An undated forfeiture clock is an UNKNOWN deadline and must not read as
     // "no deadline". It is the one non-fact that still earns a colour.
@@ -193,96 +219,16 @@ function clockChip(item: QueueItem): { label: string; variant: "danger" | "warni
   return { label: `${item.daysRemaining}${unit} days left`, variant: "neutral" };
 }
 
-/**
- * The row's date, as an object rather than as a sentence prefix.
- *
- * ── Why it is a tile at all ───────────────────────────────────────────────
- *
- * "Due 5 Aug 2026 — Notice of delay / claim for revision of completion date"
- * put the date in the same weight and colour as the label behind it, so it
- * read as more prose. Six of those stacked is a wall of text in which the one
- * thing that differs between the rows is buried inside the one thing that does
- * not. Given a fixed slot at the head of the row, filled, tabular and aligned
- * down a column, the date becomes something the eye lands on and compares
- * without reading — which is the whole of what a date column is for.
- *
- * ── Why ONE line and not two, measured ────────────────────────────────────
- *
- * A day-over-month tile is the more obviously "date-like" of the two and was
- * rejected on height. Measured in the browser at the panel's real width
- * (528px at a 1440px viewport), with the real stylesheet:
- *
- *   time-bar row, date in the headline   60px   ← what this replaces
- *   time-bar row, one-line tile          40px
- *   time-bar row, two-line tile          66px
- *
- * The one-line tile does not merely cost nothing — **it takes 20px off every
- * long row on the list.** The reason is the redundancy itself: "Due 5 Aug
- * 2026 — " is eighteen characters in front of a 55-character label, and the
- * pair wrapped to two lines in this column. Remove the prefix and the label
- * fits on one. The two-line tile would have ADDED 6px to the same row.
- *
- * Rows that were already one line — "Certify PC-006", a folded group — measure
- * 40px before and after, empty slot included. So no row on this list got
- * taller and several got shorter; the page height can only fall.
- *
- * The date still reads as an object rather than as prose, which is what was
- * being asked for. The fill, the fixed slot and the tabular figures do that
- * work; the second line was never what did it.
- *
- * ── What it shows ─────────────────────────────────────────────────────────
- *
- * Day and short month, on `bg-muted` in `text-foreground` — the same muted
- * fill `SectionHeading` uses, so no new token appears on this page. The YEAR
- * is shown ONLY when the date falls outside the current year: four characters
- * on every row for a fact that is identical on nearly all of them is exactly
- * the noise this change is removing, and a deadline eighteen months out must
- * never be mistaken for one this year. The full date, year included, is in the
- * row's tooltip and in its accessible name.
- *
- * ── What it does NOT show ─────────────────────────────────────────────────
- *
- * Nothing at all, when the row has no date. Not a dash, not a placeholder, not
- * an outlined empty tile: "—" inside a date tile reads as a date that failed
- * to load, and these dates have not failed to load — a certificate awaiting
- * certification genuinely has no due date anywhere in the payload. The slot
- * keeps its width so every headline in the list starts on the same vertical
- * line, and the chip says which kind of absence it is ("Not dated" for an
- * undated notice deadline, "No date" for an undated task).
- *
- * ── Colour ────────────────────────────────────────────────────────────────
- *
- * None, ever. Severity rule 4 gives the ink to the one element that names the
- * breach, and that is the chip — the element that knows whether the clock has
- * run out. A date is a fact about the calendar and is the same fact whether it
- * has passed or not.
- */
-function DateTile({ item }: { item: QueueItem }) {
-  // Fixed width whether or not it draws anything, so the headlines align. w-20
-  // fits "27 Sep 26" at `text-xs` without wrapping, which is the widest string
-  // this can produce.
-  const slot = "w-20 shrink-0";
+/*
+  ── The date tile MOVED to `blocks.tsx` as `RowDate` ──────────────────────
 
-  const parsed = item.date ? new Date(item.date) : null;
-  if (!parsed || Number.isNaN(parsed.getTime())) return <div className={slot} aria-hidden />;
-
-  const day = parsed.getDate();
-  const month = parsed.toLocaleDateString("en-GB", { month: "short" });
-  const sameYear = parsed.getFullYear() === new Date().getFullYear();
-  const year = String(parsed.getFullYear()).slice(2);
-
-  return (
-    // `aria-hidden`: the full date is already in the row's `aria-label`, in
-    // words and with its year. A screen-reader user should not be handed
-    // "5 Aug" as a second, worse copy of it.
-    <div
-      className={`${slot} rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-foreground text-center`}
-      aria-hidden
-    >
-      {`${day} ${month}${sameYear ? "" : ` ${year}`}`}
-    </div>
-  );
-}
+  Its long justification travelled with it, including the measurement that
+  settled one line against two (a one-line tile takes 20px off every long row;
+  a two-line tile adds 6px). What changed is only where it lives: the risk
+  panel and the change feed now draw the same slot, so all three lists on this
+  page start their text on one vertical line instead of two lists starting 92px
+  apart across a 16px gutter.
+*/
 
 /**
  * One row, one line.
@@ -332,8 +278,8 @@ export function QueueRow({ item }: { item: QueueItem }) {
       }
       className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
-      {/* The date, first, as an object. See `DateTile`. */}
-      <DateTile item={item} />
+      {/* The date, first, as an object. See `RowDate` in `blocks.tsx`. */}
+      <RowDate date={item.date} />
       {/*
         ── Two lines, and never a broken word ──────────────────────────────
 
@@ -346,7 +292,24 @@ export function QueueRow({ item }: { item: QueueItem }) {
         A one-line headline still occupies one line, so the common row keeps
         its 41px pitch and the panel does not grow on a normal day.
       */}
-      <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">{item.headline}</p>
+      {/*
+        ── `font-medium`, and it is the only content weight on the page ──────
+
+        Measured before this change: 40 uses of `text-sm` across the homepage
+        against 5 of `text-lg`, and the ONE `font-medium` content row belonged
+        to "What changed" — the panel whose own header comment says it is
+        explicitly not what you must do. The page's one bold row was on the
+        thing nobody has to act on.
+
+        This is the list that asks a person to move, so this is the list that
+        gets the weight. It costs no height, adds no element and introduces no
+        token: `font-medium` is already the panel-title weight, so the queue's
+        rows now read at the same weight as the headings around them and the
+        passive column reads a step below.
+      */}
+      <p className="text-sm font-medium text-foreground line-clamp-2 min-w-0 flex-1">
+        {item.headline}
+      </p>
       {chip && (
         <Badge variant={chip.variant} className="shrink-0 tabular-nums">
           {chip.label}
