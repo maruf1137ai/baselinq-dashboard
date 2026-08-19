@@ -25,7 +25,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarClock, Plus, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { describeCountdown, TONE_CLASS } from "@/lib/timeBarCountdown";
+import { describeCountdown, TONE_CLASS, type Countdown } from "@/lib/timeBarCountdown";
+
+// A time bar is drawn ONLY once its deadline has passed (PR#56's rule).
+// describeCountdown's tone still distinguishes urgent/soon at the lib
+// level — other consumers may want that gradient — but this tab
+// deliberately renders both as neutral so nothing is coloured before the
+// breach has actually happened; a notice period with days left has not
+// been missed.
+const badgeClass = (tone: Countdown["tone"]) =>
+  tone === "urgent" || tone === "soon" ? TONE_CLASS.closed : TONE_CLASS[tone];
 
 interface TimeBar {
   id: number;
@@ -176,7 +185,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={cn(
                     "px-2.5 py-1 rounded-md border text-xs font-medium whitespace-nowrap",
-                    TONE_CLASS[countdown.tone]
+                    badgeClass(countdown.tone)
                   )}>
                     {countdown.text}
                   </span>

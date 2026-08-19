@@ -46,8 +46,19 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  title: string;
+export interface PageHeaderProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
+  /**
+   * Usually a string. Widened to `ReactNode` for the one page whose title IS
+   * its content — Home, whose h1 carries the verdict and links it. Nothing
+   * about the layout, spacing or type scale changed to allow it: the node is
+   * rendered inside the same `h1`, so a page that passes a string is byte-for-
+   * byte what it was.
+   *
+   * A title node must stay a title: one short phrase, no block elements, no
+   * controls other than a link around the phrase itself.
+   */
+  title: React.ReactNode;
   description?: string;
   /**
    * Small print that belongs ON the title line rather than under it — a live

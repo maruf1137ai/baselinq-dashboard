@@ -5,7 +5,7 @@ import {
   VariationOrder,
 } from "@/components/finance/VariationOrdersTable";
 import { Button } from "@/components/ui/button";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
@@ -32,7 +32,8 @@ import { deleteData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
 import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
@@ -89,7 +90,41 @@ const Finance = () => {
     : [];
 
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
+
+  // ── Deep links ────────────────────────────────────────────────────────────
+  // /finance?tab=<tabKey>&pc=<paymentCertificateId>
+  // /finance?tab=<tabKey>&vo=<variationOrderId>
+  //
+  // Same pattern as Project Health: useSearchParams drives the existing state
+  // and the choice is written back, so the URL stays shareable and survives a
+  // reload. No router, no store, no second selection mechanism.
+  //
+  // The tab is DERIVED from the URL rather than seeded into useState once.
+  // `visibleTabs` is not stable on first paint — usePermission returns true
+  // while the effective-permissions payload is in flight, so "Platform Fees"
+  // can appear a beat late. A useState initialiser would capture the tab list
+  // as it stood at mount and permanently ignore a valid ?tab= for a tab that
+  // had not appeared yet. Deriving keeps one source of truth and self-corrects.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = resolveTabParam(searchParams.get("tab"), visibleTabs);
+
+  // NOTE ON PERMISSIONS: `visibleTabs` is computed above from canViewFinance
+  // and canViewPlatformFees WITHOUT reference to the URL. A ?tab= value can
+  // only ever pick a member of that already-filtered list, so following a
+  // ?tab=Payment Certificates&pc=… link as a viewer without finance.view
+  // yields visibleTabs === [] and activeTab === "" — the same refusal as
+  // navigating here normally. The parameter is not a way past the gate.
+  const chooseTab = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", next);
+    // The record parameters belong to the tab that was being viewed. Carrying
+    // them across to another tab would leave a selection pointing at something
+    // no longer on screen.
+    params.delete("pc");
+    params.delete("vo");
+    setSearchParams(params, { replace: true });
+  };
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
@@ -130,6 +165,30 @@ const Finance = () => {
         };
       });
   }, [voResponse]);
+
+  // ?vo=<variationOrderId> selects the SAME `selectedOrder` the in-page Edit
+  // click sets — one selection, two entry paths, rather than a parallel
+  // highlight mechanism that could disagree with it.
+  //
+  // A link may name the variation by its display number ("VO-001") or by its
+  // task id, because both are visible in the app and either could end up in a
+  // link. It resolves ONLY against `variationOrders`, the list already on
+  // screen: a deleted id, or one belonging to a project this viewer is not on,
+  // simply finds nothing. Nothing is selected, nothing is filtered, and the
+  // full list renders exactly as it would with no parameter — the page never
+  // implies the variation was deleted when it was only never shown.
+  const linkedOrder = useMemo(
+    () =>
+      findByDeepLinkId(searchParams.get("vo"), variationOrders, (o) => [
+        o.id,
+        o.taskId,
+      ]),
+    [searchParams, variationOrders],
+  );
+
+  useEffect(() => {
+    if (linkedOrder) setSelectedOrder(linkedOrder);
+  }, [linkedOrder]);
 
   const handleEdit = (order: VariationOrder) => {
     setSelectedOrder(order);
@@ -190,7 +249,7 @@ const Finance = () => {
                   key={tab}
                   role="tab"
                   aria-selected={activeTab === tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => chooseTab(tab)}
                   className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
@@ -238,6 +297,7 @@ const Finance = () => {
                 <VariationOrdersTable
                   orders={variationOrders}
                   search={voSearch}
+                  highlightTaskId={selectedOrder?.taskId ?? null}
                   onViewDetails={(taskId) => navigate(`/tasks/${taskId}`)}
                   onEdit={canEditVariationOrder ? handleEdit : undefined}
                   onDelete={canEditVariationOrder ? handleDelete : undefined}
@@ -246,7 +306,9 @@ const Finance = () => {
             </main>
           )}
           {activeTab === "Cost Ledger" && <CostLadger />}
-          {activeTab === "Payment Certificates" && <PaymentCertificate />}
+          {activeTab === "Payment Certificates" && (
+            <PaymentCertificate certificateParam={searchParams.get("pc")} />
+          )}
           {activeTab === "Platform Fees" && canViewPlatformFees && <PlatformFees />}
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>

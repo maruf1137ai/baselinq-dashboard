@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
@@ -46,6 +46,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
+import { pageContaining } from "@/lib/deepLink";
 
 export interface PCEntry {
   id: number;
@@ -197,6 +198,13 @@ interface PaymentCertificateTableProps {
   orders: PCEntry[];
   /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
   search: string;
+  /** Id of the certificate whose details are open, or null for none.
+   *
+   *  Lifted out of the row so that clicking a PC number and following a
+   *  `/finance?tab=Payment Certificates&pc=…` link drive the SAME state
+   *  instead of two dialogs that can disagree about what is selected. */
+  selectedId?: number | null;
+  onSelect?: (id: number | null) => void;
 }
 
 const PAGE_SIZE = 10;
@@ -796,9 +804,23 @@ const PCDetailsDialog = ({
   );
 };
 
-const PCRow = ({ entry }: { entry: PCEntry }) => {
+const PCRow = ({
+  entry,
+  isSelected,
+  onSelect,
+  rowRef,
+}: {
+  entry: PCEntry;
+  isSelected: boolean;
+  onSelect: (id: number | null) => void;
+  rowRef?: React.Ref<HTMLTableRowElement>;
+}) => {
   const warnings = warningsOf(entry);
-  const [showViewDialog, setShowViewDialog] = useState(false);
+  // The details dialog is open exactly when this row is the selected one —
+  // lifted so a `/finance?tab=Payment Certificates&pc=…` link and a row
+  // click drive the same dialog instead of two that can disagree.
+  const showViewDialog = isSelected;
+  const setShowViewDialog = (open: boolean) => onSelect(open ? entry.id : null);
   const [waitingOnOpen, setWaitingOnOpen] = useState(false);
   const [actingOn, setActingOn] = useState<string | null>(null);
   // Reject/Cancel need a reason from the person, not just a click — this
@@ -875,7 +897,11 @@ const PCRow = ({ entry }: { entry: PCEntry }) => {
   };
 
   return (
-    <tr className="hover:bg-muted/50 transition-colors">
+    <tr
+      ref={rowRef}
+      aria-current={isSelected ? "true" : undefined}
+      data-highlighted={isSelected ? "true" : undefined}
+      className={`transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-muted/50"}`}>
       <td className="px-4 py-3 whitespace-nowrap text-sm">
         <button
           type="button"
@@ -987,8 +1013,14 @@ const HEADERS: { label: string; align?: "right" }[] = [
   { label: "Actions" },
 ];
 
-export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({ orders, search }) => {
+export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({
+  orders,
+  search,
+  selectedId = null,
+  onSelect,
+}) => {
   const [page, setPage] = useState(1);
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -1008,6 +1040,19 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Page to the selected certificate, then bring it into view. A selection
+  // that is not in `filtered` — a stale id, or one hidden behind the current
+  // search — leaves the pagination exactly where the user left it.
+  useEffect(() => {
+    if (selectedId === null) return;
+    const target = pageContaining(filtered, (o) => o.id === selectedId, PAGE_SIZE);
+    if (target !== null) setPage(target);
+  }, [selectedId, filtered]);
+
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [selectedId, safePage]);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -1049,7 +1094,15 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                 </td>
               </tr>
             ) : (
-              paginated.map((order) => <PCRow key={order.id} entry={order} />)
+              paginated.map((order) => (
+                <PCRow
+                  key={order.id}
+                  entry={order}
+                  isSelected={order.id === selectedId}
+                  onSelect={(id) => onSelect?.(id)}
+                  rowRef={order.id === selectedId ? selectedRowRef : undefined}
+                />
+              ))
             )}
           </tbody>
         </table>

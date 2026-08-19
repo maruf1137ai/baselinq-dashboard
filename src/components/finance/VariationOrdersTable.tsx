@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { MoreIcon } from "../icons/icons";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { UserChip } from "@/components/TaskComponents/UserChip";
@@ -11,6 +11,7 @@ import {
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { pageContaining } from "@/lib/deepLink";
 
 interface VariationOrdersTableProps {
   orders: VariationOrder[];
@@ -21,6 +22,13 @@ interface VariationOrdersTableProps {
   onDelete?: (order: VariationOrder) => void;
   /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
   search: string;
+  /** Task id of the currently selected variation, or null for none.
+   *
+   *  This is a HIGHLIGHT, never a filter. The row is paged to, scrolled to and
+   *  marked; every other row stays exactly where it was. A task id that is not
+   *  in `orders` — deleted, or on a project this viewer is not a member of —
+   *  highlights nothing and changes nothing else about the table. */
+  highlightTaskId?: string | null;
 }
 
 export enum OrderStatus {
@@ -79,8 +87,10 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   onEdit,
   onDelete,
   search,
+  highlightTaskId = null,
 }) => {
   const [page, setPage] = useState(1);
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -103,6 +113,19 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // A link to the 34th variation is no use if the table opens on page 1 and
+  // the row is three pages away. `pageContaining` returns null when the id is
+  // not in the visible list, which leaves the pagination untouched.
+  useEffect(() => {
+    if (!highlightTaskId) return;
+    const target = pageContaining(filtered, (o) => o.taskId === highlightTaskId, PAGE_SIZE);
+    if (target !== null) setPage(target);
+  }, [highlightTaskId, filtered]);
+
+  useEffect(() => {
+    highlightRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlightTaskId, safePage]);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -144,8 +167,15 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                 </td>
               </tr>
             ) : (
-              paginated.map((order) => (
-                <tr key={order.id} className="hover:bg-muted/50 transition-colors">
+              paginated.map((order) => {
+                const isHighlighted = highlightTaskId !== null && order.taskId === highlightTaskId;
+                return (
+                <tr
+                  key={order.id}
+                  ref={isHighlighted ? highlightRef : undefined}
+                  aria-current={isHighlighted ? "true" : undefined}
+                  data-highlighted={isHighlighted ? "true" : undefined}
+                  className={`transition-colors ${isHighlighted ? "bg-primary/5" : "hover:bg-muted/50"}`}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                     {onViewDetails ? (
                       <button
@@ -207,7 +237,8 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                     </DropdownMenu>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

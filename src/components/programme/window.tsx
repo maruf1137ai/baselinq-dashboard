@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Shield, TrendingDown } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Timeline from "./timeline";
 import Milestone from "./milestone";
 import { AddPhaseDialog } from "./AddPhaseDialog";
@@ -11,7 +12,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 const tabs = ["Schedule", "Milestones", "Risk Forecast"];
 
 const Window = () => {
-  const [activeTab, setActiveTab] = useState("Schedule");
+  // ── Deep link: /programme?milestone=<milestoneId> ─────────────────────────
+  // Same pattern as Project Health: useSearchParams drives the tab state the
+  // page already has, and switching tabs writes back, so the URL stays
+  // shareable and survives a reload.
+  //
+  // A named milestone lives on the Milestones tab, so the parameter opens
+  // that tab. It cannot open a tab that does not exist, and it fetches
+  // nothing by id — the milestone is only ever highlighted if it is already
+  // in the list this viewer's own request returned. An id that is stale, or
+  // that belongs to a project this user is not on, opens the Milestones tab
+  // with the full, unfiltered list and nothing highlighted: the same page the
+  // user would see having clicked the tab themselves, never an error and
+  // never an empty list implying the phase was deleted.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const milestoneParam = searchParams.get("milestone");
+  const [tabChoice, setTabChoice] = useState<string | null>(null);
+  const activeTab = tabChoice ?? (milestoneParam ? "Milestones" : "Schedule");
+
+  const chooseTab = (next: string) => {
+    setTabChoice(next);
+    if (next !== "Milestones" && milestoneParam) {
+      // Leaving the tab the selection lives on: drop it rather than leave a
+      // parameter pointing at a row that is no longer rendered.
+      const params = new URLSearchParams(searchParams);
+      params.delete("milestone");
+      setSearchParams(params, { replace: true });
+    }
+  };
+
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const projectId = localStorage.getItem("selectedProjectId");
@@ -30,7 +59,7 @@ const Window = () => {
         {tabs.map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => chooseTab(tab)}
             className={`text-sm py-4 px-6 border-b-2 -mb-px transition-all ${
               activeTab === tab
                 ? "border-primary text-foreground"
@@ -54,7 +83,11 @@ const Window = () => {
             <div className="flex justify-end">
               <AcceptBaselineDialog projectId={projectId} />
             </div>
-            <Milestone projectId={projectId} onAddMilestone={() => setAddDialogOpen(true)} />
+            <Milestone
+              projectId={projectId}
+              onAddMilestone={() => setAddDialogOpen(true)}
+              selectedMilestoneId={milestoneParam}
+            />
           </div>
         )}
         {activeTab === "Risk Forecast" && <RiskForecast projectId={projectId} />}
