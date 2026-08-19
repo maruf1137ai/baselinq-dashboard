@@ -48,7 +48,7 @@
  */
 import { Link } from "react-router-dom";
 
-import { Panel, RowDate } from "./blocks";
+import { Panel } from "./blocks";
 import { relativeDays } from "@/lib/homeSignals";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import type { ChangeFeed, ChangeItem } from "@/lib/homeChanges";
@@ -93,23 +93,12 @@ function ChangeRow({ item }: { item: ChangeItem }) {
          reference by this page's own argument, so it is the column that gives
          height back to the one that is not. */
       className="flex items-baseline gap-3 px-4 py-2 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:-ring-offset-1"
-      /* The tile is `aria-hidden`; the date in words, with its year and with
-         the word that says what kind of date it is, lives here. */
+      /* The ABSOLUTE date, in words and with its year, and the word that says
+         what kind of date it is. The row shows the relative form; a reader who
+         needs the calendar day gets it here. */
       title={[full ? `Moved ${full}` : null, when].filter(Boolean).join(" · ") || undefined}
       aria-label={[item.headline, when ? `moved ${when}` : null].filter(Boolean).join(". ") + "."}
     >
-      {/*
-        ── The date moved to the FRONT, into the shared slot ───────────────
-
-        It was a right-aligned "6 days ago". The queue sixteen pixels to the
-        left starts every row with an 80px date tile, so two visually identical
-        lists sat 92px out of register at the one edge the eye uses to read a
-        list as a list. Same slot, same grammar, same column — and the relative
-        phrase is not lost, it is in the tooltip and the accessible name, where
-        "6 days ago" is a better sentence than it ever was as a right-hand
-        stub.
-      */}
-      <RowDate date={item.at} />
       {/* ONE LINE PER ROW, and the detail runs on inside it rather than under
           it. The page has to hold one screen at 1440px and the right-hand
           column is what sets its height: measured on the real layout, a
@@ -124,6 +113,36 @@ function ChangeRow({ item }: { item: ChangeItem }) {
           <span className="text-muted-foreground font-normal"> · {item.detail}</span>
         )}
       </p>
+      {/*
+        ── RELATIVE time, back on the right, where it was and where it belongs ─
+
+        It was here, it was moved into a leading date pill to put this list in
+        register with the queue, and the pill printed the absolute event date:
+        "17 Aug" on nearly every row of the live project, in the strongest
+        position a row has, replacing the one thing a reader of a history
+        actually asks — **how long ago**. Nobody scanning what has moved on a
+        project is looking up a calendar day; they are asking whether a thing
+        is fresh. "yesterday" answers that and "17 Aug" makes them work it out.
+
+        On the RIGHT because it is metadata about the row rather than the row's
+        subject — a history's rows are the things that moved, not the days they
+        moved on. It is also what separates this list from `Open risk` directly
+        above it, which is plain sentences and ends in nothing; the two start
+        their text on the same vertical line and diverge at the other end, which
+        is the right way round. The queue, in the other column, is the only list
+        weighted at both ends.
+
+        Muted and `text-xs`: quieter than every headline tier including
+        `routine`, so it never competes with the sentence it dates.
+
+        It also explains the order. This feed is tier-major and recency-minor
+        by design — see the header — so a reader WILL see "6 days ago" above
+        "yesterday". Printing the age is what makes that visibly deliberate
+        rather than visibly broken, and the panel's lead says the rule outright.
+      */}
+      {when && (
+        <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{when}</span>
+      )}
     </Link>
   );
 }
@@ -160,6 +179,7 @@ export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
     return (
       <Panel
         title="What changed"
+        emphasis="reference"
         // "Nothing is tracked" and "nothing has moved" are different states and
         // the page must not say the second when it means the first — a brand
         // new project has no certificates and no meetings, and calling that
@@ -177,7 +197,16 @@ export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
   return (
     <Panel
       title="What changed"
-      lead={`${feed.items.length} recent`}
+      emphasis="reference"
+      /*
+        "3 recent" was a count with no unit and no grammar. The rows now print
+        their age on the right, so the ordering is visible — and it is NOT
+        newest-first, by design, which this panel's header comment names as the
+        thing a reader misreads as broken. Saying the rule beside the title
+        costs no height (the lead already rides on the title's baseline) and
+        turns a confusing column into an explained one.
+      */
+      lead={`${feed.items.length} recent · most consequential first`}
       hint={changeFeedDisclosure(feed)}
     >
       {feed.items.map((item) => (

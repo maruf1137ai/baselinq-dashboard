@@ -324,10 +324,19 @@ export function QueueRow({ item }: { item: QueueItem }) {
  * the sentence it used to be ("4 need you today · 13 open in all") was three
  * clauses where one number does. `summariseQueue`'s bands decide "today".
  */
+/*
+  "3 today · 6 open" counts things whose unit the reader has to infer, and all
+  three panels on this page were leading with an unlabelled figure of a
+  different kind — actions, signals, events — in the same treatment. Each one
+  now names what it is counting, in the same number of words: "3 due today ·
+  6 to do", "4 critical of 11 open signals", "3 recent · most consequential
+  first". "due" also states this list's axis, which is the deadline in the
+  pill at the head of each of its rows, and no other list on the page has one.
+*/
 function queueLead(summary: ReturnType<typeof summariseQueue>): string | undefined {
   if (summary.total === 0) return undefined;
-  if (summary.calm) return `${summary.total} open · none urgent`;
-  return `${summary.actToday} today · ${summary.total} open`;
+  if (summary.calm) return `${summary.total} to do · none urgent`;
+  return `${summary.actToday} due today · ${summary.total} to do`;
 }
 
 export function ActionQueueBlock({
@@ -342,7 +351,7 @@ export function ActionQueueBlock({
 
   if (isLoading) {
     return (
-      <Panel title={title}>
+      <Panel title={title} emphasis="primary">
         <AwesomeLoader message="Working out what needs you" />
       </Panel>
     );
@@ -357,6 +366,7 @@ export function ActionQueueBlock({
       return (
         <Panel
           title={title}
+          emphasis="primary"
           icon={ShieldAlert}
           tone="orange"
           // Still a sentence, and deliberately: this is the one empty state
@@ -365,7 +375,15 @@ export function ActionQueueBlock({
         />
       );
     }
-    return <Panel title={title} icon={CheckCircle2} tone="green" hint="Nothing is waiting on you." />;
+    return (
+      <Panel
+        title={title}
+        emphasis="primary"
+        icon={CheckCircle2}
+        tone="green"
+        hint="Nothing is waiting on you."
+      />
+    );
   }
 
   // Rows keep `rankQueue`'s order inside their section; sections keep theirs.
@@ -388,7 +406,22 @@ export function ActionQueueBlock({
   }
 
   return (
-    <Panel title={title} lead={queueLead(summary)}>
+    /*
+      ── The ONE primary panel on this page ──────────────────────────────
+
+      `emphasis="primary"` keeps this header on the card surface and sets its
+      title a weight above every other heading on the screen, while `Open risk`
+      and `What changed` take `reference` and drop their headers onto the well
+      fill. See the long note on `Panel` in blocks.tsx.
+
+      This is the same argument that gave these rows `font-medium` one change
+      ago, carried one level up: the list that asks a person to move outranks
+      the two lists that are true whether or not anybody moves. The owner asked
+      to be able to "identify the hierarchy" of the blocks below the financial
+      band; this is the hierarchy, stated in the two channels that cost no
+      height — weight and surface.
+    */
+    <Panel title={title} emphasis="primary" lead={queueLead(summary)}>
       {rows}
     </Panel>
   );
