@@ -7,11 +7,16 @@ import {
   filterComplianceRows,
   isObligationClosed,
   isTimeBarClosed,
+  countdownPhrase,
+  dueSoonThreshold,
+  normaliseDayUnit,
   parseDueDate,
   sortComplianceRows,
   summariseCompliance,
   summariseLoadIssues,
   urgencyLabel,
+  DUE_SOON_CALENDAR_DAYS,
+  DUE_SOON_WORKING_DAYS,
   type ApiObligation,
   type ApiTimeBar,
   type ComplianceRow,
@@ -275,13 +280,77 @@ describe("urgencyLabel", () => {
     status: "open",
     urgency: "on-track",
     daysFromDue: 30,
+    daysUnit: "calendar",
     ...over,
   });
 
-  it("states the days when it has them", () => {
-    expect(urgencyLabel(row({ urgency: "on-track", daysFromDue: 30 }))).toBe("30d left");
-    expect(urgencyLabel(row({ urgency: "due-soon", daysFromDue: 3 }))).toBe("3d left");
-    expect(urgencyLabel(row({ urgency: "overdue", daysFromDue: -4 }))).toBe("4d overdue");
+  // THE DEFECT. This column carries working-day notice deadlines beside
+  // calendar-day contract obligations. It used to print "12d left" for both.
+  it("names the unit every number is counted in", () => {
+    expect(urgencyLabel(row({ urgency: "on-track", daysFromDue: 30, daysUnit: "calendar" })))
+      .toBe("30 calendar days remaining");
+    expect(urgencyLabel(row({ urgency: "due-soon", daysFromDue: 3, daysUnit: "working" })))
+      .toBe("3 working days remaining");
+    expect(urgencyLabel(row({ urgency: "overdue", daysFromDue: -4, daysUnit: "working" })))
+      .toBe("4 working days overdue");
+  });
+
+  it("never prints a bare, unitless day count", () => {
+    const cases: ComplianceRow[] = [
+      row({ urgency: "on-track", daysFromDue: 30, daysUnit: "calendar" }),
+      row({ urgency: "due-soon", daysFromDue: 3, daysUnit: "working" }),
+      row({ urgency: "overdue", daysFromDue: -4, daysUnit: "working" }),
+      row({ urgency: "due-soon", daysFromDue: 0, daysUnit: "working" }),
+    ];
+    for (const c of cases) {
+      const label = urgencyLabel(c);
+      // No "12d", and no figure followed by an unqualified "days".
+      expect(label).not.toMatch(/\d\s*d\b/);
+      expect(label).not.toMatch(/\d+ days?\b/);
+      // Every label that carries a figure names the unit beside it.
+      if (/\d/.test(label)) expect(label).toMatch(/(working|calendar) days?/);
+    }
+  });
+
+  it("singularises", () => {
+    expect(urgencyLabel(row({ urgency: "due-soon", daysFromDue: 1, daysUnit: "working" })))
+      .toBe("1 working day remaining");
+    expect(urgencyLabel(row({ urgency: "overdue", daysFromDue: -1, daysUnit: "calendar" })))
+      .toBe("1 calendar day overdue");
+  });
+
+  it("says due today rather than zero days", () => {
+    expect(urgencyLabel(row({ urgency: "due-soon", daysFromDue: 0, daysUnit: "working" })))
+      .toBe("due today");
+  });
+
+  // Rendering the server's finished phrase is the point: nothing at the render
+  // layer re-pairs a number with a unit.
+  it("renders a server-authored countdown label verbatim", () => {
+    expect(urgencyLabel(row({
+      urgency: "due-soon",
+      daysFromDue: 12,
+      daysUnit: "working",
+      countdownLabel: "12 working days remaining",
+    }))).toBe("12 working days remaining");
+  });
+
+  it("ignores a server label on a closed row, which reports its status", () => {
+    expect(urgencyLabel(row({
+      urgency: "closed",
+      status: "served",
+      countdownLabel: "4 working days remaining",
+    }))).toBe("served");
+  });
+
+  // A number whose unit we cannot name is a number we must not print.
+  it("states the urgency without a figure when the unit is unknown", () => {
+    expect(urgencyLabel(row({ urgency: "overdue", daysFromDue: -4, daysUnit: null })))
+      .toBe("Overdue");
+    expect(urgencyLabel(row({ urgency: "due-soon", daysFromDue: 3, daysUnit: null })))
+      .toBe("Due soon");
+    expect(urgencyLabel(row({ urgency: "on-track", daysFromDue: 30, daysUnit: null })))
+      .toBe("On track");
   });
 
   // The badge is the whole message on a row. It must never print "nulld left"
@@ -294,6 +363,8 @@ describe("urgencyLabel", () => {
       row({ urgency: "no-date", daysFromDue: null }),
       row({ urgency: "on-track", daysFromDue: NaN }),
       row({ urgency: "closed", daysFromDue: null, status: "" }),
+      row({ urgency: "overdue", daysFromDue: null, daysUnit: null }),
+      row({ urgency: "due-soon", daysFromDue: 3, daysUnit: null }),
     ];
     for (const c of cases) {
       const label = urgencyLabel(c);
@@ -425,6 +496,114 @@ describe("sortComplianceRows", () => {
     expect(sorted.map(r => r.title)).toEqual(["Overdue", "Due soon", "On track", "Done"]);
     expect(rows.map(r => r.title)).toEqual(before);
     expect(sorted).not.toBe(rows);
+  });
+});
+
+describe("day units", () => {
+  it("reads the backend's unit values", () => {
+    expect(normaliseDayUnit("working")).toBe("working");
+    expect(normaliseDayUnit("calendar")).toBe("calendar");
+    expect(normaliseDayUnit(" Working Days ")).toBe("working");
+    expect(normaliseDayUnit("calendar_days")).toBe("calendar");
+  });
+
+  // An unrecognised unit is unknown, never assumed. Assuming "calendar" for a
+  // working-day clock overstates the time available by about a third.
+  it("returns null for anything it does not recognise", () => {
+    expect(normaliseDayUnit(null)).toBeNull();
+    expect(normaliseDayUnit(undefined)).toBeNull();
+    expect(normaliseDayUnit("")).toBeNull();
+    expect(normaliseDayUnit("business")).toBeNull();
+  });
+
+  // One threshold applied to both units is the calendar-arbitrary window the
+  // two backend modules were written to avoid.
+  it("gives each unit its own amber window", () => {
+    expect(dueSoonThreshold("calendar")).toBe(DUE_SOON_CALENDAR_DAYS);
+    expect(dueSoonThreshold("working")).toBe(DUE_SOON_WORKING_DAYS);
+    expect(DUE_SOON_WORKING_DAYS).toBeLessThan(DUE_SOON_CALENDAR_DAYS);
+  });
+
+  it("uses the tighter window when the unit is unknown", () => {
+    expect(dueSoonThreshold(null)).toBe(DUE_SOON_WORKING_DAYS);
+  });
+
+  // Same wording as TimeBarClock.days_remaining_label on the backend, so one
+  // column reads the same whether the phrase was served or built here.
+  it("phrases a countdown the way the backend does", () => {
+    expect(countdownPhrase(12, "working")).toBe("12 working days remaining");
+    expect(countdownPhrase(1, "working")).toBe("1 working day remaining");
+    expect(countdownPhrase(0, "calendar")).toBe("due today");
+    expect(countdownPhrase(-1, "calendar")).toBe("1 calendar day overdue");
+    expect(countdownPhrase(-3, "working")).toBe("3 working days overdue");
+  });
+});
+
+describe("buildTimeBarRows — units", () => {
+  const bar = (over: Partial<ApiTimeBar> = {}): ApiTimeBar => ({
+    id: 7,
+    label: "Notice of delay",
+    contract_form: "JBCC",
+    clause_ref: "23.1",
+    clause_verified: true,
+    deadline_date: "2026-08-10",
+    days_remaining: 7,
+    days_remaining_unit: "working",
+    days_remaining_label: "7 working days remaining",
+    status: "open",
+    ...over,
+  });
+
+  it("carries the unit the server counted in, and its finished label", () => {
+    const [row] = buildTimeBarRows([bar()], TODAY);
+    expect(row.daysUnit).toBe("working");
+    expect(row.countdownLabel).toBe("7 working days remaining");
+    expect(urgencyLabel(row)).toBe("7 working days remaining");
+  });
+
+  it("applies the working-day window to a working-day clock", () => {
+    // 12 working days is outside the 10-working-day window, but would have
+    // been inside a flat 14-day one.
+    expect(buildTimeBarRows([bar({ days_remaining: 12 })], TODAY)[0].urgency).toBe("on-track");
+    expect(buildTimeBarRows([bar({ days_remaining: 9 })], TODAY)[0].urgency).toBe("due-soon");
+  });
+
+  it("falls back to the clock's own unit when days_remaining_unit is absent", () => {
+    const [row] = buildTimeBarRows(
+      [bar({ days_remaining_unit: null, unit: "working" })],
+      TODAY,
+    );
+    expect(row.daysUnit).toBe("working");
+  });
+
+  // A server count with no unit anywhere: keep the number for colour and
+  // order, but say nothing about how long it is.
+  it("leaves the unit unknown when the server named none", () => {
+    const [row] = buildTimeBarRows(
+      [bar({ days_remaining_unit: null, unit: null, days_remaining_label: null })],
+      TODAY,
+    );
+    expect(row.daysUnit).toBeNull();
+    expect(row.daysFromDue).toBe(7);
+    expect(urgencyLabel(row)).toBe("Due soon");
+  });
+
+  // The fallback counts calendar days between two calendar dates, so it may
+  // say so.
+  it("marks a locally counted bar as calendar days", () => {
+    const [row] = buildTimeBarRows(
+      [bar({ days_remaining: null, days_remaining_unit: null, unit: null, days_remaining_label: null, deadline_date: "2026-08-10" })],
+      TODAY,
+    );
+    expect(row.daysUnit).toBe("calendar");
+    expect(urgencyLabel(row)).toBe("7 calendar days remaining");
+  });
+
+  it("drops the countdown label on a served bar so the status shows", () => {
+    const [row] = buildTimeBarRows([bar({ status: "served" })], TODAY);
+    expect(row.countdownLabel).toBeUndefined();
+    expect(row.daysUnit).toBeNull();
+    expect(urgencyLabel(row)).toBe("served");
   });
 });
 

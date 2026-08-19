@@ -105,7 +105,11 @@ function buildObligationRowsFromAggregate(
       dueDate: o.dueDate,
       status: o.status,
       urgency,
+      // An obligation's due date is a calendar date, so `deriveUrgency`
+      // counted calendar days. Stated, not assumed — the badge prints the
+      // unit, and this column also carries working-day notice deadlines.
       daysFromDue,
+      daysUnit: "calendar",
       responsibleRole: o.responsibleRole || undefined,
       documentId: o.documentId,
       obligationId: o._id,
