@@ -74,7 +74,7 @@ const CERTIFICATES = [
 ];
 
 const VARIATIONS = [
-  { ref: "VO-001", status: "Approved", value: 450_000, dateInstructed: "2026-02-10", approvedAt: "2026-02-20T09:00:00Z", updatedAt: "2026-02-20T09:00:00Z" },
+  { ref: "VO-001", status: "Approved", value: 450_000, dateInstructed: "2026-02-10", approvedAt: "2026-02-20T09:00:00Z", updatedAt: "2026-02-20T09:00:00Z", signedAt: "2026-02-20T09:00:00Z" },
   { ref: "VO-002", status: "Under Review", value: 220_000, dateInstructed: null, approvedAt: null, updatedAt: "2026-06-01T09:00:00Z" },
   { ref: "VO-003", status: "Draft", value: 90_000, dateInstructed: "2026-05-02", approvedAt: null, updatedAt: "2026-05-02T09:00:00Z" },
 ];
@@ -108,7 +108,7 @@ function homeData(gates: { canViewFinance: boolean; canViewCompliance: boolean }
   const money = summariseMoney(
     canViewFinance ? PROJECT : undefined,
     certificates,
-    variations.map((v) => ({ status: v.status, grandTotal: v.value })),
+    variations.map((v) => ({ status: v.status, grandTotal: v.value, signedAt: v.signedAt })),
   );
   const time = summariseTime(PROJECT, NOW);
   const run = buildCertificateRun(certificates);

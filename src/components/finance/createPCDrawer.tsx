@@ -30,7 +30,6 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-const DRAFT_TYPE = "PC";
 const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"] as const;
 
 interface WorkLineItem {
@@ -373,6 +372,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   projectId,
   onSubmit,
 }) => {
+  // Scoped per project so minimizing a draft on one project can't resurface
+  // in another project's "New Certificate" drawer — see taskDrafts.ts.
+  const draftType = `PC:${projectId ?? "none"}`;
+
   const [valuationPeriod, setValuationPeriod] = useState<Date | undefined>(
     // First day of the current month — not a date pinned to a demo dataset.
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -749,7 +752,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     try {
       const created = await onSubmit?.(payload);
       if (created?.id) await registerAttachments(created.id);
-      clearTaskDraft(DRAFT_TYPE);
+      clearTaskDraft(draftType);
       onClose();
     } catch (err) {
       // Stay open. Every line item, note and VO amount is still on screen.
@@ -776,7 +779,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     if (hasContent && !window.confirm("Discard this certificate draft?")) {
       return;
     }
-    clearTaskDraft(DRAFT_TYPE);
+    clearTaskDraft(draftType);
     onClose();
   };
 
@@ -786,7 +789,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // discards what was typed — those now behave like "minimize": the draft is
   // kept and restored the next time the drawer opens. Only the footer Cancel
   // button (above) clears it, and only after confirming.
-  useTaskDraftAutosave(DRAFT_TYPE, isOpen, {
+  useTaskDraftAutosave(draftType, isOpen, {
     valuationPeriod: valuationPeriod?.toISOString(),
     certificateDate: certificateDate?.toISOString(),
     workItems,
@@ -874,7 +877,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   useEffect(() => {
     if (isOpen && !wasOpen.current) {
       wasOpen.current = true;
-      applyDraft(loadTaskDraft(DRAFT_TYPE));
+      applyDraft(loadTaskDraft(draftType));
     } else if (!isOpen) {
       wasOpen.current = false;
     }

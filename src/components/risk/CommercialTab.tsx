@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 import { certificateAdjustments, financialOverview } from "@/lib/projectPosition";
 import type { ProjectCommercials } from "@/hooks/useProjectCommercials";
 
-function Panel({
+export function Panel({
   title,
   lead,
   action,
@@ -70,7 +70,7 @@ function Panel({
  * colour or a rule — the client marks them "auto-calculated" and the honest
  * translation of that is showing the reader the sum so they can check it.
  */
-function Row({
+export function Row({
   label,
   value,
   note,

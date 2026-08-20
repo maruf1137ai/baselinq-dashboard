@@ -38,11 +38,15 @@ import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
 
-const mapStatus = (status: string): OrderStatus => {
-  const s = (status || "").toLowerCase();
-  if (s === "done" || s === "approved" || s === "completed") return OrderStatus.Approved;
-  if (s === "in review" || s === "inreview" || s === "in_review") return OrderStatus.InReview;
-  return OrderStatus.Open;
+// The VO's own real status (`item.task.status`), NOT the wrapping Task's
+// kanban column (`item.status` — todo/in review/done, which a seed/demo
+// script or an unrelated board move can set with no regard for the VO's
+// actual commercial state). See VariationOrdersTable.tsx's OrderStatus for
+// why the distinction matters. Falls back to Draft rather than guessing at
+// one of the "further along" states for a value it doesn't recognise.
+const mapStatus = (status: string | undefined | null): OrderStatus => {
+  const known = Object.values(OrderStatus) as string[];
+  return known.includes(status || "") ? (status as OrderStatus) : OrderStatus.Draft;
 };
 
 const formatDate = (dateStr: string): string => {
@@ -157,7 +161,8 @@ const Finance = () => {
           taskId: String(item.taskId),
           title: item.task?.title || "-",
           value,
-          status: mapStatus(item.status),
+          status: mapStatus(item.task?.status),
+          signedAt: item.task?.signedAt ?? null,
           requestedBy: assigneeName ? { name: assigneeName } : null,
           updated: formatDate(item.update_at),
           impact,

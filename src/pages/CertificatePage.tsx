@@ -233,6 +233,35 @@ export default function CertificatePage() {
               <DetailRow label="Issued at">{formatCertDate(cert.issued_at)}</DetailRow>
 
               {/* Type-specific rows */}
+              {cert.type === "rfi" && (
+                <>
+                  <DetailRow label="Question">{cert.question || "—"}</DetailRow>
+                  <DetailRow label="Response">{cert.response_answer || "—"}</DetailRow>
+                  {cert.responded_by && (
+                    <DetailRow label="Responded by">{cert.responded_by}</DetailRow>
+                  )}
+                  <DetailRow label="Responded at">{formatCertDate(cert.responded_at)}</DetailRow>
+                </>
+              )}
+              {cert.type === "gi" && (
+                <>
+                  <DetailRow label="Direction">{cert.direction || "—"}</DetailRow>
+                  <DetailRow label="Discipline">{cert.discipline || "—"}</DetailRow>
+                  {cert.raised_by && (
+                    <DetailRow label="Raised by">{cert.raised_by}</DetailRow>
+                  )}
+                </>
+              )}
+              {cert.type === "si" && (
+                <>
+                  <DetailRow label="Discipline">{cert.discipline || "—"}</DetailRow>
+                  <DetailRow label="Location">{cert.location || "—"}</DetailRow>
+                  <DetailRow label="Urgency">{cert.urgency || "—"}</DetailRow>
+                  {cert.vo_reference && (
+                    <DetailRow label="VO Reference">{cert.vo_reference}</DetailRow>
+                  )}
+                </>
+              )}
               {cert.type === "vo" && (
                 <>
                   <DetailRow label="Approved amount">

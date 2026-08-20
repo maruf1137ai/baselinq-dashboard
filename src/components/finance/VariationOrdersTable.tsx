@@ -31,10 +31,21 @@ interface VariationOrdersTableProps {
   highlightTaskId?: string | null;
 }
 
+// The VO's own commercial state (`VariationOrder.Status` on the backend) —
+// NOT the wrapping Task's kanban column. The two used to be conflated here:
+// this table showed `Task.status` (todo/in review/done), which a seed/demo
+// script can set to anything with zero regard for the VO's real state, so a
+// row could read "Approved" while the underlying VariationOrder was still a
+// Draft, or vice versa. These eight values are the real ones.
 export enum OrderStatus {
-  Open = "Open",
-  InReview = "In Review",
+  Draft = "Draft",
+  Submitted = "Submitted",
+  UnderReview = "Under Review",
+  Priced = "Priced",
+  Recommended = "Recommended",
   Approved = "Approved",
+  Rejected = "Rejected",
+  Closed = "Closed",
 }
 
 export interface VariationOrder {
@@ -43,6 +54,13 @@ export interface VariationOrder {
   title: string;
   value: number;
   status: OrderStatus;
+  /**
+   * Set ONLY by sign-and-issue (role + PIN) — see `tasks/views_signing.py`.
+   * `status === Approved` does not by itself mean this VO was ever signed: a
+   * data fix or a seed script can set status directly. This is the one field
+   * that can't be, so it's the honest answer to "was this actually signed".
+   */
+  signedAt: string | null;
   /** null when the record carries no assignee — never substituted. */
   requestedBy: { name: string } | null;
   updated: string;
@@ -58,8 +76,38 @@ const PAGE_SIZE = 10;
 // amber ramp, off the 50/700/200 scale every other status chip uses.
 const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
   if (status === OrderStatus.Approved) return <Badge variant="success">{status}</Badge>;
-  if (status === OrderStatus.Open) return <Badge variant="neutral">{status}</Badge>;
+  if (status === OrderStatus.Rejected) return <Badge variant="danger">{status}</Badge>;
+  if (status === OrderStatus.Draft || status === OrderStatus.Closed) {
+    return <Badge variant="neutral">{status}</Badge>;
+  }
   return <Badge variant="warning">{status}</Badge>;
+};
+
+/** A small, unmissable marker for the one thing the status badge can't say. */
+const SignedMark: React.FC<{ signedAt: string | null; status: OrderStatus }> = ({ signedAt, status }) => {
+  if (signedAt) {
+    return (
+      <span
+        className="ml-1.5 text-xs text-green-700"
+        title={`Signed ${new Date(signedAt).toLocaleDateString()}`}
+      >
+        ✓ Signed
+      </span>
+    );
+  }
+  // Only worth flagging when the badge alone would read as final/decided —
+  // an unsigned Draft or Under Review is simply expected, not a discrepancy.
+  if (status === OrderStatus.Approved || status === OrderStatus.Rejected) {
+    return (
+      <span
+        className="ml-1.5 text-xs text-muted-foreground"
+        title="This VO's status was set without going through sign-and-issue."
+      >
+        (not signed)
+      </span>
+    );
+  }
+  return null;
 };
 
 const ImpactBadge: React.FC<{ days: number }> = ({ days }) => (
@@ -195,7 +243,10 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                     {formatCurrency(order.value)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <StatusBadge status={order.status} />
+                    <span className="inline-flex items-center">
+                      <StatusBadge status={order.status} />
+                      <SignedMark signedAt={order.signedAt} status={order.status} />
+                    </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
                     {order.requestedBy ? (

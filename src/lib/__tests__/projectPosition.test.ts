@@ -22,9 +22,9 @@ const CERTS_45 = [
   { id: 50, workflowState: "submitted", claimAmount: 980_000, retentionAmount: 49_000 },
 ];
 const VOS_45 = [
-  { status: "Approved", grandTotal: 552_000 },
-  { status: "Approved", grandTotal: 368_000 },
-  { status: "Approved", grandTotal: 460_000 },
+  { status: "Approved", grandTotal: 552_000, signedAt: "2026-02-01T00:00:00Z" },
+  { status: "Approved", grandTotal: 368_000, signedAt: "2026-02-02T00:00:00Z" },
+  { status: "Approved", grandTotal: 460_000, signedAt: "2026-02-03T00:00:00Z" },
   { status: "Submitted", grandTotal: 207_000 },
   { status: "Under Review", grandTotal: 304_750 },
 ];

@@ -108,7 +108,24 @@ describe("toVariationRecord", () => {
       // that the row moved.
       approvedAt: null,
       updatedAt: "2026-06-30T09:00:00Z",
+      signedAt: null,
     });
+  });
+
+  it("carries signedAt from the VariationOrder route", () => {
+    // Only sign-and-issue (tasks/views_signing.py) stamps this — see
+    // homeSignals.ts's VariationLike.signedAt for why summariseMoney needs it.
+    expect(
+      toVariationRecord({ voNumber: "VO-006", signedAt: "2026-07-01T00:00:00Z" }).signedAt,
+    ).toBe("2026-07-01T00:00:00Z");
+  });
+
+  it("carries signedAt from the assignment-task route's nested variation", () => {
+    const r = toVariationRecord({
+      taskId: 92,
+      task: { voNumber: "VO-007", signedAt: "2026-07-02T00:00:00Z" },
+    });
+    expect(r.signedAt).toBe("2026-07-02T00:00:00Z");
   });
 
   it("leaves both feed timestamps null when the payload carries neither", () => {
@@ -262,8 +279,8 @@ describe("certifiedValueOf", () => {
 
   it("reads a variation's value from either route", () => {
     const money = summariseMoney({ contractValue: 1_000_000 }, [], [
-      { status: "Approved", grandTotal: 552_000 },
-      { status: "approved", task: { grandTotal: 368_000 } },
+      { status: "Approved", grandTotal: 552_000, signedAt: "2026-02-01T00:00:00Z" },
+      { status: "approved", task: { grandTotal: 368_000 }, signedAt: "2026-02-02T00:00:00Z" },
       { status: "Under Review", grandTotal: 304_750 },
     ]);
     expect(money.variations).toBe(920_000);

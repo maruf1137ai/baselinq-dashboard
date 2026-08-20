@@ -66,6 +66,12 @@ export interface VariationRecord {
    */
   approvedAt?: string | null;
   updatedAt?: string | null;
+  /**
+   * `VariationOrder.signed_at`. Carried through so `summariseMoney`
+   * (`homeSignals.ts`) can require a real signature before counting a
+   * variation as approved — see that file's `VariationLike.signedAt` for why.
+   */
+  signedAt?: string | null;
 }
 
 /**
@@ -166,6 +172,7 @@ export function toVariationRecord(raw: any): VariationRecord {
     dateInstructed: raw?.dateInstructed ?? nested?.dateInstructed ?? null,
     approvedAt: raw?.approvedAt ?? nested?.approvedAt ?? null,
     updatedAt: raw?.updatedAt ?? nested?.updatedAt ?? null,
+    signedAt: raw?.signedAt ?? nested?.signedAt ?? null,
   };
 }
 

@@ -137,7 +137,11 @@ export function useProjectCommercials(projectId: string | undefined) {
         certificates.isError ? null : certificateList,
         variationTasks.isError || variationRecords.isError || variationRecords.truncated
           ? null
-          : variationList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value })),
+          : variationList.map((v) => ({
+              status: v.status ?? undefined,
+              grandTotal: v.value,
+              signedAt: v.signedAt,
+            })),
       ),
     [
       project,

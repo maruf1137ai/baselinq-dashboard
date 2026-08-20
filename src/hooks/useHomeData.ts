@@ -492,7 +492,11 @@ export function useHomeData(projectId: string | undefined) {
         project,
         certificatesReadable ? certificateList : null,
         variationsReadable
-          ? variationRecordList.map((v) => ({ status: v.status ?? undefined, grandTotal: v.value }))
+          ? variationRecordList.map((v) => ({
+              status: v.status ?? undefined,
+              grandTotal: v.value,
+              signedAt: v.signedAt,
+            }))
           : null,
       ),
     [project, certificateList, variationRecordList, certificatesReadable, variationsReadable],

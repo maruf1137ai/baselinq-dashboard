@@ -1103,7 +1103,7 @@ describe("summariseMoney", () => {
     { id: 3, workflowState: "submitted", netAmount: 500_000, retentionAmount: 50_000 },
   ];
   const variations = [
-    { status: "approved", task: { grandTotal: 50_000 } },
+    { status: "approved", task: { grandTotal: 50_000 }, signedAt: "2026-01-05T00:00:00Z" },
     { status: "in review", task: { grandTotal: 999_999 } },
   ];
 
@@ -1115,6 +1115,23 @@ describe("summariseMoney", () => {
 
   it("counts only approved variations", () => {
     const m = summariseMoney(project, certificates, variations);
+    expect(m.variations).toBe(50_000);
+    expect(m.variationCount).toBe(1);
+  });
+
+  it("excludes an approved variation that was never actually signed", () => {
+    // `status: "Approved"` can be set by a plain PATCH with no signing-role/
+    // PIN check (`tasks/views.py::TaskViewSet.update_entity`) — only
+    // sign-and-issue (`tasks/views_signing.py`) stamps `signed_at`. The
+    // backend's own ledger (cost_ledger/signals.py, billing/accrual.py)
+    // already refuses to treat an unsigned "Approved" VO as a real approval;
+    // this figure must agree or it silently overstates against the Cost
+    // Ledger showing the same project.
+    const unsigned = [
+      { status: "approved", task: { grandTotal: 50_000 }, signedAt: "2026-01-05T00:00:00Z" },
+      { status: "approved", grandTotal: 300_000 }, // approved, never signed
+    ];
+    const m = summariseMoney(project, certificates, unsigned);
     expect(m.variations).toBe(50_000);
     expect(m.variationCount).toBe(1);
   });
@@ -1194,7 +1211,7 @@ describe("summariseMoney", () => {
 
   it("does not report over-certification once a variation covers it", () => {
     const posted = [{ id: 1, workflowState: "posted", claimAmount: 1_050_000 }];
-    const approved = [{ status: "approved", grandTotal: 200_000 }];
+    const approved = [{ status: "approved", grandTotal: 200_000, signedAt: "2026-01-05T00:00:00Z" }];
     // Against the original this reads 105% and fires the "Over" badge; against
     // the revised sum the server certifies against (pc_integrity's ceiling is
     // contract_value + approved variations) it is 88% and well inside.
@@ -1243,10 +1260,11 @@ describe("an approved variation with no price", () => {
   const project = { contractValue: 10_000_000 };
 
   it("counts it rather than letting it contribute R0 in silence", () => {
+    const SIGNED = "2026-01-05T00:00:00Z";
     const m = summariseMoney(project, [], [
-      { status: "approved", grandTotal: 500_000 },
-      { status: "approved", grandTotal: null },
-      { status: "approved" },
+      { status: "approved", grandTotal: 500_000, signedAt: SIGNED },
+      { status: "approved", grandTotal: null, signedAt: SIGNED },
+      { status: "approved", signedAt: SIGNED },
     ]);
     expect(m.variationCount).toBe(3);
     expect(m.variationsUnpriced).toBe(2);

@@ -1898,6 +1898,16 @@ export interface VariationLike {
    */
   grandTotal?: number | null;
   task?: { grandTotal?: number } | null;
+  /**
+   * `VariationOrder.signed_at` — set only by sign-and-issue
+   * (`tasks/views_signing.py`), never by a generic status PATCH. A VO whose
+   * `status` was set to Approved without ever being signed is not a real
+   * approval; the backend's own ledger (`cost_ledger/signals.py`,
+   * `billing/accrual.py::is_vo_approved`) already requires this before it
+   * will count a VO as approved, so this figure must match or it silently
+   * disagrees with the Cost Ledger showing the same project.
+   */
+  signedAt?: string | null;
 }
 
 const APPROVED_VO = new Set(["done", "approved", "completed"]);
@@ -2012,8 +2022,8 @@ export function summariseMoney(
   const certificatesKnown = Array.isArray(certificates);
   const variationsKnown = Array.isArray(variations);
 
-  const approvedVos = (variations ?? []).filter((v) =>
-    APPROVED_VO.has((v.status || "").toLowerCase()),
+  const approvedVos = (variations ?? []).filter(
+    (v) => APPROVED_VO.has((v.status || "").toLowerCase()) && !!v.signedAt,
   );
   const variationsTotal = approvedVos.reduce((s, v) => s + variationValue(v), 0);
 

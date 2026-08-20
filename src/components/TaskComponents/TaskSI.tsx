@@ -73,8 +73,9 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
       // 4. Task ID is available
       if (decisionTimeline === "Draft" && isAssigned && !isCreator && taskId) {
         try {
-          await postData(`/tasks/tasks/${taskId}/update-entity/`, {
-            status: "Issued",
+          await postData({
+            url: `/tasks/tasks/${taskId}/update-entity/`,
+            data: { status: "Issued" },
           });
           // Silently update - no toast notification for auto-transition
           queryClient.invalidateQueries({ queryKey: ["task"] });
@@ -113,10 +114,13 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
       // });
 
       // Use update-entity endpoint to update SI status to "Acknowledged"
-      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
-        status: "Acknowledged",
-        isAcknowledged: true,
-        leadsToVariation: variationChecked,
+      await postData({
+        url: `/tasks/tasks/${taskId}/update-entity/`,
+        data: {
+          status: "Acknowledged",
+          isAcknowledged: true,
+          leadsToVariation: variationChecked,
+        },
       });
 
       toast.success("Site Instruction acknowledged successfully");
@@ -159,9 +163,12 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
       const updatedResponses = [...existingResponses, newResponse];
 
       // Use update-entity endpoint to update SI status to "Actioned" and add response
-      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
-        status: "Actioned",
-        responses: updatedResponses,
+      await postData({
+        url: `/tasks/tasks/${taskId}/update-entity/`,
+        data: {
+          status: "Actioned",
+          responses: updatedResponses,
+        },
       });
       toast.success("Feedback submitted successfully");
       setFeedbackText("");
@@ -184,8 +191,9 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
     setLoading(true);
     try {
       // Use update-entity endpoint to update SI status to "Verified"
-      await postData(`/tasks/tasks/${taskId}/update-entity/`, {
-        status: "Verified",
+      await postData({
+        url: `/tasks/tasks/${taskId}/update-entity/`,
+        data: { status: "Verified" },
       });
       toast.success("Site Instruction verified successfully");
       queryClient.invalidateQueries({ queryKey: ["task"] });
