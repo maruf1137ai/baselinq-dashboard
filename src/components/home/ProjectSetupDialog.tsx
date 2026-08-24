@@ -207,6 +207,9 @@ export function ProjectSetupDialog({
 
       toast.success("Project updated successfully");
       queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("projects") });
+      // Home reads the project list under a separate "home-projects" key that the predicate
+      // above doesn't match; invalidate it explicitly so the setup banner updates without a reload.
+      queryClient.invalidateQueries({ queryKey: ["home-projects"] });
 
       // Invite the client when an email was supplied.
       if (missing.includes("Client Details") && quickForm.client_email.trim()) {

@@ -271,6 +271,9 @@ const ProjectDetails = () => {
         principal_agent_mandate: formData.principal_agent_mandate ? Number(formData.principal_agent_mandate) : undefined,
       } as any);
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
+      // Home reads the project list under a separate "home-projects" key; invalidate
+      // it explicitly so the setup banner updates without a manual reload.
+      queryClient.invalidateQueries({ queryKey: ["home-projects"] });
 
       toast.success("Project saved successfully");
     } catch {
@@ -353,6 +356,7 @@ const ProjectDetails = () => {
           query.queryKey[0] === "projects" ||
           query.queryKey[0] === "project",
       });
+      queryClient.invalidateQueries({ queryKey: ["home-projects"] });
       toast.success("Document deleted successfully");
       setShowDeleteConfirm(false);
       setDocToDelete(null);
