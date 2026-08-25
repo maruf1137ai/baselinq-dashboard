@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useWebPush } from "./useWebPush";
+import { getWsBase } from "@/lib/ws";
 
 const POLL_INTERVAL = 30_000; // 30 seconds
 
@@ -23,6 +25,7 @@ const getUserId = () => {
 
 export function useNotifications() {
   const store = useNotificationStore();
+  const queryClient = useQueryClient();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const projectRef = useRef<string | undefined>(getProjectId());
   const userRef = useRef<string | undefined>(getUserId());
@@ -46,6 +49,64 @@ export function useNotifications() {
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Real-time accelerant on top of the 30s poll above (never replaces it —
+  // see backend/notification/consumers.py + signals.py). The socket only
+  // ever carries a bare "something changed" ping, so on message we just
+  // re-trigger the same refresh paths this hook already has: the
+  // "notifications-marked-read" event (reused generically for "any
+  // push-worthy notification", not literal mark-as-read — renaming it would
+  // touch every existing listener for no functional gain) covers the bell,
+  // and invalidating the channels list query covers the nav badge and the
+  // Communications per-channel unread counts, since both key off the same
+  // `channels/?projectId=...` cache entry (see useFetch.tsx's queryKey).
+  useEffect(() => {
+    const token = localStorage.getItem("access");
+    if (!token) return;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
+    let stopped = false;
+
+    const connectWs = () => {
+      if (stopped) return;
+      const currentToken = localStorage.getItem("access");
+      if (!currentToken) return;
+
+      ws = new WebSocket(
+        `${getWsBase()}/ws/notifications/?token=${encodeURIComponent(currentToken)}`
+      );
+
+      ws.onopen = () => {
+        reconnectAttempt = 0;
+      };
+      ws.onmessage = () => {
+        window.dispatchEvent(new Event("notifications-marked-read"));
+        const pid = getProjectId();
+        if (pid) {
+          queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${pid}`] });
+        }
+      };
+      ws.onclose = () => {
+        if (stopped) return;
+        const delay = Math.min(1000 * 2 ** reconnectAttempt, 30000);
+        reconnectAttempt += 1;
+        reconnectTimer = setTimeout(connectWs, delay);
+      };
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+    connectWs();
+
+    return () => {
+      stopped = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

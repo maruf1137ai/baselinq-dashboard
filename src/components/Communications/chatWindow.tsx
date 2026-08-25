@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { fetchData, postData, deleteData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
+import { getWsBase } from "@/lib/ws";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
@@ -441,16 +442,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
       const token = localStorage.getItem("access");
       if (!token) return;
 
-      let wsBase: string;
-      try {
-        const apiUrl = new URL(
-          import.meta.env.VITE_API_BASE_URL || "/",
-          window.location.origin
-        );
-        wsBase = `${apiUrl.protocol === "https:" ? "wss:" : "ws:"}//${apiUrl.host}`;
-      } catch {
-        wsBase = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
-      }
+      const wsBase = getWsBase();
 
       ws = new WebSocket(
         `${wsBase}/ws/channels/${channel.id}/?token=${encodeURIComponent(token)}`
