@@ -5,7 +5,7 @@ import {
   VariationOrder,
 } from "@/components/finance/VariationOrdersTable";
 import { Button } from "@/components/ui/button";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
@@ -32,16 +32,22 @@ import { deleteData } from "@/lib/Api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
+import { markSurfaceNotificationsRead } from "@/lib/markNotificationsRead";
 import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
 
-const mapStatus = (status: string): OrderStatus => {
-  const s = (status || "").toLowerCase();
-  if (s === "done" || s === "approved" || s === "completed") return OrderStatus.Approved;
-  if (s === "in review" || s === "inreview" || s === "in_review") return OrderStatus.InReview;
-  return OrderStatus.Open;
+// The VO's own real status (`item.task.status`), NOT the wrapping Task's
+// kanban column (`item.status` — todo/in review/done, which a seed/demo
+// script or an unrelated board move can set with no regard for the VO's
+// actual commercial state). See VariationOrdersTable.tsx's OrderStatus for
+// why the distinction matters. Falls back to Draft rather than guessing at
+// one of the "further along" states for a value it doesn't recognise.
+const mapStatus = (status: string | undefined | null): OrderStatus => {
+  const known = Object.values(OrderStatus) as string[];
+  return known.includes(status || "") ? (status as OrderStatus) : OrderStatus.Draft;
 };
 
 const formatDate = (dateStr: string): string => {
@@ -89,7 +95,59 @@ const Finance = () => {
     : [];
 
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(() => visibleTabs[0] ?? "");
+
+  // ── Deep links ────────────────────────────────────────────────────────────
+  // /finance?tab=<tabKey>&pc=<paymentCertificateId>
+  // /finance?tab=<tabKey>&vo=<variationOrderId>
+  //
+  // Same pattern as Project Health: useSearchParams drives the existing state
+  // and the choice is written back, so the URL stays shareable and survives a
+  // reload. No router, no store, no second selection mechanism.
+  //
+  // The tab is DERIVED from the URL rather than seeded into useState once.
+  // `visibleTabs` is not stable on first paint — usePermission returns true
+  // while the effective-permissions payload is in flight, so "Platform Fees"
+  // can appear a beat late. A useState initialiser would capture the tab list
+  // as it stood at mount and permanently ignore a valid ?tab= for a tab that
+  // had not appeared yet. Deriving keeps one source of truth and self-corrects.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = resolveTabParam(searchParams.get("tab"), visibleTabs);
+
+  // NOTE ON PERMISSIONS: `visibleTabs` is computed above from canViewFinance
+  // and canViewPlatformFees WITHOUT reference to the URL. A ?tab= value can
+  // only ever pick a member of that already-filtered list, so following a
+  // ?tab=Payment Certificates&pc=… link as a viewer without finance.view
+  // yields visibleTabs === [] and activeTab === "" — the same refusal as
+  // navigating here normally. The parameter is not a way past the gate.
+  // Opening the Payment Certificates tab shows a table of every certificate
+  // and the state it is in, which is exactly what its notifications say — so
+  // viewing the tab clears the whole "finance" surface, not only the one
+  // certificate a ?pc= deep link happened to point at. Previously nothing
+  // cleared unless you arrived through that deep link, so certificates read
+  // in the normal way stayed counted forever.
+  //
+  // Gated on canViewFinance so a user who cannot see the table cannot clear
+  // notifications about it. `activeTab` is already permission-derived, but
+  // it is briefly "" while permissions resolve, hence the explicit check.
+  const onPaymentCertificatesTab = activeTab === "Payment Certificates";
+  useEffect(() => {
+    if (!canViewFinance || !onPaymentCertificatesTab) return;
+    const projectId = localStorage.getItem("selectedProjectId");
+    if (!projectId) return;
+    void markSurfaceNotificationsRead("finance", projectId);
+  }, [canViewFinance, onPaymentCertificatesTab]);
+
+  const chooseTab = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", next);
+    // The record parameters belong to the tab that was being viewed. Carrying
+    // them across to another tab would leave a selection pointing at something
+    // no longer on screen.
+    params.delete("pc");
+    params.delete("vo");
+    setSearchParams(params, { replace: true });
+  };
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
@@ -122,7 +180,8 @@ const Finance = () => {
           taskId: String(item.taskId),
           title: item.task?.title || "-",
           value,
-          status: mapStatus(item.status),
+          status: mapStatus(item.task?.status),
+          signedAt: item.task?.signedAt ?? null,
           requestedBy: assigneeName ? { name: assigneeName } : null,
           updated: formatDate(item.update_at),
           impact,
@@ -130,6 +189,30 @@ const Finance = () => {
         };
       });
   }, [voResponse]);
+
+  // ?vo=<variationOrderId> selects the SAME `selectedOrder` the in-page Edit
+  // click sets — one selection, two entry paths, rather than a parallel
+  // highlight mechanism that could disagree with it.
+  //
+  // A link may name the variation by its display number ("VO-001") or by its
+  // task id, because both are visible in the app and either could end up in a
+  // link. It resolves ONLY against `variationOrders`, the list already on
+  // screen: a deleted id, or one belonging to a project this viewer is not on,
+  // simply finds nothing. Nothing is selected, nothing is filtered, and the
+  // full list renders exactly as it would with no parameter — the page never
+  // implies the variation was deleted when it was only never shown.
+  const linkedOrder = useMemo(
+    () =>
+      findByDeepLinkId(searchParams.get("vo"), variationOrders, (o) => [
+        o.id,
+        o.taskId,
+      ]),
+    [searchParams, variationOrders],
+  );
+
+  useEffect(() => {
+    if (linkedOrder) setSelectedOrder(linkedOrder);
+  }, [linkedOrder]);
 
   const handleEdit = (order: VariationOrder) => {
     setSelectedOrder(order);
@@ -190,8 +273,8 @@ const Finance = () => {
                   key={tab}
                   role="tab"
                   aria-selected={activeTab === tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`text-sm py-3 px-5 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  onClick={() => chooseTab(tab)}
+                  className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
@@ -202,7 +285,7 @@ const Finance = () => {
           </header>
 
           {activeTab === "Variation Orders" && (
-            <main className="pt-4 space-y-4">
+            <main className="pt-6 space-y-4">
               {/* One toolbar row, same shape as the other three finance tabs:
                   search grows on the left, actions right-aligned beside it. */}
               {/* No "New Variation Order" here, deliberately.
@@ -238,6 +321,7 @@ const Finance = () => {
                 <VariationOrdersTable
                   orders={variationOrders}
                   search={voSearch}
+                  highlightTaskId={selectedOrder?.taskId ?? null}
                   onViewDetails={(taskId) => navigate(`/tasks/${taskId}`)}
                   onEdit={canEditVariationOrder ? handleEdit : undefined}
                   onDelete={canEditVariationOrder ? handleDelete : undefined}
@@ -246,7 +330,9 @@ const Finance = () => {
             </main>
           )}
           {activeTab === "Cost Ledger" && <CostLadger />}
-          {activeTab === "Payment Certificates" && <PaymentCertificate />}
+          {activeTab === "Payment Certificates" && (
+            <PaymentCertificate certificateParam={searchParams.get("pc")} />
+          )}
           {activeTab === "Platform Fees" && canViewPlatformFees && <PlatformFees />}
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
@@ -271,6 +357,7 @@ const Finance = () => {
                 initialData={{
                   title: selectedOrder.rawTask?.title,
                   discipline: selectedOrder.rawTask?.discipline,
+                  category: selectedOrder.rawTask?.category,
                   description: selectedOrder.rawTask?.description,
                   lineItems: selectedOrder.rawTask?.lineItems,
                 }}

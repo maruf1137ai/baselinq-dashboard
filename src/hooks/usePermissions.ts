@@ -101,6 +101,27 @@ export function usePermissions() {
   const canEditFinance     = isOrgAdmin || perm("finance.edit");
   const canApprovePayment  = isOrgAdmin || perm("finance.approve_payment");
 
+  // ── The three certificate-stage codes ────────────────────────────────────
+  //
+  // These are the codes the SERVER checks per transition
+  // (`tasks/pc_workflow.py::TRANSITION_PERMISSIONS`), and not one of them is
+  // `finance.approve_payment` — that code reverses a RECORDED PAYMENT
+  // (`tasks/views_payments.py`) and answers no question about certifying.
+  // They are read here so the homepage can show a person the certificate acts
+  // they can actually perform, instead of showing every finance viewer the
+  // principal agent's job.
+  //
+  // `finance.approve_certificate` is granted to PRINCIPAL_PM alone
+  // (user/migrations/0040_pc_single_approve_permission.py), which is what makes
+  // "awaiting your certification" an answerable question at all.
+  //
+  // Deliberately NOT escalated by `isOrgAdmin`: an organisation admin is an
+  // account-level role, certifying is a project-level appointment, and the
+  // server does not treat the one as the other.
+  const canCertifyCertificate = perm("finance.approve_certificate");
+  const canPostCertificate    = perm("finance.post_certificate");
+  const canPrepareCertificate = perm("finance.create_certificate");
+
   return {
     isLoading,
     isOrgAdmin,
@@ -142,6 +163,10 @@ export function usePermissions() {
     canViewFinance,
     canEditFinance,
     canApprovePayment,
+    // Finance — the certificate stages, one code per act
+    canCertifyCertificate,
+    canPostCertificate,
+    canPrepareCertificate,
     // Legacy finance flags — all collapse to view/edit
     canViewCostLedger:         canViewFinance,
     canEditCostLedger:         canEditFinance,

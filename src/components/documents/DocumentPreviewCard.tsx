@@ -99,6 +99,20 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
             <span className="text-sm text-foreground truncate">{fileName}</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Payment Certificates have a real filed PDF alongside the branded
+                certificate view (VO/SI/Claim link-docs have no `url` at all, so
+                this never renders for them — same component, no behaviour change
+                for the fake-link case). */}
+            {url && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onPreview({ name: fileName, url, streamUrl: doc.streamUrl as string })}
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <FileText className="mr-1.5" /> View PDF
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

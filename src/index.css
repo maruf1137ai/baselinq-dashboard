@@ -114,6 +114,56 @@ All colors MUST be HSL.
     --chart-3: 38 92% 50%;
     --chart-4: 220 9% 42%;
     --chart-5: 199 89% 48%;
+
+    /* ── Visualisation tokens ───────────────────────────────────────────
+       The five --chart-* above are NOT usable as a palette and are left
+       dead deliberately — there is no Tailwind mapping for them and none
+       should be added, because a mapping would put three unusable colours
+       one utility class away from a future PR. Measured against the card
+       ground (#fcfcfd) and the row-hover ground (bg-muted/50 over card,
+       #f1f2f4):
+
+         --chart-1  #6b5be6  4.80 / 4.40   ok as a mark, fails 4.5:1 as text
+         --chart-2  #21c45d  2.25 / 2.05   FAILS 3:1 even as a mark
+         --chart-3  #f59f0a  2.08 / 1.90   fails (and duplicates --warning)
+         --chart-4  #616875  5.47 / 5.01   passes everywhere (= --muted-foreground)
+         --chart-5  #0da2e7  2.79 / 2.55   fails 3:1 as a mark
+
+       There is a second trap that contrast-against-ground does not catch:
+       #6b5be6 against #616875 is 1.14:1. Brand purple and neutral ink are
+       very nearly the same LUMINANCE, so a purple series next to a neutral
+       reference line is distinguishable by hue alone — invisible in
+       greyscale and to a dichromat. That pairing is what these six tokens
+       exist to make impossible.
+
+       --viz-breach and --viz-caution are not new colours: they are the
+       red-700 and amber-800 this app already uses as severity TEXT,
+       promoted to tokens so a mark can reach them. Both clear 4.5:1 on
+       both grounds, so they are safe as text as well as marks. */
+    /* BRAND, and it is the only token here that means "Baselinq" rather
+       than "this is the state of things". The primary data series wears it:
+       the certified curve, the today marker on the contract rail, the
+       approved segment of the variations bar, the milestone slip bars.
+
+       It NEVER carries severity. That is what keeps it compatible with the
+       page's rule that only a breach which has already happened may be
+       coloured — purple is a different hue family from --viz-breach and
+       --viz-caution, it appears on the data in every state including a
+       perfectly healthy one, and it is therefore not readable as a warning.
+
+       4.80:1 on the card and 4.40:1 on hover, so it clears 3:1 as a mark
+       comfortably. It does NOT clear 4.5:1 on hover, so it is never used
+       for text. Note it is 1.14:1 against --viz-ink: purple and neutral ink
+       are nearly the same luminance, so wherever the two are adjacent they
+       must also be separated by a shape channel — a dash pattern, or a gap.
+       See the notes in StatusBand.tsx. */
+    --viz-brand: 247 74% 63%;     /* #6b5be6 — the primary data series 4.80 / 4.40 */
+    --viz-ink: 220 9% 42%;        /* #616875 — series lines, labels   5.47 / 5.01 */
+    --viz-fill: 220 9% 50%;       /* #737b8a — area fills under a line           */
+    --viz-track: 220 13% 90%;     /* #e0e3e8 — the empty part of a bar           */
+    --viz-rule: 220 13% 86%;      /* #d7dae0 — gridlines, borders (= --border)   */
+    --viz-breach: 0 74% 42%;      /* #b91c1c — a breach that HAS happened 6.31 / 5.78 */
+    --viz-caution: 25 84% 31%;    /* #92400e — a threshold approached    6.92 / 6.33 */
   }
 
   /* Unreachable today (there is no ThemeProvider and nothing sets .dark),
@@ -180,6 +230,21 @@ All colors MUST be HSL.
     --chart-3: 38 92% 55%;
     --chart-4: 220 10% 66%;
     --chart-5: 199 85% 55%;
+
+    /* Same roles, inverted ground. Nothing sets .dark today (there is no
+       ThemeProvider), but leaving these out would mean the visual band is
+       the one part of the app that breaks the day someone wires the
+       toggle up. Ink and fill lighten; breach and caution lighten a long
+       way, because red-700 on a #1d212b card is 2.1:1 and unreadable. */
+    /* Lightened from 63% to 70%: the light-mode purple on a #1d212b card is
+       about 2.4:1 and would fail 3:1 as a mark. At 70% it clears it. */
+    --viz-brand: 247 74% 70%;
+    --viz-ink: 220 10% 66%;
+    --viz-fill: 220 10% 58%;
+    --viz-track: 220 17% 24%;
+    --viz-rule: 220 16% 22%;
+    --viz-breach: 0 84% 68%;
+    --viz-caution: 32 90% 62%;
   }
 }
 

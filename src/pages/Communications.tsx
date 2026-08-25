@@ -4,12 +4,14 @@ import { ChatSidebar } from "@/components/Communications/chatSidebar";
 import ChatWindow from "@/components/Communications/chatWindow";
 import ChatSammary from "@/components/Communications/chatSammary";
 import useFetch from "@/hooks/useFetch";
+import { NOTIFICATIONS_CHANGED_EVENT } from "@/hooks/useUserEventSocket";
 import { useQueryClient } from "@tanstack/react-query";
 import { postData, fetchData } from "@/lib/Api";
 import { Loader2, Check, X, Hash, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Command,
   CommandEmpty,
@@ -35,6 +37,26 @@ const Communications = () => {
   // derive shared attachments/links from the same poll (no second fetch).
   const [channelMessages, setChannelMessages] = useState<any[]>([]);
   const queryClient = useQueryClient();
+
+  // Refresh the channel list on a server push.
+  //
+  // This list carries each channel's own unread_count and last-message
+  // preview, and it used to be kept current by accident: DashboardSidebar
+  // polled this exact query key every 30s for its Communications badge, so
+  // both stayed fresh. That badge now reads the shared unread summary
+  // instead, which left NOTHING refreshing this list — sitting on this page,
+  // a message arriving in another channel would not appear until remount.
+  //
+  // Driven by the push rather than by restoring the poll, so the list and
+  // the badge above it update from the same event and cannot disagree.
+  useEffect(() => {
+    if (!projectId) return;
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
+    };
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, handler);
+  }, [projectId, queryClient]);
 
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
@@ -119,17 +141,21 @@ const Communications = () => {
       console.error("Failed to fetch full channel details", err);
     }
 
-    if (channel.unread_count > 0) {
-      try {
-        await postData({
-          url: `channels/${channel.id}/mark_read/`,
-          data: {}
-        });
-        queryClient.invalidateQueries({ queryKey: [projectId ? `channels/?projectId=${projectId}` : ""] });
-        window.dispatchEvent(new Event("notifications-marked-read"));
-      } catch (err) {
-        console.error("Failed to mark channel as read", err);
-      }
+    // No `unread_count > 0` guard: that field comes from the cached channel
+    // LIST payload, which is polled on an interval and is routinely stale by
+    // the time the row is clicked. When it read 0 against a channel that had
+    // since received messages, the mark-read was skipped entirely and the
+    // badge stayed up. Marking an already-read channel read is a no-op on the
+    // server, so the guard only ever cost correctness.
+    try {
+      await postData({
+        url: `channels/${channel.id}/mark_read/`,
+        data: {}
+      });
+      queryClient.invalidateQueries({ queryKey: [projectId ? `channels/?projectId=${projectId}` : ""] });
+      window.dispatchEvent(new Event("notifications-marked-read"));
+    } catch (err) {
+      console.error("Failed to mark channel as read", err);
     }
   };
 
@@ -165,12 +191,15 @@ const Communications = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-        {/* Header inset matches the canonical 24px top padding used by every
-            other page (Tasks/Compliance/Meetings/Documents). DashboardLayout
-            uses padding="p-0" here because the chat below needs full-bleed —
-            so we apply the canonical 24px on the header itself. */}
-        <div className="px-6 pt-6 pb-4 border-b border-border">
-          <h1 className="text-2xl font-normal tracking-tight text-foreground">Communications</h1>
+        {/* EXCEPTION to the page-top rule, on the BODY only: the chat pane
+            below has to reach the viewport edges, so DashboardLayout is asked
+            for padding="p-0". The header band then re-applies the canonical
+            p-6 itself, so the title still sits 24px from the top and 24px
+            from the left, exactly like every other page, and the rule below
+            it lands on the same 80px line a `space-y-6` page's second band
+            starts on. Previously `pb-4`, which put the divider at 73px. */}
+        <div className="p-6 border-b border-border">
+          <PageHeader title="Communications" />
         </div>
         <div className="flex flex-1 overflow-hidden">
           <div className="border-r border-border bg-card flex-shrink-0">

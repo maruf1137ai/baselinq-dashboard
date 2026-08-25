@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { fetchData, postData, deleteData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
+import { getWsBase } from "@/lib/ws";
 import { Badge } from "../ui/badge";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { FilePreviewModal } from "@/components/TaskComponents/FilePreviewModal";
@@ -335,6 +336,35 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   };
 
   // Fetch messages from API
+  // Mark the OPEN conversation read.
+  //
+  // Previously the only caller of mark_read/ was the channel list in
+  // Communications.tsx, fired when you click a channel. Reading messages
+  // that arrive while you already have the channel open marked nothing —
+  // so the sidebar badge and the bell both kept counting messages sitting
+  // on screen in front of the user, and only a re-click cleared them.
+  //
+  // Guarded on visibility: a background tab receiving messages is not
+  // someone reading them. Deduped on the last message id so the 2.5s poll
+  // doesn't re-POST when nothing new has arrived.
+  const lastMarkedMessageIdRef = useRef<number | string | null>(null);
+  const markChannelRead = async (latestMessageId: number | string | null) => {
+    if (!channel?.id) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    if (latestMessageId != null && lastMarkedMessageIdRef.current === latestMessageId) return;
+    lastMarkedMessageIdRef.current = latestMessageId;
+    try {
+      await postData({ url: `channels/${channel.id}/mark_read/`, data: {} });
+      // Refreshes the bell and every sidebar badge off one cache entry —
+      // see hooks/useUnreadSummary.ts.
+      window.dispatchEvent(new Event("notifications-marked-read"));
+    } catch {
+      // Non-fatal: the badge stays until the next read. Reset so the next
+      // poll retries rather than treating this id as already marked.
+      lastMarkedMessageIdRef.current = null;
+    }
+  };
+
   const fetchMessages = async (showLoader = false) => {
     if (!channel?.id) return;
     if (showLoader) setIsLoadingMessages(true);
@@ -390,6 +420,14 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
         if (signature === lastSignatureRef.current) return;
         lastSignatureRef.current = signature;
 
+        // Content actually changed (first load, or new/edited messages) and
+        // the user is looking at it — so it has been read. Fire-and-forget;
+        // this must never block rendering the messages below.
+        const newest = formattedMessages.length
+          ? formattedMessages[formattedMessages.length - 1].id
+          : null;
+        void markChannelRead(newest);
+
         applyMessages((prev) => {
           // Preserve any still-pending optimistic messages until their real
           // server copy has been removed explicitly by the send handlers, plus
@@ -410,17 +448,72 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     // unchanged-poll signature and the cached URLs with it.
     lastSignatureRef.current = null;
     stableUrlsRef.current.clear();
+    // Message ids are per-channel, so a stale value here could suppress the
+    // mark-read on the newly opened channel.
+    lastMarkedMessageIdRef.current = null;
     applyMessages([]);
     fetchMessages(true);
 
-    // Set up polling to refetch messages every 2.5 seconds
-    const intervalId = setInterval(() => {
-      fetchMessages(false);
-    }, 2500); // 2.5 seconds
+    // Polling stays as the source of truth and the fallback path — only its
+    // cadence changes. WS (below) just triggers an earlier fetchMessages()
+    // call; it never delivers message data itself, so a socket outage never
+    // loses updates, it only slows them back down to the original 2.5s.
+    const POLL_MS_DEFAULT = 2500;
+    const POLL_MS_WS_HEALTHY = 20000;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const setPollInterval = (ms: number) => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => fetchMessages(false), ms);
+    };
+    setPollInterval(POLL_MS_DEFAULT);
 
-    // Cleanup: Clear interval when component unmounts or channel changes
+    // Real-time push (falls back to the poll above if the socket never
+    // connects or drops — see backend/channel/consumers.py + signals.py).
+    // The socket only ever carries a "something changed" ping; the actual
+    // message data always comes from fetchMessages() so there is exactly one
+    // code path that parses/dedupes/renders messages.
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
+    let stopped = false;
+
+    const connectWs = () => {
+      if (stopped || !channel?.id) return;
+      const token = localStorage.getItem("access");
+      if (!token) return;
+
+      const wsBase = getWsBase();
+
+      ws = new WebSocket(
+        `${wsBase}/ws/channels/${channel.id}/?token=${encodeURIComponent(token)}`
+      );
+
+      ws.onopen = () => {
+        reconnectAttempt = 0;
+        setPollInterval(POLL_MS_WS_HEALTHY);
+      };
+      ws.onmessage = () => {
+        fetchMessages(false);
+      };
+      ws.onclose = () => {
+        if (stopped) return;
+        setPollInterval(POLL_MS_DEFAULT);
+        const delay = Math.min(1000 * 2 ** reconnectAttempt, 30000);
+        reconnectAttempt += 1;
+        reconnectTimer = setTimeout(connectWs, delay);
+      };
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+    connectWs();
+
+    // Cleanup: Clear interval/socket when component unmounts or channel changes
     return () => {
-      clearInterval(intervalId);
+      stopped = true;
+      if (intervalId) clearInterval(intervalId);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
       // Optimistic messages are dropped on channel switch — release their
       // object URLs with them.
       Object.keys(tempObjectUrlsRef.current).forEach(revokeTempUrls);

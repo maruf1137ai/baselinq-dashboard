@@ -1,1615 +1,351 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { DashboardLayout } from '@/components/DashboardLayout';
+/**
+ * Home.
+ *
+ * ── The two questions ────────────────────────────────────────────────────
+ *
+ * A project manager opens this screen to answer two things, and should be able
+ * to answer both in about two seconds without scrolling:
+ *
+ *   1. **Is anything on fire?**            → the position strip, first.
+ *   2. **Do I personally have to do        → "What needs you", top-left.
+ *      something today?**
+ *
+ * Everything that answers neither has been demoted or removed. The previous
+ * revision put eight panels of equal weight in one column — queue, key
+ * indicators, risk, contract time, commercial position, certificate run,
+ * current certificate, then meetings/programme/documents — so the page had no
+ * answer to "where do I look first", and ran to 3,904px on a 1440px screen
+ * while half the horizontal space sat empty.
+ *
+ * ── The layout ───────────────────────────────────────────────────────────
+ *
+ *   Preconditions   ONE bounded block of hairline rows, above everything, and
+ *                   nothing at all in the usual case where none apply.
+ *   Position strip  full width, six figures in one row. The summary.
+ *   ├── LEFT  50%   THE WORK — what needs you, and only what a person can do.
+ *   └── RIGHT 50%   THE POSITION — open risk (as condition), contract time.
+ *
+ * **Why the work is on the left.** In a left-to-right reading order the left
+ * column is where the eye lands and where it returns. The queue is the only
+ * thing on this page that asks the user to move, so it gets that position and
+ * that is the whole justification. The right column is what is true about the
+ * project whether or not anybody acts today: standing risk conditions and the
+ * contract clock. Work on the left, state on the right.
+ *
+ * The columns collapse to one below `lg`, the breakpoint the app already uses
+ * (this file's own three-up reference band used `lg:grid-cols-3`).
+ * `items-start` so a short queue does not stretch to the height of the risk
+ * panel beside it — an empty "What needs you" is a good answer and should look
+ * like a small one.
+ *
+ * ── What was removed from this page, and why ─────────────────────────────
+ *
+ *   Certificate run     the whole certificate series with a bar per row —
+ *                       562px of history. Reference, not condition. /finance.
+ *   Current certificate its only action ("certify PC-006") is already the
+ *                       first row of the queue, and its figures are /finance's.
+ *   Meetings            each has its own page one click away in the sidebar,
+ *   Programme           each was a panel of four rows, and none of the three
+ *   Documents           answers either question above. Their ACTIONABLE parts
+ *                       are untouched: an unanswered invitation and a meeting
+ *                       action awaiting a decision are still queue rows.
+ *
+ * Nothing removed here was removed from the product; every one of them is a
+ * sidebar entry.
+ *
+ * ── Where the eye goes, and the one conflict in this brief ───────────────
+ *
+ * The 50/50 split is an explicit request. NN/g's eyetracking puts roughly
+ * 80% of fixations in the left half of a page, so the right column is held to
+ * PASSIVE REFERENCE only — open risk as a standing condition, and the
+ * contract clock. Neither asks anyone to do anything today; both are things
+ * that are true about the project whether or not anybody acts.
+ *
+ * Everything that asks for a move is on the left: the queue, and the
+ * precondition block above it, which is full-width and therefore begins in
+ * the left half. Nothing actionable was moved right to balance the columns.
+ *
+ * ── The severity rule ────────────────────────────────────────────────────
+ *
+ * Stated in full at the top of `blocks.tsx`, and it governs this whole page:
+ * only a breach that has already happened may carry colour; a tier is named
+ * once at the head of its rows rather than repeated on each; only the worst
+ * tier present is drawn; one coloured element per statement. Everything else
+ * is ranked by position.
+ *
+ * ── What has not changed ─────────────────────────────────────────────────
+ *
+ * No figure, no fetch and no permission gate. `useHomeData` still requests
+ * exactly what it requested — the money endpoints are still not REQUESTED
+ * without `finance.view`, risk is still gated on `compliance.view`, and
+ * `resolveFinanceAccess` still fails closed while the permission map loads.
+ * Risk signals moved OUT of the queue and into their own grouped panel, but
+ * they pass through `visibleRiskSignals`, which applies exactly the gates the
+ * queue rows used to declare. Elapsed calendar time is still not shown as
+ * progress, and there is still no invented data anywhere on it.
+ */
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FolderOpen, ShieldAlert } from "lucide-react";
+
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { patchData, validateFile, registerS3Document, ALLOWED_FILE_EXTENSIONS, inviteClient, inviteAppointedCompany, getAppointedCompanies } from "@/lib/Api";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { PrimaryContractAlert } from '@/components/documents/PrimaryContractAlert';
-import { ProjectStatusCard } from '@/components/ProjectStatusCard';
-import { ProjectTimelineCard } from '@/components/ProjectTimelineCard';
-import { ActionItem } from '@/components/ActionItem';
-import { ActivityFeedItem } from '@/components/ActivityFeedItem';
-import { BudgetBreakdownCard } from '@/components/BudgetBreakdownCard';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Shield, FileText, ArrowRight, ChevronDown, Plus, FolderOpen, ClipboardList, X, CloudUpload, Check, MapPin, CalendarIcon, Building2 } from 'lucide-react';
-import { InsuranceBanner } from '@/components/InsuranceBanner';
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { FilePreviewModal } from '@/components/TaskComponents/FilePreviewModal';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import MyAction from '@/components/icons/MyAction';
-import Caution2 from '@/components/icons/Caution2';
-import Asterisk from '@/components/icons/Asterisk';
-import CashIcon from '@/components/icons/CashIcon';
-import Calander2 from '@/components/icons/Calander2';
-import useFetch from "@/hooks/useFetch";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useMilestonePhaseCosts } from "@/hooks/useMilestones";
-import type { MilestoneWithCost } from "@/hooks/useMilestones";
-import { differenceInDays, parseISO, isAfter, isBefore, isToday } from "date-fns";
-import { cn, formatDate } from "@/lib/utils";
-import { hasPermission, COMPANY_TYPES } from "@/lib/roleUtils";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useNavigate, Link } from "react-router-dom";
-import { isMeetingPast, formatDate as formatDateUk } from "@/lib/dateUtils";
-import { useS3Upload } from "@/hooks/useS3Upload";
-import { useRoles } from "@/hooks/useRoles";
-import { LocationPickerMap } from "@/components/LocationPickerMap";
-import { INPUT_BASE, SELECT_BASE, TEXTAREA_BASE } from "@/lib/constants";
+import { InsuranceBanner } from "@/components/InsuranceBanner";
+import { PrimaryContractAlert } from "@/components/documents/PrimaryContractAlert";
+import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
+import {
+  ActionQueueBlock,
+  LoadIssueBanner,
+  RiskConditionBlock,
+  SetupLineBlock,
+  VerdictTail,
+  VerdictTitle,
+} from "@/components/home/blocks";
+import { StatusBandBlock } from "@/components/home/StatusBand";
+import { WhatChangedBlock } from "@/components/home/WhatChanged";
+import { useHomeData } from "@/hooks/useHomeData";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 
-const qInputCls = INPUT_BASE;
-const qSelectCls = SELECT_BASE + " appearance-none";
-const qTextareaCls = TEXTAREA_BASE + " min-h-[200px]";
-
-// COMPANY_TYPES imported from @/lib/roleUtils
+// Real signups get CIDB rather than CONTRACTOR (see user/serializers.py's
+// ROLE_MAP), so both are listed — CONTRACTOR alone missed most of them.
+const CLIENT_ROLE_CODES = ["CLIENT", "OWNER", "CONTRACTOR", "CIDB"];
 
 const Index = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { roles: appRoles } = useRoles();
-  const [projectId, setProjectId] = useState(() => localStorage.getItem("selectedProjectId") || undefined);
-  const [selectedDoc, setSelectedDoc] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<any>(true);
+  const projectId = useSelectedProjectId();
+  const data = useHomeData(projectId);
 
-  // Quick-fill modal state
-  const [quickFillOpen, setQuickFillOpen] = useState(false);
-  const [quickForm, setQuickForm] = useState({
-    brief: "",
-    company_name: "", client_name: "", client_email: "",
-    total_budget: "",
-    location_street: "", location_lat: "", location_lng: "",
-    start_date: "", end_date: "",
-    appointed_company_name: "",
-    appointed_company_type: "",
-    appointed_contact_name: "",
-    appointed_contact_email: "",
-    appointed_position: "",
-    appointed_insurance_expiry: "",
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupSection, setSetupSection] = useState<string | null>(null);
 
-  // Appointed companies (multi-invite)
-  interface AppointedInviteEntry { id: string; company_name: string; company_type: string; contact_name: string; email: string; position: string; }
-  const [appointedInvites, setAppointedInvites] = useState<AppointedInviteEntry[]>([]);
-  const [appointedCompanies, setAppointedCompanies] = useState<any[]>([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
-  const fetchAppointedCompanies = async (pid: string) => {
-    setIsLoadingCompanies(true);
-    try {
-      const companies = await getAppointedCompanies(pid);
-      setAppointedCompanies((companies || []).sort((a: any, b: any) => (a.company_name || "").localeCompare(b.company_name || "")));
-    }
-    catch { /* silent */ }
-    finally { setIsLoadingCompanies(false); }
-  };
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const s3Upload = useS3Upload("project-documents/pending");
-
-  const addFiles = useCallback((files: File[]) => {
-    files.forEach((file) => {
-      const result = validateFile(file);
-      if (result.valid) {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        s3Upload.startUpload(id, file);
-      } else {
-        toast.error(`${file.name}: ${result.error}`);
-      }
-    });
-  }, [s3Upload]);
-
-  const [quickFillSection, setQuickFillSection] = useState<string | null>(null);
-  const openQuickFill = () => { setQuickFillSection(null); setQuickFillOpen(true); if (projectId) fetchAppointedCompanies(projectId); };
-  const openQuickFillFor = (section: string) => {
-    setQuickFillSection(section);
-    setQuickFillOpen(true);
-    if (section === "Associated Company" && projectId) fetchAppointedCompanies(projectId);
-  };
-  const closeQuickFill = () => {
-    setQuickFillOpen(false);
-    setQuickFillSection(null);
-    setQuickForm({
-      brief: "",
-      company_name: "", client_name: "", client_email: "",
-      total_budget: "",
-      location_street: "", location_lat: "", location_lng: "",
-      start_date: "", end_date: "",
-      appointed_company_name: "",
-      appointed_company_type: "",
-      appointed_contact_name: "",
-      appointed_contact_email: "",
-      appointed_position: "",
-      appointed_insurance_expiry: "",
-    });
-    setAppointedInvites([]);
-    s3Upload.entries.forEach((e) => s3Upload.removeEntry(e.id));
+  const openSetup = (section: string | null) => {
+    setSetupSection(section);
+    setSetupOpen(true);
   };
 
-  const submitQuickFill = async (missing: string[]) => {
-    if (!projectId || !canEditProject) return;
-    setIsSaving(true);
-    try {
-      const payload: Record<string, any> = {};
-      if (missing.includes("Scope of Work") && quickForm.brief.trim()) {
-        payload.task_order_brief = quickForm.brief.trim();
-      }
-      // CLIENT/CONTRACTOR: fill own client company details
-      if (missing.includes("Client Details") && isClientOrContractor && quickForm.company_name.trim()) {
-        payload.client_details = {
-          company_name: quickForm.company_name.trim(),
-          client: { name: quickForm.client_name.trim(), email: quickForm.client_email.trim(), position: "" },
-        };
-      }
-      // NON-CLIENT: just invite the client (handled after patch via inviteClient)
-      if (missing.includes("Budget Allocation")) {
-        const num = parseFloat(quickForm.total_budget.replace(/,/g, ""));
-        if (!num || num <= 0) { toast.error("Please enter a valid budget amount"); setIsSaving(false); return; }
-        payload.total_budget = num;
-      }
-      if (missing.includes("Location")) {
-        if (quickForm.location_street.trim()) payload.location = quickForm.location_street.trim();
-        if (quickForm.location_lat) payload.latitude = parseFloat(quickForm.location_lat);
-        if (quickForm.location_lng) payload.longitude = parseFloat(quickForm.location_lng);
-      }
-      if (missing.includes("Project Timeline") && quickForm.start_date && quickForm.end_date) {
-        payload.start_date = quickForm.start_date;
-        payload.end_date = quickForm.end_date;
-      }
-      const validInvites = appointedInvites.filter((e) => e.company_name.trim() && e.email.trim());
-      // NON-CLIENT: fill own appointed company details
-      if (missing.includes("Associated Company") && !isClientOrContractor && quickForm.appointed_company_name.trim()) {
-        payload.appointed_company = {
-          company_name: quickForm.appointed_company_name.trim(),
-          company_type: quickForm.appointed_company_type,
-          role_as_per_appointment: quickForm.appointed_position,
-          contact: { name: quickForm.appointed_contact_name.trim(), email: quickForm.appointed_contact_email.trim() },
-        };
-      }
-      // NON-CLIENT: inviting a client counts as a valid action even without a patch payload
-      const hasClientInvite = missing.includes("Client Details") && !isClientOrContractor && quickForm.client_email.trim();
-      // CLIENT/CONTRACTOR: invite companies (handled after patch via inviteAppointedCompany)
+  const isClientOrContractor = CLIENT_ROLE_CODES.includes(data.currentUser?.role?.code ?? "");
 
-      if (Object.keys(payload).length === 0 && s3Upload.entries.length === 0 && !hasClientInvite && validInvites.length === 0) {
-        toast.error("Please fill in at least one field");
-        setIsSaving(false);
-        return;
-      }
-      if (Object.keys(payload).length > 0) {
-        await patchData({ url: `projects/${projectId}/`, data: payload });
-      }
+  // ── State 1: no project ────────────────────────────────────────────────
+  // "No projects at all" and "none selected" are different problems with
+  // different fixes, so they get different screens.
+  if (!projectId) {
+    const hasNoProjects = data.allProjects.length === 0;
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* The title states the state. "Home" said nothing about either of
+              the two situations below, both of which have a fix. */}
+          <PageHeader title={hasNoProjects ? "No projects yet" : "No project selected"} />
+          {hasNoProjects ? (
+            <EmptyState
+              icon={FolderOpen}
+              title="No projects yet"
+              description="A project is where contract administration lives — instructions, variations, certificates and the documents behind them."
+              action={
+                <Button size="sm" onClick={() => navigate("/create-project")}>
+                  Create your first project
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={FolderOpen}
+              title="No project selected"
+              description="Choose a project to see what is waiting on you."
+            />
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-      // Register S3 documents if any uploaded
-      if (s3Upload.entries.length > 0) {
-        const ids = s3Upload.entries.map((e) => e.id);
-        const s3Keys = await s3Upload.waitForAll(ids);
-        await Promise.all(
-          s3Upload.entries.map(async (entry) => {
-            const key = s3Keys.get(entry.id);
-            if (key) await registerS3Document(projectId, { file_name: entry.file.name, s3_key: key, name: entry.title || "" }).catch(() => { });
-          })
-        );
-      }
-
-      toast.success("Project updated successfully");
-      queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("projects") });
-
-      // CLIENT/CONTRACTOR: invite client if email provided
-      // NON-CLIENT: invite client (that's the only action for Client Details)
-      if (missing.includes("Client Details") && quickForm.client_email.trim()) {
-        try {
-          await inviteClient({
-            client_name: quickForm.client_name.trim(),
-            client_email: quickForm.client_email.trim(),
-            project_id: projectId,
-          });
-          toast.success(`Client invite sent to ${quickForm.client_email}`);
-        } catch (err: any) {
-          toast.warning(`Project updated, but client invite failed: ${err?.response?.data?.error || err.message}`);
-        }
-      }
-
-      // CLIENT/CONTRACTOR: send appointed company invitations
-      if (missing.includes("Associated Company") && isClientOrContractor && validInvites.length > 0) {
-        await Promise.allSettled(
-          validInvites.map((entry) =>
-            inviteAppointedCompany({
-              project_id: projectId,
-              company_name: entry.company_name.trim(),
-              company_type: entry.company_type,
-              contact_name: entry.contact_name.trim(),
-              contact_email: entry.email.trim(),
-              position: entry.position || '',
-            })
-          )
-        );
-        toast.success(`${validInvites.length} associated company invitation${validInvites.length > 1 ? "s" : ""} sent`);
-      }
-
-      closeQuickFill();
-    } catch {
-      toast.error("Failed to update. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const { data: tasksResponse, isLoading: loadingTasks } = useFetch<{ tasks: any[] }>(
-    projectId ? `projects/${projectId}/tasks/` : "",
-    { enabled: !!projectId }
-  );
-  const { data: meetingsResponse, isLoading: loadingMeetings } = useFetch<any>(
-    projectId ? `meetings/?project_id=${projectId}` : "",
-    { enabled: !!projectId }
-  );
-  const { data: phaseCostsData, isLoading: loadingMilestones } = useMilestonePhaseCosts(projectId || null);
-  const allMilestones: MilestoneWithCost[] = phaseCostsData?.milestones ?? [];
-
-  const upcomingMeetings = (
-    (Array.isArray(meetingsResponse) ? meetingsResponse : meetingsResponse?.results ?? []) as any[]
-  )
-    .filter((m: any) => m.status !== "cancelled" && !isMeetingPast(m.date, m.time))
-    .sort((a: any, b: any) => new Date(a.date_time || a.date).getTime() - new Date(b.date_time || b.date).getTime())
-    .slice(0, 5);
-  const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
-  const currentUserId = currentUser?.id ? String(currentUser.id) : undefined;
-  // CIDB is the role code real "Contractor" signups actually get (see
-  // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
-  const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];
-  const isClientOrContractor = CLIENT_ROLE_CODES.includes(currentUser?.role?.code ?? '');
-  const { canEditProject: canEditByRole } = usePermissions();
-  const { data: projectListData } = useFetch(
-    currentUser?.id ? `projects/?userId=${currentUser.id}` : "",
-    { enabled: !!currentUser?.id }
-  );
-  const project = (projectListData?.results || []).find(
-    (p: any) => String(p._id || p.id) === String(projectId)
-  );
-  const isProjectCreator = !!currentUser?.id && String(project?.userId) === String(currentUser.id);
-  const canEditProject = canEditByRole || isProjectCreator;
-
-  useEffect(() => {
-    const handleProjectChange = () => {
-      setProjectId(localStorage.getItem("selectedProjectId") || undefined);
-    };
-    window.addEventListener("project-change", handleProjectChange);
-    return () => window.removeEventListener("project-change", handleProjectChange);
-  }, []);
-
-  // Distribute task types realistically across items for demo diversity
-  const DEMO_TYPES = ["CPI", "RFI", "SI", "VO", "DC", "RFI", "CPI", "SI", "VO", "RFI"];
-  const DEMO_PRIORITIES = ["High", "Medium", "Critical", "Low", "High", "Medium", "High", "Low", "Critical", "Medium"];
-
-  const taskList = (tasksResponse?.tasks || []).map((item: any, idx: number) => {
-    // Backend returns "CRITICALPATHITEM" — normalise to the short "CPI"
-    // code the rest of the dashboard uses for badges / filters.
-    const rawType = (item.taskType || "").toString().toUpperCase();
-    const apiType = rawType === "CRITICALPATHITEM" ? "CPI" : rawType;
-    // Demo fallback only fires when the backend genuinely returned no
-    // type for this row (rare — usually means a malformed Task wrapper).
-    const type = apiType || DEMO_TYPES[idx % DEMO_TYPES.length];
-    return {
-      id: item.taskId || item.task?._id,
-      title: item.task?.subject || item.task?.title || item.task?.taskActivityName || "",
-      description: item.task?.description || item.task?.question || item.task?.instruction || "",
-      type,
-      status: item.status || item.task?.status || "todo",
-      priority: item.task?.priority || DEMO_PRIORITIES[idx % DEMO_PRIORITIES.length],
-      discipline: item.task?.discipline,
-      due_date: item.task?.dueDate || item.task?.finishDate,
-      created_at: item.created_at || item.task?.createdAt,
-      updated_at: item.task?.updatedAt || item.created_at || item.task?.createdAt,
-      assignedBy: item.assignedBy,
-      // Werner To/CC — assignedTo is "the ball is in this person's court",
-      // responseBy is "CC'd, watching only". Needed to personalize My
-      // Actions instead of showing every open task on the project to
-      // everyone (see Aug 6 meeting notes: David-as-contractor had no way
-      // to tell a VO had come back to him — the dashboard never filtered
-      // by who the task was actually assigned to).
-      assignedToIds: (item.assignedTo || []).map((u: any) => String(u.userId)),
-      responseByIds: (item.responseBy || []).map((u: any) => String(u.userId)),
-      // Single source of truth for "this needs the current user's action" —
-      // shared by both My Actions (filter) and Activity Feed (highlight),
-      // so the two sections never disagree about what's actionable.
-      needsAction: (() => {
-        const s = (item.status || item.task?.status || "todo").toLowerCase();
-        if (s === "done" || s === "closed") return false;
-        if (!currentUserId) return false;
-        return (item.assignedTo || []).some((u: any) => String(u.userId) === currentUserId);
-      })(),
-    };
-  });
-
-  // Note: a previous demo-realism block here unconditionally overwrote
-  // task.type / task.priority / task.due_date with randomly cycled
-  // values, which made an SI show up as "CPI: Test SI 0001" on the
-  // dashboard. Removed — the real backend fields are the source of
-  // truth, and the fallbacks above already cover the empty-project
-  // demo case.
-
-  // Personalized: only tasks where the ball is actually in the current
-  // user's court (they're in assignedTo, the Werner "To"), not every open
-  // task on the project. A task you're only CC'd on (responseBy) belongs
-  // in the Activity Feed as an FYI, not here demanding action.
-  const myActions = taskList.filter((t: any) => t.needsAction);
-
-  // Sort actions by date: overdue first, then by due date ascending
-  const sortedActions = useMemo(() => {
-    const now = new Date();
-    return myActions
-      .map((task: any) => ({
-        ...task,
-        _isOverdue: task.due_date ? isBefore(new Date(task.due_date), now) && !isToday(new Date(task.due_date)) : false,
-      }))
-      .sort((a: any, b: any) => {
-        if (a._isOverdue && !b._isOverdue) return -1;
-        if (!a._isOverdue && b._isOverdue) return 1;
-        const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-        const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
-        return dateA - dateB;
-      });
-  }, [myActions]);
-
-  const overdueCount = sortedActions.filter((t: any) => t._isOverdue).length;
-
-  const actorNames = ["Sarah Chen", "Maruf M.", "David K.", "Linda N.", "James P."];
-  const statusVerbMap: Record<string, string> = {
-    done: "approved",
-    closed: "approved",
-    in_review: "submitted for review",
-    inreview: "submitted for review",
-    "in review": "submitted for review",
-    answered: "submitted for review",
-    todo: "created",
-    in_progress: "updated",
-  };
-
-  const recentActivity = [...taskList].sort((a: any, b: any) => {
-    const dateA = new Date(b.updated_at || b.created_at).getTime();
-    const dateB = new Date(a.updated_at || a.created_at).getTime();
-    return dateA - dateB;
-  }).slice(0, 8);
-
-  // Project context bar calculations
-  const projectProgress = useMemo(() => {
-    if (!project) return 0;
-    const startStr = project.startDate || project.start_date;
-    const endStr = project.endDate || project.end_date;
-    if (!startStr || !endStr) return 0;
-    const start = parseISO(startStr);
-    const end = parseISO(endStr);
-    const now = new Date();
-    if (isAfter(now, end)) return 100;
-    if (isBefore(now, start)) return 0;
-    const total = differenceInDays(end, start);
-    const elapsed = differenceInDays(now, start);
-    return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
-  }, [project]);
-
-  const daysRemaining = useMemo(() => {
-    if (!project) return null;
-    const endStr = project.endDate || project.end_date;
-    if (!endStr) return null;
-    const end = parseISO(endStr);
-    const diff = differenceInDays(end, new Date());
-    return diff;
-  }, [project]);
-
-  // Documents from project
-  const recentDocuments = (project?.documents || project?.attachments || []).slice(0, 5);
-
-
-
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName?.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return '📄';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return '🖼';
-    if (['xlsx', 'xls'].includes(ext || '')) return '📊';
-    return '📎';
-  };
-
-  useEffect(() => {
-    setTimeout(() => {
-      setProjectId(localStorage.getItem("selectedProjectId") || undefined);
-    }, 1000);
-  }, []);
-
-  const allProjects = projectListData?.results || [];
-  const hasNoProjects = !projectId && allProjects.length === 0;
-
-  const [dismissedDrafts, setDismissedDrafts] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("dismissedDraftProjects") || "[]"); } catch { return []; }
-  });
-
-  const dismissDraft = (id: string) => {
-    const updated = [...dismissedDrafts, id];
-    setDismissedDrafts(updated);
-    localStorage.setItem("dismissedDraftProjects", JSON.stringify(updated));
-  };
-
-  const continueDraftProject = (p: any) => {
-    const id = String(p._id || p.id);
-    localStorage.setItem("selectedProjectId", id);
-    window.dispatchEvent(new Event("project-change"));
-    navigate("/edit-project");
-  };
-
-  const projectStats = useMemo(() => {
-    if (!project) return null;
-    const clientDetails = project.clientDetails || project.client_details;
-    const taskOrderBrief = project.taskOrderBrief || project.task_order_brief;
-    const projectDocs = project.documents || project.attachments || [];
-    const fields = [
-      { label: "Client Details", value: (clientDetails?.company_name || clientDetails?.companyName) ? clientDetails : null },
-      { label: "Scope of Work", value: taskOrderBrief || null },
-      { label: "Project Documents", value: projectDocs.length > 0 ? "yes" : null },
-      { label: "Budget Allocation", value: Number((project.totalBudget ?? project.total_budget) || 0) > 0 ? "yes" : null },
-      { label: "Location", value: project.location || null },
-      { label: "Project Timeline", value: (project.startDate || project.start_date) && (project.endDate || project.end_date) ? "yes" : null },
-      { label: "Associated Company", value: (project.appointedCompany || project.appointed_company)?.company_name || null },
-    ];
-    const filledCount = fields.filter(f => !!f.value).length;
-    const totalCount = fields.length;
-    const percentage = Math.round((filledCount / totalCount) * 100);
-    const missing = fields.filter(f => !f.value).map(f => f.label);
-    return { percentage, filledCount, totalCount, missing };
-  }, [project]);
-
-  const draftProjects = allProjects.filter(
-    (p: any) => {
-      const isDraft = (p.status === "Draft" || p.status === "draft");
-      const isSelected = String(p._id || p.id) === String(projectId);
-      return isDraft && !isSelected && !dismissedDrafts.includes(String(p._id || p.id));
-    }
-  );
-
-
-  const showCompletionCard = canEditProject && ((projectStats && projectStats.percentage < 100) || draftProjects.length > 0);
+  // ── State 2: total outage ──────────────────────────────────────────────
+  // Falling through to the ordinary empty state would render an outage as
+  // "Nothing is waiting on you" — on a page whose whole purpose is telling
+  // someone what is outstanding, that is the most expensive thing we could
+  // say. State the outage instead.
+  if (data.loadIssue.level === "total") {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <PageHeader title="This project's data could not be loaded" />
+          <EmptyState
+            icon={ShieldAlert}
+            title="This project's data could not be loaded"
+            description={data.loadIssue.message}
+            action={
+              <Button variant="outline" size="sm" onClick={data.retryFailed}>
+                Try again
+              </Button>
+            }
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
+      {/* DashboardLayout owns the p-6 page padding; a page is a plain
+          space-y-6 wrapper — the one page-top rule, documented on
+          `PageHeader`. Home ran at space-y-4 while it was being built to a
+          one-screen budget; it is on the app-wide 24px band gap now. */}
       <div className="space-y-6">
-        <InsuranceBanner />
+        {/*
+          ── No description, and both halves of it were removed for a reason ──
 
-        {/* AI MVP — nudge owners/admins to mark the project's primary
-            contract. Auto-hides once a primary_contract is set. Gated
-            on canEditProject so non-owners (e.g. a Civil Engineer team
-            member) don't see a CTA they can't action. */}
-        <PrimaryContractAlert
-          projectId={projectId}
-          visibleToCurrentUser={canEditProject}
-        />
+          It read `${project.name} · ${project.location}`, and on the seeded
+          project that rendered:
 
-        {showCompletionCard && (
-          <div className="p-6 rounded-xl bg-card border border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h4 className="text-sm font-normal text-foreground leading-none">
-                  Project Setup Incomplete
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-2xl">
-                  {projectStats && projectStats.percentage < 100
-                    ? `Your selected project "${project.name}" is ${projectStats.percentage}% complete. Finish the onboarding to unlock all coordination features.`
-                    : "Finish setting up your draft projects to start collaborating with your team."}
-                </p>
-              </div>
-              {projectStats && projectStats.percentage < 100 && canEditProject && (
-                <Button
-                  onClick={() => openQuickFill()}
-                  className="h-8 px-4 bg-primary text-primary-foreground text-xs rounded-lg shadow-sm shadow-primary/20 hover:bg-primary/90 transition-all font-normal flex items-center gap-2 shrink-0"
-                >
-                  Complete Setup
-                  <ArrowRight />
-                </Button>
-              )}
-            </div>
+            "Hatfield Street Refurbishment · Nine Flowers Guest House, 133,
+             Hatfield Street, Cape Town Ward 115, Cape Town, City of Cape
+             Town, Western Cape, 8001, South Africa"
 
-            {/* Missing point cards */}
-            {projectStats && projectStats.percentage < 100 && (
-              <div className="grid grid-cols-1 gap-3">
-                {projectStats.missing.map((item) => {
-                  const cardConfig: Record<string, { icon: React.ReactNode; iconBg: string; iconColor: string; description: string }> = {
-                    "Scope of Work": { icon: <FileText className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Describe the full construction scope." },
-                    "Client Details": { icon: <Shield className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Add client company and contact info." : "Invite your client to fill in their company details." },
-                    "Budget Allocation": { icon: <ClipboardList className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the total project budget." },
-                    "Project Documents": { icon: <CloudUpload className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Upload contracts, drawings and project files." },
-                    "Location": { icon: <MapPin className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Add the project site address or location." },
-                    "Project Timeline": { icon: <CalendarIcon className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: "Set the project start and end dates." },
-                    "Associated Company": { icon: <Building2 className="h-4 w-4" />, iconBg: "bg-muted", iconColor: "text-slate-500", description: isClientOrContractor ? "Invite the professional firms associated with this project." : "Fill in your company details for this project." },
-                  };
-                  const cfg = cardConfig[item];
-                  if (!cfg) return null;
-                  return canEditProject ? (
-                    <button
-                      key={item}
-                      onClick={() => openQuickFillFor(item)}
-                      className="group text-left bg-muted/50 rounded-xl px-4 py-3.5 hover:bg-muted hover:shadow-sm transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
-                          {cfg.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-normal text-[#111827]">{item}</p>
-                          <p className="text-xs text-[#9ca3af] mt-0.5">{cfg.description}</p>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-[#9ca3af] group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
-                      </div>
-                    </button>
-                  ) : (
-                    <div
-                      key={item}
-                      className="text-left bg-muted/50 rounded-xl px-4 py-3.5 opacity-60 cursor-not-allowed"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${cfg.iconBg} ${cfg.iconColor} flex items-center justify-center shrink-0`}>
-                          {cfg.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-normal text-[#111827]">{item}</p>
-                          <p className="text-xs text-[#9ca3af] mt-0.5">{cfg.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          **The name was already on screen.** `DashboardSidebar` renders
+          `selectedProject?.name` in the project switcher, in a fixed `h-16`
+          block that lines up with the page header's own row — so the same
+          string appeared twice, about 200px apart, on the same horizontal
+          band. The switcher is the better of the two places for it: it is
+          where the name is also the control that changes it.
 
-            {/* Draft projects */}
-            {draftProjects.length > 0 && (
-              <div className={`space-y-2 ${projectStats && projectStats.percentage < 100 ? "mt-3" : ""}`}>
-                {draftProjects.slice(0, 2).map((p: any) => {
-                  const id = String(p._id || p.id);
-                  return (
-                    <div key={id} className="flex items-center justify-between gap-3 bg-muted/50 rounded-xl px-4 py-2.5 group transition-all hover:bg-muted hover:shadow-sm">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                        <span className="text-sm text-foreground truncate font-normal tracking-tight">{p.name || "Untitled Project"}</span>
-                        <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Draft</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          onClick={() => continueDraftProject(p)}
-                          className="h-8 px-4 bg-slate-200 text-slate-700 hover:bg-primary hover:text-white text-xs rounded-lg transition-all font-normal flex items-center gap-2"
-                        >
-                          Finish
-                          <ArrowRight className="group-hover:translate-x-0.5 transition-transform" />
-                        </Button>
-                        <button
-                          aria-label="Dismiss draft"
-                          onClick={() => dismissDraft(id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {draftProjects.length > 2 && (
-                  <p className="text-xs text-muted-foreground ml-2">+ {draftProjects.length - 2} more draft projects</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {/* No Projects Banner */}
-        {hasNoProjects && (
-          <div className="w-full bg-card rounded-xl border border-border p-8 text-center shadow-sm flex flex-col items-center">
-            <div className="w-14 h-14 bg-[#f0edff] rounded-2xl flex items-center justify-center mb-4">
-              <FolderOpen className="w-7 h-7 text-primary" />
-            </div>
-            <h2 className="text-lg font-medium text-[#111827] mb-1">No projects yet</h2>
-            <p className="text-sm text-[#6b7280] mb-5 max-w-md leading-relaxed">
-              A project is where contract administration lives — instructions, variations, certificates and the documents behind them, all auditable in one place.
-            </p>
-            <button
-              onClick={() => navigate("/create-project")}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground text-sm font-normal rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-            >
-              <Plus className="h-4 w-4" />
-              Create your first project
-            </button>
-          </div>
-        )}
-        {/* Project Context Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-4 bg-muted/50 border border-border rounded-xl p-4">
-          <div className="flex items-center gap-4">
-            {/* Progress Ring */}
-            <div className="relative h-12 w-12 shrink-0">
-              <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48">
-                <circle cx="24" cy="24" r="20" fill="none" stroke="#E5E7EB" strokeWidth="4" />
-                <circle
-                  cx="24" cy="24" r="20" fill="none"
-                  stroke="#6c5ce7" strokeWidth="4" strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 20}`}
-                  strokeDashoffset={`${2 * Math.PI * 20 * (1 - projectProgress / 100)}`}
-                  className="transition-all duration-700"
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
-                {projectProgress}%
-              </span>
-            </div>
-            <div>
-              <h1 className="text-lg font-medium text-foreground leading-tight">
-                {project?.name || "Select a Project"}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {project?.project_number || project?.projectNumber || "—"}
-                {project?.location ? ` • ${project.location}` : ""}
-              </p>
-            </div>
-          </div>
+          **The location was not an address.** `Project.location` is one free
+          text column holding a reverse geocoder's full display string.
+          "Nine Flowers Guest House" is the nearest named building the
+          geocoder matched and is not the project; "Cape Town Ward 115" is an
+          electoral ward; and the tail is municipality, province, postcode and
+          country. A Cape Town principal agent was being told, on their own
+          project's homepage, that the job is in South Africa.
 
-          <div className="flex items-center gap-3 flex-wrap">
-            {daysRemaining !== null && (
-              <Badge
-                variant="outline"
-                className={`text-xs font-medium px-3 py-1 ${daysRemaining < 0
-                  ? 'bg-red-50 text-red-600 border-red-200'
-                  : daysRemaining <= 30
-                    ? 'bg-orange-50 text-orange-600 border-orange-200'
-                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                  }`}
-              >
-                {daysRemaining < 0
-                  ? `${Math.abs(daysRemaining)} days overdue`
-                  : `${daysRemaining} days remaining`}
-              </Badge>
-            )}
-            {project?.total_budget || project?.totalBudget ? (
-              <Badge variant="outline" className="text-xs font-medium px-3 py-1 bg-card text-foreground border-border">
-                R {(project.total_budget || project.totalBudget || 0).toLocaleString()}
-              </Badge>
-            ) : null}
-            <Badge variant="outline" className="text-xs font-medium px-3 py-1 bg-primary/10 text-primary border-primary/20">
-              {myActions.length} open actions
-            </Badge>
-          </div>
+          **And it could not be shortened honestly.** `Project` carries
+          `location`, `latitude` and `longitude` and no structured address —
+          no suburb, city or postcode column — so there is nothing to select a
+          better component from. Every rule for trimming the display string is
+          a positional guess against a format whose segment count varies with
+          what the geocoder matched: taking the first two segments yields
+          "Nine Flowers Guest House, 133", which is worse than silence, and
+          counting from the end is arbitrary in the same way on a string with
+          fewer segments. A heuristic that cannot be defended on a
+          differently-shaped string is not shipped.
+
+          The full address is not lost: it is on the project record, and on
+          issued notices, where the complete legal description is the point.
+          What this bought back is roughly two lines of the one screen this
+          page is held to.
+        */}
+        {/*
+          ── The verdict IS the title ──────────────────────────────────────
+
+          The page states one thing outright before any panel: the single
+          worst fact that is true right now, or the plain statement that there
+          is not one. See `VerdictTitle`.
+
+          It used to ride in the header's `actions` slot at `text-sm`, muted —
+          top-right, where every other page in this app puts buttons and where
+          readers have learnt not to look — while the biggest element on the
+          screen was the word "Home". That is hierarchy applied inside every
+          module and inverted between them, and it is the page's whole 7/10.
+
+          So the two swapped and "Home" is deleted outright: the project's name
+          is already in the sidebar switcher, and a page does not need to tell
+          a reader which page it is when its title can tell them where the
+          project is instead. The `· N others` clause rides in `meta`, beside
+          the title on the same baseline, because it qualifies the fact rather
+          than being one.
+
+          `data.verdict` is null while the page is loading and `VerdictTitle`
+          says so rather than asserting an all-clear about data that has not
+          arrived. See the guard in `useHomeData`.
+        */}
+        <PageHeader title={<VerdictTitle data={data} />} meta={<VerdictTail data={data} />} />
+
+        {/*
+          ── The precondition stack: ONE block, not four ────────────────────
+
+          These four are the same kind of thing — "something about this
+          project is not set up yet" — and each one used to draw its own
+          full-width bordered block. On a fresh project a user met a setup
+          line, then a yellow contract banner, then possibly an insurance
+          banner, then possibly a load banner: four containers, four borders,
+          three 12px gaps and roughly 190px of chrome standing between the
+          page header and the first thing anyone came here to read.
+
+          The fix is the one the app already uses everywhere else: a list of
+          related things is ONE bounded container with hairline-divided rows.
+          The Xero finding holds — the container is still visibly bounded, it
+          is just one container instead of four. `divide-y` supplies the rules
+          between rows, and `empty:hidden` means the usual case, where every
+          precondition is satisfied and all four children render null, draws
+          nothing at all rather than a 2px empty box.
+
+          `SetupLineBlock` and `LoadIssueBanner` were changed to draw no
+          chrome of their own. `PrimaryContractAlert` and `InsuranceBanner`
+          are owned elsewhere, so their card, border and radius are stripped
+          here at the composition layer — see the note in the report about
+          the amber fill that properly belongs in their own files.
+        */}
+        <div
+          className={[
+            "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
+            "divide-y divide-border",
+            // Foreign children flatten into rows. `!` because these fight the
+            // child's own utilities at equal specificity, where source order
+            // would otherwise decide. They target only the child's ROOT, and
+            // `divide-y` above is untouched because it applies to the
+            // container, not to a child class.
+            "[&>*]:!rounded-none [&>*]:!border-0 [&>*]:!bg-card",
+            // Restores the row hover the flattening removes, in the same
+            // token every other list row on this page uses.
+            "[&>*]:hover:!bg-muted/50 [&>*]:transition-colors",
+          ].join(" ")}
+        >
+          <SetupLineBlock
+            data={data}
+            onOpen={() => openSetup(null)}
+            onOpenSection={(s) => openSetup(s)}
+          />
+          <PrimaryContractAlert projectId={projectId} visibleToCurrentUser={data.canEditProject} />
+          <InsuranceBanner />
+          {/* State 3: partial outage — one line, one action. */}
+          <LoadIssueBanner data={data} />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* My Action Card — grouped by urgency */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                  <MyAction />
-                </div>
-                <h3 className="text-sm text-gray2">My Actions ({myActions.length})</h3>
+        {/* State 4: loading */}
+        {data.isLoading ? (
+          <AwesomeLoader message="Reading what needs you" />
+        ) : (
+          <>
+            {/* Question 1: is anything on fire. */}
+            <StatusBandBlock data={data} />
+
+            <div className="grid gap-4 lg:grid-cols-2 items-start">
+              {/* Question 2: what do I have to do. */}
+              <div className="space-y-4">
+                <ActionQueueBlock data={data} />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4 bg-card p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
-              {loadingTasks || loadingCurrentUser ? (
-                <AwesomeLoader message="Loading tasks" />
-              ) : sortedActions.length > 0 ? (
-                <>
-                  {overdueCount > 0 && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-2 w-2 rounded-full bg-red-500" />
-                      <span className="text-xs font-medium text-red-600">{overdueCount} overdue</span>
-                    </div>
-                  )}
-                  {sortedActions.map((task: any) => (
-                    <div key={task.id} className="mb-2">
-                      <ActionItem
-                        title={`${task.type}: ${task.title}`}
-                        description={task.description || task.title}
-                        priority={task.priority ? (task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) as any : "Medium"}
-                        dueDate={task.due_date ? formatDate(task.due_date) : "No Date"}
-                        id={task.id}
-                        isOverdue={task._isOverdue}
-                      />
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <EmptyState
-                  variant="plain"
-                  size="sm"
-                  title="Nothing needs your attention"
-                  description="Instructions, RFIs and variations waiting on you appear here, with the ones nearest their time bar first."
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity Feed Card — compact timeline */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                  <Caution2 />
-                </div>
-                <h3 className="text-sm text-gray2">Activity Feed</h3>
+              {/* What is true whether or not anybody acts today. */}
+              <div className="space-y-4">
+                <RiskConditionBlock data={data} />
+                <WhatChangedBlock feed={data.changeFeed} />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-0 bg-card p-2 mx-2 rounded-md max-h-[400px] overflow-y-auto">
-              {loadingTasks ? (
-                <AwesomeLoader message="Loading activity" />
-              ) : recentActivity.length > 0 ? (
-                recentActivity.map((task: any, idx: number) => {
-                  const s = task.status?.toLowerCase();
-                  const verb = statusVerbMap[s] || "updated";
-                  const displayStatus: "In Progress" | "Pending" | "Completed" =
-                    s === "done" || s === "closed" ? "Completed"
-                      : s === "in review" || s === "in_review" || s === "inreview" || s === "answered" ? "In Progress"
-                        : "Pending";
-
-                  const actorName = task.assignedBy?.name || actorNames[idx % actorNames.length];
-
-                  return (
-                    <ActivityFeedItem
-                      key={task.id}
-                      title={`${actorName} ${verb} ${task.type || 'Task'}: ${task.title}`}
-                      status={displayStatus}
-                      author={actorName}
-                      timeAgo={task.updated_at || task.created_at ? formatDate(task.updated_at || task.created_at) : "Just now"}
-                      needsAction={task.needsAction}
-                    />
-                  );
-                })
-              ) : (
-                <EmptyState
-                  variant="plain"
-                  size="sm"
-                  title="No activity recorded yet"
-                  description="Every instruction issued, response given and status change on this project is logged here as it happens."
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Upcoming Meetings */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                <CalendarIcon className="h-4 w-4 text-gray2" />
-              </div>
-              <h3 className="text-sm text-gray2">Upcoming Meetings</h3>
             </div>
-            <button
-              onClick={() => navigate('/meetings')}
-              className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group"
-            >
-              View all
-              <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </CardHeader>
-          <CardContent className="bg-card p-2 mx-2 rounded-md">
-            {loadingMeetings ? (
-              <AwesomeLoader message="Loading meetings" />
-            ) : upcomingMeetings.length > 0 ? (
-              <div className="divide-y divide-border/50">
-                {upcomingMeetings.map((m: any) => (
-                  <Link
-                    key={m.id}
-                    to={`/meetings/${m.id}`}
-                    className="flex items-center justify-between px-2 py-3 hover:bg-muted/40 rounded-md transition-colors group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {m.title}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          {m.date_time || m.date}
-                        </span>
-                        {m.location && (
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            {m.location}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {m.attendees?.length > 0 && (
-                      <div className="flex -space-x-1.5 ml-4 shrink-0">
-                        {(m.attendees as string[]).slice(0, 3).map((name: string, i: number) => (
-                          <div key={i} className="h-6 w-6 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center">
-                            <span className="text-xs text-primary font-medium">
-                              {name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        ))}
-                        {m.extra_attendees > 0 && (
-                          <div className="h-6 w-6 rounded-full bg-muted border-2 border-white flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{m.extra_attendees}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                variant="plain"
-                size="sm"
-                title="No meetings scheduled"
-                description="Site and progress meetings appear here once scheduled, with their minutes attached afterwards."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Programme Milestones */}
-        <ProgrammeMilestonesCard milestones={allMilestones} isLoading={loadingMilestones} onViewAll={() => navigate("/programme")} />
-
-        {/* Recent Documents */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                <FileText className="h-4 w-4 text-gray2" />
-              </div>
-              <h3 className="text-sm text-gray2">Recent Documents</h3>
-            </div>
-            <button
-              onClick={() => navigate('/documents')}
-              className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group"
-            >
-              View all
-              <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </CardHeader>
-          <CardContent className="bg-card p-2 mx-2 rounded-md">
-            {recentDocuments.length > 0 ? (
-              <div className="divide-y divide-border/50">
-                {recentDocuments.map((doc: any, i: number) => {
-                  const displayName = doc.name || doc.file_name || doc.fileName || "Document";
-                  return (
-                    <button
-                      key={doc.id || doc._id || i}
-                      onClick={() => setSelectedDoc(doc)}
-                      className="w-full flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/50 transition-colors text-left"
-                    >
-                      <span className="text-base">{getFileIcon(doc.file_name || doc.fileName || doc.name || "Doc")}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{displayName}</p>
-                        <p className="text-xs text-muted-foreground/50">
-                          {doc.uploaded_at || doc.uploadedAt
-                            ? formatDate(doc.uploaded_at || doc.uploadedAt)
-                            : ""}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyState
-                variant="plain"
-                size="sm"
-                title="No documents uploaded yet"
-                description="The most recently uploaded contract documents, drawings and specifications will show here."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <BudgetBreakdownCard progress={65} daysStatus="On track" />
-        <ProjectTimelineCard
-          startDate={formatDate(project?.startDate || project?.start_date)}
-          currentDate={formatDate(new Date().toISOString())}
-          deadline={formatDate(project?.endDate || project?.end_date)}
-          progress={45}
-          daysStatus={project?.status || "In Progress"}
-        />
-
-
-
-        {/* Health Score Cards */}
-        {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <ProjectStatusCard
-            icon={<CashIcon />}
-            title="Budget Health"
-            value="85%"
-            subtitle="R 862,500 / R 15,000,000"
-            badgeText="On track"
-            badgeVariant="success"
-            actionText="Review forecast"
-            trendArrow="up"
-          />
-          <ProjectStatusCard
-            icon={<Calander2 />}
-            title="Schedule Health"
-            value="115%"
-            subtitle="3 days average"
-            badgeText="2 delayed"
-            badgeVariant="destructive"
-            actionText="Adjust timeline"
-            trendArrow="down"
-          />
-          <ProjectStatusCard
-            icon={<Shield />}
-            title="Compliance"
-            value="5"
-            subtitle="2 overdue • 3 due soon"
-            badgeText="Action required"
-            badgeVariant="destructive"
-            actionText="Review obligations"
-            trendArrow="down"
-          />
-          <ProjectStatusCard
-            icon={<Asterisk />}
-            title="AI Risk Score"
-            value="Medium"
-            badgeText="Improving"
-            badgeVariant="success"
-            actionText="View risk dashboard"
-            trendArrow="up"
-          />
-        </div> */}
-
+          </>
+        )}
       </div>
-      {/* Document Preview Modal */}
-      <FilePreviewModal
-        isOpen={!!selectedDoc}
-        onOpenChange={(open) => { if (!open) setSelectedDoc(null); }}
-        file={selectedDoc ? {
-          name: selectedDoc.name || selectedDoc.file_name || selectedDoc.fileName || "Document",
-          url: selectedDoc.streamUrl || selectedDoc.stream_url || selectedDoc.file_url || selectedDoc.fileUrl || "",
-        } : null}
+
+      <ProjectSetupDialog
+        open={setupOpen}
+        section={setupSection}
+        onClose={() => { setSetupOpen(false); setSetupSection(null); }}
+        projectId={projectId}
+        projectStats={data.projectStats}
+        canEditProject={data.canEditProject}
+        isClientOrContractor={isClientOrContractor}
       />
-
-      {/* Quick-fill modal — shows all missing fields at once */}
-      {projectStats && (
-        <Dialog open={quickFillOpen} onOpenChange={(open) => { if (!open) closeQuickFill(); }}>
-          <DialogContent size="lg" className="p-0 overflow-hidden">
-            <DialogHeader className="px-6 py-4 border-b border-border">
-              <DialogTitle>
-                {quickFillSection ?? "Complete Project Setup"}
-              </DialogTitle>
-              <p className="text-xs text-[#6b7280] mt-1">Fill in the missing details below and save.</p>
-            </DialogHeader>
-
-            <div className="px-8 py-6 space-y-4 max-h-[72vh] overflow-y-auto">
-
-              {/* ── Scope of Work card ── */}
-              {(quickFillSection === null || quickFillSection === "Scope of Work") && projectStats.missing.includes("Scope of Work") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#f0edff] flex items-center justify-center shrink-0">
-                      <FileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Scope of Work</p>
-                      <p className="text-xs text-[#9ca3af]">Describe the construction scope — auto-populates into contracts</p>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <textarea
-                      className={qTextareaCls}
-                      placeholder="e.g. The Client wishes to appoint an Architect to measure up the existing residential building..."
-                      value={quickForm.brief}
-                      onChange={(e) => setQuickForm((v) => ({ ...v, brief: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Client Details card ── */}
-              {(quickFillSection === null || quickFillSection === "Client Details") && projectStats.missing.includes("Client Details") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#eef2ff] flex items-center justify-center shrink-0">
-                      <Shield className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Client Details</p>
-                      <p className="text-xs text-[#9ca3af]">
-                        {isClientOrContractor
-                          ? "Fill once — auto-populates into all contracts and appointment letters"
-                          : "Invite your client to fill in their company details"}
-                      </p>
-                    </div>
-                  </div>
-                  {isClientOrContractor ? (
-                    // CLIENT/CONTRACTOR: fill own client company details
-                    <div className="p-5 space-y-4">
-                      <div>
-                        <label className="block text-xs font-normal text-[#374151] mb-1.5">
-                          Client Name or Company <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          className={qInputCls}
-                          placeholder="e.g. Mr John Smith or ABC Holdings (Pty) Ltd"
-                          value={quickForm.company_name}
-                          onChange={(e) => setQuickForm((v) => ({ ...v, company_name: e.target.value }))}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
-                          <input
-                            className={qInputCls}
-                            placeholder="Full name"
-                            value={quickForm.client_name}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Email</label>
-                          <input
-                            type="email"
-                            className={qInputCls}
-                            placeholder="client@company.com"
-                            value={quickForm.client_email}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // NON-CLIENT: invite client by email
-                    <div className="p-5 space-y-4">
-                      <p className="text-xs text-[#6b7280]">
-                        We'll send an email invitation for the client to complete their company details.
-                      </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Client Name</label>
-                          <input
-                            className={qInputCls}
-                            placeholder="e.g. John Smith"
-                            value={quickForm.client_name}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, client_name: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">
-                            Client Email <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="email"
-                            className={qInputCls}
-                            placeholder="client@company.com"
-                            value={quickForm.client_email}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, client_email: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Budget Allocation card ── */}
-              {(quickFillSection === null || quickFillSection === "Budget Allocation") && projectStats.missing.includes("Budget Allocation") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center shrink-0">
-                      <ClipboardList className="h-4 w-4 text-[#16a34a]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Budget Allocation</p>
-                      <p className="text-xs text-[#9ca3af]">Set the total project budget</p>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <label className="block text-xs font-normal text-[#374151] mb-1.5">
-                      Total Budget <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-[#6b7280] pointer-events-none select-none">R</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className={cn(qInputCls, "pl-10 text-lg h-[52px]")}
-                        placeholder="0"
-                        value={quickForm.total_budget}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9]/g, "");
-                          setQuickForm((v) => ({ ...v, total_budget: raw ? Number(raw).toLocaleString() : "" }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Location card ── */}
-              {(quickFillSection === null || quickFillSection === "Location") && projectStats.missing.includes("Location") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#f0f9ff] flex items-center justify-center shrink-0">
-                      <MapPin className="h-4 w-4 text-[#0284c7]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Location</p>
-                      <p className="text-xs text-[#9ca3af]">Project site address or area — used in contracts and reports</p>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <LocationPickerMap
-                      location={quickForm.location_street}
-                      latitude={quickForm.location_lat}
-                      longitude={quickForm.location_lng}
-                      mapHeight={260}
-                      onChange={(loc, lat, lng) =>
-                        setQuickForm((v) => ({ ...v, location_street: loc, location_lat: lat, location_lng: lng }))
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Project Timeline card ── */}
-              {(quickFillSection === null || quickFillSection === "Project Timeline") && projectStats.missing.includes("Project Timeline") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#fdf4ff] flex items-center justify-center shrink-0">
-                      <CalendarIcon className="h-4 w-4 text-[#9333ea]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Project Timeline</p>
-                      <p className="text-xs text-[#9ca3af]">Start and end dates — used for scheduling and contract periods</p>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-normal text-[#374151] mb-1.5">Start Date <span className="text-red-500">*</span></label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
-                              <span className={quickForm.start_date ? "text-[#111827]" : "text-gray-400"}>
-                                {quickForm.start_date ? format(new Date(quickForm.start_date), "dd MMM yyyy") : "Pick a date"}
-                              </span>
-                              <CalendarIcon className="h-4 w-4 text-[#9ca3af] shrink-0" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={quickForm.start_date ? new Date(quickForm.start_date) : undefined}
-                              onSelect={(date) => setQuickForm((v) => ({ ...v, start_date: date ? format(date, "yyyy-MM-dd") : "" }))}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-normal text-[#374151] mb-1.5">End Date <span className="text-red-500">*</span></label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className={cn(qInputCls, "flex items-center justify-between cursor-pointer")}>
-                              <span className={quickForm.end_date ? "text-[#111827]" : "text-gray-400"}>
-                                {quickForm.end_date ? format(new Date(quickForm.end_date), "dd MMM yyyy") : "Pick a date"}
-                              </span>
-                              <CalendarIcon className="h-4 w-4 text-[#9ca3af] shrink-0" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={quickForm.end_date ? new Date(quickForm.end_date) : undefined}
-                              onSelect={(date) => setQuickForm((v) => ({ ...v, end_date: date ? format(date, "yyyy-MM-dd") : "" }))}
-                              disabled={(date) => quickForm.start_date ? date < new Date(quickForm.start_date) : false}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Associated Company card ── */}
-              {(quickFillSection === null || quickFillSection === "Associated Company") && projectStats.missing.includes("Associated Company") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#fefce8] flex items-center justify-center shrink-0">
-                      <Building2 className="h-4 w-4 text-[#ca8a04]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">
-                        {isClientOrContractor ? "Associated Companies" : "Associated Company Information"}
-                      </p>
-                      <p className="text-xs text-[#9ca3af]">
-                        {isClientOrContractor
-                          ? "Invite professional firms associated with this project"
-                          : "Fill in your company details — auto-populates into contracts and appointment letters"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {isClientOrContractor ? (
-                    // CLIENT/CONTRACTOR: multi-invite form
-                    <div className="p-5 space-y-3">
-                      {isLoadingCompanies ? (
-                        <p className="text-sm text-muted-foreground py-2">Loading...</p>
-                      ) : appointedCompanies.filter(c => !["CLIENT", "OWNER", "CLIENT OWNER"].includes((c.role || "").toUpperCase().trim())).length > 0 && (
-                        <div className="space-y-2">
-                          {appointedCompanies
-                            .filter(c => !["CLIENT", "OWNER", "CLIENT OWNER"].includes((c.role || "").toUpperCase().trim()))
-                            .map((comp) => (
-                              <div key={comp.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/50">
-                                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-normal text-[#111827] truncate">{comp.company_name}</p>
-                                  <p className="text-xs text-muted-foreground">{comp.role || "Partner"}</p>
-                                </div>
-                                <span className="text-xs px-2 py-0.5 rounded-full border border-border bg-card text-muted-foreground shrink-0">{comp.status}</span>
-                              </div>
-                            ))}
-                          <div className="h-px bg-border" />
-                        </div>
-                      )}
-                      {appointedInvites.map((entry) => (
-                        <div key={entry.id} className="rounded-xl p-4 space-y-3 bg-muted/50">
-                          <div className="flex justify-end">
-                            <button
-                              aria-label="Remove invitation"
-                              type="button"
-                              onClick={() => setAppointedInvites((prev) => prev.filter((e) => e.id !== entry.id))}
-                              className="text-muted-foreground hover:text-red-500 transition-colors"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Name <span className="text-red-500">*</span></label>
-                            <input
-                              className={qInputCls}
-                              placeholder="e.g. Smith Architects (Pty) Ltd"
-                              value={entry.company_name}
-                              onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_name: e.target.value } : x))}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Type</label>
-                            <div className="relative">
-                              <select
-                                className={qSelectCls}
-                                value={entry.company_type}
-                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, company_type: e.target.value } : x))}
-                              >
-                                <option value="">Select type...</option>
-                                {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
-                              <input
-                                className={qInputCls}
-                                placeholder="e.g. John Smith"
-                                value={entry.contact_name}
-                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, contact_name: e.target.value } : x))}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-normal text-[#374151] mb-1.5">Email Address <span className="text-red-500">*</span></label>
-                              <input
-                                type="email"
-                                className={qInputCls}
-                                placeholder="contact@firm.co.za"
-                                value={entry.email}
-                                onChange={(e) => setAppointedInvites((prev) => prev.map((x) => x.id === entry.id ? { ...x, email: e.target.value } : x))}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setAppointedInvites((prev) => [...prev, { id: crypto.randomUUID(), company_name: "", company_type: "", contact_name: "", email: "", position: "" }])}
-                        className="w-full py-3.5 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-sm text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-                      >
-                        <Plus className="h-4 w-4" />
-                        {appointedInvites.length === 0 ? "Add Associated Company" : "Add Another Company"}
-                      </button>
-                    </div>
-                  ) : (
-                    // NON-CLIENT: fill own company details
-                    <div className="p-5 space-y-4">
-                      <div>
-                        <label className="block text-xs font-normal text-[#374151] mb-1.5">
-                          Company Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          className={qInputCls}
-                          placeholder="e.g. Base Architects and Associates"
-                          value={quickForm.appointed_company_name}
-                          onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_name: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-normal text-[#374151] mb-1.5">Company Type</label>
-                        <div className="relative">
-                          <select
-                            className={qSelectCls}
-                            value={quickForm.appointed_company_type}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_company_type: e.target.value }))}
-                          >
-                            <option value="">Select type...</option>
-                            {COMPANY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Name</label>
-                          <input
-                            className={qInputCls}
-                            placeholder="e.g. John Smith"
-                            value={quickForm.appointed_contact_name}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_name: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-normal text-[#374151] mb-1.5">Contact Email</label>
-                          <input
-                            type="email"
-                            className={qInputCls}
-                            placeholder="contact@firm.co.za"
-                            value={quickForm.appointed_contact_email}
-                            onChange={(e) => setQuickForm((v) => ({ ...v, appointed_contact_email: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Documents card ── */}
-              {(quickFillSection === null || quickFillSection === "Project Documents") && projectStats.missing.includes("Project Documents") && (
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-muted/50 border-b border-border">
-                    <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center shrink-0">
-                      <CloudUpload className="h-4 w-4 text-[#ea580c]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-normal text-[#111827]">Project Documents</p>
-                      <p className="text-xs text-[#9ca3af]">Upload contracts, drawings, BOQ and other project files</p>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept={ALLOWED_FILE_EXTENSIONS.join(",")}
-                      onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); e.target.value = ""; }}
-                    />
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                      onDragLeave={() => setIsDragging(false)}
-                      onDrop={(e) => { e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}
-                      className={cn(
-                        "flex items-center gap-5 rounded-xl px-6 py-5 cursor-pointer transition-all duration-200 border-2 border-dashed",
-                        isDragging ? "border-primary bg-[#f8f7ff]" : "border-border bg-card hover:border-primary hover:bg-[#f8f7ff]"
-                      )}
-                    >
-                      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors", isDragging ? "bg-[#ede9fb]" : "bg-muted")}>
-                        <CloudUpload className={cn("h-6 w-6 transition-colors", isDragging ? "text-primary" : "text-[#6b7280]")} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-[#374151]">Drag and drop your files here</p>
-                        <p className="text-xs text-[#6b7280] mt-0.5">or <span className="text-primary underline">click to browse</span></p>
-                        <p className="text-xs text-[#9ca3af] mt-1 uppercase tracking-tight">PDF, Excel, Images up to 20MB</p>
-                      </div>
-                    </div>
-                    {s3Upload.entries.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {s3Upload.entries.map((f) => (
-                          <div key={f.id} className="bg-muted/50 rounded-xl px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-4 w-4 text-primary shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-normal text-[#111827] truncate">{f.file.name}</p>
-                                <p className="text-xs text-[#9ca3af]">{(f.file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                <div className="mt-2">
-                                  <input
-                                    type="text"
-                                    className="w-full h-7 px-2 rounded-lg border border-border text-xs placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    placeholder="Document title (optional)"
-                                    value={f.title || ""}
-                                    onChange={(e) => s3Upload.updateEntry(f.id, { title: e.target.value })}
-                                  />
-                                </div>
-                              </div>
-                              {f.status === "done" && <Check className="h-4 w-4 text-[#00b894] shrink-0" />}
-                              <button
-                                aria-label="Remove file" type="button" onClick={() => s3Upload.removeEntry(f.id)} className="text-[#9ca3af] hover:text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors shrink-0">
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                            {f.status === "uploading" && (
-                              <div className="mt-2.5">
-                                <div className="h-1 bg-muted rounded-full overflow-hidden">
-                                  <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${f.progress}%` }} />
-                                </div>
-                                <p className="text-xs text-[#9ca3af] mt-1">{f.progress}%</p>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            <div className="px-8 py-5 border-t border-border flex items-center justify-end gap-3">
-              <button
-                onClick={closeQuickFill}
-                className="px-4 py-2 text-xs text-[#6b7280] hover:text-[#111827] transition-colors"
-              >
-                Cancel
-              </button>
-              <Button
-                onClick={() => submitQuickFill(quickFillSection ? [quickFillSection] : projectStats.missing)}
-                disabled={isSaving || !canEditProject}
-                className="h-10 px-6 bg-primary text-primary-foreground text-xs rounded-xl shadow-sm hover:bg-primary/90 transition-all font-normal disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </DashboardLayout>
   );
 };
-
-const MILESTONE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  planned:     { label: "Planned",     color: "#6B7280", bg: "bg-muted/50",    border: "border-border" },
-  in_progress: { label: "In Progress", color: "#6c5ce7", bg: "bg-primary/5",  border: "border-primary/20" },
-  completed:   { label: "Completed",   color: "#10B981", bg: "bg-emerald-50", border: "border-emerald-200" },
-  delayed:     { label: "Delayed",     color: "#EF4444", bg: "bg-red-50",     border: "border-red-200" },
-};
-
-function milestoneProgress(startDate: string, endDate: string): number {
-  const start = new Date(startDate).getTime();
-  const end   = new Date(endDate).getTime();
-  const now   = Date.now();
-  if (now <= start) return 0;
-  if (now >= end)   return 100;
-  return Math.round(((now - start) / (end - start)) * 100);
-}
-
-function ProgrammeMilestonesCard({
-  milestones,
-  isLoading,
-  onViewAll,
-}: {
-  milestones: MilestoneWithCost[];
-  isLoading: boolean;
-  onViewAll: () => void;
-}) {
-  const statusCounts = (["planned", "in_progress", "completed", "delayed"] as const).map((key) => ({
-    key,
-    count: milestones.filter((m) => m.status === key).length,
-    ...MILESTONE_STATUS_CONFIG[key],
-  })).filter((s) => s.count > 0);
-
-  const visibleMilestones = milestones
-    .filter((m) => m.status !== "completed")
-    .slice(0, 5)
-    .concat(
-      milestones.filter((m) => m.status === "completed").slice(0, Math.max(0, 5 - milestones.filter((m) => m.status !== "completed").length))
-    )
-    .slice(0, 5);
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-            <Calander2 />
-          </div>
-          <h3 className="text-sm text-gray2">Programme Milestones</h3>
-        </div>
-        <button
-          onClick={onViewAll}
-          className="inline-flex items-center text-xs text-foreground hover:text-primary transition-colors group"
-        >
-          View Programme
-          <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-        </button>
-      </CardHeader>
-      <CardContent className="bg-card p-2 mx-2 rounded-md">
-        {isLoading ? (
-          <AwesomeLoader message="Loading milestones" />
-        ) : milestones.length === 0 ? (
-          <EmptyState
-            variant="plain"
-            size="sm"
-            title="No programme milestones set"
-            description="Set the milestones that govern this project — practical completion, sectional handovers, key dates — to track slippage against them."
-          />
-        ) : (
-          <>
-            {/* Status count chips */}
-            {statusCounts.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap px-2 pt-2 pb-3">
-                {statusCounts.map(({ key, count, label, color, bg, border }) => (
-                  <span
-                    key={key}
-                    className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${bg} ${border}`}
-                    style={{ color }}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    {count} {label}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Milestone rows */}
-            <div className="divide-y divide-border/50">
-              {visibleMilestones.map((m) => {
-                const cfg = MILESTONE_STATUS_CONFIG[m.status] ?? MILESTONE_STATUS_CONFIG.planned;
-                const pct = milestoneProgress(m.startDate, m.endDate);
-                const start = formatDateUk(m.startDate);
-                const end = formatDateUk(m.endDate);
-                return (
-                  <div key={m._id} className="flex items-center gap-3 px-2 py-3">
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <p className="text-sm text-foreground truncate">{m.name}</p>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${cfg.bg} ${cfg.border}`}
-                          style={{ color: cfg.color }}
-                        >
-                          {cfg.label}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%`, backgroundColor: cfg.color, opacity: 0.7 }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                          {start} – {end}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {milestones.length > 5 && (
-              <button
-                onClick={onViewAll}
-                className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors"
-              >
-                +{milestones.length - 5} more phases — View Programme
-              </button>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default Index;

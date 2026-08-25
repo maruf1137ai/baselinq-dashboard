@@ -28,6 +28,16 @@ export interface Notification {
     projectId?: string | number;
     entityType?: string;
     entityId?: number;
+    /** Task wrapper PK — set on task_updated/task_assigned and VO/SI/RFI/DC/CPI creation. */
+    taskId?: string | number;
+    /** Document PK — written as str in documents/views.py, int in documents/ai_analysis.py. */
+    documentId?: string | number;
+    /** RiskSignal PK — set unconditionally by risk/engine.py's _send_one. */
+    signal_id?: string | number;
+    /** Payment certificate PK — see tasks/pc_workflow.py. */
+    paymentCertificateId?: string | number;
+    /** Meeting PK, snake_case — see meetings/views.py's _fan_out_notifications. */
+    meeting_id?: string | number;
     voNumber?: string;
     siNumber?: string;
     rfiNumber?: string;

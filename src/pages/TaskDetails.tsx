@@ -98,6 +98,7 @@ import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { isTaskLocked as computeIsTaskLocked } from "@/lib/taskLock";
+import { markNotificationsRead } from "@/lib/markNotificationsRead";
 import {
   getIntentionAtDisplay,
   getFormalClaimAtDisplay,
@@ -1504,6 +1505,24 @@ export default function TaskDetails() {
     localStorage.setItem(`task_${taskId}_replies_seen_at`, new Date().toISOString());
   }, [taskId, displayTask?.responses]);
 
+  // Opening the task IS reading its notifications. Without this, task_*
+  // notifications — over half of every notification in the system — could
+  // only be cleared by clicking each one individually in the bell, so the
+  // badge stayed high no matter how much work the user actually did.
+  // task_code ("VO-060") is sent alongside the id because the older
+  // escalation/reply payloads identify the doc by label and carry no taskId.
+  const markedContextRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!taskId || !displayTask) return;
+    if (markedContextRef.current === taskId) return;
+    markedContextRef.current = taskId;
+    void markNotificationsRead({
+      taskId,
+      entityLabel: displayTask.task_code || null,
+      link: `/tasks/${taskId}`,
+    });
+  }, [taskId, displayTask?.task_code, displayTask]);
+
 
   // Map API statuses that don't directly match timeline stage names
   const statusToStageMap: Record<string, string> = {
@@ -1565,21 +1584,30 @@ export default function TaskDetails() {
       // amendment). Architect / QS / CQS were here previously but the
       // backend 403s them, so the button died on click. Hide it instead.
       const paRoles = ["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"];
-      // Client final sign-off when status = Recommended (over-mandate VOs).
       const clientRoles = ["CLIENT", "CPM"];
-      // "Priced" AND "Under Review" both count as "the PM still owes a
-      // decision" — Under Review is a real Werner stage (see the
-      // timeline.stages order below: Draft → Priced → Under Review →
-      // Recommended → Approved), entered automatically the moment the
-      // creator/PM leaves a reply while Priced (a few lines up in
-      // handleSubmitResponse). That auto-transition is intentional and
-      // legitimate — but this check previously only recognized "Priced",
-      // so the Approve/Recommend button vanished the instant the PM so
-      // much as replied, and only came back once the contractor re-priced.
-      // The button must stay available through the whole review window,
-      // not just its first moment.
-      if (["Priced", "Under Review"].includes(displayTask.status) && paRoles.includes(userCode)) return true;
-      if (displayTask.status === "Recommended" && clientRoles.includes(userCode)) return true;
+      // "Priced" AND "Under Review" both count as "someone with signing
+      // authority still owes a decision" — Under Review is a real Werner
+      // stage (see the timeline.stages order below: Draft → Priced →
+      // Under Review → Recommended → Approved), entered automatically the
+      // moment the creator/PM leaves a reply while Priced (a few lines up
+      // in handleSubmitResponse). "Recommended" adds the client's final
+      // sign-off window on over-mandate VOs.
+      //
+      // Client and PM-family roles share this same negotiation window —
+      // backend's SIGNING_ROLES["vo"] (views_signing.py) authorises CLIENT
+      // to sign at any pre-signed state, with no status precondition at
+      // all. This used to only offer CLIENT the button at "Recommended",
+      // which meant a client with real signing authority had no way to
+      // sign during Priced/Under Review even though the backend would
+      // accept it. Draft/Submitted are still excluded — no pricing exists
+      // yet at those stages, so "sign" wouldn't make sense there.
+      const negotiationStatuses = ["Priced", "Under Review", "Recommended"];
+      if (
+        negotiationStatuses.includes(displayTask.status) &&
+        (paRoles.includes(userCode) || clientRoles.includes(userCode))
+      ) {
+        return true;
+      }
       return false;
     }
 

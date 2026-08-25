@@ -4,14 +4,12 @@
 // import { Plug } from "lucide-react";
 
 import UpcomingFeature from "@/components/settings/UpcomingFeature";
+import { PageHeader } from "@/components/ui/page-header";
 
 const Integrations = () => {
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Integrations</h2>
-        <p className="text-sm text-muted-foreground mt-1">Connect Baselinq with your existing tools and workflows.</p>
-      </div>
+      <PageHeader title="Integrations" description="Connect Baselinq with your existing tools and workflows." />
       <UpcomingFeature title="Integrations" />
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
       <div className="border border-dashed border-border rounded-lg p-12 flex flex-col items-center justify-center text-center space-y-4">

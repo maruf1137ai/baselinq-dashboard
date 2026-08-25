@@ -85,7 +85,7 @@ describe("clampToRemaining", () => {
     const out = clampToRemaining("VO-001", 80_000, 50_000);
     expect(out.value).toBe(50_000);
     expect(out.note).toContain("VO-001");
-    expect(out.note).toContain("50 000,00");
+    expect(out.note).toContain("50\u00a0000,00");
   });
 
   it("says the variation is fully certified rather than flipping the field to 0", () => {

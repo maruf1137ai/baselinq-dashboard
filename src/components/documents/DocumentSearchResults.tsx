@@ -9,6 +9,8 @@ import {
 } from '@/lib/documentTaxonomy';
 import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UnreadNotificationBadge } from '@/components/commons/UnreadNotificationBadge';
+import type { Notification } from '@/types/notification';
 
 interface DocumentSearchResultsProps {
   /** Documents matching the active search query (already filtered server-side). */
@@ -17,6 +19,7 @@ interface DocumentSearchResultsProps {
   query: string;
   isLoading?: boolean;
   onDocumentClick?: (id: string) => void;
+  unreadByDocId?: Record<string, Notification[]>;
 }
 
 /** Compact relative-time formatter — matches the folder views. */
@@ -43,6 +46,7 @@ export function DocumentSearchResults({
   query,
   isLoading,
   onDocumentClick,
+  unreadByDocId,
 }: DocumentSearchResultsProps) {
   if (isLoading) {
     return (
@@ -115,6 +119,7 @@ export function DocumentSearchResults({
                 {doc.reference}
               </span>
             )}
+            <UnreadNotificationBadge notifications={unreadByDocId?.[doc._id]} />
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
           </div>
         );

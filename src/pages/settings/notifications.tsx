@@ -6,6 +6,7 @@
 // import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import UpcomingFeature from "@/components/settings/UpcomingFeature";
+import { PageHeader } from "@/components/ui/page-header";
 
 // interface NotificationSetting {
 //   id: string;
@@ -100,10 +101,7 @@ const Notifications = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-normal tracking-tight text-foreground">Notifications</h2>
-        <p className="text-sm text-muted-foreground mt-1">Manage how and when you receive notifications.</p>
-      </div>
+      <PageHeader title="Notifications" description="Manage how and when you receive notifications." />
       <UpcomingFeature title="Notifications" />
       {/* UPCOMING_FEATURE: Original JSX commented out below — restore when backend integration is ready
 

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 
 import { useNavigate } from "react-router-dom";
+import { PageHeader } from "@/components/ui/page-header";
 
 function SectionCard({ title, subtitle, icon, children }: {
   title: string; subtitle?: string; icon: React.ReactNode; children: React.ReactNode;
@@ -236,13 +237,13 @@ const AccountProfile = () => {
   if (isLoading) return <div className="flex items-center justify-center py-24"><AwesomeLoader message="Loading" /></div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-5xl p-6">
       <form onSubmit={handleSave}>
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-normal tracking-tight text-foreground">Profile Details</h2>
-            <p className="text-sm text-muted-foreground mt-1">Your personal identity, contact info, and professional credentials.</p>
-          </div>
+        <PageHeader
+          className="mb-6"
+          title="Profile Details"
+          description="Your personal identity, contact info, and professional credentials."
+          actions={
           <div className="flex items-center gap-3">
 
             <Button type="submit" disabled={isSaving} className="h-8 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0">
@@ -250,7 +251,8 @@ const AccountProfile = () => {
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </div>
+          }
+        />
 
         <SectionCard title="Personal Information" subtitle="Basic identity and contact details" icon={<UserIcon className="h-4 w-4" />}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">

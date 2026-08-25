@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/collapsible';
 import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UnreadNotificationBadge as UnreadBadge } from '@/components/commons/UnreadNotificationBadge';
+import type { Notification } from '@/types/notification';
 
 /** Spring-load delay before a drag-hovered folder auto-expands (ms). */
 const SPRING_FOLDER_DELAY = 500;
@@ -30,6 +32,7 @@ interface FoldersViewProps {
   onViewRegister?: (folderId: string, folderName: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadByDocId?: Record<string, Notification[]>;
 }
 
 interface FolderRowProps {
@@ -40,6 +43,7 @@ interface FolderRowProps {
   onViewRegister?: (folderId: string, folderName: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadByDocId?: Record<string, Notification[]>;
 }
 
 /** Compact relative-time formatter — matches ContractsTree. */
@@ -60,7 +64,7 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
  * (Copy / Cut / Paste / Copy path / Rename / Delete).
  */
 function DocumentRow({
-  doc, idx, tab, onDocumentClick, onRenameDoc, onDeleteDoc,
+  doc, idx, tab, onDocumentClick, onRenameDoc, onDeleteDoc, unreadNotifications,
 }: {
   doc: ApiDocument;
   idx: number;
@@ -68,6 +72,7 @@ function DocumentRow({
   onDocumentClick?: (id: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadNotifications?: Notification[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: doc._id,
@@ -113,6 +118,7 @@ function DocumentRow({
             {doc.reference}
           </span>
         )}
+        <UnreadBadge notifications={unreadNotifications} />
         <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
     </DocItemContextMenu>
@@ -124,13 +130,14 @@ function DocumentRow({
  * Paste-into is disabled here (no folder to paste into).
  */
 function UnfiledRow({
-  doc, tab, onDocumentClick, onRenameDoc, onDeleteDoc,
+  doc, tab, onDocumentClick, onRenameDoc, onDeleteDoc, unreadNotifications,
 }: {
   doc: ApiDocument;
   tab: FolderTab;
   onDocumentClick?: (id: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadNotifications?: Notification[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: doc._id,
@@ -162,6 +169,7 @@ function UnfiledRow({
             {doc.reference}
           </span>
         )}
+        <UnreadBadge notifications={unreadNotifications} />
       </div>
     </DocItemContextMenu>
   );
@@ -171,7 +179,7 @@ function UnfiledRow({
  * Folder row for Drawings / Documents. Folder header is a drop target that
  * spring-loads open while a document is dragged over it.
  */
-function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc }: FolderRowProps) {
+function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc, unreadByDocId }: FolderRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { canUploadDocument } = usePermissions();
@@ -208,6 +216,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
 
   const hasRecent = docs.some(d => new Date(d.createdAt).getTime() > Date.now() - SEVEN_DAYS);
   const hasAiFlags = docs.some(d => (d.aiFlags ?? 0) > 0);
+  const unreadCount = docs.reduce((sum, d) => sum + (unreadByDocId?.[d._id]?.length ?? 0), 0);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -236,6 +245,15 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
           )}
           {hasRecent && (
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Recent activity" />
+          )}
+
+          {unreadCount > 0 && (
+            <span
+              className="h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium shrink-0"
+              title={`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
           )}
 
           <span
@@ -293,6 +311,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
                 onDocumentClick={onDocumentClick}
                 onRenameDoc={onRenameDoc}
                 onDeleteDoc={onDeleteDoc}
+                unreadNotifications={unreadByDocId?.[doc._id]}
               />
             ))}
           </div>
@@ -307,7 +326,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
  * The drag-and-drop context lives at the page level (Documents.tsx) so a drag
  * can cross tabs.
  */
-export function FoldersView({ projectId, tab, documents, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc }: FoldersViewProps) {
+export function FoldersView({ projectId, tab, documents, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc, unreadByDocId }: FoldersViewProps) {
   const { data, isLoading, error } = useFolders({ projectId, tab });
   const navigate = useNavigate();
   const { canUploadDocument } = usePermissions();
@@ -411,6 +430,10 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
         const folders = foldersByDiscipline.get(discipline) ?? [];
         const totalDocs = folders.reduce((sum, f) => sum + (docsByFolderId.get(f._id)?.length ?? 0), 0);
         const hasRecent = folders.some(f => (docsByFolderId.get(f._id) ?? []).some(d => new Date(d.createdAt).getTime() > Date.now() - SEVEN_DAYS));
+        const disciplineUnread = folders.reduce(
+          (sum, f) => sum + (docsByFolderId.get(f._id) ?? []).reduce((s, d) => s + (unreadByDocId?.[d._id]?.length ?? 0), 0),
+          0,
+        );
 
         return (
           <div key={discipline} className="border-b border-border last:border-b-0">
@@ -424,6 +447,14 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
               {hasRecent && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
               )}
+              {disciplineUnread > 0 && (
+                <span
+                  className="h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium"
+                  title={`${disciplineUnread} unread notification${disciplineUnread !== 1 ? 's' : ''}`}
+                >
+                  {disciplineUnread > 99 ? '99+' : disciplineUnread}
+                </span>
+              )}
             </div>
 
             {folders.map((folder) => (
@@ -436,6 +467,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
                 onViewRegister={onViewRegister}
                 onRenameDoc={onRenameDoc}
                 onDeleteDoc={onDeleteDoc}
+                unreadByDocId={unreadByDocId}
               />
             ))}
           </div>
@@ -458,6 +490,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
               onDocumentClick={onDocumentClick}
               onRenameDoc={onRenameDoc}
               onDeleteDoc={onDeleteDoc}
+              unreadNotifications={unreadByDocId?.[doc._id]}
             />
           ))}
         </div>

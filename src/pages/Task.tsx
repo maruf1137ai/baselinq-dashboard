@@ -26,6 +26,7 @@ import { useUserRoleStore } from "@/store/useUserRoleStore";
 import TaskFilterBar, { TaskFilters, defaultFilters } from '@/components/task/TaskFilterBar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
+import { useTaskUnreadNotifications } from '@/hooks/useTaskUnreadNotifications';
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
+import { PageHeader } from "@/components/ui/page-header";
 
 // "+ Action" menu — order matches Werner's spec (rev G):
 //   SI → VO → RFI → GI
@@ -190,7 +192,8 @@ const getStatusDisplayName = (status: string | null) => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
-function TaskCard({ task, isDragging, currentUserId }: any) {
+function TaskCard({ task, isDragging, currentUserId, notifications }: any) {
+  const unreadNotifications: any[] = notifications || [];
   const { userRole } = useUserRoleStore();
   const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
   const { data: effectivePerms } = useEffectivePermissions(projectId);
@@ -316,7 +319,35 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
               'border border-border';
 
   const content = (
-    <div ref={setNodeRef} style={style} {...attributes} {...(isLocked ? {} : listeners)} className="mb-3">
+    <div ref={setNodeRef} style={style} {...attributes} {...(isLocked ? {} : listeners)} className="relative mb-3">
+      {unreadNotifications.length > 0 && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="absolute -top-2 -right-2 z-10 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium shadow cursor-default"
+              >
+                {unreadNotifications.length > 99 ? "99+" : unreadNotifications.length}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="bg-[#1B1C1F] text-white border-none py-1.5 px-3 max-w-xs">
+              <div className="flex flex-col gap-1.5">
+                {unreadNotifications.slice(0, 5).map((n: any) => (
+                  <div key={n._id}>
+                    <p className="text-xs font-medium">{n.title}</p>
+                    {n.body && <p className="text-xs opacity-70 line-clamp-2">{n.body}</p>}
+                  </div>
+                ))}
+                {unreadNotifications.length > 5 && (
+                  <p className="text-xs opacity-60">+{unreadNotifications.length - 5} more</p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       <Card
         onClick={() => navigate(`/tasks/${task.id}`)}
         className={`bg-card rounded-xl shadow-none transition-shadow overflow-hidden
@@ -480,7 +511,7 @@ function TaskCard({ task, isDragging, currentUserId }: any) {
   return content;
 }
 
-function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
+function Column({ id, title, count, tasks, onAddClick, currentUserId, unreadByTaskId }: any) {
   const { setNodeRef } = useSortable({ id });
 
   // Only count overdue for non-resolved tasks (resolved items shouldn't show "breached")
@@ -518,7 +549,7 @@ function Column({ id, title, count, tasks, onAddClick, currentUserId }: any) {
             style={{ minHeight: '100px' }}
           >
             {tasks.map((task: any) => (
-              <TaskCard key={task.id} task={task} currentUserId={currentUserId} />
+              <TaskCard key={task.id} task={task} currentUserId={currentUserId} notifications={unreadByTaskId?.[String(task.id)]} />
             ))}
           </div>
         </SortableContext>
@@ -558,11 +589,18 @@ const isDateInRange = (dateStr: string | null, range: string): boolean => {
 };
 
 // Apply filters to a flat task array
-const applyFilters = (taskList: any[], filters: TaskFilters, currentUserName: string | null): any[] => {
+const applyFilters = (
+  taskList: any[],
+  filters: TaskFilters,
+  currentUserName: string | null,
+  unreadByTaskId: Record<string, any[]> = {},
+): any[] => {
   return taskList.filter(task => {
     // Document type filter
     if (filters.docTypes.length > 0 && !filters.docTypes.includes(task.type)) return false;
 
+    // Unread messages filter
+    if (filters.messageFilter === 'unread' && !(unreadByTaskId[String(task.id)]?.length)) return false;
 
     // Assignee filter
     if (filters.assignee !== 'all') {
@@ -641,13 +679,25 @@ export default function Task() {
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [tasks]);
 
+  // task_code ("VO-060") -> task id, so unread notifications that only
+  // carry an entity_label/parent_label (no taskId) can still be matched.
+  const tasksByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    [...tasks.todo, ...tasks.inReview, ...tasks.done].forEach(task => {
+      if (task.task_code) map[task.task_code] = String(task.id);
+    });
+    return map;
+  }, [tasks]);
+
+  const { unreadByTaskId } = useTaskUnreadNotifications(projectId, tasksByCode);
+
   // Apply filters to each column
   const currentUserName = currentUser?.name || null;
   const filteredTasks = useMemo(() => ({
-    todo: applyFilters(tasks.todo, filters, currentUserName),
-    inReview: applyFilters(tasks.inReview, filters, currentUserName),
-    done: applyFilters(tasks.done, filters, currentUserName),
-  }), [tasks, filters, currentUserName]);
+    todo: applyFilters(tasks.todo, filters, currentUserName, unreadByTaskId),
+    inReview: applyFilters(tasks.inReview, filters, currentUserName, unreadByTaskId),
+    done: applyFilters(tasks.done, filters, currentUserName, unreadByTaskId),
+  }), [tasks, filters, currentUserName, unreadByTaskId]);
 
   const [activeId, setActiveId] = useState(null);
   const [activeStartContainer, setActiveStartContainer] = useState(null);
@@ -895,17 +945,23 @@ export default function Task() {
           </div>
         ) : (
           <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-normal tracking-tight text-foreground">Tasks</h1>
-              <Link
-                to="/help/tasks"
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                title="Who can create / reply / sign / close / escalate each task type"
-              >
-                <HelpCircle className="h-4 w-4" />
-                Workflow reference
-              </Link>
-            </div>
+            {/* The board is a fixed-height flex column rather than the usual
+                `space-y-6` stack, so the 24px band gap under the header is
+                carried by `mb-6` here. Same 24px, same baseline. */}
+            <PageHeader
+              className="mb-6"
+              title="Tasks"
+              actions={
+                <Link
+                  to="/help/tasks"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  title="Who can create / reply / sign / close / escalate each task type"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  Workflow reference
+                </Link>
+              }
+            />
             <TaskFilterBar
               filters={filters}
               onFiltersChange={setFilters}
@@ -920,9 +976,9 @@ export default function Task() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="flex gap-6 min-w-min h-full">
-                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
-                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} currentUserId={currentUser?.id} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="todo" title="Open" count={filteredTasks.todo.length} tasks={filteredTasks.todo} currentUserId={currentUser?.id} unreadByTaskId={unreadByTaskId} onAddClick={canCreateTask ? () => { setPreSelectedStatus("todo"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="inReview" title="Under Review" count={filteredTasks.inReview.length} tasks={filteredTasks.inReview} currentUserId={currentUser?.id} unreadByTaskId={unreadByTaskId} onAddClick={canCreateTask ? () => { setPreSelectedStatus("In Review"); setIsSelectionOpen(true); } : undefined} />
+                  <Column id="done" title="Resolved" count={filteredTasks.done.length} tasks={filteredTasks.done} currentUserId={currentUser?.id} unreadByTaskId={unreadByTaskId} onAddClick={canCreateTask ? () => { setPreSelectedStatus("Done"); setIsSelectionOpen(true); } : undefined} />
                 </div>
 
                 <DragOverlay>

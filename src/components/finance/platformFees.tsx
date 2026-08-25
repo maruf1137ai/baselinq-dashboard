@@ -596,7 +596,7 @@ const PlatformFees: React.FC = () => {
 
   if (!canView) {
     return (
-      <main className="pt-4">
+      <main className="pt-6">
         <EmptyState
           icon={Lock}
           title="Platform fees are not visible to your role"
@@ -608,7 +608,7 @@ const PlatformFees: React.FC = () => {
 
   if (!projectId) {
     return (
-      <main className="pt-4">
+      <main className="pt-6">
         <EmptyState
           icon={Receipt}
           title="No project selected"
@@ -620,7 +620,7 @@ const PlatformFees: React.FC = () => {
 
   if (isLoading) {
     return (
-      <main className="pt-4">
+      <main className="pt-6">
         <AwesomeLoader compact message="Totalling platform fees" />
       </main>
     );
@@ -628,7 +628,7 @@ const PlatformFees: React.FC = () => {
 
   if (isError || !data) {
     return (
-      <main className="pt-4">
+      <main className="pt-6">
         <EmptyState
           icon={Receipt}
           title="Platform fees could not be loaded"
@@ -642,7 +642,7 @@ const PlatformFees: React.FC = () => {
 
   if (!config.configured) {
     return (
-      <main className="pt-4">
+      <main className="pt-6">
         <EmptyState
           icon={Receipt}
           title="Billing is not enabled for this project"
@@ -658,7 +658,7 @@ const PlatformFees: React.FC = () => {
       : null;
 
   return (
-    <main className="pt-4 space-y-4">
+    <main className="pt-6 space-y-4">
       {/* Header stats. Four across only from xl: these values are full ZAR
           amounts, ~4x longer than the counts a summary row usually carries,
           and at the canonical text-3xl they need the width. */}

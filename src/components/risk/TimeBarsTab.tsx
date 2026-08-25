@@ -22,8 +22,19 @@ import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CalendarClock, Plus, ShieldQuestion } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CalendarClock, Plus, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { describeCountdown, TONE_CLASS, type Countdown } from "@/lib/timeBarCountdown";
+
+// A time bar is drawn ONLY once its deadline has passed (PR#56's rule).
+// describeCountdown's tone still distinguishes urgent/soon at the lib
+// level — other consumers may want that gradient — but this tab
+// deliberately renders both as neutral so nothing is coloured before the
+// breach has actually happened; a notice period with days left has not
+// been missed.
+const badgeClass = (tone: Countdown["tone"]) =>
+  tone === "urgent" || tone === "soon" ? TONE_CLASS.closed : TONE_CLASS[tone];
 
 interface TimeBar {
   id: number;
@@ -36,17 +47,24 @@ interface TimeBar {
   duration: number;
   unit: string;
   deadline_date: string;
-  days_remaining: number;
+  /**
+   * Counted in `days_remaining_unit` — for every JBCC clock that is WORKING
+   * days, on the South African working-day calendar including the builders'
+   * annual shutdown. Nullable in the type because a countdown we did not
+   * receive must be handled, not assumed.
+   */
+  days_remaining: number | null;
+  /** "working" | "calendar". Always travels with `days_remaining`. */
+  days_remaining_unit?: string | null;
+  /**
+   * The countdown as a finished sentence — "12 working days remaining",
+   * "3 working days overdue", "due today". Published by the backend
+   * (`TimeBarClock.days_remaining_label`) expressly so that no client ever
+   * pairs the number with a unit itself. Rendered verbatim below.
+   */
+  days_remaining_label?: string | null;
   status: string;
   notes: string;
-}
-
-function urgencyClass(days: number, status: string) {
-  if (status !== "open") return "bg-muted text-muted-foreground border-border";
-  if (days < 0) return "bg-red-50 text-red-700 border-red-200";
-  if (days <= 3) return "bg-red-50 text-red-700 border-red-200";
-  if (days <= 14) return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-emerald-50 text-emerald-700 border-emerald-200";
 }
 
 export default function TimeBarsTab({ projectId }: { projectId: string }) {
@@ -54,7 +72,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
   const [awarenessDate, setAwarenessDate] = useState("");
   const [contractForm, setContractForm] = useState("JBCC");
 
-  const { data, refetch } = useFetch<{ time_bars: TimeBar[] }>(
+  const { data, isLoading, isError, refetch } = useFetch<{ time_bars: TimeBar[] }>(
     `projects/${projectId}/time-bars/`
   );
   const { mutateAsync: post } = usePost();
@@ -105,7 +123,28 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
         </Button>
       </div>
 
-      {bars.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-3" aria-busy="true" aria-live="polite">
+          <span className="sr-only">Loading notice deadlines</span>
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+      ) : isError ? (
+        /* An outage must never render as the empty state. "No deadlines
+           tracked" and "we could not load your deadlines" are opposite
+           statements, and on a page about forfeiture the wrong one costs a
+           claim. */
+        <EmptyState
+          icon={ShieldAlert}
+          title="Notice deadlines could not be loaded"
+          description="The deadlines tracked against this project could not be read. This is not a statement that there are none — nothing below has been checked."
+          action={
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      ) : bars.length === 0 ? (
         <EmptyState
           icon={CalendarClock}
           title="No deadlines tracked"
@@ -113,7 +152,9 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
         />
       ) : (
         <div className="space-y-3">
-          {bars.map(bar => (
+          {bars.map(bar => {
+            const countdown = describeCountdown(bar);
+            return (
             <div key={bar.id} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -144,13 +185,9 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={cn(
                     "px-2.5 py-1 rounded-md border text-xs font-medium whitespace-nowrap",
-                    urgencyClass(bar.days_remaining, bar.status)
+                    badgeClass(countdown.tone)
                   )}>
-                    {bar.status !== "open"
-                      ? bar.status
-                      : bar.days_remaining < 0
-                        ? `${Math.abs(bar.days_remaining)}d overdue`
-                        : `${bar.days_remaining}d left`}
+                    {countdown.text}
                   </span>
                   {bar.status === "open" && (
                     <Button variant="outline" size="sm" onClick={() => serve(bar.id)}>
@@ -160,7 +197,8 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

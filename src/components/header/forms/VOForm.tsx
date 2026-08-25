@@ -31,6 +31,21 @@ import { loadTaskDraft, clearTaskDraft, useTaskDraftAutosave } from "@/lib/taskD
 
 const DRAFT_TYPE = "VO";
 
+// Matches cost_ledger.CostLedgerEntry.Category on the backend exactly. Kept as
+// a local literal list rather than a shared import — this repo already keeps
+// this same 8-value list duplicated per-component (BudgetBreakdownCard,
+// costLadger, costLedgerDrawer).
+const COST_CATEGORY_OPTIONS = [
+  "Subcontractor",
+  "Materials",
+  "Plant & Equipment",
+  "Labour",
+  "Professional Fees",
+  "Preliminaries",
+  "Contingency",
+  "Other",
+] as const;
+
 export default function VOForm({ setOpen, initialStatus, initialData, taskId }: any) {
   // Draft auto-fill is create-mode only — never restore/save while editing.
   const draftEnabled = !taskId && !initialData;
@@ -38,6 +53,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
 
   const [title, setTitle] = useState(initialData?.title || draft?.title || "");
   const [discipline, setDiscipline] = useState(initialData?.discipline || draft?.discipline || DISCIPLINE_OPTIONS[0]);
+  const [category, setCategory] = useState(initialData?.category || draft?.category || "Other");
   const [description, setDescription] = useState(initialData?.description || draft?.description || "");
   const [dateInstructed, setDateInstructed] = useState<Date | undefined>(
     initialData?.dateInstructed
@@ -70,6 +86,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
   useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
     title,
     discipline,
+    category,
     description,
     dateInstructed,
     items,
@@ -142,6 +159,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
       project: parseInt(projectId),
       title: title,
       discipline: discipline || undefined,
+      category: category || undefined,
       description: description,
       taskStatus: initialStatus || "Draft",
       line_items: items.map(item => ({
@@ -237,6 +255,22 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
           </SelectTrigger>
           <SelectContent className="bg-card">
             {DISCIPLINE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label>Cost Category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="mt-1">
+            <SelectValue placeholder="Select cost category" />
+          </SelectTrigger>
+          <SelectContent className="bg-card">
+            {COST_CATEGORY_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
               </SelectItem>

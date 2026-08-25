@@ -1059,6 +1059,7 @@ export default function EditProject() {
       await deleteProjectDocument(projectId, docId);
       setExistingDocs((prev) => prev.filter((d) => (d.id || d._id) !== docId));
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["home-projects"] });
       toast.success("Document removed");
     } catch {
       toast.error("Failed to delete document");
@@ -1277,6 +1278,9 @@ export default function EditProject() {
           },
         });
         if (pId) queryClient.invalidateQueries({ queryKey: ["project", pId] });
+        // Home reads the project list under a separate "home-projects" key that
+        // the predicate above doesn't match; invalidate it explicitly too.
+        queryClient.invalidateQueries({ queryKey: ["home-projects"] });
 
         setIsSubmitting(false);
         navigate("/settings/project-details");

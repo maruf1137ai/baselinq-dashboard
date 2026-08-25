@@ -15,6 +15,7 @@ import ReactMarkdown from 'react-markdown';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { AiMark } from "@/components/icons/AiMark";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface ChatSource {
   clause_number: string;
@@ -328,8 +329,12 @@ const AiWorkSpace = () => {
   return (
     <DashboardLayout padding="p-0">
       <div className="flex flex-col h-[calc(100vh-64px)]">
-        <div className="px-6 py-4 border-b border-border">
-          <h1 className="text-2xl font-normal tracking-tight text-foreground">Linq</h1>
+        {/* EXCEPTION to the page-top rule, on the BODY only: the chat canvas
+            below is full-bleed, so DashboardLayout is asked for padding="p-0"
+            and this header band re-applies the canonical p-6. Was `py-4`,
+            which floated the title 8px above every other page's title. */}
+        <div className="p-6 border-b border-border">
+          <PageHeader title="Linq" />
         </div>
         <div className="flex flex-1 overflow-hidden">
           <ChatSidebar onNewChat={handleNewChat} open={true} onToggle={() => { }} />

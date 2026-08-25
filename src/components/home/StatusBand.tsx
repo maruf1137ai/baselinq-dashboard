@@ -1,0 +1,1082 @@
+/**
+ * The status band — the visual layer across the top of Home.
+ *
+ * ── Two kinds of colour, and they do not compete ──────────────────────────
+ *
+ * **BRAND is identity. SEMANTIC is state.** Conflating them is what made an
+ * earlier revision of this band entirely greyscale, which read as unfinished
+ * beside every other surface in the app.
+ *
+ *   BRAND     `--viz-brand`, #6b5be6, the product's single accent. It marks
+ *             the PRIMARY DATA SERIES in every zone — the certified curve,
+ *             today on the contract rail, the approved segment of the
+ *             variations bar, the milestone slip bars. It appears on a
+ *             perfectly healthy project exactly as much as on a failing one,
+ *             so it carries NO severity information and cannot be misread as
+ *             a warning.
+ *   SEMANTIC  `--viz-breach` and `--viz-caution`. State, and only state. Red
+ *             still means a breach that has ALREADY happened and nothing
+ *             else, and it is still drawn on one element at a time.
+ *   FRAME     `--viz-track`, `--viz-rule`, `--viz-ink`. Tracks, empty spans,
+ *             ceiling rules and axis text. The purple marks the data; the
+ *             greys mark the frame it is read against.
+ *
+ * The page's severity rule survives intact, because it was always a rule
+ * about SEVERITY colour: a reader cannot mistake a purple mark for a warning
+ * when the warning colours are a different hue family entirely.
+ *
+ * ── Purple is 1.14:1 against neutral ink, and that is handled by SHAPE ────
+ *
+ * #6b5be6 is 4.80:1 on the card — comfortably over the 3:1 a non-text mark
+ * needs — so purple as a mark was never the problem. The problem is purple
+ * ADJACENT TO `--viz-ink` (#616875) with nothing but hue between them: the
+ * two are within a rounding error of the same luminance, so that pairing
+ * disappears in greyscale and to a dichromat.
+ *
+ * The answer is not to drain the colour out of both. It is that **every
+ * purple mark is also separated from its neighbour by a channel that is not
+ * colour**, and those channels are load-bearing and must not be removed on
+ * the grounds that the hues now differ:
+ *
+ *   certified curve vs its ceiling   solid with a fill under it, vs dashed
+ *                                    with nothing under it
+ *   extension span vs overrun span   a 2px cut in the card colour, on the
+ *                                    contract completion date
+ *   the three variations segments    2px gaps between every pair
+ *   today marker vs whatever it      a 2px card-coloured ring around it
+ *   sits on
+ *
+ * The greyscale and dichromatic reading of this band still works. That is
+ * the test any future change to it has to pass.
+ *
+ * ── What it replaces, and why that is not a loss ──────────────────────────
+ *
+ * It replaces `PositionStripBlock`, which was six figures in a row. The figures
+ * were right and are all still here; what was missing was any shape. A reader
+ * asking "where are we" got six rand values and had to hold the contract dates
+ * in their head to know whether any of them was good news.
+ *
+ * It also absorbs `ContractTimeBlock` from the right-hand column. That panel's
+ * three figures — time remaining, build length, completion — are the axis
+ * below, drawn once instead of stated three times, and the column space it
+ * vacated is what pays for "What changed".
+ *
+ * So the band is not additional height. It is the same information with a
+ * scale under it, and the page is shorter than it was.
+ *
+ * ── The zones, and what a viewer without finance.view gets ────────────────
+ *
+ * Three zones with `finance.view`:  TIME · MONEY · CHANGE
+ * Two zones without it:             TIME · PROGRAMME
+ *
+ * A contractor does not get a band with two holes in it. The money and change
+ * zones are not RENDERED EMPTY and not greyed out — they are absent, and the
+ * programme zone expands to take the width, carrying the milestone
+ * baseline-versus-actual detail that the three-zone layout compresses into one
+ * line inside TIME. Dates are not money: `Milestone.baseline_end` and
+ * `Project.start_date` carry no commercial information and are not gated.
+ *
+ * ── The colour budget ─────────────────────────────────────────────────────
+ *
+ * The page's severity rule is stated in full at the top of `blocks.tsx` and
+ * governs this file. Two consequences worth naming here, because both are
+ * cases where the obvious design would break it:
+ *
+ *  1. **An extension of time is not coloured.** It is a recorded fact — the
+ *     server moves `contract_end_date` when a variation granting an extension
+ *     is signed — and nobody has breached anything. It is drawn as a distinct
+ *     but achromatic band.
+ *
+ *  2. **Past the VO tolerance is not coloured either.** `vo_tolerance.py` sets
+ *     `contractual: False` deliberately and explains why: it is an
+ *     underwriting heuristic, and no JBCC, NEC, FIDIC or GCC clause is
+ *     breached at 10%. The mark is drawn, the figure is stated, and the word
+ *     "breach" appears nowhere near it.
+ *
+ * That leaves exactly two things in this band that may carry `destructive`,
+ * and both are breaches that have already happened: **today past the contract
+ * completion date**, and **certified past the revised contract sum**.
+ *
+ * **Nothing here is encoded by colour alone.** Each of those two also states
+ * itself in words — "32 days past completion", "Over" — because an earlier
+ * audit of this page found severity carried by hue with no second channel.
+ * The brand purple on the certified curve is a series colour, not a severity:
+ * it is the one chromatic element on this page that does not mean "wrong".
+ *
+ * ── Provenance ───────────────────────────────────────────────────────────
+ *
+ * Every plotted value, with the endpoint and field behind it:
+ *
+ *   Contract axis      GET projects/?userId= → `start_date`, `end_date`,
+ *                      `contract_end_date`, via `summariseTime`.
+ *   Milestone drift    GET projects/{id}/milestones/ → `baseline_end` against
+ *                      `actual_end ?? end_date`. Never `percent_complete`.
+ *   Certified curve    GET tasks/payment-certificates/?projectId= →
+ *                      `certificate_date`, `total_payable`, `workflow_state`,
+ *                      via `buildCertificateRun` → `buildCertifiedCurve`.
+ *   Ceiling line       `Project.contract_value` + approved variation value,
+ *                      via `summariseMoney().revisedContractSum`.
+ *   Change position    GET tasks/variation-orders/ and tasks/tasks/?taskType=VO
+ *                      → `status`, `grand_total`, `date_instructed`.
+ *   Tolerance mark     GET projects/{id}/risk-signals/ → the VO_TOLERANCE_BREACH
+ *                      signal's `detail.tolerance_pct`. Absent when unfired.
+ *
+ * No endpoint is requested here that the page did not already request, and no
+ * gate is loosened.
+ */
+import { Link } from "react-router-dom";
+
+import { Badge } from "@/components/ui/badge";
+import { formatZAR } from "@/lib/formatCurrency";
+import { formatDate as formatDateUk } from "@/lib/dateUtils";
+import { BALANCE_LABEL, FINANCE_TAB, REVISED_SUM_DOUBLE_COUNT } from "@/lib/homeSignals";
+import { cn } from "@/lib/utils";
+import type { ContractTimeline, MilestoneDrift } from "@/lib/homeVisuals";
+import type { HomeData } from "@/hooks/useHomeData";
+
+/** "30 days" / "1 day" — never a bare number, never a percentage. */
+const days = (n: number) => `${n} day${Math.abs(n) === 1 ? "" : "s"}`;
+
+const CERTIFICATES = `/finance?tab=${encodeURIComponent(FINANCE_TAB.certificates)}`;
+const VARIATIONS = `/finance?tab=${encodeURIComponent(FINANCE_TAB.variations)}`;
+
+// ── Zone chrome ───────────────────────────────────────────────────────────
+
+/**
+ * One zone of the band: a name, a headline figure, a shape, and a footnote.
+ *
+ * The footnote is not decoration and is not optional where a series is
+ * incomplete — it is where every zone declares what it could not plot. See
+ * the header of `homeVisuals.ts`.
+ */
+function Zone({
+  name,
+  to,
+  linkLabel,
+  value,
+  compare,
+  badge,
+  caveat,
+  note,
+  children,
+  footnote,
+}: {
+  name: string;
+  to?: string;
+  linkLabel?: string;
+  value: string | null;
+  compare?: string | null;
+  badge?: React.ReactNode;
+  /**
+   * The long form, on `title`. Kept for the reader who wants the full
+   * derivation — but nothing load-bearing may live here alone. See `note`.
+   */
+  caveat?: string;
+  /**
+   * **The load-bearing caveat, ON THE PAGE.**
+   *
+   * "Certified, not paid", "a commercial measure, not physical progress" and
+   * "ex-VAT" were `title` attributes, and a `title` attribute does not exist on
+   * a touch device, in print, in a screenshot, or in the PDF somebody sends an
+   * insurer — which are four of the ways these figures actually travel. A
+   * caveat that changes what a number MEANS is not a hover affordance;
+   * `CommercialTab` already argues this and renders its `warning` visibly, and
+   * this is the same rule applied to the same figures on the other screen.
+   *
+   * Held to one short line. What was cut to pay for it is the Money zone's
+   * fourth footnote clause — see below.
+   */
+  note?: string | null;
+  children?: React.ReactNode;
+  /** What this series could not show. Printed, never swallowed. */
+  footnote?: string | null;
+}) {
+  return (
+    <div className="px-4 py-3 min-w-0 flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs text-muted-foreground">{name}</p>
+        {to && (
+          <Link
+            to={to}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
+            {linkLabel}
+          </Link>
+        )}
+      </div>
+
+      <div className="min-w-0" title={caveat}>
+        <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+          <p className="text-lg tabular-nums text-foreground break-words">{value ?? "—"}</p>
+          {badge}
+        </div>
+        {compare && (
+          <p className="text-xs text-muted-foreground tabular-nums mt-0.5 break-words">{compare}</p>
+        )}
+      </div>
+
+      {children}
+
+      {(footnote || note) && (
+        <div className="mt-auto">
+          {footnote && <p className="text-xs text-muted-foreground">{footnote}</p>}
+          {note && <p className="text-xs text-muted-foreground">{note}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A list joined into one footnote sentence, or null when nothing to declare. */
+const footnoteOf = (parts: (string | null)[]) => {
+  const kept = parts.filter(Boolean) as string[];
+  return kept.length > 0 ? kept.join(" · ") : null;
+};
+
+// ── The contract axis ─────────────────────────────────────────────────────
+
+/**
+ * The contract dates, drawn as a dated axis.
+ *
+ * **This is not a progress bar and there is no fill.** `ContractTimeline`
+ * exposes no proportion of the works and could not be rendered as one — see
+ * the long note on that type. What is drawn is a rule with pins on it: where
+ * the contract starts, where it is due to end, and where today falls between
+ * them. That is a calendar, and a calendar is a fact.
+ *
+ * The two bands ARE filled, because each is a quantity in its own right: the
+ * days an extension of time moved the completion date by (achromatic — a
+ * recorded fact), and the days today is past completion (destructive — a
+ * breach that has already happened).
+ *
+ * `aria-hidden` on the graphic: every value in it is stated in text by the
+ * zone's headline figure and its two date labels, so a screen reader is given
+ * the figures rather than a shape it cannot see.
+ */
+function ContractAxis({ timeline }: { timeline: ContractTimeline }) {
+  const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
+  const start = timeline.marks.find((m) => m.key === "start");
+  const completion = timeline.marks.find((m) => m.key === "completion");
+
+  return (
+    <div className="mt-1">
+      <div className="relative h-2" aria-hidden="true">
+        {/* The rule itself. */}
+        <div
+          className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+          style={{ backgroundColor: "hsl(var(--viz-track))" }}
+        />
+
+        {/* Days a signed extension of time moved completion by. No colour —
+            it is DATA — a quantity of days a signed variation granted — so it
+            takes the brand colour, not the frame grey. It abuts the overrun
+            band, and purple against breach red is separated there by the 2px
+            card-coloured cut below, not by hue. */}
+        {timeline.extension && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+            data-viz="extension"
+            style={{
+              left: pct(timeline.extension.from),
+              width: pct(timeline.extension.to - timeline.extension.from),
+              backgroundColor: "hsl(var(--viz-brand))",
+            }}
+          />
+        )}
+
+        {/* Today, past completion. A breach that has already happened. */}
+        {timeline.overrun && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-r-full"
+            data-viz="overrun"
+            style={{
+              left: pct(timeline.overrun.from),
+              width: pct(timeline.overrun.to - timeline.overrun.from),
+              // `--viz-breach` (6.31:1), not `--destructive` (4.68:1). This is
+              // the one mark on the band that means something has gone wrong
+              // and it is 6px tall, so it takes the darker of the two reds.
+              backgroundColor: "hsl(var(--viz-breach))",
+            }}
+          />
+        )}
+
+        {/* ── The completion boundary ───────────────────────────────────
+            Drawn whenever there is an overrun, and it exists for a contrast
+            reason as much as a semantic one.
+
+            The extension band ends exactly where the overrun band begins, so
+            on an extended contract that has then run late the two TOUCH. They
+            measure 1.15:1 against each other — `--viz-ink` and `--viz-breach`
+            are near-identical in luminance — so the join between "days we
+            were granted" and "days we are late" was legible by HUE ALONE, and
+            vanished in greyscale and to a dichromat. This is the same defect
+            that was found on the certified curve and its reference line.
+
+            A 2px cut in the card colour separates them by a channel that is
+            not colour at all, and it lands on the contract completion date,
+            which is the one boundary on this axis worth marking. */}
+        {timeline.overrun && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-1.5 w-0.5 -translate-x-1/2 bg-card"
+            style={{ left: pct(timeline.overrun.from) }}
+          />
+        )}
+
+        {/* The originally-agreed date, where an extension moved it. */}
+        {timeline.marks
+          .filter((m) => m.key === "original")
+          .map((m) => (
+            <div
+              key={m.key}
+              className="absolute top-0 h-2 w-px"
+              style={{ left: pct(m.at), backgroundColor: "hsl(var(--viz-ink))" }}
+            />
+          ))}
+
+        {/* ── Today. The one mark a reader looks for, and the rail's
+            primary datum — so it is the rail's brand mark.
+
+            THERE IS STILL NO FILL FROM START TO TODAY, and there must never
+            be one. A bar filled to today is elapsed calendar time, and a
+            reader will take it for progress: `ProjectTimelineCard.tsx` did
+            exactly that and was deleted for it. Baselinq records no measure
+            of what has been built. A marker states a POSITION ON A CALENDAR,
+            which is a fact; a fill states a PROPORTION OF THE WORKS, which is
+            a claim nothing here can support.
+
+            The ring is the shape channel: at an overrun the marker sits on
+            top of the red overrun band, and #6b5be6 against #b91c1c is close
+            enough that hue alone would not separate them. */}
+        {timeline.todayAt !== null && (
+          <div
+            className="absolute top-0 h-2 w-0.5 -translate-x-1/2 rounded-full"
+            style={{
+              left: pct(timeline.todayAt),
+              backgroundColor: "hsl(var(--viz-brand))",
+              boxShadow: "0 0 0 2px hsl(var(--card))",
+            }}
+          />
+        )}
+      </div>
+
+      {/* The axis labels itself at both ends rather than floating labels over
+          the marks, which collide at every width once a project is short. */}
+      <div className="flex items-baseline justify-between gap-2 mt-1.5">
+        <p className="text-xs text-muted-foreground tabular-nums truncate">
+          {start ? formatDateUk(start.date, "short", "—") : "—"}
+        </p>
+        <p className="text-xs text-muted-foreground tabular-nums truncate">
+          {completion ? formatDateUk(completion.date, "short", "—") : "—"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Milestone drift ───────────────────────────────────────────────────────
+
+/**
+ * Baseline against actual, one row per milestone, worst slip first.
+ *
+ * Shown in full only in the two-zone layout, where a viewer without
+ * `finance.view` has the width for it. In the three-zone layout the same
+ * numbers are the TIME zone's footnote.
+ *
+ * Each row is a bar whose length is its slip against the worst slip in the
+ * programme — a comparison between milestones, which is what the reader is
+ * making. It is deliberately NOT scaled against the milestone's own duration,
+ * which would read as a proportion of the work done.
+ */
+/** How many slipped milestones the bar draws. The rest are counted, not hidden. */
+const MILESTONE_ROWS = 4;
+
+/**
+ * "showing 4 of 9 slipped", or null when the bar draws all of them.
+ *
+ * The bar took the worst four and said nothing, so a programme with nine
+ * slipped milestones rendered as a programme with four. A chart that shows a
+ * subset is not wrong for showing a subset; it is wrong for not saying so.
+ */
+export function milestoneCapNote(drift: MilestoneDrift): string | null {
+  const n = drift.rows.filter((r) => r.slipDays > 0).length;
+  return n > MILESTONE_ROWS ? `showing ${MILESTONE_ROWS} of ${n} slipped` : null;
+}
+
+function MilestoneDrift({ drift }: { drift: MilestoneDrift }) {
+  const slipped = drift.rows.filter((r) => r.slipDays > 0).slice(0, MILESTONE_ROWS);
+  if (slipped.length === 0) return null;
+  const worst = drift.worstSlipDays ?? 1;
+
+  return (
+    <div className="space-y-1.5 mt-1">
+      {slipped.map((r) => (
+        <div key={r.id} className="flex items-center gap-2 min-w-0">
+          <p className="text-xs text-foreground truncate w-1/3 shrink-0" title={r.name}>
+            {r.name}
+          </p>
+          <div
+            className="relative h-1.5 flex-1 rounded-full"
+            style={{ backgroundColor: "hsl(var(--viz-track))" }}
+            aria-hidden="true"
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                width: `${Math.max(4, (r.slipDays / worst) * 100).toFixed(2)}%`,
+                // The programme zone's primary series. Slip is a fact about
+                // dates, not a severity — a milestone past baseline is not a
+                // contract breach — so this is brand, never `--viz-breach`.
+                backgroundColor: "hsl(var(--viz-brand))",
+              }}
+            />
+          </div>
+          {/* The figure beside the bar, so nothing is carried by length alone. */}
+          <p className="text-xs text-muted-foreground tabular-nums shrink-0 w-16 text-right">
+            +{days(r.slipDays)}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── The certified curve ───────────────────────────────────────────────────
+
+/**
+ * Cumulative certified value against the revised contract sum.
+ *
+ * ── Why this is a STEP and not a curve ────────────────────────────────────
+ *
+ * Certification is a series of discrete events. Nothing is certified between
+ * PC-003 on 19 May and PC-004 on 18 June; the cumulative total is flat across
+ * that month and then jumps. A smoothed line through those two points asserts
+ * a certified value on every day in between that no principal agent signed —
+ * which is inventing data, on the page whose whole rule is that nothing is
+ * invented. So the path is a step: flat, then vertical, then flat. The corners
+ * ARE the certificates.
+ *
+ * ── Why this is hand-drawn rather than a chart library ────────────────────
+ *
+ * `recharts` is a dependency of this repo and was the obvious tool. It was
+ * measured and rejected on three counts:
+ *
+ *  1. Its `type="monotone"` and `type="linear"` both draw the interpolation
+ *     described above. `type="step"` avoids that, but then the library is
+ *     contributing nothing but a path string.
+ *  2. It is 111 kB gzipped, and it was previously imported by NOTHING, so
+ *     using it here would have moved the whole library into the app's main
+ *     chunk — measured at 1,051 kB gzip before and 1,163 kB after — to draw
+ *     one 64px sparkline on the landing page.
+ *  3. It fights exactly the cases that matter most here. Empty, one-point,
+ *     all-on-one-date and undated-excluded are four states this mark has to
+ *     handle explicitly and correctly, and each is an early return below.
+ *
+ * ── The series is BRAND purple; its ceiling is neutral ink ────────────────
+ *
+ * The curve is the primary datum of this zone, so it wears `--viz-brand`
+ * (4.80:1 on the card, 4.40:1 on hover — well over the 3:1 a mark needs). The
+ * ceiling is a REFERENCE, so it stays `--viz-ink` with the rest of the frame.
+ *
+ * The two are 1.14:1 against each other — purple and neutral ink are nearly
+ * the same luminance — so hue is not what separates them and must never be
+ * the only thing that does. **The shape channel is what makes the purple
+ * safe:** the series is solid with a fill beneath it, the ceiling is dashed
+ * with nothing beneath it. Read in greyscale, one is a solid line over a
+ * shaded area and the other is a dashed rule, which is the whole distinction
+ * intact. That fill and that dash pattern are load-bearing and are not
+ * decoration to be tidied away later.
+ *
+ * ── The fill is a PURPLE TINT, and that is a judgement ────────────────────
+ *
+ * A neutral fill under a purple line was the alternative, on the argument
+ * that it keeps the line the loudest thing in the box. It was rejected: the
+ * line and the area beneath it are ONE datum — cumulative certified value —
+ * and giving them two different hues reads as two series, which is a worse
+ * error than a slightly quieter line. At 16% opacity the tint is a very
+ * light lilac and the stroke is still comfortably the most salient mark in
+ * the zone; and the fill is also what distinguishes the series from the
+ * dashed ceiling in greyscale, so it is doing structural work either way.
+ *
+ * Tokens are consumed through `style={{ stroke: "hsl(var(--viz-ink))" }}`
+ * rather than as `stroke="…"` presentation attributes, because `var()` inside
+ * a presentation attribute is inconsistently supported in older Safari.
+ *
+ * ── Why the y-domain runs to the ceiling ──────────────────────────────────
+ *
+ * A sparkline scaled to its own maximum always ends at the top of its box,
+ * which reads as "finished" whatever the figures are. The domain here is
+ * `[0, max(ceiling, latest)]`, so the path's HEIGHT IN THE BOX is the
+ * proportion certified — the comparison the reader is actually making — and
+ * the dashed line is where the contract sum sits.
+ *
+ * ── What the dashed line is NOT ──────────────────────────────────────────
+ *
+ * It is not a planned curve. No valuation schedule exists in the backend, so
+ * there is no planned S-curve to draw against this one, and a flat line must
+ * never be read as a plan. It is a ceiling.
+ */
+/**
+ * **Why the curve is not drawn**, in the reader's words, or null when it is.
+ *
+ * `CertifiedCurve` returns null in three separate cases and each of them left
+ * the zone with a headline figure and an empty 64px hole under it. A reader
+ * cannot tell a chart that has nothing to say from a chart that failed, and
+ * the difference matters most on the zone that carries the money. Each reason
+ * is a fact about the data, so each is stated as one.
+ *
+ * These conditions mirror the early returns in `CertifiedCurve` exactly; they
+ * are computed here rather than reported back out of the component because a
+ * child that renders null cannot hand its parent a reason.
+ */
+export function certifiedCurveNote(
+  points: { date: string; cumulative: number }[],
+  ceiling: number | null,
+): string | null {
+  if (points.length === 0) return null; // The zone's own figure already says it.
+  if (points.length === 1) return "one certificate — no curve to draw yet";
+  const t = (d: string) => new Date(d).getTime();
+  const first = t(points[0].date);
+  const last = t(points[points.length - 1].date);
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) {
+    return "every certificate carries one date — no time axis to draw on";
+  }
+  const latest = points[points.length - 1].cumulative;
+  const top = ceiling !== null && ceiling > 0 ? Math.max(ceiling, latest) : latest;
+  if (!(top > 0)) return "nothing certified yet — no curve to draw";
+  return null;
+}
+
+function CertifiedCurve({
+  points,
+  ceiling,
+  overCeiling,
+}: {
+  points: { date: string; cumulative: number }[];
+  ceiling: number | null;
+  overCeiling: boolean;
+}) {
+  // One point is not a series. A single certificate is stated as a figure by
+  // the zone above and drawing a one-pixel mark adds nothing to it.
+  if (points.length < 2) return null;
+
+  const W = 100;
+  const H = 40;
+
+  const t = (d: string) => new Date(d).getTime();
+  const first = t(points[0].date);
+  const last = t(points[points.length - 1].date);
+  // Every certificate on one date: there is no time axis to spread them over.
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) return null;
+
+  const latest = points[points.length - 1].cumulative;
+  const top = ceiling !== null && ceiling > 0 ? Math.max(ceiling, latest) : latest;
+  if (!(top > 0)) return null;
+
+  const x = (d: string) => ((t(d) - first) / (last - first)) * W;
+  const y = (v: number) => H - (v / top) * H;
+
+  // The step. Before the first certificate the certified total is zero, so
+  // the path starts on the floor and jumps — which is the fact, not a flourish.
+  let d = `M 0 ${H.toFixed(2)}`;
+  let prevY = H;
+  for (const p of points) {
+    const px = x(p.date);
+    const py = y(p.cumulative);
+    d += ` L ${px.toFixed(2)} ${prevY.toFixed(2)} L ${px.toFixed(2)} ${py.toFixed(2)}`;
+    prevY = py;
+  }
+
+  const area = `${d} L ${W.toFixed(2)} ${prevY.toFixed(2)} L ${W.toFixed(2)} ${H.toFixed(2)} Z`;
+  // The certified total holds until the next certificate, so the line runs
+  // flat to the right-hand edge rather than stopping in mid-air.
+  const line = `${d} L ${W.toFixed(2)} ${prevY.toFixed(2)}`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="w-full h-16 mt-1 overflow-visible"
+      // Every value in here is stated in words by the zone's headline figure
+      // and its footnote, so a screen reader is given the figures rather than
+      // a shape it cannot see.
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={area} style={{ fill: "hsl(var(--viz-brand))", fillOpacity: 0.16 }} />
+      <path
+        d={line}
+        strokeLinejoin="round"
+        // Without this the horizontal scale squashes the stroke to a hairline
+        // and the verticals render three times thicker than the flats.
+        vectorEffect="non-scaling-stroke"
+        style={{ fill: "none", stroke: "hsl(var(--viz-brand))", strokeWidth: 1.5 }}
+      />
+      {ceiling !== null && ceiling > 0 && (
+        <line
+          x1={0}
+          x2={W}
+          y1={y(ceiling)}
+          y2={y(ceiling)}
+          strokeDasharray="3 3"
+          vectorEffect="non-scaling-stroke"
+          style={{
+            // Severity rule 1: the line turns to breach red ONLY once it has
+            // actually been crossed. Below the ceiling it is a neutral
+            // reference, and drawing it red would colour a fact, not a breach.
+            stroke: overCeiling ? "hsl(var(--viz-breach))" : "hsl(var(--viz-ink))",
+            strokeWidth: 1,
+          }}
+        />
+      )}
+    </svg>
+  );
+}
+
+// ── The change bar ────────────────────────────────────────────────────────
+
+/**
+ * Variation VALUE by status — approved, awaiting decision, draft — as one
+ * stacked bar, with every status's value and count printed beneath it.
+ *
+ * ── Why this and not a tolerance gauge ────────────────────────────────────
+ *
+ * The obvious chart here is cumulative variation value against the risk
+ * policy's tolerance, and it is the weaker of the two. It is ONE number
+ * against ONE threshold, so there is no series in it; the threshold is only
+ * on the wire when the signal has already fired, so on a compliant project —
+ * the common case — the bar has no tick and is a bare bar; and
+ * `variationsTruncated` can be true, so the number itself may be short.
+ *
+ * Value by status needs no tolerance, is complete whenever the variation list
+ * is, and answers a question nothing else on this page answers: **how much
+ * change is still undecided.** The tolerance has not been dropped — it is the
+ * zone's footnote, in words, whenever the server has published it.
+ *
+ * ── Why three segments and not four ───────────────────────────────────────
+ *
+ * REJECTED is counted in the legend and not drawn. It is settled and carries
+ * no value forward, so including it in a bar about live change would inflate
+ * the denominator with money nobody is going to spend.
+ *
+ * ── How three segments stay distinguishable ───────────────────────────────
+ *
+ * The three fills are 4.80:1, 5.47:1 and 4.10:1 against the card, so each
+ * clears 3:1 against the GROUND. Against EACH OTHER they are 1.14:1 and
+ * 1.33:1 — so adjacency is not what separates them, and could not be made to:
+ * three fills that are all mutually distinguishable AND all above 3:1 on a
+ * white card do not exist. Each segment is instead divided from the next by a
+ * 2px gap in the card colour. A gap is not a colour channel, so the bar
+ * survives greyscale and dichromacy, and the legend prints every figure in
+ * words regardless.
+ */
+function ChangeBar({ slices }: { slices: { key: string; label: string; count: number; value: number | null; valuedCount: number }[] }) {
+  /** Drawn, in order. Rejected is deliberately absent — see above. */
+  const DRAWN = ["approved", "outstanding", "draft"];
+  // Approved is the committed value and the segment the eye should find, so
+  // it is this zone's brand mark. The other two are the frame greys.
+  // Approved-vs-awaiting is 1.14:1 and awaiting-vs-draft is 1.33:1, so NONE
+  // of the three pairs is separated by hue — the 2px gaps below are what
+  // separate them, in greyscale and to a dichromat alike.
+  const FILL: Record<string, string> = {
+    approved: "hsl(var(--viz-brand))",
+    outstanding: "hsl(var(--viz-ink))",
+    draft: "hsl(var(--viz-fill))",
+  };
+
+  const counted = slices.filter((s) => s.count > 0);
+  if (counted.length === 0) return null;
+
+  const drawn = slices.filter((s) => DRAWN.includes(s.key) && (s.value ?? 0) > 0);
+  const drawnTotal = drawn.reduce((n, s) => n + (s.value ?? 0), 0);
+
+  // How many live variations the bar's widths actually account for. A bar
+  // built from four of nine values is not wrong for showing four; it is wrong
+  // for not saying so.
+  const live = slices.filter((s) => DRAWN.includes(s.key));
+  const unvalued = live.reduce((n, s) => n + (s.count - s.valuedCount), 0);
+
+  return (
+    <div className="mt-1">
+      {drawnTotal > 0 && (
+        <div className="flex h-1.5 gap-0.5" aria-hidden="true">
+          {drawn.map((s) => (
+            <div
+              key={s.key}
+              className="rounded-full"
+              style={{
+                width: `${(((s.value ?? 0) / drawnTotal) * 100).toFixed(2)}%`,
+                backgroundColor: FILL[s.key],
+              }}
+            />
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+        {counted.map((s) => (
+          <p key={s.key} className="text-xs text-muted-foreground tabular-nums">
+            {/* A swatch only where there is a segment to point at. A dot for a
+                status the bar does not draw would say the bar has a part the
+                reader cannot find. */}
+            {FILL[s.key] && (s.value ?? 0) > 0 && (
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full mr-1"
+                style={{ backgroundColor: FILL[s.key] }}
+              />
+            )}
+            {s.value === null ? s.count : formatZAR(s.value)} {s.label.toLowerCase()}
+            {s.value !== null && s.count > 0 ? ` (${s.count})` : ""}
+          </p>
+        ))}
+      </div>
+      {unvalued > 0 && (
+        // Always visible, never a tooltip: a datum that could not be placed is
+        // counted on the face of the card.
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {unvalued} not priced, so not in the bar
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── The band ──────────────────────────────────────────────────────────────
+
+export function StatusBandBlock({ data }: { data: HomeData }) {
+  const {
+    canViewFinance,
+    time,
+    timeline,
+    milestoneDrift,
+    certifiedCurve,
+    changePosition,
+    changeSplit,
+    money,
+    retention,
+    variationPosition: vos,
+    variationsTruncated,
+    certificatesTruncated,
+    retentionReleaseKnown,
+    projectUnavailable,
+    milestonesUnavailable,
+  } = data;
+
+  const zones: React.ReactNode[] = [];
+
+  // ── TIME ────────────────────────────────────────────────────────────────
+  // Ungated. A contractor who may not see the contract sum still has to know
+  // when the works are due.
+  const overrun = time.overrun && time.remainingDays !== null;
+  const driftLine =
+    milestonesUnavailable
+      ? "Milestones could not be read"
+      : milestoneDrift.tracked === 0 && milestoneDrift.untracked === 0
+      ? null
+      : footnoteOf([
+          milestoneDrift.tracked > 0
+            ? `${milestoneDrift.slipped} of ${milestoneDrift.tracked} milestones past baseline`
+            : null,
+          milestoneDrift.untracked > 0 ? `${milestoneDrift.untracked} unbaselined` : null,
+        ]);
+
+  zones.push(
+    <Zone
+      key="time"
+      name="Time"
+      to="/programme"
+      linkLabel="Programme"
+      value={
+        !time.hasDates || time.remainingDays === null
+          ? null
+          : days(Math.abs(time.remainingDays))
+      }
+      compare={
+        // ── AN OUTAGE IS NOT AN EMPTY PROJECT ────────────────────────────
+        // `project` comes from a paged walk that can fail or truncate, and
+        // when it does `summariseTime` reports no dates — which read as
+        // "No project timeline recorded", a confident statement about a
+        // project nothing was read from. The two are now distinguished.
+        projectUnavailable
+          ? "This project's record could not be read"
+          : !time.hasDates
+          ? "No project timeline recorded"
+          : overrun
+            ? "past the contract completion date"
+            : time.notStarted
+              ? "until completion — not started"
+              : "until contract completion"
+      }
+      badge={
+        // ── There is deliberately NO "Overrun" badge here ──────────────────
+        //
+        // An earlier revision drew one in `danger` beside the red overrun band
+        // on the axis, which put TWO coloured elements on one statement and
+        // broke severity rule 4. The rule's tie-break gives the colour to the
+        // element that NAMES the breach, and the fix takes that literally: the
+        // naming moved into TEXT. The label reads "Past completion", the
+        // comparison line reads "past the contract completion date", and both
+        // are achromatic. That leaves exactly one coloured element for this
+        // statement — the band on the axis — which is also the only one of the
+        // candidates that carries information the words do not: where the
+        // overrun begins and how long it runs.
+        //
+        // Nothing is encoded by colour alone: the figure and both lines of
+        // text state the overrun outright.
+        time.extensionDays !== null && time.extensionDays > 0 ? (
+          // A recorded fact, not a warning: a signed variation moved the
+          // completion date. Neutral, per severity rule 1.
+          <Badge variant="neutral">{`+${days(time.extensionDays)} EOT`}</Badge>
+        ) : undefined
+      }
+      caveat="Calendar days against the contract dates. Not a measure of what has been built — Baselinq records none."
+      // On the page, not on a tooltip: the whole risk with a date axis is
+      // that a reader takes elapsed time for progress.
+      note="Calendar days — not a measure of what has been built."
+      footnote={canViewFinance ? driftLine : null}
+    >
+      {timeline.hasAxis ? <ContractAxis timeline={timeline} /> : null}
+    </Zone>,
+  );
+
+  if (canViewFinance) {
+    // ── MONEY ─────────────────────────────────────────────────────────────
+    const curve = certifiedCurve;
+    zones.push(
+      <Zone
+        key="money"
+        name="Money"
+        to={CERTIFICATES}
+        linkLabel="Certificates"
+        value={money.certified === null ? null : formatZAR(money.certified)}
+        compare={
+          money.certifiedPct === null || money.revisedContractSum === null
+            ? "certified to date"
+            : `certified — ${money.certifiedPct}% of ${formatZAR(money.revisedContractSum)}`
+        }
+        badge={
+          // Certified past the revised contract sum. A breach that has already
+          // happened, and the word carries it so the red line is not alone.
+          //
+          // The truncation badge comes FIRST when both apply: a total built
+          // from a short list cannot support a claim that it exceeded a
+          // ceiling. Neutral, per severity rule 1 — a short read is not a
+          // breach, it is a gap, and it is the same badge the Change zone
+          // already draws for a short variation walk.
+          certificatesTruncated ? (
+            <Badge variant="neutral">May be short</Badge>
+          ) : curve.overCeiling ? (
+            <Badge variant="danger">Over</Badge>
+          ) : undefined
+        }
+        caveat="Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
+        /*
+          ── THE FOOTNOTE, CUT FROM FOUR CLAUSES TO TWO FIGURES ────────────
+
+          It ran "N undated, not plotted · R X in flight · R Y still to
+          certify · R Z retention at 5%" — four clauses in 11px grey, of which
+          a reader took the first they could parse and stopped. Two survive,
+          and they are the two that are FIGURES the reader came for: the
+          balance still to certify, and retention. `in flight` went to
+          /finance, where the certificates it counts are listed; it is a
+          figure about work in progress, not about the position.
+
+          What replaced the two clauses is not more prose — it is the
+          disclosures that were missing (`note` below, and the unpriced and
+          unplotted counts), which are the ones a reader cannot recover from
+          anywhere else on the page.
+        */
+        footnote={footnoteOf([
+          // `BALANCE_LABEL` lower-cased: "R 2 000 000,00 still to certify". It
+          // read "remaining", which named the same number differently from
+          // Project Health one click away, and named the WRONG question —
+          // what remains to be certified is not what remains to be paid, and
+          // the payload cannot answer the second.
+          money.balance === null
+            ? null
+            : `${formatZAR(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
+          retention.held === null
+            ? null
+            : // "gross" is said outright where no posted certificate carried a
+              // `retention_release`, because the figure then reports money the
+              // employer may no longer hold. Project Health has stated this
+              // all along; Home printed the gross figure unqualified.
+              `${formatZAR(retention.held)} retention${
+                retention.ratePct === null ? "" : ` at ${retention.ratePct}%`
+              }${retentionReleaseKnown ? "" : ", gross — no releases recorded"}`,
+          // What the curve could not draw, and why it drew nothing at all.
+          curve.undated > 0 ? `${curve.undated} undated, not plotted` : null,
+          certifiedCurveNote(curve.points, curve.ceiling),
+          // An approved variation with no `grand_total` is inside the revised
+          // sum at R0 — hence inside the percentage above and inside this
+          // curve's ceiling. Counted here rather than left silent, the same
+          // way the run discloses what it could not date.
+          money.variationsUnpriced > 0
+            ? `${money.variationsUnpriced} approved variation${
+                money.variationsUnpriced === 1 ? "" : "s"
+              } not priced, so counted at zero in the sum above`
+            : null,
+        ])}
+        /*
+          ── The two caveats that change what these numbers MEAN ───────────
+
+          Both were `title` attributes. The first is the one Project Health
+          renders as a visible `warning` on the same figure and Home did not:
+          the revised sum can count a signed variation twice, and Home prints
+          that sum in the percentage above AND draws the curve's dashed
+          ceiling from it. Same number, two screens, and only one of them said
+          so. The second is the certified basis, which decides whether "82%"
+          is a claim about money or about building.
+        */
+        note={[
+          money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : null,
+          "Certified, not paid. Ex-VAT — a commercial measure, not physical progress.",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <CertifiedCurve
+          points={curve.points}
+          ceiling={curve.ceiling}
+          overCeiling={curve.overCeiling}
+        />
+      </Zone>,
+    );
+
+    // ── CHANGE ────────────────────────────────────────────────────────────
+    const c = changePosition;
+    zones.push(
+      <Zone
+        key="change"
+        name="Change"
+        to={VARIATIONS}
+        linkLabel="Variations"
+        value={vos.total === 0 ? "—" : String(vos.outstanding)}
+        compare={
+          vos.total === 0
+            ? "no variations raised"
+            : `awaiting decision, of ${vos.total} raised`
+        }
+        badge={
+          variationsTruncated ? <Badge variant="neutral">May be short</Badge> : undefined
+        }
+        caveat={
+          c.tolerancePct === null
+            ? "Approved variation value against the original contract sum."
+            : "Approved variation value against the original contract sum. The tolerance is a commercial and underwriting heuristic set on this project's risk policy — no JBCC, NEC, FIDIC or GCC clause is breached at it. The contractual ceiling is the principal agent's mandate."
+        }
+        footnote={footnoteOf([
+          /*
+            ── "of the original sum" WAS WRONG, AND THE LABEL IS WHAT WAS
+               FIXED ────────────────────────────────────────────────────────
+
+            The denominator is `Project.contract_value`, and
+            `tasks/views_signing.py::_apply_vo_to_project` adds a signed
+            variation's amount INTO that field. So it grows with the numerator
+            and it is not the original sum on any project that uses the
+            sign-and-issue flow.
+
+            The denominator cannot be repaired here — nothing on either payload
+            marks which variations took that flow, so the pre-variation sum is
+            not recoverable client-side — so the LABEL was repaired instead:
+            the figure is named against the sum as recorded, which is exactly
+            what it is measured against. See `ChangePosition`.
+          */
+          c.pctOfContractSum === null
+            ? null
+            : c.tolerancePct === null
+              ? // The COMMON case, and it has to say so rather than stay
+                // quiet. `ProjectRiskPolicy.vo_tolerance_pct` is not on the
+                // project payload; the only route it takes to the client is
+                // inside a FIRED VO_TOLERANCE_BREACH signal's detail. So on a
+                // compliant project we genuinely do not know this project's
+                // threshold, and silence would let a reader assume the figure
+                // beside it had been checked against one. The rule's own 10%
+                // default is a policy default, not this policy, and printing
+                // it would draw a threshold that is not this project's.
+                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded · tolerance not published for this project`
+              : // Worded as a tolerance, never as a breach. `contractual: False`.
+                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded, ${
+                  c.pastTolerance ? "past" : "within"
+                } the ${c.tolerancePct}% tolerance`,
+          c.undated > 0 ? `${c.undated} with no instruction date` : null,
+        ])}
+        // Two sentences a reader must not have to hover for: that the
+        // denominator moves, and that the tolerance is not a contract term.
+        note={[
+          c.pctOfContractSum === null
+            ? null
+            : "Signed variations are added into the recorded sum, so this share reads low.",
+          c.tolerancePct === null
+            ? null
+            : "The tolerance is an underwriting heuristic, not a contract term.",
+        ]
+          .filter(Boolean)
+          .join(" ") || null}
+      >
+        <ChangeBar slices={changeSplit} />
+      </Zone>,
+    );
+  } else {
+    // ── PROGRAMME ─────────────────────────────────────────────────────────
+    // The second zone for a viewer without finance.view. Not a placeholder and
+    // not a hole: the same milestone data the three-zone layout compresses
+    // into one line of TIME, drawn in full because there is width for it.
+    zones.push(
+      <Zone
+        key="programme"
+        name="Programme"
+        to="/programme"
+        linkLabel="Milestones"
+        value={
+          milestonesUnavailable
+            ? null
+            : milestoneDrift.tracked === 0
+            ? milestoneDrift.untracked === 0
+              ? null
+              : "Not baselined"
+            : String(milestoneDrift.slipped)
+        }
+        compare={
+          // The same distinction the TIME zone now makes: a failed read is not
+          // a project without milestones.
+          milestonesUnavailable
+            ? "The programme could not be read"
+            : milestoneDrift.tracked === 0
+            ? milestoneDrift.untracked === 0
+              ? "No milestones recorded"
+              : `${milestoneDrift.untracked} milestones, none with a baseline to measure against`
+            : `of ${milestoneDrift.tracked} baselined milestones past baseline`
+        }
+        caveat="Baseline finish against actual finish, or against the current planned finish where a milestone has not finished. Dates only — Baselinq holds no measure of physical progress."
+        footnote={footnoteOf([
+          milestoneDrift.untracked > 0
+            ? `${milestoneDrift.untracked} unbaselined — neither slipped nor on time`
+            : null,
+          milestoneDrift.worstSlipDays === null
+            ? null
+            : `worst ${days(milestoneDrift.worstSlipDays)}`,
+          // The bar draws four rows; a programme with nine slipped milestones
+          // was rendered as one with four and said nothing about it.
+          milestoneCapNote(milestoneDrift),
+        ])}
+        note="Dates only — no measure of physical progress."
+      >
+        <MilestoneDrift drift={milestoneDrift} />
+      </Zone>,
+    );
+  }
+
+  return (
+    <section
+      className={cn(
+        "bg-card border border-border rounded-xl overflow-hidden",
+        // Hairline-divided zones, the same grammar the precondition stack and
+        // every list on this page use. `divide-x` from `md` only: stacked
+        // below that, a vertical rule would divide nothing.
+        "grid divide-y divide-border md:divide-y-0 md:divide-x",
+        zones.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2",
+      )}
+    >
+      {zones}
+    </section>
+  );
+}

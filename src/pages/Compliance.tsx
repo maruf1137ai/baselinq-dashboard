@@ -18,9 +18,9 @@
  * never a single percentage standing in for all of it, so a project with
  * everything overdue can't report a friendly-looking 60%.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -40,6 +40,7 @@ import { fetchData } from "@/lib/Api";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { cn } from "@/lib/utils";
+import { findByDeepLinkId } from "@/lib/deepLink";
 import type { ApiDocument } from "@/components/documents/DocumentTable";
 import { formatDate } from "@/lib/dateUtils";
 import {
@@ -105,7 +106,11 @@ function buildObligationRowsFromAggregate(
       dueDate: o.dueDate,
       status: o.status,
       urgency,
+      // An obligation's due date is a calendar date, so `deriveUrgency`
+      // counted calendar days. Stated, not assumed — the badge prints the
+      // unit, and this column also carries working-day notice deadlines.
       daysFromDue,
+      daysUnit: "calendar",
       responsibleRole: o.responsibleRole || undefined,
       documentId: o.documentId,
       obligationId: o._id,
@@ -124,6 +129,9 @@ const Compliance = () => {
   const [evidenceObligation, setEvidenceObligation] = useState<ComplianceObligation | null>(null);
   const [noticeObligation, setNoticeObligation] = useState<ComplianceObligation | null>(null);
   const [detailObligation, setDetailObligation] = useState<ComplianceObligation | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const obligationParam = searchParams.get("obligation");
+  const linkedRowRef = useRef<HTMLDivElement | null>(null);
 
   const { mutateAsync: post, isPending: isCreating } = usePost();
   const { mutateAsync: patch, isPending: isPatching } = usePatch();
@@ -134,11 +142,54 @@ const Compliance = () => {
     isError: obligationsError,
     refetch: refetchObligations,
   } = useComplianceObligations(projectId);
-  const obligations: ComplianceObligation[] = obligationsData?.obligations ?? [];
+  // Memoised so the identity is stable across renders: three useMemos and the
+  // deep-link effect below all key off this list, and a fresh `[]` on every
+  // render would re-run each of them for nothing.
+  const obligations: ComplianceObligation[] = useMemo(
+    () => obligationsData?.obligations ?? [],
+    [obligationsData],
+  );
   const obligationsById = useMemo(
     () => new Map(obligations.map(o => [o._id, o])),
     [obligations],
   );
+
+  // ── Deep link: /compliance?obligation=<obligationId> ──────────────────────
+  // Same pattern as Project Health: useSearchParams drives the state the page
+  // already has (`detailObligation`, the one the in-page row click sets) and
+  // the choice is written back, so opening an obligation from a link and
+  // opening one by clicking it are the same act and produce the same URL.
+  //
+  // Resolution is against `obligations` — the rows this viewer's own request
+  // returned, already scoped to the projects and documents they may see. A
+  // stale id, or one belonging to an obligation this user was never shown,
+  // finds nothing: no obligation opens, the list is NOT filtered, and the page
+  // renders identically to a visit with no parameter. It never reports an
+  // empty or clear compliance position to someone who has merely not been
+  // shown what is there.
+  const linkedObligation = useMemo(
+    () => findByDeepLinkId(obligationParam, obligations, o => [o._id]),
+    [obligationParam, obligations],
+  );
+
+  useEffect(() => {
+    if (linkedObligation) setDetailObligation(linkedObligation);
+  }, [linkedObligation]);
+
+  // Scroll the linked row into view once it has actually rendered.
+  useEffect(() => {
+    if (linkedObligation) linkedRowRef.current?.scrollIntoView({ block: "center" });
+  }, [linkedObligation]);
+
+  /** The single way an obligation becomes "the open one", from either entry
+   *  path. Writing the id back keeps the URL shareable and reload-safe. */
+  const chooseObligation = (obligation: ComplianceObligation | null) => {
+    setDetailObligation(obligation);
+    const params = new URLSearchParams(searchParams);
+    if (obligation) params.set("obligation", obligation._id);
+    else params.delete("obligation");
+    setSearchParams(params, { replace: true });
+  };
 
   const {
     data: timeBarData,
@@ -269,11 +320,14 @@ const Compliance = () => {
   if (!projectId) {
     return (
       <DashboardLayout>
-        <EmptyState
-          icon={Shield}
-          title="No project selected"
-          description="Choose a project to see the obligations and notice deadlines recorded against it."
-        />
+        <div className="space-y-6">
+          <PageHeader title="Compliance" />
+          <EmptyState
+            icon={Shield}
+            title="No project selected"
+            description="Choose a project to see the obligations and notice deadlines recorded against it."
+          />
+        </div>
       </DashboardLayout>
     );
   }
@@ -305,20 +359,33 @@ const Compliance = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* No `description`. The page-top rule (see `PageHeader`) puts the
+            title band on one line everywhere; a paragraph under the title that
+            only two pages carried pushed everything below it 24px down and
+            read as an explanation the other seven pages did without. What it
+            said — obligations come from this project's documents, deadlines
+            are tracked against them — is already said by the rows themselves,
+            which each carry their source document or clause reference, and by
+            the empty state for a project with nothing tracked yet.
+
+            Header actions are `h-8`, the height Documents and Meetings use,
+            so the counts row below starts on the same 80px line as every
+            other untabbed page's first content band. */}
         <PageHeader
           title="Compliance"
-          description="Obligations extracted from this project's documents, and the notice deadlines being tracked against it."
           actions={
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
-                className="text-foreground hover:bg-muted"
+                className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
                 onClick={handleAnalyseWithAI}
               >
                 <AiMark className="mr-1.5" /> Analyse with AI
               </Button>
-              <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Button
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setCreateOpen(true)}
+              >
                 Track obligation
               </Button>
             </div>
@@ -409,14 +476,20 @@ const Compliance = () => {
               const raw = row.source === "obligation" && row.obligationId
                 ? obligationsById.get(row.obligationId)
                 : undefined;
+              const isLinked =
+                !!linkedObligation && raw?._id === linkedObligation._id;
               return (
                 <div
                   key={row.key}
+                  ref={isLinked ? linkedRowRef : undefined}
+                  aria-current={isLinked ? "true" : undefined}
+                  data-highlighted={isLinked ? "true" : undefined}
                   className={cn(
                     "bg-card border border-border rounded-xl p-4",
                     raw && "cursor-pointer hover:bg-muted/30",
+                    isLinked && "ring-2 ring-ring",
                   )}
-                  onClick={raw ? () => setDetailObligation(raw) : undefined}
+                  onClick={raw ? () => chooseObligation(raw) : undefined}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -576,7 +649,7 @@ const Compliance = () => {
       />
       <ComplianceDetailModal
         isOpen={!!detailObligation}
-        onClose={() => setDetailObligation(null)}
+        onClose={() => chooseObligation(null)}
         projectId={projectId}
         obligation={detailObligation}
       />

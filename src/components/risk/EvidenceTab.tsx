@@ -144,7 +144,13 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
 
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {pack.integrity_verified ? (
-                    <Badge variant="outline" className="text-xs border-emerald-200 text-emerald-700 gap-1">
+                    // Not green. A pack whose hashes still match is the normal
+                    // state and is not a breach of anything; under this page's
+                    // severity rule only a thing that has already gone wrong
+                    // carries colour, so "Verified" is stated in words and the
+                    // one failed pack in a list of twenty is the only red on
+                    // the tab — which is what makes it findable.
+                    <Badge variant="neutral" className="text-xs gap-1">
                       <ShieldCheck className="h-3 w-3" /> Verified
                     </Badge>
                   ) : (

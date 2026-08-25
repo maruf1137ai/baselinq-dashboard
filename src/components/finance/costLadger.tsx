@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ProjectStatusCard } from '../ProjectStatusCard';
+import CashIcon from '../icons/CashIcon';
 
 import CostLedgerTable from './costLadgerTable';
 import { FinanceToolbar } from './FinanceToolbar';
@@ -14,13 +15,14 @@ import {
   DropdownMenuItem,
 } from '../ui/dropdown-menu';
 import { CostLedgerDrawer } from './costLedgerDrawer';
-import CashIcon from '../icons/CashIcon';
 import useFetch from '@/hooks/useFetch';
 import { PlusIcon, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
 import { usePermission } from '@/hooks/usePermission';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useProjectCommercials } from '@/hooks/useProjectCommercials';
+import { financialOverview } from '@/lib/projectPosition';
 
 export enum Category {
   Subcontractor = 'Subcontractor',
@@ -78,19 +80,6 @@ interface LedgerListResponse {
   results: LedgerApiEntry[];
 }
 
-interface LedgerSummary {
-  totalDebits: number;
-  totalCredits: number;
-  netPosition: number;
-  currency: string;
-}
-
-
-
-import { formatZAR } from '@/lib/formatCurrency';
-
-const formatSummary = (value: number) => formatZAR(value);
-
 /** Format API date YYYY-MM-DD to DD/MM/YY for display */
 const formatLedgerDate = (dateStr: string): string => {
   if (!dateStr) return '—';
@@ -128,8 +117,13 @@ const CostLadger = () => {
 
   const { data: listData, isLoading } = useFetch<LedgerListResponse>(listUrl);
 
-  const { data: summaryData } = useFetch<LedgerSummary>(
-    projectId ? `cost-ledger/summary/?project_id=${projectId}` : '',
+  // Same derivation Project Health's Commercial position tab uses, so this
+  // tab's "Financial overview" cannot drift from that one — see
+  // useProjectCommercials's own header on why it's safe to call a second time.
+  const commercials = useProjectCommercials(projectId || undefined);
+  const overviewRows = useMemo(
+    () => financialOverview(commercials.money, commercials.certificateBasis),
+    [commercials.money, commercials.certificateBasis],
   );
 
   const availableCategories = useMemo(() => {
@@ -204,34 +198,24 @@ const CostLadger = () => {
   const activeFilterCount = selectedCategories.length;
 
   return (
-    <main className="pt-4 space-y-4">
+    <main className="pt-6 space-y-4">
+      {(commercials.variationsTruncated || commercials.variationsFailed) && (
+        <p className="text-xs text-muted-foreground">Variations may be short</p>
+      )}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        <ProjectStatusCard
-          icon={<CashIcon />}
-          title="Total Debits"
-          value={summaryData ? formatSummary(summaryData.totalDebits) : '—'}
-          badgeText=""
-          badgeVariant="default"
-          actionText=""
-        />
-        <ProjectStatusCard
-          icon={<CashIcon />}
-          title="Total Credits"
-          value={summaryData ? formatSummary(summaryData.totalCredits) : '—'}
-          badgeText=""
-          badgeVariant="default"
-          actionText=""
-        />
-        <ProjectStatusCard
-          icon={<CashIcon />}
-          title="Net Position"
-          value={summaryData ? formatSummary(summaryData.netPosition) : '—'}
-          badgeText=""
-          badgeVariant="default"
-          actionText=""
-          valueClassName={summaryData?.netPosition != null && summaryData.netPosition < 0 ? 'text-red-600' : ''}
-          className={summaryData?.netPosition != null && summaryData.netPosition < 0 ? 'border border-red-200' : ''}
-        />
+        {overviewRows.map((r) => (
+          <ProjectStatusCard
+            key={r.key}
+            icon={<CashIcon />}
+            title={r.label}
+            value={r.value ?? '—'}
+            subtitle={r.formula}
+            badgeText=""
+            badgeVariant="default"
+            actionText=""
+            valueClassName={r.derived ? 'font-medium' : undefined}
+          />
+        ))}
       </div>
 
       {/* One toolbar row: search grows on the left, filter and actions sit

@@ -38,6 +38,7 @@ import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 
 
 const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
@@ -73,34 +74,36 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
-  const { data: channelsData } = useFetch<any[]>(
-    selectedProjectId ? `channels/?projectId=${selectedProjectId}` : "",
-    { refetchInterval: 30000 }
-  )
-  const totalUnread = Array.isArray(channelsData)
-    ? channelsData.reduce((sum: number, ch: any) => sum + (ch.unread_count || 0), 0)
-    : 0
+  // All three sidebar badges come from ONE request, shared with the bell in
+  // DashboardHeader (see useUnreadSummary). They were previously three
+  // separate polls — channels/?projectId, and two notifications/unread-count
+  // calls — refreshed by a hand-rolled window event whose handler refetched
+  // only two of the three. That is why "mark all as read" emptied the bell
+  // and left Communications showing a number: the channel query was never
+  // refetched, and the endpoint behind it was never updated either. Reading
+  // one cache entry means these cannot disagree with each other or the bell.
+  // Surface counts come pre-grouped from the server (notification/surfaces.py),
+  // so this file holds no notification-type list of its own to fall behind —
+  // the Meetings badge counted only meeting_invited and the Documents badge
+  // only two of four document types, which is why the bell could show rows
+  // these badges silently ignored.
+  const unread = useUnreadSummary();
 
-  const { data: meetingUnreadData, refetch: refetchMeetingUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
-    { refetchInterval: 30000 }
-  )
-  const meetingUnread = meetingUnreadData?.count || 0
-
-  const { data: docUnreadData, refetch: refetchDocUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=document_created,document_version_created` : "",
-    { refetchInterval: 30000 }
-  )
-  const docUnread = docUnreadData?.count || 0
-
-  useEffect(() => {
-    const handler = () => {
-      refetchMeetingUnread();
-      refetchDocUnread();
-    };
-    window.addEventListener("notifications-marked-read", handler);
-    return () => window.removeEventListener("notifications-marked-read", handler);
-  }, [refetchMeetingUnread, refetchDocUnread]);
+  // Every sidebar item that can carry unread notifications maps to a
+  // notification/surfaces.py surface key, except Communications: its badge
+  // is unread MESSAGES (unread.channels), not a notification-type count —
+  // see useUnreadSummary's UnreadSummary.channels doc.
+  const SURFACE_BY_TITLE: Record<string, string> = {
+    Tasks: "tasks",
+    Meetings: "meetings",
+    Documents: "documents",
+    Finance: "finance",
+    "Project Health": "project_health",
+    Compliance: "compliance",
+    Settings: "settings",
+  };
+  const badgeFor = (title: string) =>
+    title === "Communications" ? unread.channels : unread.surfaceCount(SURFACE_BY_TITLE[title] ?? "");
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -318,11 +321,7 @@ export function DashboardSidebar() {
                         const isActive = item.url === "/"
                           ? location.pathname === "/"
                           : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                        const badge =
-                          item.title === "Communications" && totalUnread > 0 ? totalUnread :
-                          item.title === "Meetings" && meetingUnread > 0 ? meetingUnread :
-                          item.title === "Documents" && docUnread > 0 ? docUnread :
-                          0;
+                        const badge = badgeFor(item.title);
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -363,6 +362,7 @@ export function DashboardSidebar() {
                     <SidebarMenu>
                       {settingsItems.filter((item) => !item.permission || (item.permission === "viewSettings" ? canViewSettings : can(item.permission))).map((item) => {
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                        const badge = badgeFor(item.title);
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -372,8 +372,20 @@ export function DashboardSidebar() {
                               ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                               : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
-                                {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
-                                {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                <span className="relative shrink-0">
+                                  {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                  {!open && badge > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium leading-none">
+                                      {badge > 99 ? "99+" : badge}
+                                    </span>
+                                  )}
+                                </span>
+                                {open && <span className={`text-sm font-normal flex-1 ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                {open && badge > 0 && (
+                                  <span className="h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                                    {badge > 99 ? "99+" : badge}
+                                  </span>
+                                )}
                               </NavLink>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

@@ -92,12 +92,12 @@ describe("parseMoneyInput — what it refuses", () => {
 
 describe("formatMoneyInput", () => {
   it("shows cents, grouped, without the R the input draws itself", () => {
-    expect(formatMoneyInput(1250000)).toBe("1 250 000,00");
+    expect(formatMoneyInput(1250000)).toBe("1\u00a0250\u00a0000,00");
     expect(formatMoneyInput(250.75)).toBe("250,75");
   });
 
   it("keeps the sign visible", () => {
-    expect(formatMoneyInput(-5000)).toBe("-5 000,00");
+    expect(formatMoneyInput(-5000)).toBe("-5\u00a0000,00");
   });
 
   it("round-trips through the parser", () => {
