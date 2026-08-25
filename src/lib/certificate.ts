@@ -68,6 +68,7 @@ export type CertificateData = {
   urgency?: string;
   vo_reference?: string;
   // Request for Information
+  priority?: string;
   question?: string;
   response_answer?: string;
   responded_by?: string | null;

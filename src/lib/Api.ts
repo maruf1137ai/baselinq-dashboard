@@ -908,6 +908,35 @@ export const uploadFileToPresignedUrl = async (
   });
 };
 
+let refreshPromise: Promise<string> | null = null;
+
+const refreshAccessToken = (): Promise<string> => {
+  if (refreshPromise) return refreshPromise;
+
+  const refresh = localStorage.getItem('refresh');
+  if (!refresh) {
+    localStorage.clear();
+    window.location.href = '/login';
+    return Promise.reject(new Error('No refresh token available'));
+  }
+
+  refreshPromise = api
+    .post('auth/token/refresh/', { refresh })
+    .then(res => {
+      const newAccess = res.data.access;
+      localStorage.setItem('access', newAccess);
+      if (res.data.refresh) {
+        localStorage.setItem('refresh', res.data.refresh);
+      }
+      return newAccess;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+};
+
 api.interceptors.response.use(
   res => res,
   async error => {
@@ -925,18 +954,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/user/login/')) {
       originalRequest._retry = true;
 
-      const refresh = localStorage.getItem('refresh');
-      if (!refresh) {
-        localStorage.clear();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
-        const res = await api.post('auth/token/refresh/', { refresh });
-        const newAccess = res.data.access;
-
-        localStorage.setItem('access', newAccess);
+        const newAccess = await refreshAccessToken();
         originalRequest.headers['Authorization'] = 'Bearer ' + newAccess;
 
         return api(originalRequest);

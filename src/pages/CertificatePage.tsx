@@ -235,6 +235,11 @@ export default function CertificatePage() {
               {/* Type-specific rows */}
               {cert.type === "rfi" && (
                 <>
+                  <DetailRow label="Discipline">{cert.discipline || "—"}</DetailRow>
+                  <DetailRow label="Priority">{cert.priority || "—"}</DetailRow>
+                  {cert.raised_by && (
+                    <DetailRow label="Raised by">{cert.raised_by}</DetailRow>
+                  )}
                   <DetailRow label="Question">{cert.question || "—"}</DetailRow>
                   <DetailRow label="Response">{cert.response_answer || "—"}</DetailRow>
                   {cert.responded_by && (
