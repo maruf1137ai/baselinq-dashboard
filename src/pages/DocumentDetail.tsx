@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
 import { getCategoryForDoc, SUBCATEGORY_LABEL } from '@/lib/documentTaxonomy';
+import { markNotificationsRead } from '@/lib/markNotificationsRead';
 import { AiMark } from "@/components/icons/AiMark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -109,18 +110,18 @@ const DocumentDetail = () => {
     prevAiStatusRef.current = doc?.aiStatus;
   }, [doc?.aiStatus, docId, queryClient]);
 
+  // Documents clear PER DOCUMENT, not per surface: a document is something
+  // you open, like a channel, and glancing at the list is not reading the
+  // revision that changed. (Meetings and Finance clear wholesale because
+  // their pages genuinely show everything the notification refers to.)
+  //
+  // Routed through the shared helper so every surface uses one endpoint and
+  // one matcher — that matcher handles documentId being stored as both a
+  // string (documents/views.py) and an int (documents/ai_analysis.py), which
+  // is why analysis-complete notifications used to be permanently unclearable.
   useEffect(() => {
-    if (docId && projectId) {
-      postData({
-        url: `notifications/mark_document_read/?project_id=${projectId}`,
-        data: { documentId: docId }
-      }).then(() => {
-        // Dispatch event to update sidebar counts globally
-        window.dispatchEvent(new Event("notifications-marked-read"));
-      }).catch(err => {
-        console.error("Failed to mark document read:", err);
-      });
-    }
+    if (!docId || !projectId) return;
+    void markNotificationsRead({ documentId: docId, link: `/documents/${docId}` });
   }, [docId, projectId]);
 
   const { data: versionsData, isLoading: versionsLoading } = useQuery({

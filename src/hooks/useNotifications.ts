@@ -1,10 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useWebPush } from "./useWebPush";
-import { getWsBase } from "@/lib/ws";
-
-const POLL_INTERVAL = 30_000; // 30 seconds
+import { useUserEventSocket } from "./useUserEventSocket";
 
 const getProjectId = () =>
   typeof window !== "undefined"
@@ -25,100 +22,35 @@ const getUserId = () => {
 
 export function useNotifications() {
   const store = useNotificationStore();
-  const queryClient = useQueryClient();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const projectRef = useRef<string | undefined>(getProjectId());
   const userRef = useRef<string | undefined>(getUserId());
 
   // Initialize web push registration
   useWebPush();
 
-  // Initial fetch + polling for unread count (project-scoped)
+  // Session-wide push for unread changes. Mounted here because this hook has
+  // exactly one caller (DashboardHeader), so exactly one socket exists.
+  // The socket dispatches "notifications-changed" for the badges; this
+  // callback additionally refreshes the dropdown's own list so an open bell
+  // shows the new row without waiting for the next poll.
+  useUserEventSocket(() => {
+    useNotificationStore.getState().refresh(getProjectId());
+  });
+
+  // Initial load of the dropdown's LIST, scoped to the current project.
+  //
+  // No unread-count polling here any more. The badge was moved to
+  // useUnreadSummary (one request feeding the bell and all three sidebar
+  // badges), so this hook's 30s `fetchUnreadCount` loop — and the focus
+  // handler beside it — were fetching a number that is no longer rendered
+  // anywhere: a wasted request per user every 30 seconds, plus one on every
+  // window focus. The summary hook polls once as a WebSocket fallback and
+  // refetches on focus through React Query's own default, so nothing is
+  // lost by dropping both.
   useEffect(() => {
     const token = localStorage.getItem("access");
     if (!token) return;
-
-    // Initial load — scoped to current project
     store.refresh(projectRef.current);
-
-    // Poll every 30s; always read the latest projectId so polling follows
-    // project switches without remounting this hook.
-    intervalRef.current = setInterval(() => {
-      store.fetchUnreadCount(getProjectId());
-    }, POLL_INTERVAL);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Real-time accelerant on top of the 30s poll above (never replaces it —
-  // see backend/notification/consumers.py + signals.py). The socket only
-  // ever carries a bare "something changed" ping, so on message we just
-  // re-trigger the same refresh paths this hook already has: the
-  // "notifications-marked-read" event (reused generically for "any
-  // push-worthy notification", not literal mark-as-read — renaming it would
-  // touch every existing listener for no functional gain) covers the bell,
-  // and invalidating the channels list query covers the nav badge and the
-  // Communications per-channel unread counts, since both key off the same
-  // `channels/?projectId=...` cache entry (see useFetch.tsx's queryKey).
-  useEffect(() => {
-    const token = localStorage.getItem("access");
-    if (!token) return;
-
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectAttempt = 0;
-    let stopped = false;
-
-    const connectWs = () => {
-      if (stopped) return;
-      const currentToken = localStorage.getItem("access");
-      if (!currentToken) return;
-
-      ws = new WebSocket(
-        `${getWsBase()}/ws/notifications/?token=${encodeURIComponent(currentToken)}`
-      );
-
-      ws.onopen = () => {
-        reconnectAttempt = 0;
-      };
-      ws.onmessage = () => {
-        window.dispatchEvent(new Event("notifications-marked-read"));
-        const pid = getProjectId();
-        if (pid) {
-          queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${pid}`] });
-        }
-      };
-      ws.onclose = () => {
-        if (stopped) return;
-        const delay = Math.min(1000 * 2 ** reconnectAttempt, 30000);
-        reconnectAttempt += 1;
-        reconnectTimer = setTimeout(connectWs, delay);
-      };
-      ws.onerror = () => {
-        ws?.close();
-      };
-    };
-    connectWs();
-
-    return () => {
-      stopped = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      ws?.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Refresh on window focus — also project-scoped
-  useEffect(() => {
-    const onFocus = () => {
-      const token = localStorage.getItem("access");
-      if (token) store.fetchUnreadCount(getProjectId());
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

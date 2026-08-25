@@ -336,6 +336,35 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   };
 
   // Fetch messages from API
+  // Mark the OPEN conversation read.
+  //
+  // Previously the only caller of mark_read/ was the channel list in
+  // Communications.tsx, fired when you click a channel. Reading messages
+  // that arrive while you already have the channel open marked nothing —
+  // so the sidebar badge and the bell both kept counting messages sitting
+  // on screen in front of the user, and only a re-click cleared them.
+  //
+  // Guarded on visibility: a background tab receiving messages is not
+  // someone reading them. Deduped on the last message id so the 2.5s poll
+  // doesn't re-POST when nothing new has arrived.
+  const lastMarkedMessageIdRef = useRef<number | string | null>(null);
+  const markChannelRead = async (latestMessageId: number | string | null) => {
+    if (!channel?.id) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    if (latestMessageId != null && lastMarkedMessageIdRef.current === latestMessageId) return;
+    lastMarkedMessageIdRef.current = latestMessageId;
+    try {
+      await postData({ url: `channels/${channel.id}/mark_read/`, data: {} });
+      // Refreshes the bell and every sidebar badge off one cache entry —
+      // see hooks/useUnreadSummary.ts.
+      window.dispatchEvent(new Event("notifications-marked-read"));
+    } catch {
+      // Non-fatal: the badge stays until the next read. Reset so the next
+      // poll retries rather than treating this id as already marked.
+      lastMarkedMessageIdRef.current = null;
+    }
+  };
+
   const fetchMessages = async (showLoader = false) => {
     if (!channel?.id) return;
     if (showLoader) setIsLoadingMessages(true);
@@ -391,6 +420,14 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
         if (signature === lastSignatureRef.current) return;
         lastSignatureRef.current = signature;
 
+        // Content actually changed (first load, or new/edited messages) and
+        // the user is looking at it — so it has been read. Fire-and-forget;
+        // this must never block rendering the messages below.
+        const newest = formattedMessages.length
+          ? formattedMessages[formattedMessages.length - 1].id
+          : null;
+        void markChannelRead(newest);
+
         applyMessages((prev) => {
           // Preserve any still-pending optimistic messages until their real
           // server copy has been removed explicitly by the send handlers, plus
@@ -411,6 +448,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     // unchanged-poll signature and the cached URLs with it.
     lastSignatureRef.current = null;
     stableUrlsRef.current.clear();
+    // Message ids are per-channel, so a stale value here could suppress the
+    // mark-read on the newly opened channel.
+    lastMarkedMessageIdRef.current = null;
     applyMessages([]);
     fetchMessages(true);
 

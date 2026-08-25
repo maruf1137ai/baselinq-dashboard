@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
+import { markSurfaceNotificationsRead } from "@/lib/markNotificationsRead";
 import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
@@ -118,6 +119,24 @@ const Finance = () => {
   // ?tab=Payment Certificates&pc=… link as a viewer without finance.view
   // yields visibleTabs === [] and activeTab === "" — the same refusal as
   // navigating here normally. The parameter is not a way past the gate.
+  // Opening the Payment Certificates tab shows a table of every certificate
+  // and the state it is in, which is exactly what its notifications say — so
+  // viewing the tab clears the whole "finance" surface, not only the one
+  // certificate a ?pc= deep link happened to point at. Previously nothing
+  // cleared unless you arrived through that deep link, so certificates read
+  // in the normal way stayed counted forever.
+  //
+  // Gated on canViewFinance so a user who cannot see the table cannot clear
+  // notifications about it. `activeTab` is already permission-derived, but
+  // it is briefly "" while permissions resolve, hence the explicit check.
+  const onPaymentCertificatesTab = activeTab === "Payment Certificates";
+  useEffect(() => {
+    if (!canViewFinance || !onPaymentCertificatesTab) return;
+    const projectId = localStorage.getItem("selectedProjectId");
+    if (!projectId) return;
+    void markSurfaceNotificationsRead("finance", projectId);
+  }, [canViewFinance, onPaymentCertificatesTab]);
+
   const chooseTab = (next: string) => {
     const params = new URLSearchParams(searchParams);
     params.set("tab", next);
