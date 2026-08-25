@@ -38,6 +38,7 @@ import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 
 
 const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
@@ -73,34 +74,23 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
-  const { data: channelsData } = useFetch<any[]>(
-    selectedProjectId ? `channels/?projectId=${selectedProjectId}` : "",
-    { refetchInterval: 30000 }
-  )
-  const totalUnread = Array.isArray(channelsData)
-    ? channelsData.reduce((sum: number, ch: any) => sum + (ch.unread_count || 0), 0)
-    : 0
-
-  const { data: meetingUnreadData, refetch: refetchMeetingUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=meeting_invited` : "",
-    { refetchInterval: 30000 }
-  )
-  const meetingUnread = meetingUnreadData?.count || 0
-
-  const { data: docUnreadData, refetch: refetchDocUnread } = useFetch<{ count: number }>(
-    selectedProjectId ? `notifications/unread-count/?project_id=${selectedProjectId}&type=document_created,document_version_created` : "",
-    { refetchInterval: 30000 }
-  )
-  const docUnread = docUnreadData?.count || 0
-
-  useEffect(() => {
-    const handler = () => {
-      refetchMeetingUnread();
-      refetchDocUnread();
-    };
-    window.addEventListener("notifications-marked-read", handler);
-    return () => window.removeEventListener("notifications-marked-read", handler);
-  }, [refetchMeetingUnread, refetchDocUnread]);
+  // All three sidebar badges come from ONE request, shared with the bell in
+  // DashboardHeader (see useUnreadSummary). They were previously three
+  // separate polls — channels/?projectId, and two notifications/unread-count
+  // calls — refreshed by a hand-rolled window event whose handler refetched
+  // only two of the three. That is why "mark all as read" emptied the bell
+  // and left Communications showing a number: the channel query was never
+  // refetched, and the endpoint behind it was never updated either. Reading
+  // one cache entry means these cannot disagree with each other or the bell.
+  // Surface counts come pre-grouped from the server (notification/surfaces.py),
+  // so this file holds no notification-type list of its own to fall behind —
+  // the Meetings badge counted only meeting_invited and the Documents badge
+  // only two of four document types, which is why the bell could show rows
+  // these badges silently ignored.
+  const unread = useUnreadSummary();
+  const totalUnread = unread.channels;
+  const meetingUnread = unread.surfaceCount("meetings");
+  const docUnread = unread.surfaceCount("documents");
 
   useEffect(() => {
     const handleProjectChange = () => {

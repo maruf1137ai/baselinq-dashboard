@@ -18,12 +18,18 @@ const Meetings = () => {
     if (projectId) qc.invalidateQueries({ queryKey: [`meetings/?project_id=${projectId}`] });
   };
 
+  // Clears the whole "meetings" surface, not the single meeting_invited type
+  // it used to name. A rescheduled meeting (meeting_updated) and a ready
+  // transcript (meeting_transcript_ready) were counted by the bell but
+  // cleared by nothing, so they sat unread however many times this page was
+  // opened. `surface` resolves server-side against the same table the
+  // Meetings badge is counted from, so the two can no longer disagree.
   useEffect(() => {
     const projectId = localStorage.getItem("selectedProjectId");
     if (!projectId) return;
     postData({
       url: "notifications/mark_type_read/",
-      data: { type: "meeting_invited", project_id: parseInt(projectId) },
+      data: { surface: "meetings", project_id: parseInt(projectId) },
     }).then(() => {
       refreshNotifications();
       window.dispatchEvent(new Event("notifications-marked-read"));

@@ -98,6 +98,7 @@ import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { isTaskLocked as computeIsTaskLocked } from "@/lib/taskLock";
+import { markNotificationsRead } from "@/lib/markNotificationsRead";
 import {
   getIntentionAtDisplay,
   getFormalClaimAtDisplay,
@@ -1503,6 +1504,24 @@ export default function TaskDetails() {
     hasStampedRepliesSeenRef.current = true;
     localStorage.setItem(`task_${taskId}_replies_seen_at`, new Date().toISOString());
   }, [taskId, displayTask?.responses]);
+
+  // Opening the task IS reading its notifications. Without this, task_*
+  // notifications — over half of every notification in the system — could
+  // only be cleared by clicking each one individually in the bell, so the
+  // badge stayed high no matter how much work the user actually did.
+  // task_code ("VO-060") is sent alongside the id because the older
+  // escalation/reply payloads identify the doc by label and carry no taskId.
+  const markedContextRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!taskId || !displayTask) return;
+    if (markedContextRef.current === taskId) return;
+    markedContextRef.current = taskId;
+    void markNotificationsRead({
+      taskId,
+      entityLabel: displayTask.task_code || null,
+      link: `/tasks/${taskId}`,
+    });
+  }, [taskId, displayTask?.task_code, displayTask]);
 
 
   // Map API statuses that don't directly match timeline stage names

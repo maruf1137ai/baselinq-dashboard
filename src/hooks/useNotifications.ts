@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useWebPush } from "./useWebPush";
-
-const POLL_INTERVAL = 30_000; // 30 seconds
+import { useUserEventSocket } from "./useUserEventSocket";
 
 const getProjectId = () =>
   typeof window !== "undefined"
@@ -23,41 +22,35 @@ const getUserId = () => {
 
 export function useNotifications() {
   const store = useNotificationStore();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const projectRef = useRef<string | undefined>(getProjectId());
   const userRef = useRef<string | undefined>(getUserId());
 
   // Initialize web push registration
   useWebPush();
 
-  // Initial fetch + polling for unread count (project-scoped)
+  // Session-wide push for unread changes. Mounted here because this hook has
+  // exactly one caller (DashboardHeader), so exactly one socket exists.
+  // The socket dispatches "notifications-changed" for the badges; this
+  // callback additionally refreshes the dropdown's own list so an open bell
+  // shows the new row without waiting for the next poll.
+  useUserEventSocket(() => {
+    useNotificationStore.getState().refresh(getProjectId());
+  });
+
+  // Initial load of the dropdown's LIST, scoped to the current project.
+  //
+  // No unread-count polling here any more. The badge was moved to
+  // useUnreadSummary (one request feeding the bell and all three sidebar
+  // badges), so this hook's 30s `fetchUnreadCount` loop — and the focus
+  // handler beside it — were fetching a number that is no longer rendered
+  // anywhere: a wasted request per user every 30 seconds, plus one on every
+  // window focus. The summary hook polls once as a WebSocket fallback and
+  // refetches on focus through React Query's own default, so nothing is
+  // lost by dropping both.
   useEffect(() => {
     const token = localStorage.getItem("access");
     if (!token) return;
-
-    // Initial load — scoped to current project
     store.refresh(projectRef.current);
-
-    // Poll every 30s; always read the latest projectId so polling follows
-    // project switches without remounting this hook.
-    intervalRef.current = setInterval(() => {
-      store.fetchUnreadCount(getProjectId());
-    }, POLL_INTERVAL);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Refresh on window focus — also project-scoped
-  useEffect(() => {
-    const onFocus = () => {
-      const token = localStorage.getItem("access");
-      if (token) store.fetchUnreadCount(getProjectId());
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

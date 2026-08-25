@@ -21,6 +21,7 @@ import CreateRequestButton from "./header/CreateRequestButton";
 import AiButton from "./AiButton";
 import NavbarWeather from "./NavbarWeather";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 import { useLogout } from "@/hooks/useLogout";
 import { useMeetingRsvp } from "@/hooks/useMeetingRsvp";
 import useFetch from "@/hooks/useFetch";
@@ -151,13 +152,18 @@ export function DashboardHeader() {
   const isAccountPage = location.pathname.startsWith("/account");
   const {
     notifications,
-    unreadCount,
     isLoading,
     markAsRead,
     markAllAsRead,
     deleteNotification,
     fetchNotifications,
   } = useNotifications();
+
+  // The badge reads the shared summary rather than the store's own counter,
+  // so the bell and the sidebar badges are literally the same number from
+  // the same request. The store still owns the LIST and the mark actions;
+  // it just no longer keeps a second, independently-drifting count.
+  const { total: unreadCount } = useUnreadSummary();
 
   const handleNotificationClick = async (item: (typeof notifications)[0]) => {
     if (!item.isRead) {
