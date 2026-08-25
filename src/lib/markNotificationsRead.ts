@@ -26,6 +26,8 @@ export interface NotificationContext {
   documentId?: string | number | null;
   meetingId?: string | number | null;
   paymentCertificateId?: string | number | null;
+  /** Risk signal PK — see risk/engine.py's data.signal_id. */
+  signalId?: string | number | null;
   /** Exact notification link, e.g. "/tasks/215". */
   link?: string | null;
 }

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FinanceToolbar } from "./FinanceToolbar";
 import { findByDeepLinkId } from "@/lib/deepLink";
+import { useFinanceUnreadNotifications } from "@/hooks/useFinanceUnreadNotifications";
 
 interface PCListResponse {
   count: number;
@@ -40,6 +41,7 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
   );
 
   const certificates: PCEntry[] = data?.results ?? [];
+  const { unreadByPcId } = useFinanceUnreadNotifications(projectId);
 
   // Which certificate's details are open. One piece of state, shared by the
   // in-page click on a PC number and by the ?pc= deep link.
@@ -115,6 +117,7 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
           search={search}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          unreadByPcId={unreadByPcId}
         />
       )}
 

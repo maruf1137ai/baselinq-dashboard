@@ -252,6 +252,15 @@ export default function CertificatePage() {
                   )}
                 </>
               )}
+              {cert.type === "cpi" && (
+                <>
+                  <DetailRow label="Duration">{cert.duration || "—"}</DetailRow>
+                  <DetailRow label="Start date">{formatCertDate(cert.start_date)}</DetailRow>
+                  <DetailRow label="Finish date">{formatCertDate(cert.finish_date)}</DetailRow>
+                  <DetailRow label="Predecessors">{cert.predecessors || "—"}</DetailRow>
+                  <DetailRow label="Successors">{cert.successors || "—"}</DetailRow>
+                </>
+              )}
               {cert.type === "si" && (
                 <>
                   <DetailRow label="Discipline">{cert.discipline || "—"}</DetailRow>

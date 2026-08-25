@@ -50,6 +50,8 @@ import {
 import {
   buildFigures, getCalculation, getCaveat, getMilestoneBreakdown,
 } from "@/lib/riskFormat";
+import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
+import type { Notification } from "@/types/notification";
 import {
   type Condition, type RiskTier, TIER_LABEL, TIER_NOTE, TIER_ORDER,
   chromaticTier, groupConditions,
@@ -207,12 +209,14 @@ function InstanceRow({
   drawn,
   showTitle,
   onAcknowledge,
+  unreadNotifications,
 }: {
   signal: RiskSignal;
   /** True only for rows in the one tier that may carry colour. */
   drawn: boolean;
   showTitle: boolean;
   onAcknowledge: (s: RiskSignal) => void;
+  unreadNotifications?: Notification[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const isAcknowledged = signal.status === "acknowledged";
@@ -281,6 +285,8 @@ function InstanceRow({
             Acknowledged{signal.acknowledged_by_name ? ` by ${signal.acknowledged_by_name}` : ""}
           </span>
         )}
+
+        <UnreadNotificationBadge notifications={unreadNotifications} />
       </div>
 
       {expanded && <WhyThisFired signal={signal} />}
@@ -294,11 +300,13 @@ function ConditionCard({
   condition,
   drawn,
   onAcknowledge,
+  unreadBySignalId,
 }: {
   condition: Condition<RiskSignal>;
   /** True only for the one tier `chromaticTier` allows to be drawn. */
   drawn: boolean;
   onAcknowledge: (s: RiskSignal) => void;
+  unreadBySignalId?: Record<string, Notification[]>;
 }) {
   const grouped = condition.count > 1;
   // A grouped condition opens closed: the header already states the condition
@@ -307,6 +315,13 @@ function ConditionCard({
   const [open, setOpen] = useState(false);
   const Icon = CATEGORY_ICON[condition.category] ?? FileWarning;
   const lead = condition.lead;
+  // One rule can fire against several source objects (e.g. four overdue
+  // milestones), each its own signal id and its own notification — sum
+  // across every instance so a grouped-but-closed card still shows the
+  // total, not just the lead instance's count.
+  const unreadInCondition = condition.instances.flatMap(
+    (s) => unreadBySignalId?.[String(s.id)] ?? [],
+  );
 
   return (
     /*
@@ -353,9 +368,12 @@ function ConditionCard({
               )}
             </div>
 
-            <Badge variant="outline" className="text-xs shrink-0">
-              {CATEGORY_LABEL[condition.category] ?? condition.category}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              <UnreadNotificationBadge notifications={unreadInCondition} />
+              <Badge variant="outline" className="text-xs">
+                {CATEGORY_LABEL[condition.category] ?? condition.category}
+              </Badge>
+            </div>
           </div>
 
           {grouped && (
@@ -383,6 +401,7 @@ function ConditionCard({
               drawn={drawn}
               showTitle={grouped}
               onAcknowledge={onAcknowledge}
+              unreadNotifications={unreadBySignalId?.[String(s.id)]}
             />
           ))}
         </div>
@@ -406,9 +425,11 @@ function ConditionCard({
 export function SignalFeed({
   signals,
   onAcknowledge,
+  unreadBySignalId,
 }: {
   signals: RiskSignal[];
   onAcknowledge: (s: RiskSignal) => void;
+  unreadBySignalId?: Record<string, Notification[]>;
 }) {
   const conditions = groupConditions(signals);
   if (conditions.length === 0) return null;
@@ -443,6 +464,7 @@ export function SignalFeed({
                   condition={c}
                   drawn={tier === drawnTier}
                   onAcknowledge={onAcknowledge}
+                  unreadBySignalId={unreadBySignalId}
                 />
               ))}
             </div>
@@ -464,9 +486,11 @@ export function SignalFeed({
 export function AcknowledgedList({
   signals,
   onAcknowledge,
+  unreadBySignalId,
 }: {
   signals: RiskSignal[];
   onAcknowledge: (s: RiskSignal) => void;
+  unreadBySignalId?: Record<string, Notification[]>;
 }) {
   if (signals.length === 0) return null;
 
@@ -491,6 +515,7 @@ export function AcknowledgedList({
             drawn={false}
             showTitle
             onAcknowledge={onAcknowledge}
+            unreadNotifications={unreadBySignalId?.[String(s.id)]}
           />
         ))}
       </div>

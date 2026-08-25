@@ -47,6 +47,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageContaining } from "@/lib/deepLink";
+import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
+import type { Notification } from "@/types/notification";
 
 export interface PCEntry {
   id: number;
@@ -205,6 +207,7 @@ interface PaymentCertificateTableProps {
    *  instead of two dialogs that can disagree about what is selected. */
   selectedId?: number | null;
   onSelect?: (id: number | null) => void;
+  unreadByPcId?: Record<string, Notification[]>;
 }
 
 const PAGE_SIZE = 10;
@@ -809,11 +812,13 @@ const PCRow = ({
   isSelected,
   onSelect,
   rowRef,
+  unreadNotifications,
 }: {
   entry: PCEntry;
   isSelected: boolean;
   onSelect: (id: number | null) => void;
   rowRef?: React.Ref<HTMLTableRowElement>;
+  unreadNotifications?: Notification[];
 }) => {
   const warnings = warningsOf(entry);
   // The details dialog is open exactly when this row is the selected one —
@@ -903,12 +908,15 @@ const PCRow = ({
       data-highlighted={isSelected ? "true" : undefined}
       className={`transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-muted/50"}`}>
       <td className="px-4 py-3 whitespace-nowrap text-sm">
-        <button
-          type="button"
-          onClick={() => setShowViewDialog(true)}
-          className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
-          {entry.pcNumber}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowViewDialog(true)}
+            className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+            {entry.pcNumber}
+          </button>
+          <UnreadNotificationBadge notifications={unreadNotifications} />
+        </div>
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
         {entry.period}
@@ -1018,6 +1026,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
   search,
   selectedId = null,
   onSelect,
+  unreadByPcId,
 }) => {
   const [page, setPage] = useState(1);
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -1101,6 +1110,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   isSelected={order.id === selectedId}
                   onSelect={(id) => onSelect?.(id)}
                   rowRef={order.id === selectedId ? selectedRowRef : undefined}
+                  unreadNotifications={unreadByPcId?.[String(order.id)]}
                 />
               ))
             )}

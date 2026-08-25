@@ -52,6 +52,7 @@ import {
 } from '@dnd-kit/core';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PageHeader } from '@/components/ui/page-header';
+import { useDocumentUnreadNotifications } from '@/hooks/useDocumentUnreadNotifications';
 
 const SORT_OPTIONS = [
   { value: 'recently_updated', label: 'Recently updated' },
@@ -193,6 +194,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
   });
   const canUploadAny = (capabilities?.documentTypes?.length || 0) > 0;
   const { canUploadDocument } = usePermissions();
+  const { unreadByDocId } = useDocumentUnreadNotifications(projectId);
 
   const { mutate: handleDeleteDoc, isPending: isDeletingDoc } = useMutation({
     mutationFn: (docId: string) =>
@@ -329,6 +331,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
             query={debouncedSearch}
             isLoading={isLoading}
             onDocumentClick={handleOpenDetail}
+            unreadByDocId={unreadByDocId}
           />
         ) : (
           <div className="flex flex-row gap-6 justify-between items-start">
@@ -394,6 +397,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                     onViewRegister={openRegister('contracts')}
                     onRenameDoc={setRenameDoc}
                     onDeleteDoc={setDocToDelete}
+                    unreadByDocId={unreadByDocId}
                   />
                 </TabsContent>
 
@@ -410,6 +414,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                     onViewRegister={openRegister('drawings')}
                     onRenameDoc={setRenameDoc}
                     onDeleteDoc={setDocToDelete}
+                    unreadByDocId={unreadByDocId}
                   />
                 </TabsContent>
 
@@ -426,6 +431,7 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
                     onViewRegister={openRegister('documents')}
                     onRenameDoc={setRenameDoc}
                     onDeleteDoc={setDocToDelete}
+                    unreadByDocId={unreadByDocId}
                   />
                 </TabsContent>
               </Tabs>

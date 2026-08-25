@@ -7,7 +7,7 @@
 
 import { format, parseISO } from "date-fns";
 
-export type CertificateType = "si" | "vo" | "claim" | "ic" | "pc" | "rfi" | "gi";
+export type CertificateType = "si" | "vo" | "claim" | "ic" | "pc" | "rfi" | "gi" | "cpi";
 
 /** One row of the JBCC form — mirrors tasks/pc_jbcc.py::build_form()'s "lines" entries.
  *  Money values are fixed-2dp strings straight from the backend, or null for a cell the
@@ -74,6 +74,12 @@ export type CertificateData = {
   responded_at?: string | null;
   // General Instruction
   direction?: string;
+  // Critical Path Item
+  duration?: string;
+  start_date?: string | null;
+  finish_date?: string | null;
+  predecessors?: string;
+  successors?: string;
   approved_amount?: string;
   time_extension_approved?: number | null;
   currency?: string;
@@ -99,6 +105,7 @@ const TYPE_LABEL: Record<CertificateType, string> = {
   ic: "Intention to Claim",
   rfi: "Request for Information",
   gi: "General Instruction",
+  cpi: "Critical Path Item",
   // Bare noun, same convention as the others above — CertificatePage.tsx appends
   // " Certificate" itself, so this must NOT already contain the word "Certificate"
   // (that produced the literal "CERTIFICATE CERTIFICATE" header bug this fixes).

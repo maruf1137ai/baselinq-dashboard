@@ -88,9 +88,22 @@ export function DashboardSidebar() {
   // only two of four document types, which is why the bell could show rows
   // these badges silently ignored.
   const unread = useUnreadSummary();
-  const totalUnread = unread.channels;
-  const meetingUnread = unread.surfaceCount("meetings");
-  const docUnread = unread.surfaceCount("documents");
+
+  // Every sidebar item that can carry unread notifications maps to a
+  // notification/surfaces.py surface key, except Communications: its badge
+  // is unread MESSAGES (unread.channels), not a notification-type count —
+  // see useUnreadSummary's UnreadSummary.channels doc.
+  const SURFACE_BY_TITLE: Record<string, string> = {
+    Tasks: "tasks",
+    Meetings: "meetings",
+    Documents: "documents",
+    Finance: "finance",
+    "Project Health": "project_health",
+    Compliance: "compliance",
+    Settings: "settings",
+  };
+  const badgeFor = (title: string) =>
+    title === "Communications" ? unread.channels : unread.surfaceCount(SURFACE_BY_TITLE[title] ?? "");
 
   useEffect(() => {
     const handleProjectChange = () => {
@@ -308,11 +321,7 @@ export function DashboardSidebar() {
                         const isActive = item.url === "/"
                           ? location.pathname === "/"
                           : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
-                        const badge =
-                          item.title === "Communications" && totalUnread > 0 ? totalUnread :
-                          item.title === "Meetings" && meetingUnread > 0 ? meetingUnread :
-                          item.title === "Documents" && docUnread > 0 ? docUnread :
-                          0;
+                        const badge = badgeFor(item.title);
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -353,6 +362,7 @@ export function DashboardSidebar() {
                     <SidebarMenu>
                       {settingsItems.filter((item) => !item.permission || (item.permission === "viewSettings" ? canViewSettings : can(item.permission))).map((item) => {
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                        const badge = badgeFor(item.title);
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -362,8 +372,20 @@ export function DashboardSidebar() {
                               ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                               : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
                               <NavLink to={item.url} className="flex items-center gap-3">
-                                {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
-                                {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                <span className="relative shrink-0">
+                                  {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                  {!open && badge > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium leading-none">
+                                      {badge > 99 ? "99+" : badge}
+                                    </span>
+                                  )}
+                                </span>
+                                {open && <span className={`text-sm font-normal flex-1 ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                {open && badge > 0 && (
+                                  <span className="h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                                    {badge > 99 ? "99+" : badge}
+                                  </span>
+                                )}
                               </NavLink>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

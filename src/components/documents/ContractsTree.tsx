@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/collapsible';
 import { DocItemContextMenu, FolderItemContextMenu } from './DocumentContextMenu';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UnreadNotificationBadge } from '@/components/commons/UnreadNotificationBadge';
+import type { Notification } from '@/types/notification';
 
 /** Spring-load delay before an drag-hovered folder auto-expands (ms). */
 const SPRING_FOLDER_DELAY = 500;
@@ -29,6 +31,7 @@ interface ContractsTreeProps {
   onViewRegister?: (folderId: string, folderName: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadByDocId?: Record<string, Notification[]>;
 }
 
 interface FolderNodeProps {
@@ -39,6 +42,8 @@ interface FolderNodeProps {
   descendantCountById: Map<string, number>;
   hasRecentActivityById: Map<string, boolean>;
   hasAiFlagsById: Map<string, boolean>;
+  unreadCountById: Map<string, number>;
+  unreadByDocId?: Record<string, Notification[]>;
   onDocumentClick?: (id: string) => void;
   onViewRegister?: (folderId: string, folderName: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
@@ -69,7 +74,7 @@ function formatRelative(iso?: string): string {
  * right-clickable (Copy / Cut / Paste / Copy path / Rename / Delete).
  */
 function ContractDocumentRow({
-  doc, depth, idx, onDocumentClick, onRenameDoc, onDeleteDoc,
+  doc, depth, idx, onDocumentClick, onRenameDoc, onDeleteDoc, unreadNotifications,
 }: {
   doc: ApiDocument;
   depth: number;
@@ -77,6 +82,7 @@ function ContractDocumentRow({
   onDocumentClick?: (id: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadNotifications?: Notification[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: doc._id,
@@ -124,6 +130,7 @@ function ContractDocumentRow({
             {doc.reference}
           </span>
         )}
+        <UnreadNotificationBadge notifications={unreadNotifications} />
         <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
     </DocItemContextMenu>
@@ -135,12 +142,13 @@ function ContractDocumentRow({
  * Paste-into is disabled here (no folder to paste into).
  */
 function ContractsUnfiledRow({
-  doc, onDocumentClick, onRenameDoc, onDeleteDoc,
+  doc, onDocumentClick, onRenameDoc, onDeleteDoc, unreadNotifications,
 }: {
   doc: ApiDocument;
   onDocumentClick?: (id: string) => void;
   onRenameDoc?: (doc: ApiDocument) => void;
   onDeleteDoc?: (doc: ApiDocument) => void;
+  unreadNotifications?: Notification[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: doc._id,
@@ -172,6 +180,7 @@ function ContractsUnfiledRow({
             {doc.reference}
           </span>
         )}
+        <UnreadNotificationBadge notifications={unreadNotifications} />
       </div>
     </DocItemContextMenu>
   );
@@ -183,7 +192,7 @@ function ContractsUnfiledRow({
  * it spring-loads open after a short delay so the user can drill into
  * subfolders without releasing the drag.
  */
-function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountById, hasRecentActivityById, hasAiFlagsById, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc, parentPath }: FolderNodeProps) {
+function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountById, hasRecentActivityById, hasAiFlagsById, unreadCountById, unreadByDocId, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc, parentPath }: FolderNodeProps) {
   const folderDocs = docsByFolderId.get(folder._id) ?? [];
   const descendantCount = descendantCountById.get(folder._id) ?? 0;
   const hasChildren = folder.children && folder.children.length > 0;
@@ -193,6 +202,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
   const isLeaf = !hasChildren;
   const hasRecent = hasRecentActivityById.get(folder._id) ?? false;
   const hasAiFlags = hasAiFlagsById.get(folder._id) ?? false;
+  const unreadCount = unreadCountById.get(folder._id) ?? 0;
 
   // Default to collapsed — folders open only when the user clicks them.
   const [isOpen, setIsOpen] = useState(false);
@@ -237,6 +247,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
       onDocumentClick={onDocumentClick}
       onRenameDoc={onRenameDoc}
       onDeleteDoc={onDeleteDoc}
+      unreadNotifications={unreadByDocId?.[doc._id]}
     />
   ));
 
@@ -295,6 +306,15 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
       )}
       {hasRecent && (
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
+      )}
+
+      {unreadCount > 0 && (
+        <span
+          className="h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium shrink-0"
+          title={`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
+        >
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
       )}
 
       <span className={cn(
@@ -368,6 +388,8 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
                   descendantCountById={descendantCountById}
                   hasRecentActivityById={hasRecentActivityById}
                   hasAiFlagsById={hasAiFlagsById}
+                  unreadCountById={unreadCountById}
+                  unreadByDocId={unreadByDocId}
                   onDocumentClick={onDocumentClick}
                   onViewRegister={onViewRegister}
                   onRenameDoc={onRenameDoc}
@@ -396,7 +418,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
  * Read-only hierarchical folder structure for the Contracts tab. The drag-and-
  * drop context lives at the page level (Documents.tsx) so a drag can cross tabs.
  */
-export function ContractsTree({ projectId, documents, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc }: ContractsTreeProps) {
+export function ContractsTree({ projectId, documents, onDocumentClick, onViewRegister, onRenameDoc, onDeleteDoc, unreadByDocId }: ContractsTreeProps) {
   const { data, isLoading, error } = useContractsFolders(projectId);
   const folders = Array.isArray(data) ? data : [];
 
@@ -450,6 +472,23 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
     return { hasRecentActivityById: recent, hasAiFlagsById: flags };
   }, [folders, docsByFolderId]);
 
+  // Same recursive-walk technique as descendantCountById, rolling up
+  // per-document unread notification counts to every ancestor folder.
+  const unreadCountById = useMemo(() => {
+    const map = new Map<string, number>();
+    const walk = (f: Folder): number => {
+      const direct = (docsByFolderId.get(f._id) ?? []).reduce(
+        (sum, d) => sum + (unreadByDocId?.[d._id]?.length ?? 0), 0,
+      );
+      const fromChildren = (f.children ?? []).reduce((sum, c) => sum + walk(c), 0);
+      const total = direct + fromChildren;
+      map.set(f._id, total);
+      return total;
+    };
+    folders.forEach(walk);
+    return map;
+  }, [folders, docsByFolderId, unreadByDocId]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -491,6 +530,8 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
             descendantCountById={descendantCountById}
             hasRecentActivityById={hasRecentActivityById}
             hasAiFlagsById={hasAiFlagsById}
+            unreadCountById={unreadCountById}
+            unreadByDocId={unreadByDocId}
             onDocumentClick={onDocumentClick}
             onViewRegister={onViewRegister}
             onRenameDoc={onRenameDoc}
@@ -522,6 +563,7 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
                 onDocumentClick={onDocumentClick}
                 onRenameDoc={onRenameDoc}
                 onDeleteDoc={onDeleteDoc}
+                unreadNotifications={unreadByDocId?.[doc._id]}
               />
             ))}
         </div>

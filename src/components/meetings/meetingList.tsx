@@ -11,6 +11,8 @@ import { LifecycleBadge, ArtefactBadge } from "./MeetingStatusBadges";
 import type { LifecycleStatus, ArtefactStatus } from "./MeetingStatusBadges";
 import type { Notification } from "@/types/notification";
 import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
+import { useMeetingUnreadNotifications } from "@/hooks/useMeetingUnreadNotifications";
+import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
 import { toast } from "sonner";
 
 interface Meeting {
@@ -57,15 +59,7 @@ export default function MeetingsList() {
     }
   );
 
-  const { data: unreadNotifs } = useFetch<Notification[]>(
-    projectId ? `notifications/?unread_only=true&project_id=${projectId}` : null
-  );
-  const unreadMeetingIds = new Set(
-    (Array.isArray(unreadNotifs) ? unreadNotifs : [])
-      .filter((n) => n.type === "meeting_invited" || n.type === "meeting_updated")
-      .map((n) => n.data?.meeting_id)
-      .filter(Boolean)
-  );
+  const { unreadByMeetingId } = useMeetingUnreadNotifications(projectId);
 
   const meetings: Meeting[] = Array.isArray(data) ? data : (data?.results ?? []);
 
@@ -154,7 +148,7 @@ export default function MeetingsList() {
           {show("upcoming") && filteredUpcoming.length > 0 && (
             <Section title="Upcoming">
               {filteredUpcoming.map((item) => (
-                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+                <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
               ))}
             </Section>
           )}
@@ -162,7 +156,7 @@ export default function MeetingsList() {
           {show("completed") && filteredCompleted.length > 0 && (
             <Section title="Completed">
               {filteredCompleted.map((item) => (
-                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+                <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
               ))}
             </Section>
           )}
@@ -170,7 +164,7 @@ export default function MeetingsList() {
           {show("no_show") && filteredNoShows.length > 0 && (
             <Section title="No Show">
               {filteredNoShows.map((item) => (
-                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+                <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
               ))}
             </Section>
           )}
@@ -178,7 +172,7 @@ export default function MeetingsList() {
           {show("cancelled") && filteredCancelled.length > 0 && (
             <Section title="Cancelled">
               {filteredCancelled.map((item) => (
-                <MeetingCard key={item.id} item={item} isUnread={unreadMeetingIds.has(item.id)} />
+                <MeetingCard key={item.id} item={item} unreadNotifications={unreadByMeetingId[String(item.id)]} />
               ))}
             </Section>
           )}
@@ -186,7 +180,7 @@ export default function MeetingsList() {
           {show("declined") && filteredDeclined.length > 0 && (
             <Section title="Declined">
               {filteredDeclined.map((item) => (
-                <MeetingCard key={item.id} item={item} isUnread={false} />
+                <MeetingCard key={item.id} item={item} />
               ))}
             </Section>
           )}
@@ -236,7 +230,8 @@ function RsvpBadge({ rsvp }: { rsvp: RsvpStatus | null }) {
   return null;
 }
 
-function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) {
+function MeetingCard({ item, unreadNotifications }: { item: Meeting; unreadNotifications?: Notification[] }) {
+  const isUnread = !!unreadNotifications?.length;
   const totalAttendees = item.attendees.length + (item.extra_attendees || 0);
   const { mutate: rsvp, isPending: isRsvping } = useMeetingRsvp(item.id);
   const isUpcoming = item.status === "scheduled" || item.status === "starting_soon" || item.status === "live";
@@ -260,8 +255,10 @@ function MeetingCard({ item, isUnread }: { item: Meeting; isUnread?: boolean }) 
       {/* Row: title + badges (left), date · location · attendees + rsvp (right) */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          {isUnread && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
           <h3 className="text-sm font-medium text-foreground truncate">{item.title}</h3>
+          <span onClick={(e) => e.preventDefault()}>
+            <UnreadNotificationBadge notifications={unreadNotifications} />
+          </span>
           {!showRsvpButtons && <LifecycleBadge status={item.status} />}
           {item.status === "completed" && (
             <ArtefactBadge artefactStatus={item.artefact_status} />

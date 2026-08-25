@@ -31,6 +31,7 @@ export interface TaskFilters {
   assignee: string;
   dateRange: string;
   myItems: boolean;
+  messageFilter: 'all' | 'unread';
 }
 
 export const defaultFilters: TaskFilters = {
@@ -38,6 +39,7 @@ export const defaultFilters: TaskFilters = {
   assignee: 'all',
   dateRange: 'all',
   myItems: true,
+  messageFilter: 'all',
 };
 
 interface TaskFilterBarProps {
@@ -81,6 +83,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
     filters.docTypes.length !== actualDocTypes.length ||
     filters.assignee !== 'all' ||
     filters.dateRange !== 'all' ||
+    filters.messageFilter !== 'all' ||
     filters.myItems;
 
   return (
@@ -162,6 +165,20 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
             <SelectItem value="today">Due Today</SelectItem>
             <SelectItem value="this_week">Due This Week</SelectItem>
             <SelectItem value="this_month">Due This Month</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Unread messages filter */}
+        <Select
+          value={filters.messageFilter}
+          onValueChange={val => onFiltersChange({ ...filters, messageFilter: val as 'all' | 'unread' })}
+        >
+          <SelectTrigger className="w-[150px] h-8 text-xs border-border bg-card rounded-lg">
+            <SelectValue placeholder="Messages" />
+          </SelectTrigger>
+          <SelectContent className="bg-card">
+            <SelectItem value="all">All messages</SelectItem>
+            <SelectItem value="unread">Unread messages</SelectItem>
           </SelectContent>
         </Select>
 

@@ -83,6 +83,8 @@ import {
 import { type TabKey, resolveTab, slugFor, tabsFor } from "@/components/risk/tabs";
 import { useProjectCommercials } from "@/hooks/useProjectCommercials";
 import { buildKeyIndicators } from "@/lib/projectPosition";
+import { useRiskSignalUnreadNotifications } from "@/hooks/useRiskSignalUnreadNotifications";
+import { markNotificationsRead } from "@/lib/markNotificationsRead";
 
 interface SignalsResponse {
   signals: RiskSignal[];
@@ -117,6 +119,7 @@ export default function ProjectHealth() {
   );
 
   const { mutateAsync: post } = usePost();
+  const { unreadBySignalId } = useRiskSignalUnreadNotifications(projectId);
 
   // The commercial position. Fetches NOTHING without finance.view — see the
   // header of useProjectCommercials — so a contractor's browser never holds
@@ -222,6 +225,7 @@ export default function ProjectHealth() {
         url: `risk-signals/${ackTarget.id}/acknowledge/`,
         data: { note: ackNote },
       });
+      void markNotificationsRead({ signalId: ackTarget.id });
       toast.success("Risk acknowledged");
       setAckTarget(null);
       setAckNote("");
@@ -400,8 +404,8 @@ export default function ProjectHealth() {
 
           {activeTab === "Risk signals" && !isLoading && (
             <>
-              <SignalFeed signals={live} onAcknowledge={setAckTarget} />
-              <AcknowledgedList signals={acknowledged} onAcknowledge={setAckTarget} />
+              <SignalFeed signals={live} onAcknowledge={setAckTarget} unreadBySignalId={unreadBySignalId} />
+              <AcknowledgedList signals={acknowledged} onAcknowledge={setAckTarget} unreadBySignalId={unreadBySignalId} />
 
               {counts.total === 0 && (
                 <EmptyState
