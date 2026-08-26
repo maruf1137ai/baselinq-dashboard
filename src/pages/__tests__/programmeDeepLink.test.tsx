@@ -19,6 +19,22 @@ vi.mock("@/hooks/useMilestones", () => ({
   useMilestones: () => mockUseMilestones(),
   useUpdateMilestone: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteMilestone: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  // Discipline scoping arrived with the professional-milestones work; the
+  // window reads it to decide whether to offer the discipline picker.
+  useMilestoneDisciplineAccess: () => ({ data: undefined, isLoading: false }),
+}));
+// usePermissions resolves through useEffectivePermissions, which is a
+// useQuery — so rendering the window for real would need a QueryClient this
+// suite deliberately does not set up. It mocks its hooks instead, keeping the
+// test about deep-link behaviour rather than data fetching. Grant both
+// discipline flags: this suite asserts the programme is never NARROWED by a
+// stale link, so the widest visibility is the case that must hold.
+vi.mock("@/hooks/usePermissions", () => ({
+  usePermissions: () => ({
+    canViewProgramme: true,
+    canViewOtherDisciplines: true,
+    canViewAllDisciplineFees: true,
+  }),
 }));
 vi.mock("@/hooks/useRiskForecast", () => ({
   useRiskForecast: () => ({ data: null, isLoading: false }),
