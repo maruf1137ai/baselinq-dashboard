@@ -105,6 +105,7 @@ import {
   VerdictTitle,
 } from "@/components/home/blocks";
 import { StatusBandBlock } from "@/components/home/StatusBand";
+import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
 import { WhatChangedBlock } from "@/components/home/WhatChanged";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
@@ -319,6 +320,8 @@ const Index = () => {
           <>
             {/* Question 1: is anything on fire. */}
             <StatusBandBlock data={data} />
+
+            <PhaseCostProgressBlock projectId={projectId} />
 
             <div className="grid gap-4 lg:grid-cols-2 items-start">
               {/* Question 2: what do I have to do. */}

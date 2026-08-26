@@ -18,19 +18,22 @@ const STATUS_LABELS: Record<string, string> = {
   delayed: "Delayed",
 };
 
-function formatCost(amount: number, currency: string) {
+export function formatCost(amount: number, currency: string) {
   return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 interface TimelineProps {
   projectId: string | number | null;
+  discipline: string;
+  canCreate?: boolean;
   onAddMilestone?: () => void;
 }
 
-const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
-  const { data, isLoading } = useMilestonePhaseCosts(projectId);
+const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: TimelineProps) => {
+  const { data, isLoading } = useMilestonePhaseCosts(projectId, discipline);
   const milestones = data?.milestones ?? [];
   const currency = data?.currency ?? "ZAR";
+  const totalLabel = discipline !== "construction" ? "Total planned fees" : "Total contract cost";
 
   const { rangeStart, rangeEnd, months } = useMemo(() => {
     if (!milestones.length) {
@@ -75,7 +78,7 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
       <div className="p-4 bg-card border border-border rounded-xl">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs text-muted-foreground">Legend</span>
-          {onAddMilestone && (
+          {canCreate && onAddMilestone && (
             <button
               onClick={onAddMilestone}
               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
@@ -126,34 +129,44 @@ const Timeline = ({ projectId, onAddMilestone }: TimelineProps) => {
 
             {/* Milestone rows */}
             <div className="space-y-3">
-              {milestones.map((m) => (
-                <div key={m._id} className="flex items-center gap-2">
-                  {/* Name column */}
-                  <div className="w-40 shrink-0 pr-2">
-                    <p className="text-xs font-medium text-foreground truncate">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCost(m.contractCost, currency)}
-                    </p>
-                  </div>
+              {milestones.map((m) => {
+                // Redacted (feeVisible: false) renders blank, same as "not
+                // entered yet" — no "Hidden" label. Applies uniformly to
+                // every discipline including Construction — the backend
+                // (MilestonePhaseCostsView) now gates contractCost by the
+                // same feeVisible flag as every professional fee.
+                const costLabel = !m.feeVisible
+                  ? ""
+                  : m.contractCost != null
+                  ? formatCost(m.contractCost, currency)
+                  : "Not set";
+                return (
+                  <div key={m._id} className="flex items-center gap-2">
+                    {/* Name column */}
+                    <div className="w-40 shrink-0 pr-2">
+                      <p className="text-xs font-medium text-foreground truncate">{m.name}</p>
+                      <p className="text-xs text-muted-foreground">{costLabel}</p>
+                    </div>
 
-                  {/* Bar track */}
-                  <div className="flex-1 relative h-7 bg-muted/30 rounded">
-                    <div
-                      className="absolute top-1 h-5 rounded flex items-center px-2 overflow-hidden"
-                      style={barStyle(m)}
-                      title={`${m.name} — ${formatCost(m.contractCost, currency)}`}>
-                      <span className="text-xs text-white truncate font-medium">{m.name}</span>
+                    {/* Bar track */}
+                    <div className="flex-1 relative h-7 bg-muted/30 rounded">
+                      <div
+                        className="absolute top-1 h-5 rounded flex items-center px-2 overflow-hidden"
+                        style={barStyle(m)}
+                        title={`${m.name} — ${costLabel}`}>
+                        <span className="text-xs text-white truncate font-medium">{m.name}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Total */}
-            {data && data.totalContractCost > 0 && (
+            {data && data.totalContractCost != null && data.totalContractCost > 0 && (
               <div className="mt-4 pt-3 border-t border-border flex justify-end">
                 <span className="text-xs text-muted-foreground">
-                  Total contract cost:{" "}
+                  {totalLabel}:{" "}
                   <span className="font-medium text-foreground">
                     {formatCost(data.totalContractCost, currency)}
                   </span>

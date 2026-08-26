@@ -73,11 +73,12 @@ interface AddPhaseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string | number | null;
+  discipline: string;
 }
 
-const EMPTY = { name: "", startDate: undefined as Date | undefined, endDate: undefined as Date | undefined, status: "planned" };
+const EMPTY = { name: "", startDate: undefined as Date | undefined, endDate: undefined as Date | undefined, status: "planned", feeAmount: "" };
 
-export function AddPhaseDialog({ open, onOpenChange, projectId }: AddPhaseDialogProps) {
+export function AddPhaseDialog({ open, onOpenChange, projectId, discipline }: AddPhaseDialogProps) {
   const [form, setForm] = useState(EMPTY);
   const createMutation = useCreateMilestone(projectId);
 
@@ -97,6 +98,12 @@ export function AddPhaseDialog({ open, onOpenChange, projectId }: AddPhaseDialog
         startDate: format(form.startDate, "yyyy-MM-dd"),
         endDate: format(form.endDate, "yyyy-MM-dd"),
         status: form.status,
+        discipline,
+        // Construction phases don't get a typed fee — their cost stays
+        // derived from Payment Certificates elsewhere in the app.
+        ...(discipline !== "construction"
+          ? { feeAmount: form.feeAmount ? Number(form.feeAmount) : null }
+          : {}),
       });
       toast.success("Phase created");
       setForm(EMPTY);
@@ -148,6 +155,18 @@ export function AddPhaseDialog({ open, onOpenChange, projectId }: AddPhaseDialog
               </SelectContent>
             </Select>
           </div>
+          {discipline !== "construction" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="phase-fee-amount">Fee for this stage</Label>
+              <Input
+                id="phase-fee-amount"
+                type="number"
+                placeholder="e.g. 50000"
+                value={form.feeAmount}
+                onChange={(e) => setForm({ ...form, feeAmount: e.target.value })}
+              />
+            </div>
+          )}
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => { onOpenChange(false); setForm(EMPTY); }}>
               Cancel

@@ -33,6 +33,11 @@ import {
 import { toast } from "sonner";
 import { ViewDetailsDialog } from "./detailsDialog";
 import { findByDeepLinkId } from "@/lib/deepLink";
+import { formatCost } from "./timeline";
+
+// Milestone has no per-item currency field (only the phase-costs aggregate
+// response does) — ZAR mirrors that response's own fallback default.
+const CURRENCY = "ZAR";
 
 const STATUS_LABELS: Record<string, string> = {
   planned: "Planned",
@@ -63,6 +68,7 @@ interface FormState {
   status: string;
   percentComplete: string;
   actualEnd: Date | undefined;
+  feeAmount: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -72,6 +78,7 @@ const EMPTY_FORM: FormState = {
   status: "planned",
   percentComplete: "",
   actualEnd: undefined,
+  feeAmount: "",
 };
 
 // Reusable date picker field
@@ -121,6 +128,13 @@ function DatePickerField({
 
 interface MilestoneProps {
   projectId: string | number | null;
+  discipline: string;
+  /** Same authorization rule the backend applies to create/edit/delete —
+   *  own_discipline matches the currently selected discipline, or full
+   *  visibility. The list is already filtered to one discipline at a time,
+   *  so this single flag correctly gates every row shown, not just adding
+   *  new ones. */
+  canManage?: boolean;
   onAddMilestone?: () => void;
   /** Raw `?milestone=` value from /programme, or null.
    *
@@ -131,8 +145,9 @@ interface MilestoneProps {
   selectedMilestoneId?: string | null;
 }
 
-const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: MilestoneProps) => {
-  const { data: milestones = [], isLoading } = useMilestones(projectId);
+const Milestone = ({ projectId, discipline, canManage = false, onAddMilestone, selectedMilestoneId = null }: MilestoneProps) => {
+  const { data: milestones = [], isLoading } = useMilestones(projectId, discipline);
+  const showFee = discipline !== "construction";
   const updateMutation = useUpdateMilestone(projectId);
   const deleteMutation = useDeleteMilestone(projectId);
 
@@ -160,9 +175,12 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
       status: m.status,
       percentComplete: m.percentComplete != null ? String(m.percentComplete) : "",
       actualEnd: m.actualEnd ? parseISO(m.actualEnd) : undefined,
+      feeAmount: m.feeAmount != null ? String(m.feeAmount) : "",
     });
     setDialogOpen(true);
   }
+
+  const editingMilestone = editingId ? milestones.find((m) => m._id === editingId) : undefined;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -185,6 +203,7 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
       // rather than being coerced into 0 / today.
       percentComplete: form.percentComplete === "" ? null : Number(form.percentComplete),
       actualEnd: form.actualEnd ? format(form.actualEnd, "yyyy-MM-dd") : null,
+      feeAmount: form.feeAmount === "" ? null : Number(form.feeAmount),
     };
 
     try {
@@ -219,11 +238,14 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
         <span className="w-28 shrink-0">Start Date</span>
         <span className="w-28 shrink-0">End Date</span>
         <span className="w-28 shrink-0">Status</span>
+        {showFee && <span className="w-32 shrink-0">Fee</span>}
         <span className="w-16 shrink-0 flex justify-end">
-          <Button size="sm" variant="outline" onClick={onAddMilestone} className="h-7 text-xs gap-1">
-            <Plus />
-            Add
-          </Button>
+          {canManage && (
+            <Button size="sm" variant="outline" onClick={onAddMilestone} className="h-7 text-xs gap-1">
+              <Plus />
+              Add
+            </Button>
+          )}
         </span>
       </div>
 
@@ -241,10 +263,12 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
           title="No programme phases yet"
           description="Define the phases of the works so cost and progress can be tracked against the contract programme."
           action={
-            <Button size="sm" variant="outline" onClick={onAddMilestone} className="gap-1.5">
-              <Plus />
-              Add first phase
-            </Button>
+            canManage ? (
+              <Button size="sm" variant="outline" onClick={onAddMilestone} className="gap-1.5">
+                <Plus />
+                Add first phase
+              </Button>
+            ) : undefined
           }
         />
       )}
@@ -305,10 +329,19 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
                   {STATUS_LABELS[m.status]}
                 </span>
               </span>
+              {showFee && (
+                <span className="w-32 shrink-0 text-xs text-muted-foreground">
+                  {m.feeVisible
+                    ? m.feeAmount != null
+                      ? formatCost(m.feeAmount, CURRENCY)
+                      : "Not set"
+                    : ""}
+                </span>
+              )}
               <div className="w-24 shrink-0 flex items-center justify-end gap-2">
                 <ViewDetailsDialog
                   milestone={m}
-                  onEdit={() => openEdit(m)}
+                  onEdit={canManage ? () => openEdit(m) : undefined}
                   trigger={
                     <button
                       aria-label="View milestone details"
@@ -317,18 +350,22 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
                     </button>
                   }
                 />
-                <button
-                  aria-label="Edit milestone"
-                  onClick={() => openEdit(m)}
-                  className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  aria-label="Delete milestone"
-                  onClick={() => setDeleteConfirmId(m._id)}
-                  className="text-muted-foreground hover:text-red-500 transition-colors">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {canManage && (
+                  <button
+                    aria-label="Edit milestone"
+                    onClick={() => openEdit(m)}
+                    className="text-muted-foreground hover:text-foreground transition-colors">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+                {canManage && (
+                  <button
+                    aria-label="Delete milestone"
+                    onClick={() => setDeleteConfirmId(m._id)}
+                    className="text-muted-foreground hover:text-red-500 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -411,6 +448,19 @@ const Milestone = ({ projectId, onAddMilestone, selectedMilestoneId = null }: Mi
               onChange={(date) => setForm({ ...form, actualEnd: date })}
               placeholder="Not yet completed"
             />
+
+            {editingMilestone && editingMilestone.discipline !== "construction" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="phase-fee-amount">Fee for this stage</Label>
+                <Input
+                  id="phase-fee-amount"
+                  type="number"
+                  placeholder="e.g. 50000"
+                  value={form.feeAmount}
+                  onChange={(e) => setForm({ ...form, feeAmount: e.target.value })}
+                />
+              </div>
+            )}
 
             <DialogFooter className="pt-4">
               <Button
