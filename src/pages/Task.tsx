@@ -27,6 +27,8 @@ import TaskFilterBar, { TaskFilters, defaultFilters } from '@/components/task/Ta
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 import { useTaskUnreadNotifications } from '@/hooks/useTaskUnreadNotifications';
+import { useNotificationStore } from '@/store/useNotificationStore';
+import type { Notification } from '@/types/notification';
 import {
   Tooltip,
   TooltipContent,
@@ -545,7 +547,7 @@ function Column({ id, title, count, tasks, onAddClick, currentUserId, unreadByTa
         <SortableContext items={tasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
           <div
             ref={setNodeRef}
-            className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-gray-200"
+            className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2 pt-2 scrollbar-thin scrollbar-thumb-gray-200"
             style={{ minHeight: '100px' }}
           >
             {tasks.map((task: any) => (
@@ -689,7 +691,22 @@ export default function Task() {
     return map;
   }, [tasks]);
 
-  const { unreadByTaskId } = useTaskUnreadNotifications(projectId, tasksByCode);
+  const { unreadByTaskId, otherUpdates } = useTaskUnreadNotifications(projectId, tasksByCode);
+
+  // Same click behavior as the bell dropdown (DashboardHeader.tsx): mark
+  // read, switch project context if this notification belongs to a
+  // different one, then navigate. These are notifications that couldn't be
+  // attached to a specific task card (e.g. IC notices, which link to
+  // /tasks/intention-to-claim/{id}), so this panel is the only place on the
+  // Tasks board they can be opened from.
+  const handleOtherUpdateClick = (n: Notification) => {
+    useNotificationStore.getState().markAsRead(n._id);
+    const notifProjectId = n.data?.projectId ?? n.projectId;
+    if (notifProjectId) {
+      localStorage.setItem('selectedProjectId', String(notifProjectId));
+    }
+    if (n.link) navigate(n.link);
+  };
 
   // Apply filters to each column
   const currentUserName = currentUser?.name || null;
@@ -967,6 +984,25 @@ export default function Task() {
               onFiltersChange={setFilters}
               assigneeOptions={assigneeOptions}
             />
+            {otherUpdates.length > 0 && (
+              <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-foreground mb-2">
+                  Other updates ({otherUpdates.length})
+                </p>
+                <div className="space-y-1.5">
+                  {otherUpdates.map((n) => (
+                    <button
+                      key={n._id}
+                      onClick={() => handleOtherUpdateClick(n)}
+                      className="w-full flex items-start gap-2 text-left px-2 py-1.5 rounded-md hover:bg-card transition-colors"
+                    >
+                      <Bell className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      <span className="text-xs text-foreground truncate">{n.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-0 pt-2">
               <DndContext
                 sensors={sensors}

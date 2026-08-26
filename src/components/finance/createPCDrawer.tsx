@@ -5,14 +5,21 @@ import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
 import { AlertTriangle, CalendarIcon, Loader2, Minus, Plus, Trash2, X } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO, isWithinInterval } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatMoneyInput, parseMoneyInput } from "@/lib/money";
 import { clampToRemaining, sumCertifiedByVo } from "@/lib/pcHistory";
@@ -1307,6 +1314,17 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 <div className="rounded-lg border border-border divide-y divide-border">
                   {milestones.map((m) => {
                     const checked = m._id in claimedPctByMilestone;
+                    // Informational only — the Schedule tab's cost totals are
+                    // still attributed purely by date-range overlap
+                    // (MilestonePhaseCostsView), regardless of this checkbox.
+                    // This badge just makes that otherwise-invisible match
+                    // visible at the point the date is chosen.
+                    const dateMatches =
+                      certificateDate != null &&
+                      isWithinInterval(certificateDate, {
+                        start: parseISO(m.startDate),
+                        end: parseISO(m.endDate),
+                      });
                     return (
                       <div key={m._id} className="flex items-center gap-3 px-3 py-2">
                         <Checkbox
@@ -1324,6 +1342,25 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           }}
                         />
                         <span className="flex-1 text-sm text-foreground">{m.name}</span>
+                        {dateMatches && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 text-primary border-primary/30 cursor-default"
+                                >
+                                  Date match
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs">
+                                This certificate's date falls within this phase — its amount will
+                                count toward this phase's cost on the Schedule tab, regardless of
+                                whether you check the box here.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <div className="flex items-center gap-1">
                           <input
                             type="number"

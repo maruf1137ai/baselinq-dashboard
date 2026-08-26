@@ -14,6 +14,11 @@ import {
 import { Badge } from "../ui/badge";
 import { cn } from "@/lib/utils";
 import type { Milestone as MilestoneType } from "@/hooks/useMilestones";
+import { formatCost } from "./timeline";
+
+// Milestone has no per-item currency field (only the phase-costs aggregate
+// response does) — ZAR mirrors that response's own fallback default.
+const CURRENCY = "ZAR";
 
 const STATUS_LABELS: Record<string, string> = {
   planned: "Planned",
@@ -88,6 +93,14 @@ export function ViewDetailsDialog({ milestone, onEdit, trigger }: ViewDetailsDia
                   </span>
                 </div>
               </div>
+              {milestone.discipline !== "construction" && milestone.feeVisible && (
+                <div className="item p-4 rounded-lg bg-muted">
+                  <div className="text-sm text-muted-foreground mb-2">Fee</div>
+                  <span className="text-xl text-foreground">
+                    {milestone.feeAmount != null ? formatCost(milestone.feeAmount, CURRENCY) : "Not set"}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="item border border-border rounded-lg mt-4">
@@ -163,14 +176,16 @@ export function ViewDetailsDialog({ milestone, onEdit, trigger }: ViewDetailsDia
 
           <div className="flex items-end justify-end border-t pt-4 mt-4">
             <div className="flex gap-2 w-full">
-              <Button
-                className="w-full"
-                onClick={() => {
-                  setOpen(false);
-                  onEdit?.();
-                }}>
-                Edit Milestone
-              </Button>
+              {onEdit && (
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setOpen(false);
+                    onEdit();
+                  }}>
+                  Edit Milestone
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>

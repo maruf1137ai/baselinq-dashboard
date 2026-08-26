@@ -21,11 +21,25 @@
  * badge and the bell via notification/surfaces.py; they just don't attach
  * to one card.
  */
-import { useCallback } from "react";
-import type { Notification } from "@/types/notification";
+import { useCallback, useMemo } from "react";
+import type { Notification, NotificationType } from "@/types/notification";
 import { useGroupedUnreadNotifications } from "./useGroupedUnreadNotifications";
 
 const TASK_LINK_RE = /^\/tasks\/(\d+)$/;
+
+// Mirrors backend/notification/surfaces.py's "tasks" list exactly — the
+// types that count toward the sidebar's Tasks badge. Used to separate
+// "unresolved but genuinely task-related" (shown in the board's "Other
+// updates" panel) from unresolved notifications belonging to a different
+// surface entirely (Finance, Documents, ...), which aren't this page's
+// concern even though useGroupedUnreadNotifications fetches all of them.
+const TASK_SURFACE_TYPES = new Set<NotificationType>([
+  "task_updated", "task_assigned", "vo_created", "si_created", "rfi_created",
+  "dc_created", "cpi_created", "gi_created", "ic_created", "claim_created",
+  "ic_risk_high", "vo_auto_created", "vo_signoff_required",
+  "escalation_overdue", "approval_requested", "approval_held",
+  "approval_complete", "approval_rejected", "approval_info_requested",
+]);
 
 export function useTaskUnreadNotifications(
   projectId?: string | null,
@@ -43,6 +57,16 @@ export function useTaskUnreadNotifications(
     [tasksByCode],
   );
 
-  const { unreadByKey, isLoading } = useGroupedUnreadNotifications(projectId, resolveTaskId);
-  return { unreadByTaskId: unreadByKey, isLoading };
+  const { unreadByKey, unmatched, isLoading } = useGroupedUnreadNotifications(projectId, resolveTaskId);
+
+  // Unread, task-surface-typed, but couldn't attach to any card — e.g. IC
+  // notices, which link to /tasks/intention-to-claim/{id}, a different id
+  // space than resolveTaskId understands. Previously invisible: counted
+  // toward the sidebar badge, absent from the board entirely.
+  const otherUpdates = useMemo(
+    () => unmatched.filter((n) => TASK_SURFACE_TYPES.has(n.type)),
+    [unmatched],
+  );
+
+  return { unreadByTaskId: unreadByKey, otherUpdates, isLoading };
 }

@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, Shield, TrendingDown } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Timeline from "./timeline";
 import Milestone from "./milestone";
@@ -8,8 +8,27 @@ import { AddPhaseDialog } from "./AddPhaseDialog";
 import { AcceptBaselineDialog } from "./AcceptBaselineDialog";
 import { useRiskForecast, Severity } from "@/hooks/useRiskForecast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useMilestoneDisciplineAccess } from "@/hooks/useMilestones";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const tabs = ["Schedule", "Milestones", "Risk Forecast"];
+
+// Discipline axis — independent of the Schedule/Milestones/Risk Forecast tabs
+// above. It picks which discipline's phases/fees the active tab shows.
+const DISCIPLINES = [
+  { value: "construction", label: "Construction" },
+  { value: "architectural", label: "Architectural" },
+  { value: "engineering", label: "Engineering" },
+  { value: "quantity_surveying", label: "Quantity Surveying" },
+  { value: "other", label: "Other" },
+] as const;
 
 const Window = () => {
   // ── Deep link: /programme?milestone=<milestoneId> ─────────────────────────
@@ -45,6 +64,24 @@ const Window = () => {
 
   const projectId = localStorage.getItem("selectedProjectId");
 
+  const { canViewOtherDisciplines } = usePermissions();
+  const [discipline, setDiscipline] = useState(
+    () => localStorage.getItem("programmeDiscipline") || "construction"
+  );
+  useEffect(() => {
+    localStorage.setItem("programmeDiscipline", discipline);
+  }, [discipline]);
+
+  // Same authorization facts MilestoneListCreateView.post checks server-side
+  // — fetched once per project, compared against whichever discipline tab is
+  // active, so "Add Phase" never appears somewhere the backend would 403 it.
+  // Defaults to false while loading rather than flashing a button that then
+  // disappears.
+  const { data: disciplineAccess } = useMilestoneDisciplineAccess(projectId);
+  const canCreate =
+    !!disciplineAccess &&
+    (disciplineAccess.fullVisibility || discipline === disciplineAccess.ownDiscipline);
+
   return (
     <div className="space-y-0">
       {/* Shared "Add Phase" dialog — triggered from any tab */}
@@ -52,7 +89,31 @@ const Window = () => {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         projectId={projectId}
+        discipline={discipline}
       />
+
+      {/* Discipline picker — a Contractor (no cross-discipline permission)
+          never even mounts the Select, so this user can never issue a
+          request for another discipline's phases or fees. */}
+      <div className="flex items-center gap-2 py-3">
+        <span className="text-xs text-muted-foreground">Discipline</span>
+        {canViewOtherDisciplines ? (
+          <Select value={discipline} onValueChange={setDiscipline}>
+            <SelectTrigger className="w-48 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DISCIPLINES.map((d) => (
+                <SelectItem key={d.value} value={d.value}>
+                  {d.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-sm text-foreground font-medium">Construction</span>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-border">
@@ -75,6 +136,8 @@ const Window = () => {
         {activeTab === "Schedule" && (
           <Timeline
             projectId={projectId}
+            discipline={discipline}
+            canCreate={canCreate}
             onAddMilestone={() => setAddDialogOpen(true)}
           />
         )}
@@ -85,6 +148,8 @@ const Window = () => {
             </div>
             <Milestone
               projectId={projectId}
+              discipline={discipline}
+              canManage={canCreate}
               onAddMilestone={() => setAddDialogOpen(true)}
               selectedMilestoneId={milestoneParam}
             />

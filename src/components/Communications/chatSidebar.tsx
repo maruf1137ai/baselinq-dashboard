@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { Input } from "../ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import InviteMember from "../icons/InviteMember";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
+import { DOC_TYPES, DOC_TYPE_LABEL } from "@/components/task/TaskFilterBar";
 
 interface ChatSidebarProps {
   onNewChat: () => void;
@@ -18,7 +26,9 @@ interface ChatSidebarProps {
 export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelectTask }: ChatSidebarProps) {
   const [open, setOpen] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Unread'>('All');
+  const [typeFilter, setTypeFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState("");
+  const taskTypeOptions = DOC_TYPES.filter((t) => t !== 'All');
 
   // Sort by most-recent activity (newest first). Backend returns
   // `last_message_at` (latest chat message) and `updated_at` (any
@@ -57,9 +67,12 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
 
       if (!matchesSearch) return false;
 
-      // Tab filter
-      if (filter === 'All') return true;
-      if (filter === 'Unread') return (task.unread_count || 0) > 0;
+      // Task-type filter
+      if (typeFilter !== 'All' && (task.taskType || "") !== typeFilter) return false;
+
+      // Message filter
+      if (filter === 'Unread' && !((task.unread_count || 0) > 0)) return false;
+
       return true;
     })
     .sort((a, b) => channelActivityTs(b) - channelActivityTs(a));
@@ -73,6 +86,30 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
             <button className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
               <Plus className="h-4 w-4" />New Message
             </button>
+            <div className="flex items-center gap-2 mb-3">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-9 text-xs bg-card border-border rounded-lg flex-1">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Types</SelectItem>
+                  {taskTypeOptions.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {DOC_TYPE_LABEL[t] || t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filter} onValueChange={(v) => setFilter(v as 'All' | 'Unread')}>
+                <SelectTrigger className="h-9 text-xs bg-card border-border rounded-lg flex-1">
+                  <SelectValue placeholder="Messages" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All messages</SelectItem>
+                  <SelectItem value="Unread">Unread messages</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
