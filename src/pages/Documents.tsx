@@ -7,11 +7,11 @@ import { IssueRegisterModal } from '@/components/documents/IssueRegisterModal';
 import { PrimaryContractCard } from '@/components/documents/PrimaryContractCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, Plus, ChevronDown } from 'lucide-react';
+import { Search, Plus, ChevronDown, HelpCircle } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { VersionUploadModal } from '@/components/documents/VersionUploadModal';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchData, deleteData } from '@/lib/Api';
 import { toast } from 'sonner';
@@ -291,6 +291,16 @@ const DocumentsBrowser = ({ projectId, activeTab, setActiveTab }: DocumentsBrows
               : isSearching
                 ? `${allFilteredDocs.length} result${allFilteredDocs.length !== 1 ? 's' : ''}`
                 : `${activeCount} document${activeCount !== 1 ? 's' : ''}`
+          }
+          reference={
+            <Link
+              to="/help/documentation"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Who can view, upload, download, edit, and delete documents"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Document reference
+            </Link>
           }
           actions={
             <>

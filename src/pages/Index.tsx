@@ -33,10 +33,12 @@
  * contract clock. Work on the left, state on the right.
  *
  * The columns collapse to one below `lg`, the breakpoint the app already uses
- * (this file's own three-up reference band used `lg:grid-cols-3`).
- * `items-start` so a short queue does not stretch to the height of the risk
- * panel beside it — an empty "What needs you" is a good answer and should look
- * like a small one.
+ * (this file's own three-up reference band used `lg:grid-cols-3`). At `lg` the
+ * row is a fixed height and both columns fill it exactly — "What needs you" on
+ * one side, "Open risk" and "What changed" stacked in equal halves on the
+ * other — so the two columns start and end on the same line rather than
+ * trailing off at whatever height their own content happens to reach. Each
+ * panel scrolls its own rows within its share rather than growing the row.
  *
  * ── What was removed from this page, and why ─────────────────────────────
  *
@@ -323,15 +325,19 @@ const Index = () => {
 
             <PhaseCostProgressBlock projectId={projectId} />
 
-            <div className="grid gap-4 lg:grid-cols-2 items-start">
+            <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
               {/* Question 2: what do I have to do. */}
-              <div className="space-y-4">
+              <div className="space-y-4 lg:flex-1 lg:min-w-0 lg:h-full">
                 <ActionQueueBlock data={data} />
               </div>
               {/* What is true whether or not anybody acts today. */}
-              <div className="space-y-4">
-                <RiskConditionBlock data={data} />
-                <WhatChangedBlock feed={data.changeFeed} />
+              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
+                <div className="lg:flex-1 lg:min-h-0">
+                  <RiskConditionBlock data={data} />
+                </div>
+                <div className="lg:flex-1 lg:min-h-0">
+                  <WhatChangedBlock feed={data.changeFeed} />
+                </div>
               </div>
             </div>
           </>

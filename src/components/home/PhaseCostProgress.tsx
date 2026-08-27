@@ -358,7 +358,7 @@ function PhaseCostProgressCard({
 
 export function PhaseCostProgressBlock({ projectId }: { projectId: string | undefined }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2 items-start">
+    <div className="grid gap-4 lg:grid-cols-2">
       <PhaseCostProgressCard projectId={projectId} group="construction" title="Construction" />
       <PhaseCostProgressCard projectId={projectId} group="professional" title="Professional" />
     </div>

@@ -9,7 +9,8 @@
  *   POST /api/tasks/signing-pin/verify/  → body { pin } (unused here)
  */
 import { useEffect, useState } from "react";
-import { KeyRound, ShieldCheck, ShieldAlert, Loader2, Briefcase } from "lucide-react";
+import { Link } from "react-router-dom";
+import { KeyRound, ShieldCheck, ShieldAlert, Loader2, Briefcase, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,16 @@ const Security = () => {
       <PageHeader
         title="Security"
         description="Manage account security, sessions, and authentication settings."
+        reference={
+          <Link
+            to="/help/settings"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            title="How the signing PIN and insurance broker actually work"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Settings reference
+          </Link>
+        }
       />
 
       {/* ── Signing PIN card ────────────────────────────────────────────── */}

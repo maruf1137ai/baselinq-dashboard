@@ -51,6 +51,7 @@ import { Link } from "react-router-dom";
 import { Panel } from "./blocks";
 import { relativeDays } from "@/lib/homeSignals";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 import type { ChangeFeed, ChangeItem } from "@/lib/homeChanges";
 
 /**
@@ -175,6 +176,11 @@ function changeFeedDisclosure(feed: ChangeFeed): string | undefined {
 }
 
 export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    feed.items,
+    5,
+  );
+
   if (feed.items.length === 0) {
     return (
       <Panel
@@ -209,9 +215,15 @@ export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
       lead={`${feed.items.length} recent · most consequential first`}
       hint={changeFeedDisclosure(feed)}
     >
-      {feed.items.map((item) => (
-        <ChangeRow key={item.key} item={item} />
-      ))}
+      <div
+        ref={containerRef}
+        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+      >
+        {visibleItems.map((item) => (
+          <ChangeRow key={item.key} item={item} />
+        ))}
+        {hasMore && <div ref={sentinelRef} />}
+      </div>
     </Panel>
   );
 }

@@ -20,7 +20,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -62,7 +62,7 @@ import {
   type ComplianceUrgency,
 } from "@/lib/compliance";
 import {
-  CalendarClock, CalendarOff, FileText, Paperclip, Search, Shield, ShieldAlert, ShieldQuestion,
+  CalendarClock, CalendarOff, FileText, HelpCircle, Paperclip, Search, Shield, ShieldAlert, ShieldQuestion,
 } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 
@@ -373,6 +373,16 @@ const Compliance = () => {
             other untabbed page's first content band. */}
         <PageHeader
           title="Compliance"
+          reference={
+            <Link
+              to="/help/compliance"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Who can open this page vs. who can see and act on what's inside it"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Compliance reference
+            </Link>
+          }
           actions={
             <div className="flex items-center gap-2">
               <Button

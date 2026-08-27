@@ -1,5 +1,7 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
 import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
 import MeetingsList from '@/components/meetings/meetingList';
 import { postData } from '@/lib/Api';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -41,7 +43,21 @@ const Meetings = () => {
       <div className="space-y-6">
         <PageHeader
           title="Meetings"
-          actions={canScheduleMeeting ? <ScheduleNewMeetingDialog onCreated={handleCreated} /> : undefined}
+          reference={
+            <Link
+              to="/help/meetings"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Who can schedule, update, and act on meetings, notes, and transcripts"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Meetings reference
+            </Link>
+          }
+          actions={
+            <div className="flex items-center gap-3">
+              {canScheduleMeeting && <ScheduleNewMeetingDialog onCreated={handleCreated} />}
+            </div>
+          }
         />
         <MeetingsList />
       </div>

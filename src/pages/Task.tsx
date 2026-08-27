@@ -968,7 +968,7 @@ export default function Task() {
             <PageHeader
               className="mb-6"
               title="Tasks"
-              actions={
+              reference={
                 <Link
                   to="/help/tasks"
                   className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

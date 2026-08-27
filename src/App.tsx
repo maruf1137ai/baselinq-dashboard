@@ -17,6 +17,13 @@ import CertificatePage from "./pages/CertificatePage";
 import Help from "./pages/Help";
 import HelpTasks from "./pages/HelpTasks";
 import HelpFinance from "./pages/HelpFinance";
+import HelpProgramme from "./pages/HelpProgramme";
+import HelpMeetings from "./pages/HelpMeetings";
+import HelpCommunication from "./pages/HelpCommunication";
+import HelpDocumentation from "./pages/HelpDocumentation";
+import HelpCompliance from "./pages/HelpCompliance";
+import HelpProjectHealth from "./pages/HelpProjectHealth";
+import HelpSettings from "./pages/HelpSettings";
 import ForgotPassword from "./pages/ForgotPassword";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
@@ -189,7 +196,10 @@ const App = () => (
             </ProtectedRoute>
           } />
           {/* Help hub — sidebar's "Help" link lands here, chooser between
-              the /help/tasks and /help/finance reference pages below. */}
+              the /help/tasks, /help/finance, /help/programme,
+              /help/meetings, /help/communication, /help/documentation,
+              /help/compliance, /help/project-health and /help/settings
+              reference pages below. */}
           <Route path="/help" element={
             <ProtectedRoute>
               <Help />
@@ -207,6 +217,64 @@ const App = () => (
           <Route path="/help/finance" element={
             <ProtectedRoute>
               <HelpFinance />
+            </ProtectedRoute>
+          } />
+          {/* Programme reference — who can do what in Schedule & Milestones,
+              Milestone Fees, Programme Baseline, Risk Forecast. No project
+              scope, same reasoning as /help/tasks. */}
+          <Route path="/help/programme" element={
+            <ProtectedRoute>
+              <HelpProgramme />
+            </ProtectedRoute>
+          } />
+          {/* Meetings reference — who can do what in Scheduling, Attendees,
+              Updating & Cancelling, AI Notes & Transcripts. No project
+              scope, same reasoning as /help/tasks. */}
+          <Route path="/help/meetings" element={
+            <ProtectedRoute>
+              <HelpMeetings />
+            </ProtectedRoute>
+          } />
+          {/* Communication reference — who can do what with Channels,
+              To & CC, Sending Messages & Attachments, Channel Membership.
+              No project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/communication" element={
+            <ProtectedRoute>
+              <HelpCommunication />
+            </ProtectedRoute>
+          } />
+          {/* Documentation reference — who can do what in Viewing Documents,
+              Uploading & Folders, Downloading & Previewing, Editing /
+              Versioning / Deleting. No project scope, same reasoning as
+              /help/tasks. */}
+          <Route path="/help/documentation" element={
+            <ProtectedRoute>
+              <HelpDocumentation />
+            </ProtectedRoute>
+          } />
+          {/* Compliance reference — who can open the page vs. who can see
+              and act on what's inside it (two different permissions). No
+              project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/compliance" element={
+            <ProtectedRoute>
+              <HelpCompliance />
+            </ProtectedRoute>
+          } />
+          {/* Project Health reference — who can open the page vs. who can
+              act on Risk Signals, Notice Deadlines, and the Insurer tab
+              (almost none of it is permission-gated). No project scope,
+              same reasoning as /help/tasks. */}
+          <Route path="/help/project-health" element={
+            <ProtectedRoute>
+              <HelpProjectHealth />
+            </ProtectedRoute>
+          } />
+          {/* Settings reference — User Management (add/edit/remove a team
+              member) and Security (signing PIN, insurance broker). No
+              project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/settings" element={
+            <ProtectedRoute>
+              <HelpSettings />
             </ProtectedRoute>
           } />
           <Route path="/compliance" element={

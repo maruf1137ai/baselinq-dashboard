@@ -81,6 +81,7 @@ import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import type { HomeData } from "@/hooks/useHomeData";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 
 import { Panel, RowDate, SectionHeading } from "./blocks";
 
@@ -133,15 +134,8 @@ const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
   { label: "Assigned to you", kinds: ["task"] },
 ];
 
-/**
- * A launcher, not a backlog.
- *
- * Jira's "Your work" hard-caps at 20 items with no "show more" for exactly
- * this reason, and Linear scales by removing things from view rather than by
- * paginating. Twelve is the cap here because the queue no longer carries risk
- * signals and a genuine action list this long is already a bad week.
- */
-const CAP = 12;
+/** Rows are revealed 10 at a time; scrolling to the bottom of the panel loads the next 10. */
+const PAGE_SIZE = 10;
 
 /**
  * The one chip on a row, and it is about the CLOCK, not a priority.
@@ -348,6 +342,12 @@ export function ActionQueueBlock({
 }) {
   const { queue, isLoading, loadIssue } = data;
   const summary = summariseQueue(queue);
+  // Hooks must run unconditionally, ahead of the loading/empty early returns
+  // below.
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    queue,
+    PAGE_SIZE,
+  );
 
   if (isLoading) {
     return (
@@ -387,22 +387,14 @@ export function ActionQueueBlock({
   }
 
   // Rows keep `rankQueue`'s order inside their section; sections keep theirs.
-  const shown = queue.slice(0, CAP);
   const rows: React.ReactNode[] = [];
   for (const section of SECTIONS) {
-    const items = shown.filter((i) => section.kinds.includes(i.kind));
+    const items = visibleItems.filter((i) => section.kinds.includes(i.kind));
     if (items.length === 0) continue; // Sections only appear when they apply.
     rows.push(
       <SectionHeading key={`h-${section.label}`} label={section.label} count={items.length} />,
     );
     for (const item of items) rows.push(<QueueRow key={item.key} item={item} />);
-  }
-  if (queue.length > shown.length) {
-    rows.push(
-      <p key="capped" className="px-4 py-2.5 text-xs text-muted-foreground">
-        {queue.length - shown.length} more not shown
-      </p>,
-    );
   }
 
   return (
@@ -422,7 +414,13 @@ export function ActionQueueBlock({
       height — weight and surface.
     */
     <Panel title={title} emphasis="primary" lead={queueLead(summary)}>
-      {rows}
+      <div
+        ref={containerRef}
+        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+      >
+        {rows}
+        {hasMore && <div ref={sentinelRef} />}
+      </div>
     </Panel>
   );
 }

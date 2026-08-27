@@ -90,7 +90,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
     filters.myItems;
 
   return (
-    <div className="flex items-center justify-between w-full gap-4 pb-6">
+    <div className="flex flex-wrap items-center justify-between w-full gap-4 pb-6">
       <div className="flex items-center gap-4 flex-wrap">
         {/* My Items / All Items toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
@@ -117,7 +117,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
 
         {/* Document type chips */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {DOC_TYPES.map(type => {
             const isActive = type === 'All' ? allSelected : (!allSelected && filters.docTypes.includes(type));
             const colors = DOC_TYPE_COLORS[type];
@@ -135,7 +135,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Assignee filter */}
         <Select
           value={filters.assignee}

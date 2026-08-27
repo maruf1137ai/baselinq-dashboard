@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { HelpCircle } from "lucide-react";
 import TeamMembersTable from "@/components/settings/teamMembersTable";
 import RolePermissions from "@/components/settings/Role&Permissions";
 import ApprovalChains from "@/components/settings/ApprovalChains";
@@ -29,6 +31,16 @@ const TeamManagement = () => {
       <PageHeader
         title="User Management"
         description="Manage users, roles, permissions, and approval workflows."
+        reference={
+          <Link
+            to="/help/settings"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            title="How adding, editing, and removing a user actually works"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Settings reference
+          </Link>
+        }
       />
       <div className="btns flex items-center gap-2 border-b border-border">
         {visibleTabs.map((btn) => (
