@@ -7,9 +7,9 @@ import useFetch from "@/hooks/useFetch";
 import { NOTIFICATIONS_CHANGED_EVENT } from "@/hooks/useUserEventSocket";
 import { useQueryClient } from "@tanstack/react-query";
 import { postData, fetchData } from "@/lib/Api";
-import { Loader2, Check, X, Hash, ChevronsUpDown } from "lucide-react";
+import { Loader2, Check, X, Hash, ChevronsUpDown, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -199,7 +199,19 @@ const Communications = () => {
             it lands on the same 80px line a `space-y-6` page's second band
             starts on. Previously `pb-4`, which put the divider at 73px. */}
         <div className="p-6 border-b border-border">
-          <PageHeader title="Communications" />
+          <PageHeader
+            title="Communications"
+            reference={
+              <Link
+                to="/help/communication"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                title="Who can create channels, use To & CC, and send messages"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Communication reference
+              </Link>
+            }
+          />
         </div>
         <div className="flex flex-1 overflow-hidden">
           <div className="border-r border-border bg-card flex-shrink-0">

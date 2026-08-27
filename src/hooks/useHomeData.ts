@@ -699,14 +699,11 @@ export function useHomeData(projectId: string | undefined) {
           buildTaskChanges(taskList),
         ],
         { canViewFinance, canViewCompliance },
-        // FOUR rows, and the number is a measurement rather than a taste.
-        //
-        // The page has to hold one screen at 1440px, and the right-hand column
-        // is what sets its height: the risk register plus this panel. Measured
-        // in the browser at 1440x900, each feed row is 45px and the page came
-        // to 901px at six rows and 856px at four. Four is what fits with the
-        // header, the band and the grid gaps counted in.
-        { limit: 4 },
+        // No `limit` here: the old fixed count was sized to a page that grew
+        // to fit its content and had to hold one screen. The panel now scrolls
+        // within its own fixed height instead, so the feed hands over
+        // everything still on the shelf and the panel decides how much of it
+        // to show at once.
       ),
     [
       certificateList,

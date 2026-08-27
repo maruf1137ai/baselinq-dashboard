@@ -14,7 +14,24 @@ export type NotificationType =
   | "task_assigned"
   | "meeting_invited"
   | "meeting_updated"
-  | "meeting_transcript_ready";
+  | "meeting_transcript_ready"
+  // Werner spec rev G — Tasks workflow events. Were missing here despite
+  // being live in the backend (notification/models.py) and grouped under
+  // notification/surfaces.py's "tasks" surface — the gap directly caused
+  // IC notices to be invisible on the Tasks board (useTaskUnreadNotifications
+  // couldn't recognize them as task-surface types to show in "Other updates").
+  | "gi_created"
+  | "ic_created"
+  | "claim_created"
+  | "ic_risk_high"
+  | "vo_auto_created"
+  | "vo_signoff_required"
+  | "escalation_overdue"
+  | "approval_requested"
+  | "approval_held"
+  | "approval_complete"
+  | "approval_rejected"
+  | "approval_info_requested";
 
 export interface Notification {
   _id: string;

@@ -3,7 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
-import { postData, deleteData } from "@/lib/Api";
+import { postData, deleteData, registerS3TaskAttachment } from "@/lib/Api";
+import { useS3Upload } from "@/hooks/useS3Upload";
+import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -102,7 +104,54 @@ export interface PCEntry {
   retentionApplies?: boolean;
   workItems?: { thisPeriod: number }[];
   voItems?: { thisPeriod: number; included: boolean }[];
+  /**
+   * The formal certificate PDF/invoice attached at creation, plus anything
+   * registered afterwards (e.g. the Contractor's invoice, once Approved) —
+   * see PaymentCertificateSerializer.get_attachments on the backend. Read
+   * defensively via `attachmentsOf` below, same convention as every other
+   * server field on this entry.
+   */
+  attachments?: PCAttachment[];
 }
+
+/**
+ * One row from PaymentCertificateSerializer.get_attachments →
+ * TaskAttachmentSerializer. That serializer builds its own output dict by
+ * hand (not via DRF's field declarations), so — unlike most fields on
+ * PCEntry — these keys are ALWAYS exactly this camelCase, never
+ * snake_case, regardless of endpoint: id, fileName, fileType, url,
+ * s3Key, uploadedAt. Notably the link key is "url", not "fileUrl", and
+ * there is no uploader field in the response at all (uploaded_by is on the
+ * model but the serializer never emits it) — uploadedBy stays optional and
+ * is simply absent until the backend adds it.
+ */
+export interface PCAttachment {
+  id: string | number;
+  fileName: string;
+  fileType?: string | null;
+  fileUrl: string;
+  s3Key?: string | null;
+  uploadedBy?: string | null;
+  uploadedAt?: string | null;
+}
+
+/** Server fields also arrive snake_cased depending on the endpoint — same
+ *  defensive read as serverNumber below, applied per-attachment. The link
+ *  key is normalised from "url" (what the serializer actually sends) to
+ *  "fileUrl" here so the rest of this file only ever reads one name. */
+const attachmentsOf = (entry: PCEntry): PCAttachment[] => {
+  const raw = entry.attachments ?? (entry as any).attachments;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((a: any) => ({
+    id: a.id,
+    fileName: a.fileName ?? a.file_name ?? "Attachment",
+    fileType: a.fileType ?? a.file_type ?? null,
+    fileUrl: a.url ?? a.fileUrl ?? a.file_url ?? "",
+    s3Key: a.s3Key ?? a.s3_key ?? null,
+    uploadedBy: a.uploadedBy ?? a.uploaded_by ?? null,
+    uploadedAt: a.uploadedAt ?? a.uploaded_at ?? null,
+  }));
+};
 
 /** Server fields also arrive snake_cased depending on the endpoint. */
 const serverNumber = (entry: PCEntry, camel: string, snake: string): number | null => {
@@ -657,6 +706,54 @@ const PCDetailsDialog = ({
   onTransitionClick: (transition: string) => void;
   onDeleteClick: () => void;
 }) => {
+  const queryClient = useQueryClient();
+
+  // The Contractor's invoice — attachable only once the certificate is
+  // Approved/Posted; a Draft/Submitted/Rejected/Cancelled certificate has no
+  // approved claim yet to invoice against, and creation-time attachment is
+  // already covered by createPCDrawer.tsx's own Attachments section.
+  const canAttachInvoice = entry.workflowState === "approved" || entry.workflowState === "posted";
+  // Scoped to this dialog instance only — mirrors createPCDrawer.tsx's
+  // s3Upload state, simplified: there is no form submit here, so uploads are
+  // registered against the certificate as soon as the operator confirms,
+  // rather than deferred to a later step.
+  const s3Upload = useS3Upload("task-attachments/pending");
+  const [isAttaching, setIsAttaching] = useState(false);
+
+  const handleAttachUpload = async () => {
+    if (!s3Upload.entries.length || isAttaching) return;
+    setIsAttaching(true);
+    const ids = s3Upload.entries.map((e) => e.id);
+    const s3Keys = await s3Upload.waitForAll(ids);
+    let anySucceeded = false;
+    await Promise.all(
+      s3Upload.entries.map(async (e) => {
+        const key = s3Keys.get(e.id);
+        if (!key) return; // upload itself already surfaced its own error
+        try {
+          await registerS3TaskAttachment("payment-certificates", entry.id, {
+            file_name: e.file.name,
+            s3_key: key,
+          });
+          s3Upload.removeEntry(e.id);
+          anySucceeded = true;
+        } catch (err: any) {
+          toast.error(
+            `${e.file.name}: ${err?.response?.data?.error || err?.message || "could not be attached."}`
+          );
+        }
+      })
+    );
+    if (anySucceeded) {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          typeof query.queryKey[0] === "string" &&
+          query.queryKey[0].startsWith("tasks/payment-certificates"),
+      });
+    }
+    setIsAttaching(false);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -772,6 +869,59 @@ const PCDetailsDialog = ({
                 These figures were stored as submitted — the server did not
                 recompute them from the project's retention and VAT rates.
               </p>
+            )}
+          </div>
+
+          {/* Attachments — the formal certificate PDF attached at creation,
+              plus (once Approved/Posted) the Contractor's invoice. */}
+          <div className="mt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Attachments
+            </p>
+            {attachmentsOf(entry).length > 0 ? (
+              <ul className="space-y-1.5">
+                {attachmentsOf(entry).map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <a
+                      href={a.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline truncate"
+                    >
+                      {a.fileName}
+                    </a>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {a.uploadedBy ? `${a.uploadedBy} — ` : ""}
+                      {a.uploadedAt ? formatDate(a.uploadedAt) : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No attachments yet</p>
+            )}
+
+            {canAttachInvoice && (
+              <div className="mt-3">
+                <S3AttachmentSection
+                  s3Upload={s3Upload}
+                  inputId={`pc-invoice-${entry.id}`}
+                  label="Attach invoice"
+                />
+                {s3Upload.entries.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAttachUpload}
+                    disabled={isAttaching || s3Upload.hasUploading}
+                    className="mt-2 h-9 px-4 text-sm text-primary-foreground bg-primary rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isAttaching ? "Attaching…" : "Attach to certificate"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

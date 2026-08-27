@@ -6,9 +6,12 @@ import { X, User, Users } from 'lucide-react';
 // Werner rev H — full set of contractual doc types per the spec.
 // GI / IC / DC (display: Claim) were missing from the original filter
 // bar, which caused them to be excluded from the board view by default.
-const DOC_TYPES = ['All', 'VO', 'RFI', 'SI', 'GI', 'IC', 'DC', 'CPI'] as const;
+// Exported — the Communications channel-list filter (chatSidebar.tsx)
+// reuses this same taxonomy rather than re-deriving it, since it matches
+// channel.taskType exactly (backend/channel/serializers.py::TASK_MODEL_TO_TYPE).
+export const DOC_TYPES = ['All', 'VO', 'RFI', 'SI', 'GI', 'IC', 'DC', 'CPI'] as const;
 
-const DOC_TYPE_LABEL: Record<string, string> = {
+export const DOC_TYPE_LABEL: Record<string, string> = {
   // DC is the backend code for delay claim; Werner labels it as "Claim"
   // on the UI side. Other types display by their three-letter code.
   DC: 'Claim',
@@ -87,7 +90,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
     filters.myItems;
 
   return (
-    <div className="flex items-center justify-between w-full gap-4 pb-6">
+    <div className="flex flex-wrap items-center justify-between w-full gap-4 pb-6">
       <div className="flex items-center gap-4 flex-wrap">
         {/* My Items / All Items toggle */}
         <div className="flex items-center bg-muted rounded-lg p-0.5">
@@ -114,7 +117,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
 
         {/* Document type chips */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {DOC_TYPES.map(type => {
             const isActive = type === 'All' ? allSelected : (!allSelected && filters.docTypes.includes(type));
             const colors = DOC_TYPE_COLORS[type];
@@ -132,7 +135,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Assignee filter */}
         <Select
           value={filters.assignee}

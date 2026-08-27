@@ -130,6 +130,13 @@ export function usePermissions() {
     canViewCompliance:     perm("compliance.view"),
     canViewAudit:          perm("audit.view"),
     canViewProgramme:      perm("programme.view"),
+    // full_visibility (fees.view_all) implies can-view-other, same invariant
+    // discipline.py::visibility_context() enforces server-side — without the
+    // OR here, a role granted only fees.view_all (e.g. PRINCIPAL_PM) sees no
+    // discipline picker at all, even though the backend already serves them
+    // every discipline's data.
+    canViewOtherDisciplines:  perm("programme.discipline.other.view") || perm("programme.discipline.fees.view_all"),
+    canViewAllDisciplineFees: perm("programme.discipline.fees.view_all"),
     // Settings — 3 primary flags
     canViewSettings,
     canEditSettings,

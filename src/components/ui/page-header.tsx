@@ -41,6 +41,10 @@
  *   <PageHeader title="Documents" />
  *   <PageHeader title="Finance" description="…" actions={<Button/>} />
  *   <PageHeader title="Documents" meta={<span>12 documents</span>} />
+ *   <PageHeader title="Documents" reference={<Link>Document reference</Link>} actions={<Button/>} />
+ *
+ * `reference` renders on the title row (top-right, next to the title block).
+ * `actions` renders on its own row below — buttons, filters, search, etc.
  */
 import * as React from "react";
 
@@ -66,8 +70,10 @@ export interface PageHeaderProps
    * so pages that need it don't have to hand-roll the whole header back.
    */
   meta?: React.ReactNode;
-  /** Right-aligned controls — buttons, filters, etc. */
+  /** Second-row controls — buttons, filters, search, etc. */
   actions?: React.ReactNode;
+  /** Right-aligned on the title row — the "? X reference" help link. */
+  reference?: React.ReactNode;
 }
 
 export function PageHeader({
@@ -75,23 +81,29 @@ export function PageHeader({
   description,
   meta,
   actions,
+  reference,
   className,
   ...props
 }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-4", className)} {...props}>
-      <div className="min-w-0">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h1 className="text-2xl font-normal tracking-tight text-foreground">
-            {title}
-          </h1>
-          {meta && <span className="text-sm text-muted-foreground">{meta}</span>}
+    <div className={cn(className)} {...props}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">
+              {title}
+            </h1>
+            {meta && <span className="text-sm text-muted-foreground">{meta}</span>}
+          </div>
+          {description && (
+            <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          )}
         </div>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        )}
+        {reference && <div className="shrink-0">{reference}</div>}
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex items-center justify-end gap-2 mt-3">{actions}</div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,16 @@
 /**
  * Help hub — landing page for the sidebar's "Help" link.
  *
- * Just a chooser between the two plain-English reference pages:
- * HelpTasks.tsx (/help/tasks) and HelpFinance.tsx (/help/finance).
- * Add a new card here whenever a new /help/<area> reference page ships.
+ * Just a chooser between the plain-English reference pages: HelpTasks.tsx
+ * (/help/tasks), HelpFinance.tsx (/help/finance), HelpProgramme.tsx
+ * (/help/programme), HelpMeetings.tsx (/help/meetings), HelpCommunication.tsx
+ * (/help/communication), HelpDocumentation.tsx (/help/documentation),
+ * HelpCompliance.tsx (/help/compliance), HelpProjectHealth.tsx
+ * (/help/project-health), HelpSettings.tsx (/help/settings). Add a new
+ * card here whenever a new /help/<area> reference page ships.
  */
 import { Link } from "react-router-dom";
-import { ClipboardList, Wallet, ChevronRight } from "lucide-react";
+import { ClipboardList, Wallet, CalendarClock, Users, MessageSquare, FileText, ShieldCheck, HeartPulse, UserCog, ChevronRight } from "lucide-react";
 
 const OPTIONS = [
   {
@@ -22,6 +26,55 @@ const OPTIONS = [
     title: "Finance",
     description:
       "Cost Ledger, Variation Orders, Payment Certificates, Platform Fees — who can do what, and when.",
+  },
+  {
+    to: "/help/programme",
+    icon: CalendarClock,
+    title: "Programme",
+    description:
+      "Schedule & Milestones, Milestone Fees, Programme Baseline, Risk Forecast — who can do what, and when.",
+  },
+  {
+    to: "/help/meetings",
+    icon: Users,
+    title: "Meetings",
+    description:
+      "Scheduling, Attendees, Updating & Cancelling, AI Notes & Transcripts — who can do what, and when.",
+  },
+  {
+    to: "/help/communication",
+    icon: MessageSquare,
+    title: "Communication",
+    description:
+      "Channels, To & CC, Sending Messages & Attachments, Channel Membership — who can do what, and when.",
+  },
+  {
+    to: "/help/documentation",
+    icon: FileText,
+    title: "Documentation",
+    description:
+      "Viewing Documents, Uploading & Folders, Downloading & Previewing, Editing / Versioning / Deleting — who can do what, and when.",
+  },
+  {
+    to: "/help/compliance",
+    icon: ShieldCheck,
+    title: "Compliance",
+    description:
+      "Obligations, evidence, and notices — who can open the page, and (separately) who can see and act on what's inside it.",
+  },
+  {
+    to: "/help/project-health",
+    icon: HeartPulse,
+    title: "Project Health",
+    description:
+      "Risk Signals, Notice Deadlines, the Insurer tab, Commercial Position — who can open the page, and where the real restrictions actually are.",
+  },
+  {
+    to: "/help/settings",
+    icon: UserCog,
+    title: "Settings",
+    description:
+      "User Management (add/edit/remove) and Security (signing PIN, insurance broker) — who can do what, and when.",
   },
 ];
 

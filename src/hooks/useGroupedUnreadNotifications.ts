@@ -69,5 +69,14 @@ export function useGroupedUnreadNotifications(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveData, resolveKey]);
 
-  return { unreadByKey, isLoading: query.isLoading };
+  // Notifications resolveKey couldn't attach to anything — still unread,
+  // still counted by the sidebar badge, but otherwise invisible on a
+  // per-item surface unless the caller does something with this list.
+  const unmatched = useMemo(
+    () => (effectiveData ?? []).filter((n) => !resolveKey(n)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [effectiveData, resolveKey],
+  );
+
+  return { unreadByKey, unmatched, isLoading: query.isLoading };
 }

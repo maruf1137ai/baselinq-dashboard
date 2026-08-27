@@ -56,7 +56,7 @@
  * `lib/projectPosition.ts`.
  */
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
-import { CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
+import { CheckCircle2, HelpCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -292,7 +292,18 @@ export default function ProjectHealth() {
             and Programme's. */}
         <PageHeader
           title="Project Health"
+          reference={
+            <Link
+              to="/help/project-health"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Who can open this page vs. who can act on Risk Signals, Notice Deadlines, and the Insurer tab"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Project Health reference
+            </Link>
+          }
           actions={
+            <div className="flex items-center gap-3">
             <Button
               variant="outline"
               className="h-8 text-xs rounded-lg"
@@ -302,6 +313,7 @@ export default function ProjectHealth() {
               <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
               Refresh
             </Button>
+            </div>
           }
         />
 

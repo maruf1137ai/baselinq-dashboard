@@ -19,6 +19,7 @@
  * socket can't be established.
  */
 import { useEffect, useRef } from "react";
+import { getWsBase } from "@/lib/ws";
 
 /** Fired on every server push. useUnreadSummary listens for this. */
 export const NOTIFICATIONS_CHANGED_EVENT = "notifications-changed";
@@ -54,18 +55,6 @@ export function getSocketHealthy() {
   return socketHealthy;
 }
 
-function resolveWsBase(): string {
-  try {
-    const apiUrl = new URL(
-      import.meta.env.VITE_API_BASE_URL || "/",
-      window.location.origin
-    );
-    return `${apiUrl.protocol === "https:" ? "wss:" : "ws:"}//${apiUrl.host}`;
-  } catch {
-    return `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
-  }
-}
-
 export function useUserEventSocket(onPing?: () => void) {
   // Held in a ref so reconnects always call the latest handler without
   // tearing down and re-establishing the socket on every render.
@@ -85,7 +74,7 @@ export function useUserEventSocket(onPing?: () => void) {
       if (!token) return;
 
       try {
-        ws = new WebSocket(`${resolveWsBase()}/ws/user/?token=${encodeURIComponent(token)}`);
+        ws = new WebSocket(`${getWsBase()}/ws/user/?token=${encodeURIComponent(token)}`);
       } catch {
         return;
       }

@@ -80,6 +80,7 @@ import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { SETUP_LABELS } from "@/lib/homeSetup";
 import { cn } from "@/lib/utils";
 import type { HomeData } from "@/hooks/useHomeData";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 
 // ── Shared chrome ─────────────────────────────────────────────────────────
 
@@ -185,10 +186,10 @@ export function Panel({
     !(Array.isArray(children) && children.length === 0);
 
   return (
-    <section className="bg-card border border-border rounded-xl overflow-hidden">
+    <section className="bg-card border border-border rounded-xl overflow-hidden lg:flex lg:flex-col lg:h-full">
       <header
         className={cn(
-          "flex items-center justify-between gap-3 px-4 py-3",
+          "flex items-center justify-between gap-3 px-4 py-3 lg:shrink-0",
           // The recessed header. `bg-muted/50` is the well fill this page
           // already uses for `SectionHeading`, at the same opacity, so a
           // reference panel's header and its own heading strips are one
@@ -246,7 +247,11 @@ export function Panel({
 
       {/* No body at all when there is nothing to list: an empty section is its
           header, and the lead or hint above has already said so. */}
-      {hasBody && <div className="border-t border-border divide-y divide-border">{children}</div>}
+      {hasBody && (
+        <div className="border-t border-border divide-y divide-border lg:flex-1 lg:min-h-0">
+          {children}
+        </div>
+      )}
     </section>
   );
 }
@@ -611,6 +616,32 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 export function RiskConditionBlock({ data }: { data: HomeData }) {
   const { riskGroups, riskCounts, riskUnavailable } = data;
 
+  // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
+  // governs, and only the worst tier present is drawn in colour. Groups
+  // already arrive worst-first from `groupRiskSignals`, so a single pass in
+  // fixed tier order preserves that order exactly — no re-sorting here.
+  const TIERS = [
+    { severity: "red" as const, label: "Critical" },
+    { severity: "orange" as const, label: "Warning" },
+    { severity: "green" as const, label: "Advisory" },
+  ];
+  const present = TIERS.map((t) => ({
+    ...t,
+    groups: riskGroups.filter((g) => g.severity === t.severity),
+  })).filter((t) => t.groups.length > 0);
+
+  // Flattened, tier-tagged, worst-first — the order `present` already carries
+  // — so pagination can walk it as one continuous list and still know which
+  // tier boundary it just crossed.
+  const orderedGroups = present.flatMap((tier) =>
+    tier.groups.map((g) => ({ ...g, tierLabel: tier.label, tierSeverity: tier.severity })),
+  );
+  // Hooks must run unconditionally, ahead of the early returns below.
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    orderedGroups,
+    5,
+  );
+
   // An outage must never read as "healthy".
   if (riskUnavailable) {
     return (
@@ -626,19 +657,9 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 
   if (riskGroups.length === 0) return null;
 
-  // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
-  // governs, and only the worst tier present is drawn in colour. Groups
-  // already arrive worst-first from `groupRiskSignals`, so a single pass in
-  // fixed tier order preserves that order exactly — no re-sorting here.
-  const TIERS = [
-    { severity: "red" as const, label: "Critical" },
-    { severity: "orange" as const, label: "Warning" },
-    { severity: "green" as const, label: "Advisory" },
-  ];
-  const present = TIERS.map((t) => ({
-    ...t,
-    groups: riskGroups.filter((g) => g.severity === t.severity),
-  })).filter((t) => t.groups.length > 0);
+  const tierCount = new Map(
+    present.map((t) => [t.label, t.groups.reduce((n, g) => n + g.count, 0)]),
+  );
 
   // The worst tier is named in the panel header rather than in a heading
   // strip of its own. Two reasons, and the second is the one that decided it:
@@ -686,18 +707,22 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
         `text-destructive` and `text-muted-foreground` are the tokens. The
         raw `red-700` / `amber-700` palette classes this block used are gone.
       */}
-      {present.flatMap((tier, tierIndex) => [
-        // The worst tier is already named in the header, so no strip for it.
-        // Every LOWER tier gets one, always muted: rule 3 says only the worst
-        // tier present is drawn in colour, and it has already been drawn.
-        tierIndex === 0 ? null : (
-          <SectionHeading
-            key={`h-${tier.severity}`}
-            label={tier.label}
-            count={tier.groups.reduce((n, g) => n + g.count, 0)}
-          />
-        ),
-        ...tier.groups.map((g) => (
+      <div
+        ref={containerRef}
+        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+      >
+        {visibleItems.flatMap((g, index) => [
+          // The worst tier is already named in the header, so no strip for it.
+          // Every LOWER tier gets one, always muted, the first time it's
+          // reached: rule 3 says only the worst tier present is drawn in
+          // colour, and it has already been drawn.
+          index > 0 && g.tierLabel !== visibleItems[index - 1].tierLabel ? (
+            <SectionHeading
+              key={`h-${g.tierSeverity}`}
+              label={g.tierLabel}
+              count={tierCount.get(g.tierLabel)}
+            />
+          ) : null,
           <Link
             key={g.code}
             /*
@@ -781,9 +806,10 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               and only the queue has clocks.** That is the rule; a future count,
               rating or status pill on a risk row breaks it.
             */}
-          </Link>
-        )),
-      ])}
+          </Link>,
+        ])}
+        {hasMore && <div ref={sentinelRef} />}
+      </div>
     </Panel>
   );
 }
