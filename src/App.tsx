@@ -24,6 +24,7 @@ import HelpDocumentation from "./pages/HelpDocumentation";
 import HelpCompliance from "./pages/HelpCompliance";
 import HelpProjectHealth from "./pages/HelpProjectHealth";
 import HelpSettings from "./pages/HelpSettings";
+import RolesPermissions from "./pages/RolesPermissions";
 import ForgotPassword from "./pages/ForgotPassword";
 import Meetings from "./pages/meetings";
 import MeetingDetails from "./pages/meetingDetails";
@@ -275,6 +276,13 @@ const App = () => (
           <Route path="/help/settings" element={
             <ProtectedRoute>
               <HelpSettings />
+            </ProtectedRoute>
+          } />
+          {/* Roles & Permissions — sidebar entry after Help. Content still to
+              be decided; the route exists so the navigation is in place. */}
+          <Route path="/roles-permissions" element={
+            <ProtectedRoute>
+              <RolesPermissions />
             </ProtectedRoute>
           } />
           <Route path="/compliance" element={
