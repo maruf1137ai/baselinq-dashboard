@@ -52,6 +52,49 @@ const PERMISSIONS = [
     is_system: true,
     is_project_scoped: true,
   },
+  // Three task creates, so the "Create tasks (general access)" parent has
+  // something to aggregate. Two start granted, one denied — the partial state.
+  {
+    id: 10,
+    code: "task.rfi.create",
+    group: "task",
+    subgroup: "RFI",
+    label: "Raise an RFI",
+    description: "Ask a formal question.",
+    is_system: true,
+    is_project_scoped: true,
+  },
+  {
+    id: 11,
+    code: "task.si.create",
+    group: "task",
+    subgroup: "SI",
+    label: "Issue a Site Instruction",
+    description: "Instruct the contractor.",
+    is_system: true,
+    is_project_scoped: true,
+  },
+  {
+    id: 12,
+    code: "task.vo.create",
+    group: "task",
+    subgroup: "VO",
+    label: "Create a Variation Order",
+    description: "Start a contract change.",
+    is_system: true,
+    is_project_scoped: true,
+  },
+  // The catch-all. It must never render as a row of its own.
+  {
+    id: 13,
+    code: "task.create",
+    group: "task",
+    subgroup: "RFI",
+    label: "Create tasks (general access)",
+    description: "Legacy catch-all.",
+    is_system: true,
+    is_project_scoped: true,
+  },
   {
     id: 3,
     code: "project.create",
@@ -79,7 +122,13 @@ const MATRIX: RoleMatrix = {
   orgMatrix: { "finance.view": true, "finance.approve_certificate": true },
   projectOverrides: { "finance.approve_certificate": false },
   layers: {
-    global: { "finance.view": true, "finance.approve_certificate": true },
+    global: {
+      "finance.view": true,
+      "finance.approve_certificate": true,
+      "task.rfi.create": true,
+      "task.si.create": true,
+      "task.vo.create": false,
+    },
     org: {},
     // The reversal: granted globally, revoked on THIS project.
     project: { "finance.approve_certificate": false },
@@ -142,6 +191,13 @@ const renderPage = () => {
 
 beforeEach(() => saveMutate.mockClear());
 
+/** Open one area by name. The page opens on whichever sorts first, so any test
+ *  about a specific area has to say so rather than assume. */
+const openArea = async (user: ReturnType<typeof userEvent.setup>, name: RegExp) => {
+  const rail = await screen.findByRole("navigation", { name: /permission areas/i });
+  await user.click(within(rail).getByRole("button", { name }));
+};
+
 /* ── Resolution ───────────────────────────────────────────────────────────── */
 
 describe("three-layer resolution", () => {
@@ -179,8 +235,10 @@ describe("three-layer resolution", () => {
 /* ── Rendering ────────────────────────────────────────────────────────────── */
 
 describe("Roles & Permissions", () => {
-  it("mounts and shows the first area's parts with their plain-English wording", async () => {
+  it("mounts and shows an area's parts with their plain-English wording", async () => {
+    const user = userEvent.setup();
     renderPage();
+    await openArea(user, /Finance/);
 
     expect(
       await screen.findByRole("heading", { level: 3, name: "Cost Ledger" }),
@@ -223,6 +281,7 @@ describe("saving", () => {
   it("sends only what changed, scoped to the selected project", async () => {
     const user = userEvent.setup();
     renderPage();
+    await openArea(user, /Finance/);
 
     const toggle = await screen.findByRole("switch", { name: /See the finance area/i });
     await user.click(toggle);
@@ -241,6 +300,7 @@ describe("saving", () => {
   it("stops counting a change once it is toggled back to where it started", async () => {
     const user = userEvent.setup();
     renderPage();
+    await openArea(user, /Finance/);
 
     const toggle = await screen.findByRole("switch", { name: /See the finance area/i });
     await user.click(toggle);
@@ -249,5 +309,80 @@ describe("saving", () => {
     await user.click(toggle);
     expect(screen.queryByText(/unsaved change/i)).toBeNull();
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+  });
+});
+
+/* ── The "Create tasks (general access)" parent ───────────────────────────── */
+
+describe("the create-everything control", () => {
+  const openTasks = (user: ReturnType<typeof userEvent.setup>) => openArea(user, /Tasks/);
+
+  it("shows as partly selected when only some types are granted", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openTasks(user);
+
+    const master = await screen.findByRole("checkbox", { name: /create every type/i });
+    // Two of three on — neither checked nor unchecked, and a switch could not
+    // have said so.
+    expect(master).toHaveAttribute("data-state", "indeterminate");
+    expect(screen.getByText(/2 of 3 types/i)).toBeInTheDocument();
+  });
+
+  it("turns every create on in one click", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openTasks(user);
+
+    await user.click(await screen.findByRole("checkbox", { name: /create every type/i }));
+
+    for (const label of [
+      /Raise an RFI/i,
+      /Issue a Site Instruction/i,
+      /Create a Variation Order/i,
+    ]) {
+      expect(screen.getByRole("switch", { name: label })).toBeChecked();
+    }
+    expect(screen.getByText(/3 of 3 types/i)).toBeInTheDocument();
+  });
+
+  it("counts only the types it actually changed", async () => {
+    /*
+     * Two of three were already on, so switching all on is ONE change. Counting
+     * three would send project overrides for two permissions nobody touched.
+     */
+    const user = userEvent.setup();
+    renderPage();
+    await openTasks(user);
+
+    await user.click(await screen.findByRole("checkbox", { name: /create every type/i }));
+
+    expect(screen.getByText(/1 unsaved change/i)).toBeInTheDocument();
+  });
+
+  it("clears back to nothing unsaved when switched off again", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openTasks(user);
+
+    const master = await screen.findByRole("checkbox", { name: /create every type/i });
+    await user.click(master); // all on  — 1 change
+    await user.click(master); // all off — 2 changes (the two that were on)
+
+    expect(screen.getByText(/2 unsaved changes/i)).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /Raise an RFI/i })).not.toBeChecked();
+  });
+
+  it("never renders the superseded catch-all as its own row", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openTasks(user);
+
+    await screen.findByRole("checkbox", { name: /create every type/i });
+    // The parent's own label is on the control; task.create must not also
+    // appear as a switch, or the two could be set to contradict each other.
+    expect(
+      screen.queryByRole("switch", { name: /Create tasks \(general access\)/i }),
+    ).toBeNull();
   });
 });

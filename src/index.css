@@ -354,3 +354,18 @@ body{
   opacity: 0.3;
   border-color: #A5B4FC;
 }
+
+/* Help reference pages (/help/tasks, /help/finance, …) navigate between their
+   sections with #anchor links, which the browser jumps to instantly by default.
+   Animate the jump instead. Scoped with :has() to those pages only, so the rest
+   of the app keeps its instant scrollIntoView behaviour (linked table rows in
+   Compliance, Programme, Finance rely on that). */
+html:has(.help-reference-page) {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.help-reference-page) {
+    scroll-behavior: auto;
+  }
+}

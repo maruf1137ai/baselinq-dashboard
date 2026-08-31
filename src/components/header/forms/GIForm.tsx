@@ -19,6 +19,7 @@ import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { TASK_TYPE_ROLE_RULES, CONTRACTOR_CODES } from "@/lib/roleGroups";
+import { useAutoCcRoles } from "@/hooks/useAutoCcRoles";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { registerS3TaskAttachment } from "@/lib/Api";
@@ -54,6 +55,10 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
   const [meta, setMeta] = useState<TaskMetaValue>(
     draft?.meta ?? { to: [], cc: [], dateRequired: "" }
   );
+
+  // Roles configured to be copied in on a new General Instruction, from the
+  // permission matrix rather than a hardcoded list.
+  const autoCcRoles = useAutoCcRoles("gi");
 
   // Keep the draft in sync so "minimize" can restore it later.
   useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, { formData, meta });
@@ -228,7 +233,7 @@ export default function GIForm({ setOpen, initialStatus, initialData, taskId }: 
               ? CONTRACTOR_CODES
               : TASK_TYPE_ROLE_RULES.gi.toRoleFilter
           }
-          ccAutoRoles={TASK_TYPE_ROLE_RULES.gi.ccAutoRoles}
+          ccAutoRoles={autoCcRoles}
           defaultDueDays={7}
         />
 

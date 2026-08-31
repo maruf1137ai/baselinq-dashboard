@@ -18,7 +18,7 @@ const OPTIONS = [
     icon: ClipboardList,
     title: "Tasks",
     description:
-      "RFI, SI, VO, IC, DC, GI, CPI — who can create, reply, sign, approve, close, or escalate each one.",
+      "RFI, SI, VO, IC, DC, GI — who can create, reply, sign, approve, close, or escalate each one.",
   },
   {
     to: "/help/finance",

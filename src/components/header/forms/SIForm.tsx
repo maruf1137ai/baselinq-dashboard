@@ -20,6 +20,7 @@ import { usePatch } from "@/hooks/usePatch";
 import useFetch from "@/hooks/useFetch";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
+import { useAutoCcRoles } from "@/hooks/useAutoCcRoles";
 import { registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
@@ -79,6 +80,10 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
   const [meta, setMeta] = useState<TaskMetaValue>(
     draft?.meta ?? { to: [], cc: [], dateRequired: "" }
   );
+
+  // Roles configured to be copied in on a new Site Instruction, from the
+  // permission matrix rather than a hardcoded list.
+  const autoCcRoles = useAutoCcRoles("si");
 
   // Keep the draft in sync so "minimize" can restore it later.
   useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, { formData, meta });
@@ -350,7 +355,7 @@ export default function SIForm({ setOpen, initialStatus, initialData, taskId }: 
         toLabel="To (contractor)"
         showDateRequired={false}
         toRoleFilter={TASK_TYPE_ROLE_RULES.si.toRoleFilter}
-        ccAutoRoles={TASK_TYPE_ROLE_RULES.si.ccAutoRoles}
+        ccAutoRoles={autoCcRoles}
       />
 
       <div>

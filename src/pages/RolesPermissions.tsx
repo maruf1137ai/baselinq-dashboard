@@ -56,6 +56,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -111,10 +112,18 @@ const AREAS: Record<string, { title: string; icon: AreaIcon; help: string | null
 
 const AREA_ORDER = Object.keys(AREAS);
 
+/**
+ * What the badge on a row says — where the answer came FROM, not who it
+ * applies to.
+ *
+ * "This project" read as scope, which the page header already states, so it
+ * looked like the same sentence twice. "Changed here" says the thing the
+ * header does not: this row is not on its default any more, somebody moved it.
+ */
 const ORIGIN_LABEL: Record<Layer, string> = {
   global: "Default",
-  org: "Organisation",
-  project: "This project",
+  org: "From organisation",
+  project: "Changed here",
 };
 
 /* ── Small pieces ─────────────────────────────────────────────────────────── */
@@ -285,12 +294,21 @@ export default function RolesPermissions() {
 
   const area = selectedArea && areas.includes(selectedArea) ? selectedArea : areas[0] ?? null;
 
+  /**
+   * The catch-all create permission is rendered as a parent control over the
+   * per-type creates rather than as a row of its own — see MASTER_CREATE.
+   * Nothing reads it, so showing it as an eighth switch would only invite the
+   * question of what happens when it disagrees with the seven.
+   */
+  const SUPERSEDED = "task.create";
+
   /** Permissions of the open area, grouped into their sub-parts, order preserved. */
   const parts = useMemo(() => {
     const out: { title: string; permissions: ApiPermission[] }[] = [];
     const index = new Map<string, number>();
     for (const p of catalogue) {
       if (p.group !== area) continue;
+      if (p.code === SUPERSEDED) continue;
       const title = p.subgroup || "Other";
       if (!index.has(title)) {
         index.set(title, out.length);
@@ -310,6 +328,47 @@ export default function RolesPermissions() {
   /** Effective value for a permission, taking any unsaved edit into account. */
   const valueFor = (code: string, res: Resolution) =>
     code in edits ? edits[code] : res.effective;
+
+  /**
+   * The per-type create permissions of the open area, and whether all, none or
+   * some of them are on. Only shown where there is more than one to aggregate.
+   */
+  const createPerms = useMemo(
+    () =>
+      catalogue.filter(
+        (p) => p.group === area && p.code !== SUPERSEDED && p.code.endsWith(".create"),
+      ),
+    [catalogue, area],
+  );
+
+  const createState = useMemo(() => {
+    if (createPerms.length < 2) return null;
+    const on = createPerms.filter((p) =>
+      valueFor(p.code, resolveFromLayers(matrix, p.code)),
+    ).length;
+    return {
+      total: createPerms.length,
+      on,
+      // Radix reads "indeterminate" as a checked state, which is exactly the
+      // "some of these" case a switch has no way to show.
+      checked: on === createPerms.length ? true : on === 0 ? false : "indeterminate",
+    } as const;
+  }, [createPerms, matrix, edits]);
+
+  /** Turn every create in this area on or off in one go. */
+  const setAllCreates = (next: boolean) => {
+    setEdits((prev) => {
+      const out = { ...prev };
+      for (const p of createPerms) {
+        if (!p.is_project_scoped) continue;
+        const res = resolveFromLayers(matrix, p.code);
+        // Keep the diff honest: an edit back to the saved value is not a change.
+        if (next === res.effective) delete out[p.code];
+        else out[p.code] = next;
+      }
+      return out;
+    });
+  };
 
   const editCount = Object.keys(edits).length;
   const holderNames = role ? holdersByCode[role.code] ?? [] : [];
@@ -362,7 +421,7 @@ export default function RolesPermissions() {
       <DashboardLayout>
         <div className="space-y-6">
           <PageHeader
-            className="border-b border-border pb-5"
+            className="z-20 -mt-6 border-b border-border bg-background pt-6 pb-5"
             title="Roles & Permissions"
             description="Choose a project to review and adjust what each role can do on it."
           />
@@ -391,7 +450,7 @@ export default function RolesPermissions() {
         <TooltipProvider delayDuration={200}>
           <div className="space-y-6">
             <PageHeader
-              className="border-b border-border pb-5"
+              className="sticky top-0 z-20 -mt-6 border-b border-border bg-background pt-6 pb-5"
               title="Roles & Permissions"
               /* The only thing naming the role whose switches are on screen. */
               meta={role ? <span className="text-foreground">{role.name}</span> : undefined}
@@ -462,7 +521,7 @@ export default function RolesPermissions() {
                 <div className="border-b border-border pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4">
                   <nav
                     aria-label="Permission areas"
-                    className="subtle-scrollbar flex flex-col gap-0.5 md:sticky md:top-4 md:max-h-[calc(100vh-7rem)] md:overflow-y-auto"
+                    className="subtle-scrollbar flex flex-col gap-0.5 md:sticky md:top-[7rem] md:max-h-[calc(100vh-9rem)] md:overflow-y-auto"
                   >
                     {loadingCatalogue &&
                       Array.from({ length: 9 }).map((_, i) => (
@@ -549,6 +608,35 @@ export default function RolesPermissions() {
                     </div>
                   ) : (
                     <div className="space-y-8">
+                      {createState && (
+                        <label
+                          className={cn(
+                            "flex items-start gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3.5",
+                            canEditSettings && "cursor-pointer hover:bg-muted/60",
+                          )}
+                        >
+                          <Checkbox
+                            className="mt-0.5"
+                            checked={createState.checked}
+                            disabled={!canEditSettings}
+                            onCheckedChange={(next) => setAllCreates(next === true)}
+                            aria-label={`Create every type of ${AREAS[area!]?.title.toLowerCase()} item`}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                              Create tasks (general access)
+                              <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                                {createState.on} of {createState.total} types
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block max-w-prose text-xs leading-relaxed text-muted-foreground">
+                              Switches on every create permission below. Turn individual
+                              types back off afterwards and this shows as partly selected.
+                            </span>
+                          </span>
+                        </label>
+                      )}
+
                       {parts.map((part) => {
                         const rows = part.permissions.map((p) => ({
                           p,

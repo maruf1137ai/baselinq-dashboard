@@ -1,7 +1,7 @@
 /**
  * Help / task workflow reference page.
  *
- * One section per Werner doc type (RFI, SI, VO, IC, DC, GI, CPI) showing
+ * One section per Werner doc type (RFI, SI, VO, IC, DC, GI) showing
  * who can take each action (create / reply / sign / approve / close /
  * escalate) in plain English. Written for non-technical users — uses
  * role display names, not role codes.
@@ -15,7 +15,7 @@
  *
  * Update this page whenever those rules change.
  */
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 type Row = { action: string; who: string; when: string; note?: string };
@@ -222,29 +222,6 @@ const SECTIONS: DocSection[] = [
       },
     ],
   },
-  {
-    type: "CPI",
-    title: "CPI — Critical Path Item",
-    description:
-      "A programme / schedule item on the project's critical path. Tracked through statuses — there's no formal signing for this type.",
-    rows: [
-      {
-        action: "Create a Critical Path Item",
-        who: "Project Manager, Client Project Manager, Principal Project Manager, Planner or Consultant Planner. Client and Administrator can also create one.",
-        when: "Anytime on the project.",
-      },
-      {
-        action: "Update the status / progress",
-        who: "The people the item is assigned to, plus any Project Manager.",
-        when: "While the item is Open, In Progress or Blocked.",
-      },
-      {
-        action: "Close the item",
-        who: "Doesn't use the Werner close-out flow.",
-        when: "Move the item to Done or Cancelled instead.",
-      },
-    ],
-  },
 ];
 
 const GLOBAL_NOTES = [
@@ -255,16 +232,29 @@ const GLOBAL_NOTES = [
 ];
 
 export default function HelpTasks() {
+  const navigate = useNavigate();
+
+  // Back goes to wherever the user actually came from — the Help hub, a
+  // deep link out of /tasks, anywhere — rather than always dumping them on
+  // /tasks. history.state.idx is React Router's history index: 0 (or
+  // undefined) means this page is the first entry, so there is nothing to
+  // pop and we fall back to /tasks.
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate("/tasks", { replace: true });
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="help-reference-page min-h-screen bg-background">
       <div className="mx-auto max-w-4xl px-6 py-10">
-        <Link
-          to="/tasks"
+        <button
+          type="button"
+          onClick={goBack}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to tasks
-        </Link>
+          Back
+        </button>
 
         <h1 className="text-2xl font-normal text-foreground tracking-tight">
           Task workflow reference
