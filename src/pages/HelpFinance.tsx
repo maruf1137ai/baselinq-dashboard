@@ -14,7 +14,8 @@
  *   - Auto cost-ledger entries     → backend/cost_ledger/signals.py
  *   - PC create / submit / certify permissions → backend/tasks/pc_workflow.py
  *                                     (TRANSITION_PERMISSIONS)
- *                                     and user/migrations/0040_pc_single_approve_permission.py
+ *                                     and user/migrations/0040_pc_single_approve_permission.py,
+ *                                     widened by user/migrations/0049_widen_pc_create_approve_grants.py
  *   - PC approve auto-posts, no manual post action → backend/tasks/views_pc_workflow.py
  *                                     (PaymentCertificateWorkflowMixin._run_transition) —
  *                                     approving chains straight to posting; there is no
@@ -96,11 +97,11 @@ const SECTIONS: FinanceSection[] = [
     type: "PC",
     title: "Payment Certificates",
     description:
-      "The document that makes a payment legally due. Deliberately split across several roles — under JBCC the person who values and prepares a claim is never the same person who has final say over certifying it, so this page enforces that split rather than just recommending it.",
+      "The document that makes a payment legally due. Under JBCC, the person who values and prepares a claim is never the same person who has final say over certifying it — this page enforces that split by identity (whoever raised this specific certificate), not by keeping the create and approve role lists apart. Both lists are deliberately broad: any professional can raise their own certificate, and any of several roles can certify someone else's, so there's always a traceable approver rather than a single bottleneck.",
     rows: [
       {
         action: "Create a new certificate",
-        who: "Quantity Surveyor, Consultant Quantity Surveyor, Contractor (Construction Manager), Main Contractor / Contract Manager (Contracts Manager), Project Manager, or Project Administrator.",
+        who: "Quantity Surveyor, Consultant Quantity Surveyor, Construction Manager, Contracts Manager, Project Manager, Project Administrator, Administrator, Super User, Principal / PM, Principal Agent, Architect, or Engineer (Structural, Mechanical, Electrical or Site) — in short, any member of the project's professional or management team can raise their own certificate.",
         when: "Anytime on the project.",
         note: "Creates the certificate as a Draft.",
       },
@@ -117,7 +118,7 @@ const SECTIONS: FinanceSection[] = [
       },
       {
         action: "Approve / Reject",
-        who: "Principal / PM — the project's Designated Principal Agent — but never the certificate's own creator.",
+        who: "Principal / PM, Principal Agent, Administrator, Project Administrator, Project Manager, Super User, Quantity Surveyor, or Consultant Quantity Surveyor — but never the certificate's own creator, regardless of their role.",
         when: "Once it's been Submitted.",
         note: "A single certifying act, and the only step that exists — approving is what makes the certificate final: money becomes legally due, the platform fee accrues, and the credit lands in the Cost Ledger, all in the same act. There is no separate QS stage, client stage, or posting step, and Client/Owner has no action anywhere in this process — one role certifies, independently, exactly as JBCC's principal-agent clause describes.",
       },
@@ -246,7 +247,7 @@ export default function HelpFinance() {
         </section>
 
         <p className="mt-12 text-xs text-muted-foreground">
-          Last updated 2026-08-14. If the platform behaves differently from
+          Last updated 2026-08-31. If the platform behaves differently from
           what's described here, the platform's behaviour is the bug — please
           let the team know.
         </p>

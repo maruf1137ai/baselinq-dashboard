@@ -3,24 +3,28 @@
 // The standalone page lives at /settings/permissions via src/pages/settings/permissions.tsx.
 //
 // There are now two permissions UIs, deliberately and temporarily. The new
-// /roles-permissions page is the one to use: it reads the plain-English
-// wording off the permission rows, shows which of the three layers decided an
-// answer, and writes PROJECT overrides only — so a mistake reaches one contract
-// and can be reset.
+// /roles-permissions page is the one to use for a single project: it reads
+// the plain-English wording off the permission rows, shows which of the
+// three layers decided an answer, and writes PROJECT overrides only — so a
+// mistake reaches one contract and can be reset.
 //
 // This grid stays because it is the only place that still edits the
-// ORGANISATION-wide default, which the new page will not do until that scope
-// can be given a control nobody misreads. Two UIs writing the same tables is
-// how they drift, so the banner below says plainly which does what rather than
-// leaving people to guess from two similar-looking screens.
+// ORGANISATION-wide default, which the new page does not do. It used to also
+// read `selectedProjectId` out of localStorage and pass it down, which made
+// it silently switch into editing a PROJECT override instead — for
+// project-scoped codes (nearly everything) — while this banner kept claiming
+// "organisation-wide". That's exactly backwards from what the banner and this
+// comment always said the grid was for, and it's why edits made "per
+// project" elsewhere didn't reliably stick: this screen was fighting
+// /roles-permissions over the same rows without either admin knowing. This
+// component no longer reads a project id at all, so a save here is always a
+// true org-wide default, matching the banner.
 import { ArrowRight, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PermissionsContent } from "@/pages/settings/permissions";
 
 const RolePermissions = ({ readOnly }: { readOnly?: boolean }) => {
-  const projectId = parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
@@ -45,7 +49,7 @@ const RolePermissions = ({ readOnly }: { readOnly?: boolean }) => {
         </Link>
       </div>
 
-      <PermissionsContent readOnly={readOnly} projectId={projectId} />
+      <PermissionsContent readOnly={readOnly} />
     </div>
   );
 };
