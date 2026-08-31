@@ -6,17 +6,51 @@
  * escalate) in plain English. Written for non-technical users — uses
  * role display names, not role codes.
  *
- * Source of truth:
+ * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
+ * matching permission code's current grants (Roles & Permissions), via
+ * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles:
+ * the five "Create ..." rows (task.<type>.create), RFI's "Turn it into a
+ * Site Instruction" (task.rfi.escalate_to_si), SI's "Turn it into a
+ * Variation Order" (task.si.escalate_to_vo), SI's "Close the SI"
+ * (task.approve_si, with a static "issuer, always" clause alongside the
+ * dynamic list — see CloseOutView in tasks/views_werner.py), and VO's
+ * "Recommend for Approval" / "Approve and sign" (task.vo.recommend /
+ * task.vo.approve — see VariationOrderViewSet's _recommend_transition_guard
+ * and views_signing.py's _can_sign in tasks/views.py /
+ * tasks/views_signing.py, and the matching split in
+ * src/pages/TaskDetails.tsx's canApprove). All six non-create rows were
+ * added once those actions got real permissions instead of hardcoded
+ * PROFESSIONAL_CODES/PM_CODES/SIGNING_ROLES role-code sets; task.approve_si/
+ * task.vo.recommend/task.vo.approve's grants were realigned to match what
+ * was actually enforced before each was wired in (user/migrations/0055,
+ * 0056, 0057) — their previous grants (from 0017, back when nothing read
+ * them) didn't match. DC's "File the formal Claim" row is deliberately
+ * excluded/left static: its text describes the identity-based
+ * escalate-from-IC path (only the IC's original filer, once mitigation
+ * rules pass), not the separate task.dc.create grant, so giving it a
+ * create-grant list would change what the row actually claims.
+ *
+ * Every other row (reply / sign, RFI/GI/VO/DC close-out, IC→Claim
+ * escalation, "Approve a Variation Order (older route)" i.e. task.approve_vo,
+ * and so on) stays static — none of them are actually governed by the
+ * Permission/RolePermission/ProjectRolePermission tables today; toggling
+ * the matching permission code in Roles & Permissions (where one even
+ * exists, e.g. task.approve_rfi) has no effect on real behaviour. Their
+ * source of truth:
  *   - Create perms        → user/migrations/0032_realign_task_create_perms.py
- *   - Sign perms          → tasks/views_signing.py (SIGNING_ROLES)
+ *   - Sign perms (SI/Claim) → tasks/views_signing.py (SIGNING_ROLES)
  *   - Close-out perms     → tasks/views_werner.py (CloseOutView)
  *   - Escalation chain    → tasks/views_werner.py (chain-escalate)
- *   - VO approve flow     → src/pages/TaskDetails.tsx (canApprove)
  *
  * Update this page whenever those rules change.
  */
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useGrantedRoles } from "@/hooks/useGrantedRoles";
+import { useRoles } from "@/hooks/useRolePermissions";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
+import { formatRoleList } from "@/lib/formatRoleList";
 
 type Row = { action: string; who: string; when: string; note?: string };
 
@@ -27,7 +61,44 @@ interface DocSection {
   rows: Row[];
 }
 
-const SECTIONS: DocSection[] = [
+/** Row action -> permission code + how to render the dynamic list into that row's sentence. DC's create-adjacent row excluded — see header comment. */
+const ROW_PERMISSION: Record<string, { code: string; render: (list: string) => string }> = {
+  "Create a new RFI": { code: "task.rfi.create", render: (list) => `Anyone holding: ${list}.` },
+  "Turn it into a Site Instruction": {
+    code: "task.rfi.escalate_to_si",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Create a new SI": { code: "task.si.create", render: (list) => `Anyone holding: ${list}.` },
+  "Turn it into a Variation Order": {
+    code: "task.si.escalate_to_vo",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Close the SI": {
+    code: "task.approve_si",
+    render: (list) =>
+      `The architect or engineer who issued it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Create a new VO": { code: "task.vo.create", render: (list) => `Anyone holding: ${list}.` },
+  "Recommend for Approval": {
+    code: "task.vo.recommend",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Approve and sign": {
+    code: "task.vo.approve",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "File an Intention to Claim": {
+    code: "task.ic.create",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Create a General Instruction": {
+    code: "task.gi.create",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+};
+const ROW_CODES = Object.values(ROW_PERMISSION).map((c) => c.code);
+
+const STATIC_SECTIONS: DocSection[] = [
   {
     type: "RFI",
     title: "RFI — Request for Information",
@@ -233,6 +304,30 @@ const GLOBAL_NOTES = [
 
 export default function HelpTasks() {
   const navigate = useNavigate();
+  const projectId = useSelectedProjectId();
+  const grants = useGrantedRoles(ROW_CODES, projectId);
+  const { data: roles } = useRoles();
+
+  const roleNamesByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of roles ?? []) map[r.code] = r.name;
+    return map;
+  }, [roles]);
+
+  // Falls back to the static prose until both the grants and the role names
+  // have arrived — never renders a half-computed sentence.
+  const sections = useMemo(() => {
+    if (!grants || Object.keys(roleNamesByCode).length === 0) return STATIC_SECTIONS;
+    return STATIC_SECTIONS.map((section) => ({
+      ...section,
+      rows: section.rows.map((row) => {
+        const cfg = ROW_PERMISSION[row.action];
+        if (!cfg) return row;
+        const who = cfg.render(formatRoleList(grants[cfg.code] ?? [], roleNamesByCode));
+        return { ...row, who };
+      }),
+    }));
+  }, [grants, roleNamesByCode]);
 
   // Back goes to wherever the user actually came from — the Help hub, a
   // deep link out of /tasks, anywhere — rather than always dumping them on
@@ -267,7 +362,7 @@ export default function HelpTasks() {
 
         {/* Quick jump nav */}
         <div className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <a
               key={s.type}
               href={`#${s.type.toLowerCase()}`}
@@ -280,7 +375,7 @@ export default function HelpTasks() {
 
         {/* Per-doc-type sections */}
         <div className="mt-10 space-y-10">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <section key={s.type} id={s.type.toLowerCase()} className="scroll-mt-6">
               <h2 className="text-lg font-normal text-foreground">{s.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">

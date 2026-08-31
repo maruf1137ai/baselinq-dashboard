@@ -112,10 +112,8 @@ import { useProject } from "@/hooks/useProjects";
 import { VOWorkflowStepper } from "@/components/TaskComponents/VOWorkflowStepper";
 import { SIWorkflowStepper } from "@/components/TaskComponents/SIWorkflowStepper";
 import { VOApprovalModal } from "@/components/TaskComponents/VOApprovalModal";
-import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { AiMark } from "@/components/icons/AiMark";
-import { resolvePermissionCode } from "@/lib/roleUtils";
 
 // Role to approval permission mapping per document type
 const approvalPermissions: Record<string, string[]> = {
@@ -341,7 +339,6 @@ export default function TaskDetails() {
   const projectName = (currentProject as any)?.name || "";
 
   const { data: user } = useCurrentUser();
-  const { userRole } = useUserRoleStore();
   const queryClient = useQueryClient();
   const updateTask = async (data: any) => {
     try {
@@ -1569,46 +1566,30 @@ export default function TaskDetails() {
 
   const canApprove = !!user && !!displayTask && (() => {
     if (displayTask.type === "VO") {
-      // Prefer the project-resolved role (ProjectTeamMember → backbone
-      // code, via permissions/effective/) over the user's bare global
-      // role — same fix as WernerTaskActions.tsx's userRoleCode, and for
-      // the same reason: a PM is usually assigned at the project level,
-      // not on the User record itself. Checking only user.role?.name
-      // meant this button could stay hidden even after Priced, for any
-      // user whose project-level role differs from their global one.
-      const userCode = resolvePermissionCode(
-        effectivePerms?.roleCode || user.role?.code || user.role?.name || userRole || "",
-      );
-      // Mirrors backend SIGNING_ROLES["vo"] in views_signing.py — only the
-      // PM / Principal Agent roles may approve & sign a VO (it's a contract
-      // amendment). Architect / QS / CQS were here previously but the
-      // backend 403s them, so the button died on click. Hide it instead.
-      const paRoles = ["PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"];
-      const clientRoles = ["CLIENT", "CPM"];
       // "Priced" AND "Under Review" both count as "someone with signing
       // authority still owes a decision" — Under Review is a real Werner
       // stage (see the timeline.stages order below: Draft → Priced →
       // Under Review → Recommended → Approved), entered automatically the
       // moment the creator/PM leaves a reply while Priced (a few lines up
       // in handleSubmitResponse). "Recommended" adds the client's final
-      // sign-off window on over-mandate VOs.
-      //
-      // Client and PM-family roles share this same negotiation window —
-      // backend's SIGNING_ROLES["vo"] (views_signing.py) authorises CLIENT
-      // to sign at any pre-signed state, with no status precondition at
-      // all. This used to only offer CLIENT the button at "Recommended",
-      // which meant a client with real signing authority had no way to
-      // sign during Priced/Under Review even though the backend would
-      // accept it. Draft/Submitted are still excluded — no pricing exists
-      // yet at those stages, so "sign" wouldn't make sense there.
+      // sign-off window on over-mandate VOs. Draft/Submitted are excluded —
+      // no pricing exists yet at those stages, so neither recommending nor
+      // signing would make sense there.
       const negotiationStatuses = ["Priced", "Under Review", "Recommended"];
-      if (
-        negotiationStatuses.includes(displayTask.status) &&
-        (paRoles.includes(userCode) || clientRoles.includes(userCode))
-      ) {
-        return true;
-      }
-      return false;
+      if (!negotiationStatuses.includes(displayTask.status)) return false;
+
+      // Which of the two VO buttons is actually on offer — must mirror the
+      // label logic a few hundred lines down (search isWithinMandate) so
+      // this never enables a button for an action it didn't actually gate.
+      const isApproveMode = displayTask.isWithinMandate || displayTask.status === "Recommended";
+      // Live permissions (Roles & Permissions), not a hardcoded role list —
+      // mirrors the backend exactly: task.vo.approve gates Approve & Sign
+      // (views_signing.py's _can_sign, via SignAndIssueView), task.vo.recommend
+      // gates the transition to Recommended (VariationOrderViewSet's
+      // _recommend_transition_guard, tasks/views.py).
+      const canApproveVo = effectivePerms?.permissions?.["task.vo.approve"] === true;
+      const canRecommendVo = effectivePerms?.permissions?.["task.vo.recommend"] === true;
+      return isApproveMode ? canApproveVo : canRecommendVo;
     }
 
     // Non-VO doc types: keep the legacy creator-can-approve shortcut.

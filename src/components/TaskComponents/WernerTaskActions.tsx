@@ -56,8 +56,10 @@ type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPA
 // instead of re-declaring it means the two can't drift apart again.
 const CONTRACTOR_ROLES = new Set(CONTRACTOR_CODES);
 
-// "Professional" — broad set used for ESCALATION visibility (RFI→SI).
-// Matches the backend's PROFESSIONAL_CODES in views_werner.py.
+// "Professional" — broad set used for SI/GI close-out visibility below.
+// RFI→SI escalation no longer uses this: see task.rfi.escalate_to_si /
+// canEscalateRfiToSi. Still matches the backend's local PROFESSIONAL_CODES
+// in views_werner.py's CloseOutView, a separate, still-hardcoded check.
 const PROFESSIONAL_ROLES = new Set([
   "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "CIVIL_ENG",
   "QS", "CQS", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA",
@@ -72,7 +74,11 @@ const SI_SIGN_ROLES = new Set([
 ]);
 
 // Werner — CLIENT (project owner) is included so the creator can sign
-// VO / Claim. Matches the backend SIGNING_ROLES update.
+// VO / Claim. Matches the backend SIGNING_ROLES update. No longer used for
+// SI→VO escalation visibility — see task.si.escalate_to_vo /
+// canEscalateSiToVo above (the backend's own PM_CODES for that check never
+// included CLIENT, so this set was already wider than what escalation
+// actually allowed).
 const PM_ROLES = new Set(["CLIENT", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
 
 interface Props {
@@ -204,10 +210,22 @@ export function WernerTaskActions({
   const isContractor = CONTRACTOR_ROLES.has(userRoleCode);
   const isProfessional = PROFESSIONAL_ROLES.has(userRoleCode);
   const isPM = PM_ROLES.has(userRoleCode);
+  // RFI → SI and SI → VO escalation are now gated by real permissions
+  // (Roles & Permissions), not the hardcoded PROFESSIONAL_ROLES/PM_ROLES
+  // sets above — see task.rfi.escalate_to_si / task.si.escalate_to_vo /
+  // EscalationView.create() in tasks/views_werner.py. isProfessional/isPM
+  // themselves stay in use elsewhere on this page (SI/GI close-out, DC/
+  // Claim signing, VO close-out, risk pills below), which are unrelated and
+  // still hardcoded. Note: the backend's PM_CODES for si→vo never included
+  // CLIENT, unlike this file's own PM_ROLES — reading the live permission
+  // instead of isPM here also corrects that pre-existing mismatch (a CLIENT
+  // user could see this button and then get 403 on click).
+  const canEscalateRfiToSi = effectivePerms?.permissions?.["task.rfi.escalate_to_si"] === true;
+  const canEscalateSiToVo = effectivePerms?.permissions?.["task.si.escalate_to_vo"] === true;
 
   // Escalation visibility per Werner spec:
-  //   RFI → SI : professional only (architects, engineers, PMs)
-  //   SI  → VO : PM / Principal Agent only
+  //   RFI → SI : gated by task.rfi.escalate_to_si (see above)
+  //   SI  → VO : gated by task.si.escalate_to_vo (see above)
   //   IC  → Claim : ONLY the contractor who filed the IC (raised_by).
   //                 Other contractors on the project should NOT see the
   //                 button — the backend rejects them with 403, so we
@@ -220,8 +238,8 @@ export function WernerTaskActions({
   const rawEscalation = ESCALATION_TARGETS[taskType];
   const canEscalateFromHere =
     !rawEscalation ? false :
-    taskType === "RFI" ? isProfessional :
-    taskType === "SI"  ? isPM :
+    taskType === "RFI" ? canEscalateRfiToSi :
+    taskType === "SI"  ? canEscalateSiToVo :
     taskType === "IC"  ? (isContractor && isIcRaiser) :
     false;
   // Werner spec — escalation stays available while the doc is "live",
@@ -269,12 +287,19 @@ export function WernerTaskActions({
   // ── Close-out button visibility ─────────────────────────────────────
   // Mirrors backend CloseOutView role gates (views_werner.py:1325):
   //   RFI / IC / Claim → originator OR contractor
-  //   SI / GI          → originator OR professional
+  //   SI               → originator OR task.approve_si (live permission —
+  //                       see canCloseSi below)
+  //   GI               → originator OR professional (still hardcoded)
   //   VO               → originator OR PM
   // Hidden when the doc is already in a terminal state.
   const isOriginator = !!(
     originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
   );
+  // SI close/verify is now gated by a real permission (Roles &
+  // Permissions), not the hardcoded PROFESSIONAL_ROLES set — see
+  // task.approve_si / CloseOutView in tasks/views_werner.py. GI still uses
+  // isProfessional below, unrelated and still hardcoded.
+  const canCloseSi = effectivePerms?.permissions?.["task.approve_si"] === true;
   const TERMINAL_STATUSES = new Set([
     "Closed", "Verified", "EOT Awarded", "Escalated to Claim", "Approved",
   ]);
@@ -283,7 +308,8 @@ export function WernerTaskActions({
     if (alreadyTerminal) return false;
     if (taskType === "RFI" || taskType === "IC") return isOriginator || isContractor;
     if (taskType === "DC" || taskType === "CLAIM") return isOriginator || isContractor;
-    if (taskType === "SI" || taskType === "GI") return isOriginator || isProfessional;
+    if (taskType === "SI") return isOriginator || canCloseSi;
+    if (taskType === "GI") return isOriginator || isProfessional;
     if (taskType === "VO") return isOriginator || isPM;
     return false;
   })();

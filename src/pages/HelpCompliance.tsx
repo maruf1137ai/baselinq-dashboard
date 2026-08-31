@@ -53,9 +53,22 @@
  *     a stricter can_retrigger_ai_analysis exists but is never called)
  *
  * Update this page whenever those rules change.
+ *
+ * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
+ * matching permission code's current grants (Roles & Permissions), via
+ * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
+ * "Open the Compliance page" (compliance.view) and the "Analyse with AI"
+ * button stay static on purpose — compliance.view only gates the frontend
+ * route (no backend check exists for it, see the IMPORTANT note above), and
+ * the AI button's real target doesn't cleanly map to a single code either.
  */
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useGrantedRoles } from "@/hooks/useGrantedRoles";
+import { useRoles } from "@/hooks/useRolePermissions";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
+import { formatRoleList } from "@/lib/formatRoleList";
 
 type Row = { action: string; who: string; when: string; note?: string };
 
@@ -66,7 +79,32 @@ interface ComplianceSection {
   rows: Row[];
 }
 
-const SECTIONS: ComplianceSection[] = [
+/** Row action -> permission code + how to render the dynamic list into that row's sentence. */
+const ROW_PERMISSION: Record<string, { code: string; render: (list: string) => string }> = {
+  "See an obligation on the list": {
+    code: "document.view",
+    render: (list) => `Anyone who can view documents on the project — anyone holding: ${list}.`,
+  },
+  "Add a new obligation, or mark one Complete / In Progress": {
+    code: "document.view",
+    render: (list) => `Anyone who can view the source document — anyone holding: ${list}.`,
+  },
+  "Attach evidence to an obligation": {
+    code: "document.upload",
+    render: (list) => `Anyone who can upload documents on the project — anyone holding: ${list}.`,
+  },
+  "Generate a notice for an obligation": {
+    code: "document.edit",
+    render: (list) => `Anyone who can edit documents on the project — anyone holding: ${list}.`,
+  },
+  "What compliance.edit actually controls": {
+    code: "compliance.edit",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+};
+const ROW_CODES = [...new Set(Object.values(ROW_PERMISSION).map((c) => c.code))];
+
+const STATIC_SECTIONS: ComplianceSection[] = [
   {
     type: "OPENING",
     title: "Opening the Page",
@@ -158,6 +196,29 @@ const GLOBAL_NOTES = [
 
 export default function HelpCompliance() {
   const navigate = useNavigate();
+  const projectId = useSelectedProjectId();
+  const grants = useGrantedRoles(ROW_CODES, projectId);
+  const { data: roles } = useRoles();
+
+  const roleNamesByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of roles ?? []) map[r.code] = r.name;
+    return map;
+  }, [roles]);
+
+  // Falls back to the static prose until both the grants and the role names
+  // have arrived — never renders a half-computed sentence.
+  const sections = useMemo(() => {
+    if (!grants || Object.keys(roleNamesByCode).length === 0) return STATIC_SECTIONS;
+    return STATIC_SECTIONS.map((section) => ({
+      ...section,
+      rows: section.rows.map((row) => {
+        const cfg = ROW_PERMISSION[row.action];
+        if (!cfg) return row;
+        return { ...row, who: cfg.render(formatRoleList(grants[cfg.code] ?? [], roleNamesByCode)) };
+      }),
+    }));
+  }, [grants, roleNamesByCode]);
 
   // Back goes to wherever the user actually came from — the Help hub, a
   // deep link out of /compliance, anywhere — rather than always dumping them on
@@ -193,7 +254,7 @@ export default function HelpCompliance() {
 
         {/* Quick jump nav */}
         <div className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <a
               key={s.type}
               href={`#${s.type.toLowerCase()}`}
@@ -206,7 +267,7 @@ export default function HelpCompliance() {
 
         {/* Per-area sections */}
         <div className="mt-10 space-y-10">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <section key={s.type} id={s.type.toLowerCase()} className="scroll-mt-6">
               <h2 className="text-lg font-normal text-foreground">{s.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">

@@ -47,9 +47,24 @@
  *     (links(), obligations() — document.view only, not document.edit)
  *
  * Update this page whenever those rules change.
+ *
+ * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
+ * matching permission code's current grants (Roles & Permissions), via
+ * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
+ * Three of them (Edit details, Upload version, Delete) keep a static
+ * "uploader, always" clause alongside the dynamic role list, since that
+ * carve-out is an identity check (documents/permissions.py), not part of the
+ * permission grant itself. Folder create/delete and the restricted-folder
+ * row stay entirely static — no document permission code governs either, by
+ * design (see the file header above).
  */
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useGrantedRoles } from "@/hooks/useGrantedRoles";
+import { useRoles } from "@/hooks/useRolePermissions";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
+import { formatRoleList, unionRoleCodes } from "@/lib/formatRoleList";
 
 type Row = { action: string; who: string; when: string; note?: string };
 
@@ -60,7 +75,46 @@ interface DocumentationSection {
   rows: Row[];
 }
 
-const SECTIONS: DocumentationSection[] = [
+/** Row action -> permission code(s) + how to render the dynamic list into that row's sentence. */
+const ROW_PERMISSION: Record<string, { codes: string[]; render: (list: string) => string }> = {
+  "View documents at all (the Documents page)": {
+    codes: ["document.view"],
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Upload a document": {
+    codes: ["document.upload"],
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Preview or download a document": {
+    codes: ["document.view"],
+    render: (list) => `Anyone who can view that specific document — anyone holding: ${list}.`,
+  },
+  "Edit a document's details": {
+    codes: ["document.edit"],
+    render: (list) =>
+      `Whoever originally uploaded it — always. Anyone else needs their role to hold document-edit rights: ${list}.`,
+  },
+  "Upload a new version of a document": {
+    codes: ["document.upload"],
+    render: (list) => `Whoever originally uploaded it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Delete a document": {
+    codes: ["document.delete"],
+    render: (list) =>
+      `${list} — always. The uploader can also delete their own document, but only if nothing else in the app links to it and it has no open compliance items against it.`,
+  },
+  "Change a document's status (Active / Finance Gated / Archived)": {
+    codes: ["document.manage"],
+    render: (list) => `Anyone holding: ${list}. The uploader has no special access to this one, unlike editing or versioning.`,
+  },
+  "Add or remove a document's links to other records, or add/edit its compliance obligations": {
+    codes: ["document.view"],
+    render: (list) => `Anyone who can view the document — anyone holding: ${list}.`,
+  },
+};
+const ROW_CODES = [...new Set(Object.values(ROW_PERMISSION).flatMap((c) => c.codes))];
+
+const STATIC_SECTIONS: DocumentationSection[] = [
   {
     type: "VIEWING",
     title: "Viewing Documents",
@@ -184,6 +238,30 @@ const GLOBAL_NOTES = [
 
 export default function HelpDocumentation() {
   const navigate = useNavigate();
+  const projectId = useSelectedProjectId();
+  const grants = useGrantedRoles(ROW_CODES, projectId);
+  const { data: roles } = useRoles();
+
+  const roleNamesByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of roles ?? []) map[r.code] = r.name;
+    return map;
+  }, [roles]);
+
+  // Falls back to the static prose until both the grants and the role names
+  // have arrived — never renders a half-computed sentence.
+  const sections = useMemo(() => {
+    if (!grants || Object.keys(roleNamesByCode).length === 0) return STATIC_SECTIONS;
+    return STATIC_SECTIONS.map((section) => ({
+      ...section,
+      rows: section.rows.map((row) => {
+        const cfg = ROW_PERMISSION[row.action];
+        if (!cfg) return row;
+        const roleCodes = unionRoleCodes(...cfg.codes.map((c) => grants[c]));
+        return { ...row, who: cfg.render(formatRoleList(roleCodes, roleNamesByCode)) };
+      }),
+    }));
+  }, [grants, roleNamesByCode]);
 
   // Back goes to wherever the user actually came from — the Help hub, a
   // deep link out of /documents, anywhere — rather than always dumping them on
@@ -219,7 +297,7 @@ export default function HelpDocumentation() {
 
         {/* Quick jump nav */}
         <div className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <a
               key={s.type}
               href={`#${s.type.toLowerCase()}`}
@@ -232,7 +310,7 @@ export default function HelpDocumentation() {
 
         {/* Per-area sections */}
         <div className="mt-10 space-y-10">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <section key={s.type} id={s.type.toLowerCase()} className="scroll-mt-6">
               <h2 className="text-lg font-normal text-foreground">{s.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">

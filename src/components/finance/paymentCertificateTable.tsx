@@ -51,6 +51,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { pageContaining } from "@/lib/deepLink";
 import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
 import type { Notification } from "@/types/notification";
+import type { WorkLineItem, VOLineItem } from "./createPCDrawer";
 
 export interface PCEntry {
   id: number;
@@ -85,7 +86,11 @@ export interface PCEntry {
   availableTransitions?: string[];
   /** Hard-delete (Draft-only, creator-only) — see tasks/pc_workflow.may_delete_payment_certificate. */
   canDelete?: boolean;
+  /** Edit this certificate's own fields (Draft-only, creator-only, same rule as canDelete) — see tasks/pc_workflow.may_delete_payment_certificate. */
+  canEdit?: boolean;
   // ── Who / when ─────────────────────────────────────────────────────────────
+  /** Id of the certificate's creator — for a client-side identity check alongside canEdit. Null for legacy rows written before this was tracked. */
+  createdById?: number | null;
   /** Name of the certificate's creator. Null for legacy rows written before this was tracked. */
   createdBy?: string | null;
   /** When the Designated Principal Agent certified this — set only once Approved/Posted. */
@@ -102,8 +107,22 @@ export interface PCEntry {
   retentionRatePct?: string | null;
   vatRatePct?: string | null;
   retentionApplies?: boolean;
-  workItems?: { thisPeriod: number }[];
-  voItems?: { thisPeriod: number; included: boolean }[];
+  currency?: string;
+  /** ISO date, e.g. "2026-08-31" — when the certificate itself is dated. */
+  certificateDate?: string | null;
+  notes?: string;
+  /** Programme Phase 3 — which milestones this certificate's claim is measured against. */
+  milestoneLinks?: { linkId: number; milestoneId: string; milestoneName: string; claimedPct: number }[];
+  /**
+   * Full line-item shape (id/description/contractValue/... for work items,
+   * voNumber/description/approvedValue/... for VOs) — the same type
+   * createPCDrawer.tsx's editable table uses, since editing a Draft
+   * certificate (see canEdit) reopens that exact drawer prefilled from these
+   * arrays. A superset of what the read-only details dialog itself reads
+   * (just `.thisPeriod` / `.included`), so nothing here narrows.
+   */
+  workItems?: WorkLineItem[];
+  voItems?: VOLineItem[];
   /**
    * The formal certificate PDF/invoice attached at creation, plus anything
    * registered afterwards (e.g. the Contractor's invoice, once Approved) —
@@ -257,6 +276,8 @@ interface PaymentCertificateTableProps {
   selectedId?: number | null;
   onSelect?: (id: number | null) => void;
   unreadByPcId?: Record<string, Notification[]>;
+  /** Opens the shared create/edit drawer, prefilled from the clicked entry — see PaymentCertificate. */
+  onEditRequest?: (entry: PCEntry) => void;
 }
 
 const PAGE_SIZE = 10;
@@ -483,6 +504,7 @@ const ActionButtons = ({
   onTransitionClick,
   onDeleteClick,
   onViewDetails,
+  onEditClick,
 }: {
   entry: PCEntry;
   actingOn: string | null;
@@ -490,12 +512,14 @@ const ActionButtons = ({
   onDeleteClick: () => void;
   /** Omit when rendering inside the details dialog itself — nothing to view-details *to*. */
   onViewDetails?: () => void;
+  /** Draft-only, creator-only — gated on entry.canEdit, same rule as onDeleteClick. */
+  onEditClick?: () => void;
 }) => {
   const transitions = entry.availableTransitions ?? [];
   const primary = transitions.find(isPositiveTransition) ?? null;
   const rest = transitions.filter((t) => t !== primary);
   const PrimaryIcon = primary ? TRANSITION_ICONS[primary] ?? Send : null;
-  const isEmpty = !onViewDetails && rest.length === 0 && !entry.canDelete;
+  const isEmpty = !onViewDetails && rest.length === 0 && !entry.canDelete && !entry.canEdit;
 
   return (
     <div className="flex items-center gap-1">
@@ -526,7 +550,19 @@ const ActionButtons = ({
           {onViewDetails && (
             <DropdownMenuItem onSelect={onViewDetails}>View Details</DropdownMenuItem>
           )}
-          {onViewDetails && (rest.length > 0 || entry.canDelete) && <DropdownMenuSeparator />}
+          {entry.canEdit && onEditClick && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                onEditClick();
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+          )}
+          {(onViewDetails || (entry.canEdit && onEditClick)) && (rest.length > 0 || entry.canDelete) && (
+            <DropdownMenuSeparator />
+          )}
           {rest.map((t) => (
             <DropdownMenuItem
               key={t}
@@ -579,16 +615,29 @@ const ModalActionButtons = ({
   actingOn,
   onTransitionClick,
   onDeleteClick,
+  onEditClick,
 }: {
   entry: PCEntry;
   actingOn: string | null;
   onTransitionClick: (transition: string) => void;
   onDeleteClick: () => void;
+  /** Draft-only, creator-only — gated on entry.canEdit, same rule as onDeleteClick. */
+  onEditClick?: () => void;
 }) => {
   const transitions = entry.availableTransitions ?? [];
-  if (transitions.length === 0 && !entry.canDelete) return null;
+  if (transitions.length === 0 && !entry.canDelete && !entry.canEdit) return null;
   return (
     <div className="flex items-center gap-1.5 flex-wrap justify-end">
+      {entry.canEdit && onEditClick && (
+        <button
+          type="button"
+          disabled={actingOn !== null}
+          onClick={onEditClick}
+          className="h-9 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border border-border text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Edit
+        </button>
+      )}
       {transitions.map((t) => {
         const Icon = TRANSITION_ICONS[t] ?? Send;
         const positive = isPositiveTransition(t);
@@ -698,6 +747,7 @@ const PCDetailsDialog = ({
   actingOn,
   onTransitionClick,
   onDeleteClick,
+  onEditClick,
 }: {
   entry: PCEntry;
   open: boolean;
@@ -705,6 +755,8 @@ const PCDetailsDialog = ({
   actingOn: string | null;
   onTransitionClick: (transition: string) => void;
   onDeleteClick: () => void;
+  /** Draft-only, creator-only — gated on entry.canEdit, same rule as onDeleteClick. */
+  onEditClick?: () => void;
 }) => {
   const queryClient = useQueryClient();
 
@@ -949,6 +1001,7 @@ const PCDetailsDialog = ({
               actingOn={actingOn}
               onTransitionClick={onTransitionClick}
               onDeleteClick={onDeleteClick}
+              onEditClick={onEditClick}
             />
           </DialogFooter>
         </DialogContent>
@@ -963,12 +1016,15 @@ const PCRow = ({
   onSelect,
   rowRef,
   unreadNotifications,
+  onEditRequest,
 }: {
   entry: PCEntry;
   isSelected: boolean;
   onSelect: (id: number | null) => void;
   rowRef?: React.Ref<HTMLTableRowElement>;
   unreadNotifications?: Notification[];
+  /** Opens the shared create/edit drawer, prefilled from this entry — see PaymentCertificate. */
+  onEditRequest?: (entry: PCEntry) => void;
 }) => {
   const warnings = warningsOf(entry);
   // The details dialog is open exactly when this row is the selected one —
@@ -1119,6 +1175,7 @@ const PCRow = ({
           onTransitionClick={handleTransitionClick}
           onDeleteClick={() => setShowDeleteDialog(true)}
           onViewDetails={() => setShowViewDialog(true)}
+          onEditClick={onEditRequest ? () => onEditRequest(entry) : undefined}
         />
         <PCDetailsDialog
           entry={entry}
@@ -1127,6 +1184,7 @@ const PCRow = ({
           actingOn={actingOn}
           onTransitionClick={handleTransitionClick}
           onDeleteClick={() => setShowDeleteDialog(true)}
+          onEditClick={onEditRequest ? () => onEditRequest(entry) : undefined}
         />
         <ReasonDialog
           entry={entry}
@@ -1177,6 +1235,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
   selectedId = null,
   onSelect,
   unreadByPcId,
+  onEditRequest,
 }) => {
   const [page, setPage] = useState(1);
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -1261,6 +1320,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   onSelect={(id) => onSelect?.(id)}
                   rowRef={order.id === selectedId ? selectedRowRef : undefined}
                   unreadNotifications={unreadByPcId?.[String(order.id)]}
+                  onEditRequest={onEditRequest}
                 />
               ))
             )}

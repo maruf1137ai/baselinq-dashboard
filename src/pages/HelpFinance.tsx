@@ -29,9 +29,31 @@
  *   - Platform Fees visibility     → backend/cost_ledger/views.py (_can_view_platform_fees)
  *
  * Update this page whenever those rules change.
+ *
+ * The rows below marked in ROW_PERMISSION have a LIVE "who" — computed from
+ * the matching permission code's current grants (Roles & Permissions), via
+ * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
+ * VO's "Sign & Issue" is now one of them too — task.vo.approve, wired into
+ * views_signing.py's _can_sign() in place of the hardcoded SIGNING_ROLES["vo"]
+ * set (grants realigned first in user/migrations/0057_realign_vo_approve_grants.py,
+ * same pattern as task.approve_si/task.vo.recommend — see HelpTasks.tsx).
+ * "Create, edit or delete a Variation Order" was split into two rows for the
+ * same reason: VariationOrderViewSet.create() now checks task.vo.create
+ * (matching the Tasks-side "+Action" button it's actually reached through —
+ * see HelpTasks.tsx's "Create a new VO"), while update()/destroy() still
+ * check finance.edit, so one dynamic list could no longer describe all
+ * three verbs accurately. PC's "Edit/delete a Draft" and "change the fee
+ * rate" stay static: the former is a creator-identity check
+ * (_draft_edit_guard), the latter has no endpoint at all — neither is
+ * driven by the Permission tables.
  */
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useGrantedRoles } from "@/hooks/useGrantedRoles";
+import { useRoles } from "@/hooks/useRolePermissions";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
+import { formatRoleList, unionRoleCodes } from "@/lib/formatRoleList";
 
 type Row = { action: string; who: string; when: string; note?: string };
 
@@ -42,7 +64,23 @@ interface FinanceSection {
   rows: Row[];
 }
 
-const SECTIONS: FinanceSection[] = [
+/** Row action -> permission code(s) whose grants decide its "who". Multiple codes = OR. */
+const ROW_PERMISSION: Record<string, string[]> = {
+  "View the Cost Ledger": ["finance.view", "finance.edit"],
+  "Export to CSV": ["finance.view", "finance.edit"],
+  "Add an entry manually": ["finance.edit"],
+  "Create a Variation Order": ["task.vo.create"],
+  "Edit or delete a Variation Order": ["finance.edit"],
+  "Sign & Issue (the approval)": ["task.vo.approve"],
+  "Create a new certificate": ["finance.create_certificate"],
+  "Submit for Certification": ["finance.create_certificate"],
+  Cancel: ["finance.create_certificate"],
+  "Approve / Reject": ["finance.approve_certificate"],
+  "View Platform Fees": ["finance.approve_payment"],
+};
+const ROW_CODES = [...new Set(Object.values(ROW_PERMISSION).flat())];
+
+const STATIC_SECTIONS: FinanceSection[] = [
   {
     type: "LEDGER",
     title: "Cost Ledger",
@@ -80,14 +118,19 @@ const SECTIONS: FinanceSection[] = [
       "A formal change to the contract's cost. This page covers the Finance tab's own actions — for the full task workflow (pricing, recommending, the contractor's side) see the Task workflow reference.",
     rows: [
       {
-        action: "Create, edit or delete a Variation Order",
+        action: "Create a Variation Order",
+        who: "Client/Owner, Administrator, Client Project Manager, Project Manager, Principal Agent, Principal/PM.",
+        when: "Anytime on the project.",
+        note: "There's no \"New Variation Order\" button on this page by design — a VO is always escalated from a Site Instruction or a task (see the Task workflow reference); this is the permission that flow actually checks.",
+      },
+      {
+        action: "Edit or delete a Variation Order",
         who: "Client/Owner, Client Project Manager, Project Manager, Construction Manager, Contracts Manager.",
         when: "Anytime on the project.",
-        note: "There's no \"New Variation Order\" button on this page by design — a VO is always escalated from a Site Instruction or task.",
       },
       {
         action: "Sign & Issue (the approval)",
-        who: "Client/Owner, Project Manager, Client Project Manager.",
+        who: "Client/Owner, Project Manager, Client Project Manager, Principal Agent, Principal/PM, Administrator.",
         when: "Once the VO has been priced.",
         note: "Signing requires a 4-digit PIN if you've set one in Settings → Security. This is what puts the Debit in the Cost Ledger.",
       },
@@ -160,6 +203,30 @@ const GLOBAL_NOTES = [
 
 export default function HelpFinance() {
   const navigate = useNavigate();
+  const projectId = useSelectedProjectId();
+  const grants = useGrantedRoles(ROW_CODES, projectId);
+  const { data: roles } = useRoles();
+
+  const roleNamesByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of roles ?? []) map[r.code] = r.name;
+    return map;
+  }, [roles]);
+
+  // Falls back to the static prose until both the grants and the role names
+  // have arrived — never renders a half-computed sentence.
+  const sections = useMemo(() => {
+    if (!grants || Object.keys(roleNamesByCode).length === 0) return STATIC_SECTIONS;
+    return STATIC_SECTIONS.map((section) => ({
+      ...section,
+      rows: section.rows.map((row) => {
+        const codes = ROW_PERMISSION[row.action];
+        if (!codes) return row;
+        const roleCodes = unionRoleCodes(...codes.map((c) => grants[c]));
+        return { ...row, who: `Anyone holding: ${formatRoleList(roleCodes, roleNamesByCode)}.` };
+      }),
+    }));
+  }, [grants, roleNamesByCode]);
 
   // Back goes to wherever the user actually came from — the Help hub, a
   // deep link out of /finance, anywhere — rather than always dumping them on
@@ -196,7 +263,7 @@ export default function HelpFinance() {
 
         {/* Quick jump nav */}
         <div className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <a
               key={s.type}
               href={`#${s.type.toLowerCase()}`}
@@ -209,7 +276,7 @@ export default function HelpFinance() {
 
         {/* Per-area sections */}
         <div className="mt-10 space-y-10">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <section key={s.type} id={s.type.toLowerCase()} className="scroll-mt-6">
               <h2 className="text-lg font-normal text-foreground">{s.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
