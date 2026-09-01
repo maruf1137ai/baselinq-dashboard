@@ -77,16 +77,22 @@ export const InsuranceBanner = () => {
     part that said WHY, and it fits.
   */
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-4 py-3 bg-amber-50 border-b border-amber-200">
       <div className="flex items-center gap-3 min-w-0">
-        <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-        <p className="text-sm text-muted-foreground">
-          No professional insurance certificate on file — required for consultants, and visible to
-          project owners.
-        </p>
+        <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+          <Shield className="h-5 w-5 text-amber-700" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-amber-900">
+            Upload your professional insurance certificate
+          </p>
+          <p className="text-xs text-amber-800">
+            Required for consultants. Keeps your record compliant and visible to project owners.
+          </p>
+        </div>
       </div>
-      <Button variant="outline" size="xs" className="shrink-0 w-36 justify-center" onClick={handleClick}>
-        Upload certificate
+      <Button size="xs" className="shrink-0 w-36 justify-center" onClick={handleClick}>
+        Upload now
       </Button>
     </div>
   );

@@ -958,29 +958,36 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap shrink-0">
+      <div className="flex items-center gap-3 flex-wrap shrink-0">
         {days !== null && (
-          // Severity rule 1: past the completion date is a breach that has
-          // already happened and may carry colour. "30 days left" is a
-          // forecast and may not, however small the number.
-          <Badge variant={days < 0 ? "danger" : "neutral"} className="tabular-nums">
-            {days < 0
-              ? `${Math.abs(days)} days past completion`
-              : `${days} days remaining`}
-          </Badge>
+          // The old summary's own three-step scale, restored verbatim: past
+          // the date is red, inside a month is orange, otherwise green. This
+          // is the one place on the page that reads as a status at a glance,
+          // and the owner asked for it back by name.
+          <span
+            className={cn(
+              "text-xs font-medium px-3 py-1 rounded-md border tabular-nums",
+              days < 0
+                ? "bg-red-50 text-red-600 border-red-200"
+                : days <= 30
+                  ? "bg-orange-50 text-orange-600 border-orange-200"
+                  : "bg-emerald-50 text-emerald-600 border-emerald-200",
+            )}
+          >
+            {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`}
+          </span>
         )}
         {sum !== null && (
-          <Badge
-            variant="neutral"
-            className="tabular-nums"
+          <span
+            className="text-xs font-medium px-3 py-1 rounded-md border bg-card text-foreground border-border tabular-nums"
             title="The contract sum as recorded, revised by approved variations. Ex-VAT."
           >
             {formatZAR(sum)}
-          </Badge>
+          </span>
         )}
-        <Badge variant="neutral" className="tabular-nums">
+        <span className="text-xs font-medium px-3 py-1 rounded-md border bg-primary/10 text-primary border-primary/20 tabular-nums">
           {data.myActions.length} open action{data.myActions.length === 1 ? "" : "s"}
-        </Badge>
+        </span>
       </div>
     </section>
   );
