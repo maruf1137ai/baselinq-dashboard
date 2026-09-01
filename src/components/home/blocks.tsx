@@ -157,6 +157,7 @@ export function Panel({
   tone = "neutral",
   emphasis,
   action,
+  segments,
   children,
 }: {
   title: string;
@@ -168,7 +169,9 @@ export function Panel({
    * a line the panel already draws, so naming it here costs no height.
    * `danger` is only ever for a tier that is an actual breach (rule 1).
    */
-  leadTone?: "muted" | "danger";
+  /** `warning` exists so a panel whose worst state is "soon" can say so
+   *  without borrowing the red that means "already breached". */
+  leadTone?: "muted" | "warning" | "danger";
   /** A sentence under the title. Reserved for what a figure cannot carry. */
   hint?: string;
   icon?: typeof CalendarClock;
@@ -176,6 +179,20 @@ export function Panel({
   /** See the note above: `primary` is the work, `reference` is everything else. */
   emphasis?: Emphasis;
   action?: React.ReactNode;
+  /**
+   * A switcher drawn as a second header row, beneath the title.
+   *
+   * It lives in the header rather than above the panel so that one bordered
+   * container holds the control and the list it governs. A switcher floating
+   * outside the card reads as page furniture and leaves the reader to work
+   * out which panel it drives — which is the exact ambiguity folding three
+   * panels into one was meant to remove.
+   *
+   * The title and lead stay: they belong to the ACTIVE segment and say what
+   * is in the list, which a tab label alone cannot ("Project risk" plus
+   * "13 critical of 14 open signals").
+   */
+  segments?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   // An empty array is still truthy, and rendering it would draw a 1px divider
@@ -187,7 +204,7 @@ export function Panel({
     !(Array.isArray(children) && children.length === 0);
 
   return (
-    <section className="bg-card border border-border rounded-xl overflow-hidden lg:flex lg:flex-col lg:h-full">
+    <section className="bg-card border border-border rounded-xl overflow-hidden flex flex-col w-full">
       <header
         className={cn(
           "flex items-center justify-between gap-3 px-4 py-3 lg:shrink-0",
@@ -233,7 +250,11 @@ export function Panel({
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    leadTone === "danger" ? "text-destructive" : "text-muted-foreground",
+                    leadTone === "danger"
+                      ? "text-destructive"
+                      : leadTone === "warning"
+                        ? "text-amber-700"
+                        : "text-muted-foreground",
                   )}
                 >
                   {lead}
@@ -246,10 +267,20 @@ export function Panel({
         {action && <div className="shrink-0">{action}</div>}
       </header>
 
+      {segments && (
+        <div className="px-4 pb-3 lg:shrink-0 border-b border-border">{segments}</div>
+      )}
+
       {/* No body at all when there is nothing to list: an empty section is its
           header, and the lead or hint above has already said so. */}
       {hasBody && (
-        <div className="border-t border-border divide-y divide-border lg:flex-1 lg:min-h-0">
+        <div
+          className={cn(
+            "divide-y divide-border lg:flex-1 lg:min-h-0",
+            // The segments row already drew the rule under the header.
+            !segments && "border-t border-border",
+          )}
+        >
           {children}
         </div>
       )}
@@ -392,7 +423,20 @@ export const ROW_DATE_SLOT = "w-20 shrink-0";
 export function RowDate({ date }: { date: string | null | undefined }) {
   const parsed = date ? new Date(date) : null;
   if (!parsed || Number.isNaN(parsed.getTime())) {
-    return <div className={ROW_DATE_SLOT} aria-hidden />;
+    // An EMPTY slot read as a date that failed to load, and left the column
+    // looking broken. These rows have no deadline on the wire — a rejected
+    // certificate, a proposed meeting action — and borrowing `updatedAt`
+    // would present "when somebody last touched it" as a due date. So the
+    // slot says what is true, in the same words `MyActions` already uses for
+    // the same absence.
+    return (
+      <div
+        className={`${ROW_DATE_SLOT} text-xs text-muted-foreground text-center`}
+        title="No deadline is recorded for this item"
+      >
+        No date
+      </div>
+    );
   }
 
   const day = parsed.getDate();
@@ -630,7 +674,14 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 // Its distinguishing marks are the ones it earns: uniform full-width prose, a
 // tier heading above each block of it, and the page's only "All signals" link.
 
-export function RiskConditionBlock({ data }: { data: HomeData }) {
+export function RiskConditionBlock({
+  data,
+  segments,
+}: {
+  data: HomeData;
+  /** The Contract-watch switcher, drawn in this panel's header. */
+  segments?: React.ReactNode;
+}) {
   const { riskGroups, riskCounts, riskUnavailable, canViewCompliance } = data;
 
   // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
@@ -690,6 +741,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
         emphasis="primary"
         icon={ShieldQuestion}
         tone="orange"
+        segments={segments}
         hint="The risk engine did not respond — posture unknown, not clear."
       />
     );
@@ -701,9 +753,10 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     return (
       <Panel
         title="Project risk"
-        emphasis="reference"
+        emphasis="primary"
         icon={CheckCircle2}
         tone="green"
+        segments={segments}
         hint="No open risk signals on this project."
         action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
       />
@@ -735,11 +788,12 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
       // the header and the column agree on what they are counting.
       lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open signals`}
       leadTone={worst.severity === "red" ? "danger" : "muted"}
-      emphasis="reference"
+      emphasis="primary"
       // The one link on this page that is SUPPOSED to go to Project health:
       // "show me every open signal" is a diagnosis, and that is the page that
       // diagnoses. Every ROW below goes to the object instead.
       action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
+      segments={segments}
     >
       {/*
         ── Six coloured words became one ────────────────────────────────────
@@ -806,7 +860,11 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               of date it is, and it is stated in full with its year, which the
               pill never was.
             */
-            title={firstDetected(g) ? `Open since ${formatDateUk(firstDetected(g), "long")}` : undefined}
+            title={
+              firstDetected(g)
+                ? `${g.tierLabel} · open since ${formatDateUk(firstDetected(g), "long")}`
+                : g.tierLabel
+            }
             /*
               The row's own sentence already names the count where there is
               one to name, so this adds only the fact the row shows nowhere: the
@@ -817,6 +875,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
             */
             aria-label={
               [
+                g.tierLabel,
                 g.title,
                 g.contractual ? "contractual" : null,
                 g.count > 1 ? `${g.count} signals` : null,
@@ -840,6 +899,35 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               line — and the severity word that used to compete for this space
               is gone, so the label starts wider than it was as well.
             */}
+            {/*
+              ── The dot, and why the tier-heading rule was not enough ─────
+
+              Severity rule 2 says the tier is named once above the rows it
+              governs. On the live project that rule degenerates: 13 of the 14
+              open signals are Critical, so every visible row is in the FIRST
+              tier, the header names it, and no strip is ever reached. The
+              panel arrived as five identical lines of body text with the only
+              urgency in a header the eye reads once.
+
+              A 6px dot per row is not the thing rule 3 forbids. What was
+              banned was drawing the whole row in its colour AND repeating the
+              severity as a word — six coloured words a row, which reads as a
+              background. This is one glyph at a fixed position: it ranks rows
+              against each other inside the panel, it survives a list that is
+              entirely one tier, and it leaves the sentence in body colour. The
+              severity is also still named in text on hover and to a screen
+              reader via `aria-label`, so the dot is never the only carrier.
+            */}
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                g.tierSeverity === "red"
+                  ? "bg-destructive"
+                  : g.tierSeverity === "orange"
+                    ? "bg-amber-500"
+                    : "bg-muted-foreground/40"
+              }`}
+            />
             <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">
               {g.title}
               {/* Stated only when true of every signal in the group, so a

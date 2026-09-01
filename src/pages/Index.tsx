@@ -107,7 +107,7 @@ import {
 } from "@/components/home/blocks";
 import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
-import { UpcomingMeetingsBlock } from "@/components/home/UpcomingMeetings";
+import { ContractWatchBlock } from "@/components/home/ContractWatch";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
 import { RecentActivityBlock } from "@/components/home/RecentActivity";
 import { useHomeData } from "@/hooks/useHomeData";
@@ -293,8 +293,6 @@ const Index = () => {
           The ring is SETUP COMPLETENESS and is labelled as such in text. See
           `ProjectSummaryBlock`.
         */}
-        {!data.isLoading && <ProjectSummaryBlock data={data} />}
-
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
 
@@ -354,70 +352,72 @@ const Index = () => {
         </div>
         )}
 
+        {/*
+          ── Why the strip is BELOW the setup stack now ────────────────────
+
+          It used to lead the page, on the reasoning that a project's identity
+          should not appear below a reminder about it. The owner has reversed
+          that, and the reversal is right for a reason the original argument
+          missed: the setup stack is TRANSIENT and closable. It is an
+          onboarding nag a user clears once, and every project that is
+          properly set up draws nothing there at all (`empty:hidden`). The
+          strip is permanent.
+
+          So on a finished project the strip still leads the page. On a fresh
+          one the reader meets the thing they must finish, closes it, and the
+          strip takes the top for good. Ordering the permanent block above a
+          block that disappears would have left a gap at the top of the page
+          the moment the nag was dismissed.
+        */}
+        {!data.isLoading && <ProjectSummaryBlock data={data} />}
+
         {/* State 4: loading */}
         {data.isLoading ? (
           <AwesomeLoader message="Reading what needs you" />
         ) : (
           <>
-            {/* Question 1: is anything on fire. */}
-            <StatusBandBlock data={data} />
+            {/*
+              ── The pair the client asked for, in the shape they had it ───
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:min-h-[640px]">
-              {/* Question 2: what do I have to do. */}
-              {/*
-                ── THE WORK, and it is two lists, not one ──────────────────
+              My actions and the activity feed, side by side and directly
+              under the strip, which is where production put them
+              (`f4cdc51`, `md:grid-cols-2`) and what Darren and Werner asked
+              to have back. Everything the rebuild added is still on the page
+              — it is below these two rather than around them.
 
-                "My actions" is what the reader has personally been asked to
-                do; "What needs you" is the contractual clock — notice
-                deadlines, certificates, obligations, escalations — which
-                outranks a task on consequence and is addressed to a role or
-                to the project rather than to a person.
-
-                My actions is FIRST and above. It is the question a person
-                actually opens this page with, it is the only list on the
-                screen every user can see regardless of permission, and one
-                revision of folding it into the queue proved what happens when
-                a consequence ranking is allowed to answer a possession
-                question: an RFI addressed to the reader sorted below rows
-                addressed to nobody.
-
-                Equal halves of the fixed row, each scrolling its own rows, so
-                the two columns still start and end on the same line.
-              */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <div className="lg:flex-1 lg:min-h-0">
-                  <MyActionsBlock data={data} />
-                </div>
-                <div className="lg:flex-1 lg:min-h-0">
-                  <ActionQueueBlock data={data} />
-                </div>
-              </div>
-              {/* What is true whether or not anybody acts today. */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                {/*
-                  ── The slot goes with the panel ────────────────────────
-
-                  `RiskConditionBlock` renders NOTHING for a viewer without
-                  `compliance.view` (see the note in `blocks.tsx`), and an
-                  empty `lg:flex-1` slot would still take a third of this
-                  column's height — a labelled hole where a panel used to be
-                  reads as a panel that failed to load. The condition is the
-                  same one the block itself applies, stated here so the
-                  layout drops the space too.
-                */}
-                <div className="lg:flex-1 lg:min-h-0">
-                  <UpcomingMeetingsBlock data={data} />
-                </div>
-                {data.canViewCompliance && (
-                  <div className="lg:flex-1 lg:min-h-0">
-                    <RiskConditionBlock data={data} />
-                  </div>
-                )}
-                <div className="lg:flex-1 lg:min-h-0">
-                  <RecentActivityBlock data={data} />
-                </div>
-              </div>
+              `items-start` rather than a stretched row: these are the two
+              panels whose length is genuinely data-driven (one is your work,
+              the other is the last eight events), and forcing them to a
+              common height padded whichever was shorter with dead space.
+            */}
+            <div className="grid gap-4 md:grid-cols-2 items-start">
+              <MyActionsBlock data={data} />
+              <RecentActivityBlock data={data} />
             </div>
+
+            {/*
+              ── Contract watch: one panel, three lists ──────────────────
+
+              "What needs you", "Project risk" and "My meetings" were three
+              stacked cards answering one question — what is standing on this
+              contract. Three headers, three borders and three empty states
+              for one question is chrome, and it left a reader working out the
+              boundary between them before the page was usable.
+
+              They are one panel with a segmented switcher now. Nothing is
+              removed: every row that was reachable is still reachable, and
+              the segment a role cannot populate is absent rather than
+              greyed — see the rules in `ContractWatch.tsx`.
+            */}
+            <ContractWatchBlock data={data} projectId={projectId} />
+
+            {/*
+              Time, money and change, then construction and professional, at
+              the foot of the page. These answer "where does the contract
+              stand", which is a question a reader asks after the two lists
+              above have told them whether anything is on fire today.
+            */}
+            <StatusBandBlock data={data} />
             <PhaseCostProgressBlock projectId={projectId} />
           </>
         )}

@@ -451,9 +451,12 @@ function queueLead(summary: ReturnType<typeof summariseQueue>): string | undefin
 export function ActionQueueBlock({
   data,
   title = "What needs you",
+  segments,
 }: {
   data: HomeData;
   title?: string;
+  /** The Contract-watch switcher, drawn in this panel's header. */
+  segments?: React.ReactNode;
 }) {
   const { isLoading, loadIssue } = data;
   /*
@@ -479,7 +482,7 @@ export function ActionQueueBlock({
 
   if (isLoading) {
     return (
-      <Panel title={title} emphasis="primary">
+      <Panel title={title} emphasis="primary" segments={segments}>
         <AwesomeLoader message="Working out what needs you" />
       </Panel>
     );
@@ -494,6 +497,7 @@ export function ActionQueueBlock({
       return (
         <Panel
           title={title}
+          segments={segments}
           emphasis="primary"
           icon={ShieldAlert}
           tone="orange"
@@ -506,6 +510,7 @@ export function ActionQueueBlock({
     return (
       <Panel
         title={title}
+        segments={segments}
         emphasis="primary"
         icon={CheckCircle2}
         tone="green"
@@ -552,7 +557,7 @@ export function ActionQueueBlock({
       band; this is the hierarchy, stated in the two channels that cost no
       height — weight and surface.
     */
-    <Panel title={title} emphasis="primary" lead={queueLead(summary)}>
+    <Panel title={title} emphasis="primary" lead={queueLead(summary)} segments={segments}>
       <div
         ref={containerRef}
         className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
