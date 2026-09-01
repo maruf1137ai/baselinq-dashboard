@@ -26,8 +26,16 @@ export function UpcomingMeetingsBlock({ data }: { data: HomeData }) {
 
   return (
     <Panel
-      title="Upcoming meetings"
-      lead={rows.length ? `${rows.length} scheduled` : undefined}
+      /*
+        "My meetings", and possessive on purpose. `upcomingMeetings` is the
+        reader's own diary — `useHomeData` has already dropped cancelled
+        meetings and ones this user declined — so the panel is about them in
+        the same way "My actions" is, and its heading should say so. The lead
+        carries the "upcoming" that came out of the title, which is where that
+        word belonged: it qualifies the count, not the panel.
+      */
+      title="My meetings"
+      lead={rows.length ? `${rows.length} coming up` : undefined}
       action={<ViewAll to="/meetings">All meetings</ViewAll>}
     >
       {rows.length === 0 ? (
@@ -35,8 +43,8 @@ export function UpcomingMeetingsBlock({ data }: { data: HomeData }) {
           variant="plain"
           size="sm"
           icon={CalendarDays}
-          title="No meetings scheduled"
-          description="Meetings you are invited to appear here."
+          title="Nothing in your diary"
+          description="Meetings you are invited to appear here, soonest first."
         />
       ) : (
         <ul className="divide-y divide-border">

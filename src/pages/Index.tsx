@@ -109,7 +109,7 @@ import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
 import { UpcomingMeetingsBlock } from "@/components/home/UpcomingMeetings";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
-import { WhatChangedBlock } from "@/components/home/WhatChanged";
+import { RecentActivityBlock } from "@/components/home/RecentActivity";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 
@@ -394,14 +394,27 @@ const Index = () => {
               </div>
               {/* What is true whether or not anybody acts today. */}
               <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <div className="lg:flex-1 lg:min-h-0">
-                  <RiskConditionBlock data={data} />
-                </div>
+                {/*
+                  ── The slot goes with the panel ────────────────────────
+
+                  `RiskConditionBlock` renders NOTHING for a viewer without
+                  `compliance.view` (see the note in `blocks.tsx`), and an
+                  empty `lg:flex-1` slot would still take a third of this
+                  column's height — a labelled hole where a panel used to be
+                  reads as a panel that failed to load. The condition is the
+                  same one the block itself applies, stated here so the
+                  layout drops the space too.
+                */}
+                {data.canViewCompliance && (
+                  <div className="lg:flex-1 lg:min-h-0">
+                    <RiskConditionBlock data={data} />
+                  </div>
+                )}
                 <div className="lg:flex-1 lg:min-h-0">
                   <UpcomingMeetingsBlock data={data} />
                 </div>
                 <div className="lg:flex-1 lg:min-h-0">
-                  <WhatChangedBlock feed={data.changeFeed} />
+                  <RecentActivityBlock data={data} />
                 </div>
               </div>
             </div>

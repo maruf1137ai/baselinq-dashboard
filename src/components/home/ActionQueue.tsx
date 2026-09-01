@@ -80,6 +80,8 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
+import { ROUTE } from "@/lib/homeSignals";
+import { formatZAR } from "@/lib/formatCurrency";
 import type { HomeData } from "@/hooks/useHomeData";
 import { useScrollPagination } from "@/hooks/useScrollPagination";
 
@@ -90,46 +92,54 @@ import { Panel, RowDate, SectionHeading } from "./blocks";
  * urgent it is — a heading that claims urgency would be wrong for the tail of
  * its own section (see the trade-off in the header comment).
  *
- * In `CONSEQUENCE_ORDER`: forfeiture, money, breach, blocking, own-work.
+ * The project's own deadlines first, then the rows the reader can act on —
+ * which is the order `CONSEQUENCE_ORDER` already puts them in, forfeiture
+ * ahead of money, breach, blocking and own-work.
  */
-const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
-  // "Notices to serve" asserted a NOTICE STAGE for every row underneath it,
-  // and the expense-and-loss clock is not necessarily at that stage — the
-  // heading was making a contractual claim about rows it only groups. A
-  // heading names what the rows have in common and nothing more, and what
-  // these have in common is a deadline written into the contract.
-  //
-  // "· project-wide" is not decoration. `buildTimeBarQueue` sets
-  // `requires: []` and the time-bar payload carries no assignee, so these rows
-  // are the same for every viewer on the project. Under a panel titled "What
-  // needs you" that was a claim the data cannot support, and the honest fix is
-  // to say whose they are rather than to invent an owner for them.
-  { label: "Contract deadlines · project-wide", kinds: ["time-bar"] },
-  // This one IS scoped now, and is the only section heading here that was
-  // repaired rather than qualified. Each certificate row declares the server's
-  // own permission for the act it names — `finance.approve_certificate` to
-  // certify (PRINCIPAL_PM alone), `finance.post_certificate` to post,
-  // `finance.create_certificate` to rework, `finance.edit` to record a payment
-  // — so a row reaches only somebody who can perform it. It used to require
-  // `finance.view` alone, which made "Certify PC-006" render identically for
-  // the principal agent, the contractor's QS and any finance viewer.
-  { label: "Certificates awaiting you", kinds: ["certificate", "rejected"] },
-  // `ObligationLike` carries `responsibleRole` and no assignee id — there is
-  // no user on the payload to match the reader against — so these rows are
-  // scoped to a ROLE at best and the heading says so. The role itself is
-  // already named in each row's detail. Reported as a payload gap: an
-  // obligation with an assigned user would make this section answerable.
-  { label: "Contract obligations · by role", kinds: ["obligation"] },
-  // Scoped, and always was: `my_rsvp` is resolved per requesting user by the
-  // server, and a meeting action is dropped when the server says
-  // `can_approve: false`.
-  { label: "Blocking someone else", kinds: ["rsvp", "meeting-action"] },
-  // The mirror of the section above: there, you are holding someone up; here,
-  // someone is holding you up. Separate from "Assigned to you" because the
-  // work is not yours — the task is still with whoever let it run late, and
-  // what escalated to you is the chase. Sits above "Assigned to you", matching
-  // its `blocking` consequence outranking `own-work` in the band matrix.
-  { label: "Escalated to you to chase", kinds: ["task-escalated"] },
+const SECTIONS: { label: string; note: string; kinds: QueueKind[] }[] = [
+  /*
+    ── TWO HEADINGS, NOT FIVE ────────────────────────────────────────────
+
+    This list had five: "Contract deadlines · project-wide", "Certificates
+    awaiting you", "Contract obligations · by role", "Blocking someone else"
+    and "Escalated to you to chase". On the seeded project that is five
+    headings over ten rows — a table of contents for a list you can already
+    see whole — and four of the ten rows were the same sentence about a
+    different certificate number.
+
+    What is kept is the ONE distinction on this page a reader acts on
+    differently, and it is the distinction the old suffixes were disclosing in
+    heading position: **is this row addressed to me, or is it true of the
+    project whatever I do?** A notice deadline carries no assignee at all
+    (`buildTimeBarQueue` sets `requires: []` and the payload names nobody) and
+    an obligation is scoped to a ROLE rather than a user, so both are the
+    project's. Everything else reached the reader because the reader can
+    perform the act: a certificate row declares the server's own permission
+    for certifying, posting, reworking or recording payment; an RSVP is
+    resolved per requesting user; a meeting action is dropped where the server
+    says `can_approve: false`; an escalation names the reader in
+    `escalatedTo`.
+
+    The old headings' finer grain is not lost, it is demoted. "project-wide"
+    and "by role" were honest disclosures promoted into heading position,
+    where they read as apology; they are in `note` below, which the heading
+    carries as its tooltip.
+
+    `homeQueueRank.ts` is untouched. It still orders every row, sections still
+    only appear when they apply, and rows keep `rankQueue`'s order inside a
+    section — so merging headings changed which strip a row sits under and
+    nothing about which row comes first.
+  */
+  {
+    label: "Contract deadlines",
+    note: "Project-wide. A notice deadline carries no assignee, and an obligation is scoped to a role rather than to a person, so these rows are the same for everyone on the project.",
+    kinds: ["time-bar", "obligation"],
+  },
+  {
+    label: "Yours to act on",
+    note: "Rows that reached you because you can perform the act — certifying, posting or paying a certificate, answering an invitation, approving a meeting action, or chasing a task that escalated to you.",
+    kinds: ["certificate", "rejected", "rsvp", "meeting-action", "task-escalated"],
+  },
   /*
     ── "Assigned to you" WAS HERE, AND IT IS NOW ITS OWN PANEL ─────────────
 
@@ -138,10 +148,7 @@ const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
     always the last thing paginated in. That ranking is defensible as a
     statement about the CONTRACT — a forfeiture clock does outrank your
     paperwork — and indefensible as an answer to "what have I been asked to
-    do", which is the other question a person opens this page with. An RFI
-    addressed to the reader was sorting below rows that are addressed to
-    nobody ("Contract deadlines · project-wide", above, carries no assignee at
-    all).
+    do", which is the other question a person opens this page with.
 
     So the plain-task rows moved to `MyActionsBlock`, which is uncapped,
     ungated and sorted by the reader's own due dates. `task` rows are filtered
@@ -149,14 +156,98 @@ const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
     their heading — a row with no section would be paginated in and then
     rendered nowhere, which is how a list quietly loses items.
 
-    `task-escalated` DID NOT MOVE and is still above, under "Escalated to you
-    to chase". An escalation is not your work: it is somebody else's silence
-    past the SLA, the task stays with whoever owes it, and the move it asks
-    for is a phone call rather than a form. It belongs with the things that
-    outrank a task, which is exactly where its `blocking` consequence already
-    put it.
+    `task-escalated` DID NOT MOVE. An escalation is not your work: it is
+    somebody else's silence past the SLA, the task stays with whoever owes it,
+    and the move it asks for is a phone call rather than a form. It is still
+    above, under "Yours to act on", because making that call is yours.
   */
 ];
+
+/**
+ * The unpaid-certificate chase, folded to one row.
+ *
+ * `buildPaymentOverdueQueue` emits one row per overdue certificate and they
+ * arrive adjacent, because they share a kind, a consequence and a `subRank`.
+ * On the seeded project that is four consecutive rows reading "Chase payment
+ * on PC-004 · 151 days over", "Chase payment on PC-005 · 148 days over" and
+ * so on: forty per cent of the whole list spent saying one thing four times,
+ * and the near-identical sentences are what made the panel unreadable rather
+ * than long.
+ *
+ * `groupRiskSignals` already does exactly this for repeated signals and this
+ * is the same operation in the same words — a count, a total, and the worst
+ * instance named — so the two panels fold alike.
+ *
+ * ── What the folded row may and may not say ──────────────────────────────
+ *
+ *  - The TOTAL is stated only when every folded row published a usable
+ *    figure. One null and the clause is dropped: a sum over three of four
+ *    debts printed as "R X unpaid" is a wrong number, and a wrong number
+ *    about money is the most expensive thing this page can render.
+ *  - "oldest N days over" is the WORST row's real count, not an average.
+ *  - The row goes to the certificate LIST, never to one of the N — naming a
+ *    single certificate for a group would name the wrong one.
+ *  - Nothing is folded away: every certificate is on the list it links to.
+ *
+ * Position is preserved exactly. The group takes the first member's place in
+ * the ranked array and the rest are dropped, so `rankQueue`'s order is
+ * untouched. Folding happens AFTER ranking and after the permission filter,
+ * and the panel's own lead still counts the unfolded queue.
+ */
+const PAYMENT_CHASE_PREFIX = "payment-overdue-";
+
+export function foldPaymentChases(items: QueueItem[]): QueueItem[] {
+  const chases = items.filter((i) => i.key.startsWith(PAYMENT_CHASE_PREFIX));
+  if (chases.length < 2) return items;
+
+  const total = chases.every((c) => typeof c.amount === "number" && Number.isFinite(c.amount))
+    ? chases.reduce((n, c) => n + (c.amount as number), 0)
+    : null;
+  // Most overdue first: `daysRemaining` is negative on these rows.
+  const worst = chases.reduce((a, b) =>
+    (a.daysRemaining ?? 0) <= (b.daysRemaining ?? 0) ? a : b,
+  );
+  const oldest = worst.daysRemaining === null ? null : Math.abs(worst.daysRemaining);
+
+  const folded: QueueItem = {
+    ...worst,
+    key: "payment-overdue-group",
+    headline: [
+      `${chases.length} certificates unpaid`,
+      total === null ? null : formatZAR(total),
+      oldest === null ? null : `oldest ${oldest} days over`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    detail:
+      [
+        total === null ? "One or more outstanding amounts were not published" : null,
+        // Every certificate in the fold, named, so the tooltip is the full
+        // list even though the row is one line.
+        chases
+          .map((c) => c.headline.replace(/^Chase payment on /, ""))
+          .join(", "),
+      ]
+        .filter(Boolean)
+        .join(" · ") || null,
+    // The oldest debt's due date, which is the one the tile should carry.
+    date: worst.date,
+    // No chip: "oldest N days over" is in the headline, and `clockChip` would
+    // print a bare "151 days over" beside it as though it were the group's.
+    daysRemaining: null,
+    clock: null,
+    countdownLabel: null,
+    amount: total,
+    href: ROUTE.certificates,
+    action: "Open the certificate list",
+  };
+
+  const first = items.findIndex((i) => i.key.startsWith(PAYMENT_CHASE_PREFIX));
+  return items.flatMap((i, idx) => {
+    if (!i.key.startsWith(PAYMENT_CHASE_PREFIX)) return [i];
+    return idx === first ? [folded] : [];
+  });
+}
 
 /** Rows are revealed 10 at a time; scrolling to the bottom of the panel loads the next 10. */
 const PAGE_SIZE = 10;
@@ -373,11 +464,16 @@ export function ActionQueueBlock({
     stopped drawing it. `task-escalated` is deliberately kept — see SECTIONS.
   */
   const queue = data.queue.filter((i) => i.kind !== "task");
+  // The LEAD counts the unfolded queue. Four unpaid certificates are four
+  // things outstanding however many lines they are drawn on, and the panel's
+  // own count must not shrink because its presentation got tidier.
   const summary = summariseQueue(queue);
+  // The ROWS are the folded list. See `foldPaymentChases`.
+  const rows = foldPaymentChases(queue);
   // Hooks must run unconditionally, ahead of the loading/empty early returns
   // below.
   const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
-    queue,
+    rows,
     PAGE_SIZE,
   );
 
@@ -419,14 +515,25 @@ export function ActionQueueBlock({
   }
 
   // Rows keep `rankQueue`'s order inside their section; sections keep theirs.
-  const rows: React.ReactNode[] = [];
-  for (const section of SECTIONS) {
-    const items = visibleItems.filter((i) => section.kinds.includes(i.kind));
-    if (items.length === 0) continue; // Sections only appear when they apply.
-    rows.push(
-      <SectionHeading key={`h-${section.label}`} label={section.label} count={items.length} />,
-    );
-    for (const item of items) rows.push(<QueueRow key={item.key} item={item} />);
+  const drawn: React.ReactNode[] = [];
+  const sectioned = SECTIONS.map((section) => ({
+    section,
+    items: visibleItems.filter((i) => section.kinds.includes(i.kind)),
+  })).filter((s) => s.items.length > 0); // Sections only appear when they apply.
+  for (const { section, items } of sectioned) {
+    // One section left standing is a heading for the whole panel, and the
+    // panel already has one. The strip is drawn only where it divides.
+    if (sectioned.length > 1) {
+      drawn.push(
+        <SectionHeading
+          key={`h-${section.label}`}
+          label={section.label}
+          count={items.length}
+          note={section.note}
+        />,
+      );
+    }
+    for (const item of items) drawn.push(<QueueRow key={item.key} item={item} />);
   }
 
   return (
@@ -450,7 +557,7 @@ export function ActionQueueBlock({
         ref={containerRef}
         className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
       >
-        {rows}
+        {drawn}
         {hasMore && <div ref={sentinelRef} />}
       </div>
     </Panel>

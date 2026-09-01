@@ -71,7 +71,7 @@
  * looking at.
  */
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion, X } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -273,13 +273,29 @@ export function Panel({
 export function SectionHeading({
   label,
   count,
+  note,
 }: {
   label: string;
   /** Rows under this heading. Said once here instead of on each row. */
   count?: number;
+  /**
+   * The heading's qualifier, in the tooltip rather than in the label.
+   *
+   * The queue's headings used to read "Contract deadlines · project-wide" and
+   * "Escalated to you to chase". Both suffixes are honest — they say whose
+   * the rows actually are — but a disclosure set in heading position reads as
+   * an apology attached to every row beneath it, and two of them made a
+   * ten-row list look like five lists. The qualification is still one hover
+   * away and is still written down in `SECTIONS`; it is no longer the second
+   * half of the label.
+   */
+  note?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50">
+    <div
+      className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50"
+      title={note}
+    >
       {/*
         `text-foreground`, not `text-muted-foreground`. Muted grey on this
         strip computes 4.19:1 against `bg-muted/50` over a card — under the
@@ -615,7 +631,7 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 // tier heading above each block of it, and the page's only "All signals" link.
 
 export function RiskConditionBlock({ data }: { data: HomeData }) {
-  const { riskGroups, riskCounts, riskUnavailable } = data;
+  const { riskGroups, riskCounts, riskUnavailable, canViewCompliance } = data;
 
   // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
   // governs, and only the worst tier present is drawn in colour. Groups
@@ -643,11 +659,34 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     5,
   );
 
+  /*
+    ── A PANEL NOBODY CAN FILL DOES NOT RENDER ───────────────────────────
+
+    Without `compliance.view`, `visibleRiskSignals` returns `[]` for every
+    signal on the project and the risk endpoint is never even requested. Drawn
+    as an ordinary empty panel that is a headed, bordered block reading
+    "No open risk signals" — which is an ALL-CLEAR, addressed to the one
+    viewer who has no way to know whether it is true. The seeded CONTRACTOR
+    role holds neither `compliance.view` nor `finance.view`, so this is what a
+    contractor was being told about a project with open critical signals.
+
+    So the two states are separated and must never be drawn the same way:
+
+      cannot populate (permission)  → nothing renders, here and in `Index.tsx`,
+                                      which drops the layout slot with it.
+      could populate, but empty     → the panel renders and says so below.
+
+    Nothing is disclosed by the absence beyond the absence: no count, no
+    "hidden by permission" strip. That a project has risk signals is itself
+    the fact `compliance.view` withholds.
+  */
+  if (!canViewCompliance) return null;
+
   // An outage must never read as "healthy".
   if (riskUnavailable) {
     return (
       <Panel
-        title="Risk"
+        title="Project risk"
         emphasis="reference"
         icon={ShieldQuestion}
         tone="orange"
@@ -656,7 +695,20 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     );
   }
 
-  if (riskGroups.length === 0) return null;
+  // Genuinely nothing open, for a reader who WOULD be shown it. This is a
+  // real statement about the project and it keeps its empty state.
+  if (riskGroups.length === 0) {
+    return (
+      <Panel
+        title="Project risk"
+        emphasis="reference"
+        icon={CheckCircle2}
+        tone="green"
+        hint="No open risk signals on this project."
+        action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
+      />
+    );
+  }
 
   const tierCount = new Map(
     present.map((t) => [t.label, t.groups.reduce((n, g) => n + g.count, 0)]),
@@ -676,7 +728,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
   const worst = present[0];
   return (
     <Panel
-      title="Open risk"
+      title="Project risk"
       // "of 11 open" said what the number was OF only if you already knew what
       // this panel counts. The unit is named now — the rows below are folded
       // SIGNALS, and the tally at the head of each says how many it folds, so

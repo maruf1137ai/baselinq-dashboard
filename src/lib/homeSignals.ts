@@ -541,6 +541,11 @@ export function buildPaymentOverdueQueue(
         // is running on it.
         subRank: -1,
         requires: ["finance.view", "finance.edit"] as QueueRequirement[],
+        // The outstanding figure as a NUMBER as well as inside `detail`'s
+        // sentence, so that several of these can be folded to one line with a
+        // real total. Null where the payload's figure is not usable — a fold
+        // that meets a null states no total rather than a short one.
+        amount: Number.isFinite(outstanding) ? outstanding : null,
       };
     });
 }

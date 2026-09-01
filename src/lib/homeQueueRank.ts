@@ -323,6 +323,19 @@ export interface QueueItem {
   subRank?: number;
   /** Every permission the viewer must hold. Empty means everyone. */
   requires: QueueRequirement[];
+  /**
+   * The money this row is about, in rand, where the row IS about a sum —
+   * currently only the unpaid-certificate chase, which carries the
+   * outstanding amount off the payment summary.
+   *
+   * Presentation only, exactly like `date`: `rankQueue` does not read it and
+   * must not. It exists so that several rows about the same kind of debt can
+   * be folded into one line that states the total, rather than the renderer
+   * parsing a formatted string back out of `detail` — which is how a total
+   * gets silently mis-stated. Null or absent where the source published no
+   * usable figure, and a fold that cannot see every figure states no total.
+   */
+  amount?: number | null;
 }
 
 /** The band an item lands in. Exported so a row can explain its own position. */

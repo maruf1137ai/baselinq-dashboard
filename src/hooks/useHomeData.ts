@@ -351,6 +351,17 @@ export function useHomeData(projectId: string | undefined) {
         type: type || undefined,
         status,
         due_date: item.task?.dueDate || item.task?.finishDate || null,
+        // ── The three fields "Recent activity" reads, and nothing else ─────
+        //
+        // Read straight off the payload in exactly the order the previous
+        // homepage read them, so the restored panel sorts and dates its rows
+        // the way it did. `assignedBy` is the only name a task payload
+        // carries for WHO moved the row; it is passed through as-is and stays
+        // null where the backend attributed nothing. Nothing is substituted
+        // for it — see the note in `RecentActivity.tsx`.
+        created_at: item.created_at || item.task?.createdAt || null,
+        updated_at: item.task?.updatedAt || item.created_at || item.task?.createdAt || null,
+        assignedBy: item.assignedBy ?? null,
         // The two fields the "My actions" rows print and the queue never
         // did. Read straight off the task record; no default is invented for
         // either — a task with no priority set draws no chip, and one with no
@@ -915,6 +926,11 @@ export function useHomeData(projectId: string | undefined) {
     queueSummary,
     /** Tasks assigned to the signed-in user. Ungated — see the note above. */
     myActions,
+    // The normalised tasks themselves. "Recent activity" is the only reader:
+    // it orders them by when they were last touched, which is a different
+    // question from either "what is mine" (`myActions`) or "what outranks
+    // what" (`queue`), and it is not derivable from either list.
+    taskList,
     money,
     time,
     /**
