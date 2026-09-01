@@ -293,8 +293,6 @@ const Index = () => {
           The ring is SETUP COMPLETENESS and is labelled as such in text. See
           `ProjectSummaryBlock`.
         */}
-        {!data.isLoading && <ProjectSummaryBlock data={data} />}
-
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
 
@@ -354,13 +352,48 @@ const Index = () => {
         </div>
         )}
 
+        {/*
+          ── Why the strip is BELOW the setup stack now ────────────────────
+
+          It used to lead the page, on the reasoning that a project's identity
+          should not appear below a reminder about it. The owner has reversed
+          that, and the reversal is right for a reason the original argument
+          missed: the setup stack is TRANSIENT and closable. It is an
+          onboarding nag a user clears once, and every project that is
+          properly set up draws nothing there at all (`empty:hidden`). The
+          strip is permanent.
+
+          So on a finished project the strip still leads the page. On a fresh
+          one the reader meets the thing they must finish, closes it, and the
+          strip takes the top for good. Ordering the permanent block above a
+          block that disappears would have left a gap at the top of the page
+          the moment the nag was dismissed.
+        */}
+        {!data.isLoading && <ProjectSummaryBlock data={data} />}
+
         {/* State 4: loading */}
         {data.isLoading ? (
           <AwesomeLoader message="Reading what needs you" />
         ) : (
           <>
-            {/* Question 1: is anything on fire. */}
-            <StatusBandBlock data={data} />
+            {/*
+              ── The pair the client asked for, in the shape they had it ───
+
+              My actions and the activity feed, side by side and directly
+              under the strip, which is where production put them
+              (`f4cdc51`, `md:grid-cols-2`) and what Darren and Werner asked
+              to have back. Everything the rebuild added is still on the page
+              — it is below these two rather than around them.
+
+              `items-start` rather than a stretched row: these are the two
+              panels whose length is genuinely data-driven (one is your work,
+              the other is the last eight events), and forcing them to a
+              common height padded whichever was shorter with dead space.
+            */}
+            <div className="grid gap-4 md:grid-cols-2 items-start">
+              <MyActionsBlock data={data} />
+              <RecentActivityBlock data={data} />
+            </div>
 
             <div className="flex flex-col gap-4 lg:flex-row">
               {/* Question 2: what do I have to do. */}
@@ -386,9 +419,6 @@ const Index = () => {
               */}
               <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
                 <div className="lg:min-h-[264px] flex">
-                  <MyActionsBlock data={data} />
-                </div>
-                <div className="lg:min-h-[264px] flex">
                   <ActionQueueBlock data={data} />
                 </div>
               </div>
@@ -408,13 +438,6 @@ const Index = () => {
                 <div className="lg:min-h-[264px] flex">
                   <UpcomingMeetingsBlock data={data} />
                 </div>
-                {/* Recent activity sits above Project risk, as it did before:
-                    the reader scans the column for "what has moved" far more
-                    often than for the standing-condition list, which has its
-                    own "All signals" way out. */}
-                <div className="lg:min-h-[264px] flex">
-                  <RecentActivityBlock data={data} />
-                </div>
                 {data.canViewCompliance && (
                   <div className="lg:min-h-[264px] flex">
                     <RiskConditionBlock data={data} />
@@ -422,6 +445,13 @@ const Index = () => {
                 )}
               </div>
             </div>
+            {/*
+              Time, money and change, then construction and professional, at
+              the foot of the page. These answer "where does the contract
+              stand", which is a question a reader asks after the two lists
+              above have told them whether anything is on fire today.
+            */}
+            <StatusBandBlock data={data} />
             <PhaseCostProgressBlock projectId={projectId} />
           </>
         )}
