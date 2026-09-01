@@ -73,6 +73,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
 
+import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
@@ -832,14 +833,38 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 // ── Setup ─────────────────────────────────────────────────────────────────
 
 /**
- * Project setup as ONE line, at the very top of the page. It is a precondition
+ * Project setup as ONE row, at the very top of the page. It is a precondition
  * for the rest of the screen being trustworthy, so it sits above it — but a
- * precondition is not the work, so it gets a hairline strip and nothing more.
+ * precondition is not the work, so it gets a hairline row and nothing more.
  *
  * **It draws no container of its own.** It is a ROW inside the single
- * precondition panel that `Index.tsx` builds — see the note there. It used to
- * carry `bg-card border border-border rounded-xl` and be one of up to four
- * separately-bordered full-width blocks stacked above the actual work.
+ * precondition panel that `Index.tsx` builds — see the note there.
+ *
+ * ── Why the missing fields are chips, not a clause ────────────────────────
+ *
+ * The version this replaces said the same thing in the same space, as prose:
+ * "Project setup 3 of 7 — client details, scope of work, attached documents
+ * and the appointed company still to add." Every field name was already its
+ * own button, but it was styled as underlined text inside a sentence, so four
+ * separate things read as one sentence. The card that PRECEDED the prose used
+ * four full-width icon-and-description rows and half the fold; it was
+ * genuinely tidier, and what made it tidier was not the whitespace — it was
+ * that each missing field was a discrete, bounded, labelled OBJECT.
+ *
+ * So: keep the one-row height of the prose, restore the thing-ness of the
+ * card. Each missing field is a `badgeVariants({ variant: "neutral" })` chip
+ * — the app's own status-chip primitive, `border-border bg-muted
+ * text-muted-foreground rounded-md px-2 py-0.5 text-xs`, no new token — on a
+ * `button` so it stays individually actionable and still opens
+ * `ProjectSetupDialog` at its named section. Four things are now countable at
+ * a glance without reading a sentence.
+ *
+ * Neutral, not amber: under the severity rule at the top of this file an
+ * unfilled setup field is a MISSING PRECONDITION, not a breach that has
+ * already happened, so it carries no colour.
+ *
+ * The chip labels are `SETUP_LABELS` verbatim — the same words the prose
+ * used, unrenamed, so no step is invented, dropped or relabelled here.
  */
 export function SetupLineBlock({
   data,
@@ -853,30 +878,54 @@ export function SetupLineBlock({
   const { projectStats, canEditProject } = data;
   if (!projectStats || projectStats.percentage === 100) return null;
 
+  // The chip. Identical geometry whether or not it is pressable, so the row
+  // does not reflow for a reader who lacks edit rights — only the hover and
+  // focus affordances appear, and only for someone who can act on them.
+  // `badgeVariants({ variant: "neutral" })` is `border-border bg-muted
+  // text-muted-foreground`, and --muted-foreground on --muted measures
+  // 4.53:1 — over the floor, but thin for `text-xs`. The label takes
+  // --foreground instead (13.66:1), which is also exactly what the prose
+  // this replaces used for the same field names. Nothing else changes, and
+  // it keeps the hierarchy right: the lead-in is muted, the chips are the
+  // content.
+  const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
+
   return (
     <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-      <p className="text-sm text-muted-foreground min-w-0">
-        <span className="text-foreground tabular-nums">
-          Project setup {projectStats.filledCount} of {projectStats.totalCount}
-        </span>
-        {" — "}
-        {projectStats.missing.map((item, i) => (
-          <span key={item}>
-            {i > 0 && (i === projectStats.missing.length - 1 ? " and " : ", ")}
-            {canEditProject ? (
-              <button
-                onClick={() => onOpenSection(item)}
-                className="text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-              >
-                {SETUP_LABELS[item]}
-              </button>
-            ) : (
-              <span className="text-foreground">{SETUP_LABELS[item]}</span>
-            )}
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <span className="text-sm text-muted-foreground shrink-0">
+          Project setup{" "}
+          <span className="text-foreground tabular-nums">
+            {projectStats.filledCount} of {projectStats.totalCount}
           </span>
-        ))}
-        {" still to add."}
-      </p>
+          {" · still to add"}
+        </span>
+        {projectStats.missing.map((item) =>
+          canEditProject ? (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onOpenSection(item)}
+              // `--accent` and `--muted` are the same value, so a background
+              // hover would be invisible here. The hairline carries it
+              // instead: `--border` on `--muted` is 1.13:1 at rest and
+              // --muted-foreground on --muted is 4.53:1, so the chip's edge
+              // resolves on hover and is otherwise silent.
+              className={cn(
+                chip,
+                "hover:border-muted-foreground",
+                "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+              )}
+            >
+              {SETUP_LABELS[item]}
+            </button>
+          ) : (
+            <span key={item} className={chip}>
+              {SETUP_LABELS[item]}
+            </span>
+          )
+        )}
+      </div>
       {canEditProject && (
         <Button size="xs" variant="outline" className="shrink-0" onClick={onOpen}>
           Complete setup

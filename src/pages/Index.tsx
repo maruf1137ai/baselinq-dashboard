@@ -283,11 +283,14 @@ const Index = () => {
           precondition is satisfied and all four children render null, draws
           nothing at all rather than a 2px empty box.
 
-          `SetupLineBlock` and `LoadIssueBanner` were changed to draw no
-          chrome of their own. `PrimaryContractAlert` and `InsuranceBanner`
-          are owned elsewhere, so their card, border and radius are stripped
-          here at the composition layer — see the note in the report about
-          the amber fill that properly belongs in their own files.
+          All four children now draw no chrome of their own — the amber
+          fills, the amber ink, the 40px icon tile and the black filled
+          button that `PrimaryContractAlert` and `InsuranceBanner` used to
+          carry were removed IN THOSE FILES, not overridden here, because
+          `[&>*]:!bg-card` only ever reached each child's root and their ink
+          leaked through underneath it. The flattening utilities below are
+          kept as a guard for the next foreign child dropped into this panel,
+          and for the row hover they restore.
         */}
         <div
           className={[

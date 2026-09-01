@@ -1,4 +1,4 @@
-import { Shield, ArrowRight } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -52,25 +52,41 @@ export const InsuranceBanner = () => {
     }
   };
 
+  /*
+    ── One row, achromatic, ending in the same affordance as its neighbours ──
+
+    What this replaces: a `p-4` amber card with a 40px `bg-amber-100
+    text-amber-700` icon tile, a two-line title-and-description block, and a
+    `bg-foreground text-white` BLACK filled button — the loudest control on
+    the entire homepage, attached to its least urgent item. `Index.tsx`
+    flattens its children with `[&>*]:!bg-card`, which reaches the ROOT only,
+    so the tile, the amber ink and the black button all survived underneath a
+    card-coloured row.
+
+    All three are gone. Under the homepage's severity rule (top of
+    `src/components/home/blocks.tsx`) a missing insurance certificate is a
+    missing precondition, not a breach that has already happened, so it takes
+    no colour; and the right edge of every row in the precondition panel is
+    now the same `outline` / `xs` button.
+
+    `animate-in fade-in slide-in-from-top-2` is also gone: it made the top of
+    the homepage slide on every single load, for a row that is not news.
+
+    The second line ("Keeps your record compliant and visible to project
+    owners.") is folded into the first rather than deleted — it was the only
+    part that said WHY, and it fits.
+  */
   return (
-    <div className="p-4 rounded-xl border bg-amber-50 border-amber-200 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-        <Shield className="h-5 w-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-normal text-amber-900 leading-tight">
-          Upload your professional insurance certificate
-        </p>
-        <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-          Required for consultants. Keeps your record compliant and visible to project owners.
+    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+      <div className="flex items-center gap-3 min-w-0">
+        <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          No professional insurance certificate on file — required for consultants, and visible to
+          project owners.
         </p>
       </div>
-      <Button
-        onClick={handleClick}
-        className="bg-foreground text-white hover:bg-foreground/90 h-8 px-4 text-xs rounded-lg font-normal flex items-center gap-2 shrink-0"
-      >
-        Upload now
-        <ArrowRight />
+      <Button variant="outline" size="xs" className="shrink-0" onClick={handleClick}>
+        Upload certificate
       </Button>
     </div>
   );
