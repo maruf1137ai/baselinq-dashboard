@@ -71,7 +71,7 @@
  * looking at.
  */
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
 import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -869,12 +869,10 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 export function SetupLineBlock({
   data,
   onOpen,
-  onOpenSection,
-}: {
+  onOpenSection, onDismiss }: {
   data: HomeData;
   onOpen: () => void;
-  onOpenSection: (section: string) => void;
-}) {
+  onOpenSection: (section: string) => void; onDismiss?: () => void }) {
   const { projectStats, canEditProject } = data;
   if (!projectStats || projectStats.percentage === 100) return null;
 
@@ -891,7 +889,7 @@ export function SetupLineBlock({
   const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
 
   return (
-    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap bg-amber-50">
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap bg-amber-50 border-b border-amber-200">
       <div className="flex items-center gap-2 flex-wrap min-w-0">
         <span className="text-sm text-muted-foreground shrink-0">
           Project setup{" "}
@@ -930,6 +928,16 @@ export function SetupLineBlock({
         <Button size="xs" variant="outline" className="shrink-0 w-36 justify-center" onClick={onOpen}>
           Complete setup
         </Button>
+      )}
+      {onDismiss && (
+        <button
+          type="button"
+          aria-label="Hide setup reminders"
+          onClick={onDismiss}
+          className="shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

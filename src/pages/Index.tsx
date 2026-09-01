@@ -304,15 +304,7 @@ const Index = () => {
           and for the row hover they restore.
         */}
         {!preconditionsHidden && (
-        <div className="relative">
-        <button
-          type="button"
-          aria-label="Hide setup reminders"
-          onClick={() => setPreconditionsHidden(true)}
-          className="absolute right-2 top-2 z-10 rounded-sm p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div>
         <div
           className={[
             "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
@@ -329,6 +321,7 @@ const Index = () => {
           ].join(" ")}
         >
           <SetupLineBlock
+            onDismiss={() => setPreconditionsHidden(true)}
             data={data}
             onOpen={() => openSetup(null)}
             onOpenSection={(s) => openSetup(s)}
