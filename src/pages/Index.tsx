@@ -107,6 +107,7 @@ import {
 } from "@/components/home/blocks";
 import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
+import { UpcomingMeetingsBlock } from "@/components/home/UpcomingMeetings";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
 import { WhatChangedBlock } from "@/components/home/WhatChanged";
 import { useHomeData } from "@/hooks/useHomeData";
@@ -361,8 +362,6 @@ const Index = () => {
             {/* Question 1: is anything on fire. */}
             <StatusBandBlock data={data} />
 
-            <PhaseCostProgressBlock projectId={projectId} />
-
             <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
               {/* Question 2: what do I have to do. */}
               {/*
@@ -399,12 +398,16 @@ const Index = () => {
                   <RiskConditionBlock data={data} />
                 </div>
                 <div className="lg:flex-1 lg:min-h-0">
-                  <WhatChangedBlock feed={data.changeFeed} />
+                  <UpcomingMeetingsBlock data={data} />
+          <WhatChangedBlock feed={data.changeFeed} />
                 </div>
               </div>
             </div>
           </>
         )}
+
+
+            <PhaseCostProgressBlock projectId={projectId} />
       </div>
 
       <ProjectSetupDialog

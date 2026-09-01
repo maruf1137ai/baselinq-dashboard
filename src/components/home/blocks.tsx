@@ -431,7 +431,7 @@ export function RowDate({ date }: { date: string | null | undefined }) {
 const firstDetected = (g: { signals: { first_detected_at?: string }[] }): string | null =>
   g.signals[0]?.first_detected_at ?? null;
 
-function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
+export function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}

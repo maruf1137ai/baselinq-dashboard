@@ -39,6 +39,8 @@
  * a fact about the data and each is stated as one, the same discipline
  * `certifiedCurveNote` documents for the money zone above.
  */
+import { LineChart } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useMemo } from "react";
 
 import { formatZAR } from "@/lib/formatCurrency";
@@ -229,10 +231,19 @@ function PhaseCostProgressCard({
   }
 
   if (curve.total === 0) {
+    // A bare sentence floating in a chart-sized card read as a broken panel.
+    // The shared empty state sized to the card says the same thing and looks
+    // deliberate.
     return (
       <div className={CARD}>
         {Header}
-        <p className="text-sm text-muted-foreground">No {title} phases recorded</p>
+        <EmptyState
+          variant="plain"
+          size="sm"
+          icon={LineChart}
+          title={`No ${title.toLowerCase()} phases`}
+          description="Phases appear here once they are added to the programme."
+        />
       </div>
     );
   }
@@ -284,7 +295,7 @@ function PhaseCostProgressCard({
   const rounded = curve.driftPct === null ? null : Math.round(curve.driftPct);
   const headline =
     rounded === null
-      ? "Cost and progress cannot be compared for this group"
+      ? "Not comparable yet"
       : rounded === 0
         ? "in step"
         : rounded > 0
@@ -300,32 +311,25 @@ function PhaseCostProgressCard({
       ? "progress share unknown"
       : `${Math.round(curve.latestProgressPct)}% weighted progress recorded`;
 
-  const footnotes: string[] = [];
-  if (curve.costHidden > 0) {
-    footnotes.push(`Cost not visible to you for ${curve.costHidden} phase(s)`);
-  }
-  if (curve.costUnrecorded > 0) {
-    footnotes.push(`${curve.costUnrecorded} phase(s) with no fee/cost recorded yet`);
-  }
-  if (curve.progressUntracked > 0) {
-    footnotes.push(`${curve.progressUntracked} phase(s) with no physical progress recorded`);
-  }
-  if (curve.undated > 0) {
-    footnotes.push(`${curve.undated} phase(s) with no usable date`);
-  }
-  if (!showMoney) {
-    footnotes.push("Cost is not visible to you for any phase in this group");
-  }
-  if (!showProgress) {
-    footnotes.push("Physical progress is not recorded for any phase in this group");
-  }
+  // ONE clause, not six. Every count below is a disclosure the series owes the
+  // reader, but stacked as six sentences they became the wall of text the
+  // owner objected to. They are joined into a single line, and the long
+  // methodology note moves to a tooltip on the headline.
+  const gaps: string[] = [];
+  if (curve.costHidden > 0) gaps.push(`${curve.costHidden} cost hidden`);
+  if (curve.costUnrecorded > 0) gaps.push(`${curve.costUnrecorded} no cost`);
+  if (curve.progressUntracked > 0) gaps.push(`${curve.progressUntracked} no progress`);
+  if (curve.undated > 0) gaps.push(`${curve.undated} undated`);
+  const footnotes: string[] = gaps.length
+    ? [`${gaps.join(" · ")} — of ${curve.total} phase${curve.total === 1 ? "" : "s"}`]
+    : [];
 
   return (
     <div className={CARD}>
       {Header}
 
       <div>
-        <p className="text-lg tabular-nums text-foreground">{headline}</p>
+        <p className="text-lg tabular-nums text-foreground" title={CAVEAT}>{headline}</p>
         <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
           {moneyPctText} · {progressPctText}
         </p>
