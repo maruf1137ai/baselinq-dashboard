@@ -362,7 +362,7 @@ const Index = () => {
             {/* Question 1: is anything on fire. */}
             <StatusBandBlock data={data} />
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:min-h-[640px]">
               {/* Question 2: what do I have to do. */}
               {/*
                 ── THE WORK, and it is two lists, not one ──────────────────
@@ -399,15 +399,15 @@ const Index = () => {
                 </div>
                 <div className="lg:flex-1 lg:min-h-0">
                   <UpcomingMeetingsBlock data={data} />
-          <WhatChangedBlock feed={data.changeFeed} />
+                </div>
+                <div className="lg:flex-1 lg:min-h-0">
+                  <WhatChangedBlock feed={data.changeFeed} />
                 </div>
               </div>
             </div>
+            <PhaseCostProgressBlock projectId={projectId} />
           </>
         )}
-
-
-            <PhaseCostProgressBlock projectId={projectId} />
       </div>
 
       <ProjectSetupDialog
