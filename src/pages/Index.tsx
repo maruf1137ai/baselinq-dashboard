@@ -405,14 +405,14 @@ const Index = () => {
                   same one the block itself applies, stated here so the
                   layout drops the space too.
                 */}
+                <div className="lg:flex-1 lg:min-h-0">
+                  <UpcomingMeetingsBlock data={data} />
+                </div>
                 {data.canViewCompliance && (
                   <div className="lg:flex-1 lg:min-h-0">
                     <RiskConditionBlock data={data} />
                   </div>
                 )}
-                <div className="lg:flex-1 lg:min-h-0">
-                  <UpcomingMeetingsBlock data={data} />
-                </div>
                 <div className="lg:flex-1 lg:min-h-0">
                   <RecentActivityBlock data={data} />
                 </div>

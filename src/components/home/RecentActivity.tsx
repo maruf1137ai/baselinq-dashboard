@@ -123,7 +123,8 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
 
   if (rows.length === 0) {
     return (
-      <Panel title="Recent activity" emphasis="reference">
+      <Panel title="Recent activity"
+      emphasis="primary">
         <div className="p-4">
           <EmptyState
             variant="plain"

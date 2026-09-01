@@ -687,7 +687,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     return (
       <Panel
         title="Project risk"
-        emphasis="reference"
+        emphasis="primary"
         icon={ShieldQuestion}
         tone="orange"
         hint="The risk engine did not respond — posture unknown, not clear."

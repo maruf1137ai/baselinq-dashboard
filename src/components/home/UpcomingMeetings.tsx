@@ -35,6 +35,7 @@ export function UpcomingMeetingsBlock({ data }: { data: HomeData }) {
         word belonged: it qualifies the count, not the panel.
       */
       title="My meetings"
+      emphasis="primary"
       lead={rows.length ? `${rows.length} coming up` : undefined}
       action={<ViewAll to="/meetings">All meetings</ViewAll>}
     >

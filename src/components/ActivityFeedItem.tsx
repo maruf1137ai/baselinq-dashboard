@@ -57,11 +57,11 @@ export function ActivityFeedItem({
         <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[status]}`} />
         {needsAction && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
         <p className="text-xs text-foreground truncate flex-1">
-          {author && (
-            <>
-              <span className="font-medium">{author}</span>{" "}
-            </>
-          )}
+          {/* The name is NOT repeated here. `title` already begins with the
+              author ("Marius Botha created RFI: …"), so printing it again
+              produced "Marius Botha pending Marius Botha created RFI: …".
+              The avatar carries the attribution; the sentence carries the
+              event. */}
           <span className="text-muted-foreground">{status.toLowerCase()}</span>{" "}
           {title}
         </p>
