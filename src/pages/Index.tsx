@@ -362,7 +362,7 @@ const Index = () => {
             {/* Question 1: is anything on fire. */}
             <StatusBandBlock data={data} />
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:min-h-[640px]">
+            <div className="flex flex-col gap-4 lg:flex-row">
               {/* Question 2: what do I have to do. */}
               {/*
                 ── THE WORK, and it is two lists, not one ──────────────────
@@ -384,16 +384,16 @@ const Index = () => {
                 Equal halves of the fixed row, each scrolling its own rows, so
                 the two columns still start and end on the same line.
               */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <div className="lg:flex-1 lg:min-h-0">
+              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
+                <div className="lg:min-h-[264px] flex">
                   <MyActionsBlock data={data} />
                 </div>
-                <div className="lg:flex-1 lg:min-h-0">
+                <div className="lg:min-h-[264px] flex">
                   <ActionQueueBlock data={data} />
                 </div>
               </div>
               {/* What is true whether or not anybody acts today. */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
+              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
                 {/*
                   ── The slot goes with the panel ────────────────────────
 
@@ -405,15 +405,15 @@ const Index = () => {
                   same one the block itself applies, stated here so the
                   layout drops the space too.
                 */}
-                <div className="lg:flex-1 lg:min-h-0">
+                <div className="lg:min-h-[264px] flex">
                   <UpcomingMeetingsBlock data={data} />
                 </div>
                 {data.canViewCompliance && (
-                  <div className="lg:flex-1 lg:min-h-0">
+                  <div className="lg:min-h-[264px] flex">
                     <RiskConditionBlock data={data} />
                   </div>
                 )}
-                <div className="lg:flex-1 lg:min-h-0">
+                <div className="lg:min-h-[264px] flex">
                   <RecentActivityBlock data={data} />
                 </div>
               </div>

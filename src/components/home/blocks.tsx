@@ -187,7 +187,7 @@ export function Panel({
     !(Array.isArray(children) && children.length === 0);
 
   return (
-    <section className="bg-card border border-border rounded-xl overflow-hidden lg:flex lg:flex-col lg:h-full">
+    <section className="bg-card border border-border rounded-xl overflow-hidden flex flex-col w-full">
       <header
         className={cn(
           "flex items-center justify-between gap-3 px-4 py-3 lg:shrink-0",
@@ -392,7 +392,20 @@ export const ROW_DATE_SLOT = "w-20 shrink-0";
 export function RowDate({ date }: { date: string | null | undefined }) {
   const parsed = date ? new Date(date) : null;
   if (!parsed || Number.isNaN(parsed.getTime())) {
-    return <div className={ROW_DATE_SLOT} aria-hidden />;
+    // An EMPTY slot read as a date that failed to load, and left the column
+    // looking broken. These rows have no deadline on the wire — a rejected
+    // certificate, a proposed meeting action — and borrowing `updatedAt`
+    // would present "when somebody last touched it" as a due date. So the
+    // slot says what is true, in the same words `MyActions` already uses for
+    // the same absence.
+    return (
+      <div
+        className={`${ROW_DATE_SLOT} text-xs text-muted-foreground text-center`}
+        title="No deadline is recorded for this item"
+      >
+        No date
+      </div>
+    );
   }
 
   const day = parsed.getDate();
@@ -701,7 +714,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     return (
       <Panel
         title="Project risk"
-        emphasis="reference"
+        emphasis="primary"
         icon={CheckCircle2}
         tone="green"
         hint="No open risk signals on this project."
@@ -735,7 +748,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
       // the header and the column agree on what they are counting.
       lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open signals`}
       leadTone={worst.severity === "red" ? "danger" : "muted"}
-      emphasis="reference"
+      emphasis="primary"
       // The one link on this page that is SUPPOSED to go to Project health:
       // "show me every open signal" is a diagnosis, and that is the page that
       // diagnoses. Every ROW below goes to the object instead.

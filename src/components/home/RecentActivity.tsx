@@ -140,7 +140,7 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
   return (
     <Panel
       title="Recent activity"
-      emphasis="reference"
+      emphasis="primary"
       lead={`${rows.length} most recently updated`}
     >
       {/* Same scroll behaviour as the two panels above it in this column, so
