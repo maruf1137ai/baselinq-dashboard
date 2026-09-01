@@ -39,25 +39,40 @@
  * you reach them is worse than no line: it tells a reader their own work list
  * is incomplete and offers no way to complete it.
  *
- * ── The tint, and where it stops ─────────────────────────────────────────
+ * ── The urgency ladder ───────────────────────────────────────────────────
  *
- * The old rows were amber on every row, red once overdue. Amber-on-every-row
- * is exactly what the page's severity rule forbids (see `blocks.tsx`): if the
- * whole list is tinted, the tint has stopped being a signal and become a
- * surface treatment, and it also collides with the amber the setup strip above
- * uses for a genuinely different claim.
+ * The old rows were amber on EVERY row and red once overdue — two states, one
+ * of which was always on, so the amber said nothing. Tinting the whole list is
+ * what the page's severity rule forbids (see `blocks.tsx`).
  *
- * So the tint survives on ONE condition and it is a fact: the due date has
- * passed. That is severity rule 1 — a breach that has already happened — and
- * it is drawn in `TONE.red`, not amber, because "late" is not "nearly late".
- * Everything else is a plain untinted row. On a list where three of eleven are
- * overdue, three rows are coloured and the reader can see the floor; under the
- * old treatment all eleven were, and none of them meant anything.
+ * But the first correction over-shot: tinting only the overdue row means a
+ * project with nothing yet late draws a completely achromatic list, which is
+ * what the live project does. Nothing on it ranks, and the panel reads flat.
  *
- * Colour is never the only carrier: an overdue row also says "N days overdue"
- * in words, in the same slot the due date occupies on every other row.
+ * So four steps, each keyed to a fact about the due date rather than to a
+ * rating somebody typed:
+ *
+ *   overdue          red    tinted + accent   the date has passed
+ *   today / tomorrow  amber  tinted + accent   it goes late within a day
+ *   within 7 days     yellow accent only       it goes late this week
+ *   later / no date   none   plain             nothing is imminent
+ *
+ * Only the top two tint a background, so a list that is mostly ordinary stays
+ * mostly white and the two that tint still mean something. The third step is a
+ * 2px left accent, which ranks the row without adding a third wash.
+ *
+ * Colour is never the only carrier. Every row states its own position in
+ * words, in the same slot: "3 days overdue", "Due today", "Due in 4 days",
+ * "Due 20 Oct", "No due date" — and `aria-label` repeats it.
  */
-import { AlertCircle, ArrowRight, CheckCircle2, CircleDot } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  CircleDot,
+  Clock,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
@@ -87,14 +102,21 @@ import { Panel } from "./blocks";
  * It is held to `warning` so it can never outrank the destructive an overdue
  * row draws.
  */
-function priorityChip(raw: unknown): { label: string; variant: "warning" | "neutral" } | null {
+function priorityChip(
+  raw: unknown,
+): { label: string; variant: "danger" | "warning" | "neutral" } | null {
   if (typeof raw !== "string" || raw.trim() === "") return null;
   const label = raw.trim();
   const key = label.toLowerCase();
   if (key === "none" || key === "null") return null;
   return {
     label: label.charAt(0).toUpperCase() + label.slice(1),
-    variant: key === "urgent" || key === "critical" || key === "high" ? "warning" : "neutral",
+    variant:
+      key === "urgent" || key === "critical"
+        ? "danger"
+        : key === "high"
+          ? "warning"
+          : "neutral",
   };
 }
 
@@ -130,19 +152,98 @@ export interface MyActionRow {
  * there is one tab stop and one target rather than two that go to the
  * same place.
  */
+/**
+ * The four urgency steps, derived from the due date alone.
+ *
+ * `overdue` is trusted from the row when the hook set it (it computes against
+ * a midnight-normalised today, same as here) and otherwise derived, so a row
+ * that arrives from either path lands in the same step.
+ */
+type Urgency = "overdue" | "imminent" | "week" | "none";
+
+function urgencyOf(days: number | null, overdue: boolean): Urgency {
+  if (overdue) return "overdue";
+  if (days === null) return "none";
+  if (days <= 1) return "imminent";
+  if (days <= 7) return "week";
+  return "none";
+}
+
+/**
+ * One class set per step, in one place, so the row cannot drift between the
+ * background, the accent, the icon and the date text — which is exactly how
+ * the codebase ended up with three intensity scales for one meaning before
+ * `badge.tsx` codified the 50/200/700 ramp. These use that same ramp.
+ */
+const URGENCY: Record<
+  Urgency,
+  { row: string; accent: string; text: string; icon: typeof AlertCircle; iconClass: string }
+> = {
+  overdue: {
+    row: "bg-red-50 hover:bg-red-100",
+    accent: "border-l-2 border-red-500",
+    text: "text-red-700 font-medium",
+    icon: AlertCircle,
+    iconClass: "text-red-700",
+  },
+  imminent: {
+    row: "bg-amber-50 hover:bg-amber-100",
+    accent: "border-l-2 border-amber-500",
+    text: "text-amber-700 font-medium",
+    icon: AlertTriangle,
+    iconClass: "text-amber-700",
+  },
+  // Accent only. A third tinted background would put a wash on most of a
+  // normal week's list, which is the failure the old all-amber rows had.
+  week: {
+    row: "hover:bg-muted/50",
+    accent: "border-l-2 border-yellow-400",
+    text: "text-yellow-700",
+    icon: Clock,
+    iconClass: "text-yellow-600",
+  },
+  none: {
+    row: "hover:bg-muted/50",
+    accent: "border-l-2 border-transparent",
+    text: "text-muted-foreground",
+    icon: CircleDot,
+    iconClass: "text-muted-foreground",
+  },
+};
+
+/**
+ * One row: a leading urgency icon, the title, a priority chip on the right,
+ * the description beneath, and a footer carrying the due position on the left
+ * and the way in on the right.
+ *
+ * The whole row is the link. "View →" is kept because the owner asked for this
+ * row by name, but it is text inside the anchor rather than a second control,
+ * so there is one tab stop and one target rather than two going to one place.
+ */
 export function MyActionRow({ item }: { item: MyActionRow }) {
   const chip = priorityChip(item.priority);
   const days = daysFromToday(item.due_date);
   const overdue = item.overdue ?? (days !== null && days < 0);
+  const step = urgencyOf(days, overdue);
+  const tone = URGENCY[step];
+  const Icon = tone.icon;
   const label = item.type ? `${item.type}: ${item.title}` : item.title;
   const due = formatDateUk(item.due_date ?? null, "long") || null;
 
+  // Every step says its own position in words. Colour ranks; the sentence is
+  // what actually tells a reader where the row stands.
   const dueLine =
     days === null
       ? "No due date"
       : overdue
-        ? `${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} overdue${due ? ` · due ${due}` : ""}`
-        : `Due ${due ?? "—"}`;
+        ? `${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} overdue${due ? ` · was due ${due}` : ""}`
+        : days === 0
+          ? `Due today${due ? ` · ${due}` : ""}`
+          : days === 1
+            ? `Due tomorrow${due ? ` · ${due}` : ""}`
+            : days <= 7
+              ? `Due in ${days} days · ${due ?? "—"}`
+              : `Due ${due ?? "—"}`;
 
   return (
     <Link
@@ -153,11 +254,8 @@ export function MyActionRow({ item }: { item: MyActionRow }) {
       className={cn(
         "group block px-4 py-3 transition-colors outline-none",
         "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        // The one coloured surface on this panel, and only for a date that has
-        // already passed. `bg-red-50` / `text-red-700` is `TONE.red` in
-        // blocks.tsx — the page's existing tinted-row grammar, the same one
-        // the setup strip uses in amber. No new colour.
-        overdue ? "bg-red-50 hover:bg-red-100" : "hover:bg-muted/50",
+        tone.accent,
+        tone.row,
       )}
     >
       {/*
@@ -166,11 +264,7 @@ export function MyActionRow({ item }: { item: MyActionRow }) {
         the same flex child — no indent value is invented to fake it.
       */}
       <div className="flex items-start gap-2">
-        {overdue ? (
-          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-red-700" aria-hidden />
-        ) : (
-          <CircleDot className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" aria-hidden />
-        )}
+        <Icon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", tone.iconClass)} aria-hidden />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -198,14 +292,7 @@ export function MyActionRow({ item }: { item: MyActionRow }) {
           )}
 
           <div className="flex items-center justify-between gap-3 mt-1.5">
-            <span
-              className={cn(
-                "text-xs tabular-nums",
-                overdue ? "text-red-700" : "text-muted-foreground",
-              )}
-            >
-              {dueLine}
-            </span>
+            <span className={cn("text-xs tabular-nums", tone.text)}>{dueLine}</span>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
               View
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -218,8 +305,11 @@ export function MyActionRow({ item }: { item: MyActionRow }) {
 }
 
 /** "3 overdue · 11 assigned to you", or the plain count when none is late. */
-function lead(rows: MyActionRow[], overdue: number): string {
+function lead(rows: MyActionRow[], overdue: number, soon: number): string {
   if (overdue > 0) return `${overdue} overdue · ${rows.length} assigned to you`;
+  // Without this, a list with nothing yet late says only its own length, and
+  // the header carries no urgency even when three rows go late this week.
+  if (soon > 0) return `${soon} due within 7 days · ${rows.length} assigned to you`;
   return `${rows.length} assigned to you`;
 }
 
@@ -232,6 +322,11 @@ export function MyActionsBlock({
 }) {
   const rows = data.myActions as MyActionRow[];
   const overdue = rows.filter((r) => r.overdue).length;
+  const soon = rows.filter((r) => {
+    if (r.overdue) return false;
+    const d = daysFromToday(r.due_date);
+    return d !== null && d <= 7;
+  }).length;
 
   if (data.isLoading) {
     return (
@@ -272,11 +367,11 @@ export function MyActionsBlock({
     <Panel
       title={title}
       emphasis="primary"
-      lead={lead(rows, overdue)}
+      lead={lead(rows, overdue, soon)}
       // Severity rule 2: the tier is named ONCE, at the head of the rows it
       // governs, rather than repeated. `danger` only because overdue is a
       // breach that has already happened.
-      leadTone={overdue > 0 ? "danger" : "muted"}
+      leadTone={overdue > 0 ? "danger" : soon > 0 ? "warning" : "muted"}
     >
       {/*
         Uncapped and scrollable. `max-h` below `lg` so the panel cannot run the

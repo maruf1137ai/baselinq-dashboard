@@ -168,7 +168,9 @@ export function Panel({
    * a line the panel already draws, so naming it here costs no height.
    * `danger` is only ever for a tier that is an actual breach (rule 1).
    */
-  leadTone?: "muted" | "danger";
+  /** `warning` exists so a panel whose worst state is "soon" can say so
+   *  without borrowing the red that means "already breached". */
+  leadTone?: "muted" | "warning" | "danger";
   /** A sentence under the title. Reserved for what a figure cannot carry. */
   hint?: string;
   icon?: typeof CalendarClock;
@@ -233,7 +235,11 @@ export function Panel({
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    leadTone === "danger" ? "text-destructive" : "text-muted-foreground",
+                    leadTone === "danger"
+                      ? "text-destructive"
+                      : leadTone === "warning"
+                        ? "text-amber-700"
+                        : "text-muted-foreground",
                   )}
                 >
                   {lead}

@@ -408,14 +408,18 @@ const Index = () => {
                 <div className="lg:min-h-[264px] flex">
                   <UpcomingMeetingsBlock data={data} />
                 </div>
+                {/* Recent activity sits above Project risk, as it did before:
+                    the reader scans the column for "what has moved" far more
+                    often than for the standing-condition list, which has its
+                    own "All signals" way out. */}
+                <div className="lg:min-h-[264px] flex">
+                  <RecentActivityBlock data={data} />
+                </div>
                 {data.canViewCompliance && (
                   <div className="lg:min-h-[264px] flex">
                     <RiskConditionBlock data={data} />
                   </div>
                 )}
-                <div className="lg:min-h-[264px] flex">
-                  <RecentActivityBlock data={data} />
-                </div>
               </div>
             </div>
             <PhaseCostProgressBlock projectId={projectId} />
