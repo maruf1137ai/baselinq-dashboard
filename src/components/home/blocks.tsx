@@ -819,7 +819,11 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               of date it is, and it is stated in full with its year, which the
               pill never was.
             */
-            title={firstDetected(g) ? `Open since ${formatDateUk(firstDetected(g), "long")}` : undefined}
+            title={
+              firstDetected(g)
+                ? `${g.tierLabel} · open since ${formatDateUk(firstDetected(g), "long")}`
+                : g.tierLabel
+            }
             /*
               The row's own sentence already names the count where there is
               one to name, so this adds only the fact the row shows nowhere: the
@@ -830,6 +834,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
             */
             aria-label={
               [
+                g.tierLabel,
                 g.title,
                 g.contractual ? "contractual" : null,
                 g.count > 1 ? `${g.count} signals` : null,
@@ -853,6 +858,35 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               line — and the severity word that used to compete for this space
               is gone, so the label starts wider than it was as well.
             */}
+            {/*
+              ── The dot, and why the tier-heading rule was not enough ─────
+
+              Severity rule 2 says the tier is named once above the rows it
+              governs. On the live project that rule degenerates: 13 of the 14
+              open signals are Critical, so every visible row is in the FIRST
+              tier, the header names it, and no strip is ever reached. The
+              panel arrived as five identical lines of body text with the only
+              urgency in a header the eye reads once.
+
+              A 6px dot per row is not the thing rule 3 forbids. What was
+              banned was drawing the whole row in its colour AND repeating the
+              severity as a word — six coloured words a row, which reads as a
+              background. This is one glyph at a fixed position: it ranks rows
+              against each other inside the panel, it survives a list that is
+              entirely one tier, and it leaves the sentence in body colour. The
+              severity is also still named in text on hover and to a screen
+              reader via `aria-label`, so the dot is never the only carrier.
+            */}
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                g.tierSeverity === "red"
+                  ? "bg-destructive"
+                  : g.tierSeverity === "orange"
+                    ? "bg-amber-500"
+                    : "bg-muted-foreground/40"
+              }`}
+            />
             <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">
               {g.title}
               {/* Stated only when true of every signal in the group, so a

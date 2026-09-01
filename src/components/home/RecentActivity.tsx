@@ -104,8 +104,13 @@ export function buildRecentActivity(tasks: any[]): ActivityRow[] {
         id: String(task.id),
         // With an actor: "Sarah Chen approved VO: …" exactly as before. Without
         // one: the verb leads, capitalised, and nobody is named.
+        // The AUTHOR is not in the sentence — `ActivityFeedItem` prints it in
+        // bold at the front of the row. The old page put it in both, which
+        // read "Anja Kruger pending Anja Kruger created SI: …". Removing the
+        // bold one instead left the row starting on "pending", which was
+        // worse. So: bold name, then the verb.
         title: author
-          ? `${author} ${verb} ${subject}`
+          ? `${verb} ${subject}`
           : `${verb.charAt(0).toUpperCase()}${verb.slice(1)} ${subject}`,
         status,
         author,
