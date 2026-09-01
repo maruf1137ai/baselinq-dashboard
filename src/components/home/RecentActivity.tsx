@@ -46,6 +46,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ActivityFeedItem } from "@/components/ActivityFeedItem";
 import { formatDate } from "@/lib/utils";
 import { Panel } from "./blocks";
+import { ROUTE } from "@/lib/homeSignals";
 import type { HomeData } from "@/hooks/useHomeData";
 
 /** How many rows the panel shows. The old feed's cap, unchanged. */
@@ -160,6 +161,7 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
             author={r.author}
             timeAgo={r.timeAgo}
             needsAction={r.needsAction}
+            to={ROUTE.task(r.id)}
           />
         ))}
       </div>

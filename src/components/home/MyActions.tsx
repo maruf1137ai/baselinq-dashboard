@@ -104,19 +104,33 @@ import { Panel } from "./blocks";
  */
 function priorityChip(
   raw: unknown,
-): { label: string; variant: "danger" | "warning" | "neutral" } | null {
+): { label: string; variant: "danger" | "warning" | "info" | "neutral" } | null {
   if (typeof raw !== "string" || raw.trim() === "") return null;
   const label = raw.trim();
   const key = label.toLowerCase();
   if (key === "none" || key === "null") return null;
   return {
     label: label.charAt(0).toUpperCase() + label.slice(1),
+    /*
+      The old row carried four distinct priority colours — Critical red, High
+      orange, Medium blue, Low grey — and collapsing them to two lost the
+      ranking that Darren and Werner read the chip FOR. They are restored, but
+      onto `badge.tsx`'s codified 50/200/700 ramp instead of the hand-rolled
+      classes, so High is amber rather than orange and the panel uses no colour
+      the rest of the page does not.
+
+      A priority is a RATING, not a breach, so under severity rule 1 it draws
+      no background of its own — the chip is the only place it appears, and the
+      row's tint stays keyed to the due date.
+    */
     variant:
       key === "urgent" || key === "critical"
         ? "danger"
         : key === "high"
           ? "warning"
-          : "neutral",
+          : key === "medium" || key === "normal"
+            ? "info"
+            : "neutral",
   };
 }
 
@@ -177,34 +191,30 @@ function urgencyOf(days: number | null, overdue: boolean): Urgency {
  */
 const URGENCY: Record<
   Urgency,
-  { row: string; accent: string; text: string; icon: typeof AlertCircle; iconClass: string }
+  { row: string; text: string; icon: typeof AlertCircle; iconClass: string }
 > = {
   overdue: {
-    row: "bg-red-50 hover:bg-red-100",
-    accent: "border-l-2 border-red-500",
+    row: "bg-red-50 border-red-200 hover:border-red-300",
     text: "text-red-700 font-medium",
     icon: AlertCircle,
-    iconClass: "text-red-700",
+    iconClass: "text-red-500",
   },
   imminent: {
-    row: "bg-amber-50 hover:bg-amber-100",
-    accent: "border-l-2 border-amber-500",
+    row: "bg-amber-50 border-amber-200 hover:border-amber-300",
     text: "text-amber-700 font-medium",
     icon: AlertTriangle,
-    iconClass: "text-amber-700",
+    iconClass: "text-amber-500",
   },
-  // Accent only. A third tinted background would put a wash on most of a
+  // Border only. A third tinted background would put a wash on most of a
   // normal week's list, which is the failure the old all-amber rows had.
   week: {
-    row: "hover:bg-muted/50",
-    accent: "border-l-2 border-yellow-400",
+    row: "bg-card border-yellow-300 hover:border-yellow-400",
     text: "text-yellow-700",
     icon: Clock,
-    iconClass: "text-yellow-600",
+    iconClass: "text-yellow-500",
   },
   none: {
-    row: "hover:bg-muted/50",
-    accent: "border-l-2 border-transparent",
+    row: "bg-card border-border hover:border-primary/50",
     text: "text-muted-foreground",
     icon: CircleDot,
     iconClass: "text-muted-foreground",
@@ -251,10 +261,16 @@ export function MyActionRow({ item }: { item: MyActionRow }) {
       aria-label={[label, dueLine, chip ? `${chip.label} priority` : null, "Open the task"]
         .filter(Boolean)
         .join(". ")}
+      /*
+        A discrete bordered card per row, which is the shape the old panel had
+        and the one the owner asked for back. The flat divided list that
+        replaced it saved vertical space but read as a table, and a table of
+        four rows carries no sense that each one is a separate thing somebody
+        must pick up.
+      */
       className={cn(
-        "group block px-4 py-3 transition-colors outline-none",
-        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        tone.accent,
+        "group block rounded-xl border p-3 transition-colors outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ring",
         tone.row,
       )}
     >
@@ -380,7 +396,7 @@ export function MyActionsBlock({
         row is reachable — there is no cap on what is rendered, only on how
         much of it is visible at once.
       */}
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full">
+      <div className="max-h-[420px] space-y-2 overflow-y-auto p-3 lg:max-h-none lg:h-full">
         {rows.map((r) => (
           <MyActionRow key={r.id} item={r} />
         ))}
