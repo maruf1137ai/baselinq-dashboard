@@ -70,7 +70,6 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  CircleDot,
   Clock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -199,25 +198,40 @@ const URGENCY: Record<
     icon: AlertCircle,
     iconClass: "text-red-500",
   },
+  /*
+    ── The amber ground is back, on the owner's instruction ────────────────
+
+    Production tinted EVERY non-overdue row `bg-amber-50/60` with an
+    `amber-200` border, and Darren and Werner read that ground as "this list
+    is mine to answer". Two revisions removed it on the argument that a tint
+    on every row is a surface, not a signal. The owner has reinstated it, and
+    the argument for keeping it is better than the argument that removed it:
+    the panel is ALREADY filtered to one person's own work, so the ground is
+    not claiming urgency — it is claiming ownership, which is true of every
+    row by construction.
+
+    So the ground returns exactly as production had it, and the urgency ladder
+    survives on top of it in the border, the icon and the date sentence rather
+    than in the fill. Red is still the only fill that means a breach.
+  */
   imminent: {
-    row: "bg-amber-50 border-amber-200 hover:border-amber-300",
+    row: "bg-amber-50 border-amber-300 hover:border-amber-400",
     text: "text-amber-700 font-medium",
     icon: AlertTriangle,
     iconClass: "text-amber-500",
   },
-  // Border only. A third tinted background would put a wash on most of a
-  // normal week's list, which is the failure the old all-amber rows had.
   week: {
-    row: "bg-card border-yellow-300 hover:border-yellow-400",
-    text: "text-yellow-700",
+    row: "bg-amber-50/60 border-amber-200 hover:border-amber-300",
+    text: "text-amber-700",
     icon: Clock,
-    iconClass: "text-yellow-500",
+    iconClass: "text-amber-500",
   },
+  // Production's exact treatment for everything not yet near its date.
   none: {
-    row: "bg-card border-border hover:border-primary/50",
+    row: "bg-amber-50/60 border-amber-200 hover:border-amber-300",
     text: "text-muted-foreground",
-    icon: CircleDot,
-    iconClass: "text-muted-foreground",
+    icon: AlertCircle,
+    iconClass: "text-amber-500",
   },
 };
 

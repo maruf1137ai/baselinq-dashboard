@@ -107,7 +107,7 @@ import {
 } from "@/components/home/blocks";
 import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
-import { UpcomingMeetingsBlock } from "@/components/home/UpcomingMeetings";
+import { ContractWatchBlock } from "@/components/home/ContractWatch";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
 import { RecentActivityBlock } from "@/components/home/RecentActivity";
 import { useHomeData } from "@/hooks/useHomeData";
@@ -395,56 +395,22 @@ const Index = () => {
               <RecentActivityBlock data={data} />
             </div>
 
-            <div className="flex flex-col gap-4 lg:flex-row">
-              {/* Question 2: what do I have to do. */}
-              {/*
-                ── THE WORK, and it is two lists, not one ──────────────────
+            {/*
+              ── Contract watch: one panel, three lists ──────────────────
 
-                "My actions" is what the reader has personally been asked to
-                do; "What needs you" is the contractual clock — notice
-                deadlines, certificates, obligations, escalations — which
-                outranks a task on consequence and is addressed to a role or
-                to the project rather than to a person.
+              "What needs you", "Project risk" and "My meetings" were three
+              stacked cards answering one question — what is standing on this
+              contract. Three headers, three borders and three empty states
+              for one question is chrome, and it left a reader working out the
+              boundary between them before the page was usable.
 
-                My actions is FIRST and above. It is the question a person
-                actually opens this page with, it is the only list on the
-                screen every user can see regardless of permission, and one
-                revision of folding it into the queue proved what happens when
-                a consequence ranking is allowed to answer a possession
-                question: an RFI addressed to the reader sorted below rows
-                addressed to nobody.
+              They are one panel with a segmented switcher now. Nothing is
+              removed: every row that was reachable is still reachable, and
+              the segment a role cannot populate is absent rather than
+              greyed — see the rules in `ContractWatch.tsx`.
+            */}
+            <ContractWatchBlock data={data} projectId={projectId} />
 
-                Equal halves of the fixed row, each scrolling its own rows, so
-                the two columns still start and end on the same line.
-              */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
-                <div className="lg:min-h-[264px] flex">
-                  <ActionQueueBlock data={data} />
-                </div>
-              </div>
-              {/* What is true whether or not anybody acts today. */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
-                {/*
-                  ── The slot goes with the panel ────────────────────────
-
-                  `RiskConditionBlock` renders NOTHING for a viewer without
-                  `compliance.view` (see the note in `blocks.tsx`), and an
-                  empty `lg:flex-1` slot would still take a third of this
-                  column's height — a labelled hole where a panel used to be
-                  reads as a panel that failed to load. The condition is the
-                  same one the block itself applies, stated here so the
-                  layout drops the space too.
-                */}
-                <div className="lg:min-h-[264px] flex">
-                  <UpcomingMeetingsBlock data={data} />
-                </div>
-                {data.canViewCompliance && (
-                  <div className="lg:min-h-[264px] flex">
-                    <RiskConditionBlock data={data} />
-                  </div>
-                )}
-              </div>
-            </div>
             {/*
               Time, money and change, then construction and professional, at
               the foot of the page. These answer "where does the contract

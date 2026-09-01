@@ -1,3 +1,4 @@
+import type * as React from "react";
 /**
  * Upcoming meetings.
  *
@@ -21,7 +22,14 @@ import type { HomeData } from "@/hooks/useHomeData";
 
 const CAP = 3;
 
-export function UpcomingMeetingsBlock({ data }: { data: HomeData }) {
+export function UpcomingMeetingsBlock({
+  data,
+  segments,
+}: {
+  data: HomeData;
+  /** The Contract-watch switcher, drawn in this panel's header. */
+  segments?: React.ReactNode;
+}) {
   const rows = data.upcomingMeetings ?? [];
 
   return (
@@ -36,6 +44,7 @@ export function UpcomingMeetingsBlock({ data }: { data: HomeData }) {
       */
       title="My meetings"
       emphasis="primary"
+      segments={segments}
       lead={rows.length ? `${rows.length} coming up` : undefined}
       action={<ViewAll to="/meetings">All meetings</ViewAll>}
     >
