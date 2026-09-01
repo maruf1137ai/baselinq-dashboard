@@ -198,7 +198,7 @@ const GLOBAL_NOTES = [
   "Maker-checker on Payment Certificates: whoever creates a certificate can never approve or reject that same certificate — even when their role would otherwise qualify for the action. This is enforced by the server, not just hidden in the menu, so it holds even if someone calls the API directly. The creator CAN submit and cancel their own draft — raising and submitting is the maker's job, not a certification act.",
   "A certificate's Approvals status (Draft, Submitted, Approved, Posted, Rejected, Cancelled) always reflects its real state. Click the status to see who it's currently waiting on and who's eligible to act.",
   "Cost Ledger entries linked to a Payment Certificate only ever appear once that certificate is Posted — never earlier, and never at all if it's Rejected or Cancelled first. Posting happens automatically the instant a certificate is Approved — there is no separate posting action.",
-  "Client/Owner, Administrator and similar \"owner\" roles inherit these permissions through a role alias — Administrator behaves as Client/Owner, and a plain \"QS\" behaves as Consultant Quantity Surveyor, for every rule on this page.",
+  "A plain \"QS\" behaves as Consultant Quantity Surveyor for every rule on this page. Administrator and Super User hold their own explicit grants on the Payment Certificate rules above — Client/Owner does not automatically inherit them and has no action anywhere in the PC process.",
 ];
 
 export default function HelpFinance() {
