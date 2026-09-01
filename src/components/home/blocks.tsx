@@ -73,7 +73,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
-import { badgeVariants } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
@@ -866,6 +866,126 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
  * The chip labels are `SETUP_LABELS` verbatim — the same words the prose
  * used, unrenamed, so no step is invented, dropped or relabelled here.
  */
+/**
+ * ── The project summary banner ────────────────────────────────────────────
+ *
+ * The first thing on the page: which project this is, and the three figures
+ * that frame everything under it.
+ *
+ * **THE RING IS SETUP COMPLETENESS AND IT SAYS SO.** This is the single thing
+ * most likely to be misread on the whole page, so it is labelled in text
+ * ("Setup") inside the ring's own row and stated again in full on `title`.
+ * `projectStats` is `summariseProjectSetup` — how many of the project's
+ * RECORD FIELDS have been filled in — and it is what the old page's ring was
+ * measuring too, unlabelled, where it read as a completion percentage for the
+ * works. Baselinq holds no measure of physical progress; the page says so in
+ * two other places and this ring must not quietly contradict them.
+ *
+ * **The money chip is gated on `finance.view` and nothing else is.** A
+ * contractor's site agent must not be shown the contract sum, and the same
+ * person absolutely must be shown the project number, the address and how
+ * many days are left — those are on every drawing and every notice they
+ * already handle.
+ *
+ * **Every chip is omitted rather than zeroed.** No dates, no days chip. No
+ * contract sum recorded, no money chip even with the permission. A dash in a
+ * figure's place is a claim that the figure is nothing.
+ */
+export function ProjectSummaryBlock({ data }: { data: HomeData }) {
+  const { project, projectStats, time, money, canViewFinance } = data;
+  if (!project) return null;
+
+  const pct = projectStats?.percentage ?? null;
+  const number = project.project_number || project.projectNumber || null;
+  const location = project.location || null;
+  const days = time.hasDates && time.remainingDays !== null ? time.remainingDays : null;
+  const sum = canViewFinance ? money.revisedContractSum ?? money.contractSum : null;
+
+  // The setup ring. Geometry only — `r=16` in a 40px box, the same 2px stroke
+  // the app's other rings use. `--muted` for the track and `--primary` for the
+  // filled arc, so it inherits the theme rather than naming a hex.
+  const R = 16;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <section className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        {pct !== null && (
+          <div
+            className="relative h-10 w-10 shrink-0"
+            title={`Project setup: ${projectStats!.filledCount} of ${projectStats!.totalCount} record fields completed. This measures the PROJECT RECORD, not work done on site — Baselinq holds no measure of physical progress.`}
+          >
+            <svg className="h-10 w-10 -rotate-90" viewBox="0 0 40 40" aria-hidden>
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                className="stroke-muted"
+              />
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - pct / 100)}
+                className="stroke-primary"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs tabular-nums text-foreground">
+              {pct}%
+            </span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
+            {pct !== null && pct < 100 && (
+              // The ring's label, on the page and not only on a tooltip. Without
+              // it a percentage beside a project name reads as progress.
+              <span className="text-xs text-muted-foreground">Setup {pct}% complete</span>
+            )}
+          </div>
+          {(number || location) && (
+            <p className="text-xs text-muted-foreground truncate" title={location ?? undefined}>
+              {[number, location].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap shrink-0">
+        {days !== null && (
+          // Severity rule 1: past the completion date is a breach that has
+          // already happened and may carry colour. "30 days left" is a
+          // forecast and may not, however small the number.
+          <Badge variant={days < 0 ? "danger" : "neutral"} className="tabular-nums">
+            {days < 0
+              ? `${Math.abs(days)} days past completion`
+              : `${days} days remaining`}
+          </Badge>
+        )}
+        {sum !== null && (
+          <Badge
+            variant="neutral"
+            className="tabular-nums"
+            title="The contract sum as recorded, revised by approved variations. Ex-VAT."
+          >
+            {formatZAR(sum)}
+          </Badge>
+        )}
+        <Badge variant="neutral" className="tabular-nums">
+          {data.myActions.length} open action{data.myActions.length === 1 ? "" : "s"}
+        </Badge>
+      </div>
+    </section>
+  );
+}
+
 export function SetupLineBlock({
   data,
   onOpen,

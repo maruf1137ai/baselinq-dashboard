@@ -130,8 +130,32 @@ const SECTIONS: { label: string; kinds: QueueKind[] }[] = [
   // what escalated to you is the chase. Sits above "Assigned to you", matching
   // its `blocking` consequence outranking `own-work` in the band matrix.
   { label: "Escalated to you to chase", kinds: ["task-escalated"] },
-  // Scoped: `needsAction` matches the current user against `assignedTo`.
-  { label: "Assigned to you", kinds: ["task"] },
+  /*
+    ── "Assigned to you" WAS HERE, AND IT IS NOW ITS OWN PANEL ─────────────
+
+    `buildTaskQueue` classifies a plain task as `own-work`, the LOWEST of the
+    six consequence classes, so this section was always last and its rows were
+    always the last thing paginated in. That ranking is defensible as a
+    statement about the CONTRACT — a forfeiture clock does outrank your
+    paperwork — and indefensible as an answer to "what have I been asked to
+    do", which is the other question a person opens this page with. An RFI
+    addressed to the reader was sorting below rows that are addressed to
+    nobody ("Contract deadlines · project-wide", above, carries no assignee at
+    all).
+
+    So the plain-task rows moved to `MyActionsBlock`, which is uncapped,
+    ungated and sorted by the reader's own due dates. `task` rows are filtered
+    out of this list in `ActionQueueBlock` below rather than merely losing
+    their heading — a row with no section would be paginated in and then
+    rendered nowhere, which is how a list quietly loses items.
+
+    `task-escalated` DID NOT MOVE and is still above, under "Escalated to you
+    to chase". An escalation is not your work: it is somebody else's silence
+    past the SLA, the task stays with whoever owes it, and the move it asks
+    for is a phone call rather than a form. It belongs with the things that
+    outrank a task, which is exactly where its `blocking` consequence already
+    put it.
+  */
 ];
 
 /** Rows are revealed 10 at a time; scrolling to the bottom of the panel loads the next 10. */
@@ -340,7 +364,15 @@ export function ActionQueueBlock({
   data: HomeData;
   title?: string;
 }) {
-  const { queue, isLoading, loadIssue } = data;
+  const { isLoading, loadIssue } = data;
+  /*
+    Plain tasks are `MyActionsBlock`'s, and they are removed HERE rather than
+    in `useHomeData` so that `queueSummary` and `homeVerdict` keep reading the
+    whole queue: a task assigned to somebody is still a true thing waiting on
+    them, and the page's verdict must not stop counting it because one panel
+    stopped drawing it. `task-escalated` is deliberately kept — see SECTIONS.
+  */
+  const queue = data.queue.filter((i) => i.kind !== "task");
   const summary = summariseQueue(queue);
   // Hooks must run unconditionally, ahead of the loading/empty early returns
   // below.

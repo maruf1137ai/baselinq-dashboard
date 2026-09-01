@@ -101,9 +101,11 @@ import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
   LoadIssueBanner,
+  ProjectSummaryBlock,
   RiskConditionBlock,
   SetupLineBlock,
 } from "@/components/home/blocks";
+import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
 import { WhatChangedBlock } from "@/components/home/WhatChanged";
@@ -276,6 +278,23 @@ const Index = () => {
         <PageHeader title="Home" />
 
         {/*
+          ── The project summary, above everything ──────────────────────────
+
+          Which project this is, how complete its RECORD is, and the three
+          figures that frame the page: days remaining, the contract sum (with
+          `finance.view` only) and how many actions are open against the
+          reader. It sits above the precondition stack because it is context
+          for the preconditions — "6 of 11 setup fields still to add" means
+          something different on a project that is 40% set up from one that is
+          90% — and because the project's identity should not appear below a
+          reminder about it.
+
+          The ring is SETUP COMPLETENESS and is labelled as such in text. See
+          `ProjectSummaryBlock`.
+        */}
+        {!data.isLoading && <ProjectSummaryBlock data={data} />}
+
+        {/*
           ── The precondition stack: ONE block, not four ────────────────────
 
           These four are the same kind of thing — "something about this
@@ -346,8 +365,33 @@ const Index = () => {
 
             <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
               {/* Question 2: what do I have to do. */}
-              <div className="space-y-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <ActionQueueBlock data={data} />
+              {/*
+                ── THE WORK, and it is two lists, not one ──────────────────
+
+                "My actions" is what the reader has personally been asked to
+                do; "What needs you" is the contractual clock — notice
+                deadlines, certificates, obligations, escalations — which
+                outranks a task on consequence and is addressed to a role or
+                to the project rather than to a person.
+
+                My actions is FIRST and above. It is the question a person
+                actually opens this page with, it is the only list on the
+                screen every user can see regardless of permission, and one
+                revision of folding it into the queue proved what happens when
+                a consequence ranking is allowed to answer a possession
+                question: an RFI addressed to the reader sorted below rows
+                addressed to nobody.
+
+                Equal halves of the fixed row, each scrolling its own rows, so
+                the two columns still start and end on the same line.
+              */}
+              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
+                <div className="lg:flex-1 lg:min-h-0">
+                  <MyActionsBlock data={data} />
+                </div>
+                <div className="lg:flex-1 lg:min-h-0">
+                  <ActionQueueBlock data={data} />
+                </div>
               </div>
               {/* What is true whether or not anybody acts today. */}
               <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
