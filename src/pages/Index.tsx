@@ -88,7 +88,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, ShieldAlert } from "lucide-react";
+import { FolderOpen, ShieldAlert, X } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -101,14 +101,15 @@ import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
   LoadIssueBanner,
+  ProjectSummaryBlock,
   RiskConditionBlock,
   SetupLineBlock,
-  VerdictTail,
-  VerdictTitle,
 } from "@/components/home/blocks";
+import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
+import { UpcomingMeetingsBlock } from "@/components/home/UpcomingMeetings";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
-import { WhatChangedBlock } from "@/components/home/WhatChanged";
+import { RecentActivityBlock } from "@/components/home/RecentActivity";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 
@@ -120,6 +121,19 @@ const Index = () => {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const data = useHomeData(projectId);
+
+  // The reminders are dismissible per project — someone who has decided to
+  // finish setup later should not meet the same rows every visit. Stored in
+  // localStorage because it is a per-person view preference, not a fact about
+  // the project, and keyed by project so hiding one does not hide another.
+  const dismissKey = projectId ? `home.preconditions.hidden.${projectId}` : null;
+  const [preconditionsHidden, setHidden] = useState(
+    () => !!dismissKey && localStorage.getItem(dismissKey) === "1",
+  );
+  const setPreconditionsHidden = (v: boolean) => {
+    setHidden(v);
+    if (dismissKey) localStorage.setItem(dismissKey, v ? "1" : "0");
+  };
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [setupSection, setSetupSection] = useState<string | null>(null);
@@ -262,7 +276,24 @@ const Index = () => {
           says so rather than asserting an all-clear about data that has not
           arrived. See the guard in `useHomeData`.
         */}
-        <PageHeader title={<VerdictTitle data={data} />} meta={<VerdictTail data={data} />} />
+        <PageHeader title="Home" />
+
+        {/*
+          ── The project summary, above everything ──────────────────────────
+
+          Which project this is, how complete its RECORD is, and the three
+          figures that frame the page: days remaining, the contract sum (with
+          `finance.view` only) and how many actions are open against the
+          reader. It sits above the precondition stack because it is context
+          for the preconditions — "6 of 11 setup fields still to add" means
+          something different on a project that is 40% set up from one that is
+          90% — and because the project's identity should not appear below a
+          reminder about it.
+
+          The ring is SETUP COMPLETENESS and is labelled as such in text. See
+          `ProjectSummaryBlock`.
+        */}
+        {!data.isLoading && <ProjectSummaryBlock data={data} />}
 
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
@@ -283,12 +314,17 @@ const Index = () => {
           precondition is satisfied and all four children render null, draws
           nothing at all rather than a 2px empty box.
 
-          `SetupLineBlock` and `LoadIssueBanner` were changed to draw no
-          chrome of their own. `PrimaryContractAlert` and `InsuranceBanner`
-          are owned elsewhere, so their card, border and radius are stripped
-          here at the composition layer — see the note in the report about
-          the amber fill that properly belongs in their own files.
+          All four children now draw no chrome of their own — the amber
+          fills, the amber ink, the 40px icon tile and the black filled
+          button that `PrimaryContractAlert` and `InsuranceBanner` used to
+          carry were removed IN THOSE FILES, not overridden here, because
+          `[&>*]:!bg-card` only ever reached each child's root and their ink
+          leaked through underneath it. The flattening utilities below are
+          kept as a guard for the next foreign child dropped into this panel,
+          and for the row hover they restore.
         */}
+        {!preconditionsHidden && (
+        <div>
         <div
           className={[
             "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
@@ -298,13 +334,14 @@ const Index = () => {
             // would otherwise decide. They target only the child's ROOT, and
             // `divide-y` above is untouched because it applies to the
             // container, not to a child class.
-            "[&>*]:!rounded-none [&>*]:!border-0 [&>*]:!bg-card",
+            "[&>*]:!rounded-none [&>*]:!border-0",
             // Restores the row hover the flattening removes, in the same
             // token every other list row on this page uses.
             "[&>*]:hover:!bg-muted/50 [&>*]:transition-colors",
           ].join(" ")}
         >
           <SetupLineBlock
+            onDismiss={() => setPreconditionsHidden(true)}
             data={data}
             onOpen={() => openSetup(null)}
             onOpenSection={(s) => openSetup(s)}
@@ -314,6 +351,8 @@ const Index = () => {
           {/* State 3: partial outage — one line, one action. */}
           <LoadIssueBanner data={data} />
         </div>
+        </div>
+        )}
 
         {/* State 4: loading */}
         {data.isLoading ? (
@@ -323,23 +362,63 @@ const Index = () => {
             {/* Question 1: is anything on fire. */}
             <StatusBandBlock data={data} />
 
-            <PhaseCostProgressBlock projectId={projectId} />
-
-            <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:min-h-[640px]">
               {/* Question 2: what do I have to do. */}
-              <div className="space-y-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <ActionQueueBlock data={data} />
+              {/*
+                ── THE WORK, and it is two lists, not one ──────────────────
+
+                "My actions" is what the reader has personally been asked to
+                do; "What needs you" is the contractual clock — notice
+                deadlines, certificates, obligations, escalations — which
+                outranks a task on consequence and is addressed to a role or
+                to the project rather than to a person.
+
+                My actions is FIRST and above. It is the question a person
+                actually opens this page with, it is the only list on the
+                screen every user can see regardless of permission, and one
+                revision of folding it into the queue proved what happens when
+                a consequence ranking is allowed to answer a possession
+                question: an RFI addressed to the reader sorted below rows
+                addressed to nobody.
+
+                Equal halves of the fixed row, each scrolling its own rows, so
+                the two columns still start and end on the same line.
+              */}
+              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
+                <div className="lg:flex-1 lg:min-h-0">
+                  <MyActionsBlock data={data} />
+                </div>
+                <div className="lg:flex-1 lg:min-h-0">
+                  <ActionQueueBlock data={data} />
+                </div>
               </div>
               {/* What is true whether or not anybody acts today. */}
               <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
+                {/*
+                  ── The slot goes with the panel ────────────────────────
+
+                  `RiskConditionBlock` renders NOTHING for a viewer without
+                  `compliance.view` (see the note in `blocks.tsx`), and an
+                  empty `lg:flex-1` slot would still take a third of this
+                  column's height — a labelled hole where a panel used to be
+                  reads as a panel that failed to load. The condition is the
+                  same one the block itself applies, stated here so the
+                  layout drops the space too.
+                */}
                 <div className="lg:flex-1 lg:min-h-0">
-                  <RiskConditionBlock data={data} />
+                  <UpcomingMeetingsBlock data={data} />
                 </div>
+                {data.canViewCompliance && (
+                  <div className="lg:flex-1 lg:min-h-0">
+                    <RiskConditionBlock data={data} />
+                  </div>
+                )}
                 <div className="lg:flex-1 lg:min-h-0">
-                  <WhatChangedBlock feed={data.changeFeed} />
+                  <RecentActivityBlock data={data} />
                 </div>
               </div>
             </div>
+            <PhaseCostProgressBlock projectId={projectId} />
           </>
         )}
       </div>

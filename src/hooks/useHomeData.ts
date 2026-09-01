@@ -351,6 +351,23 @@ export function useHomeData(projectId: string | undefined) {
         type: type || undefined,
         status,
         due_date: item.task?.dueDate || item.task?.finishDate || null,
+        // ── The three fields "Recent activity" reads, and nothing else ─────
+        //
+        // Read straight off the payload in exactly the order the previous
+        // homepage read them, so the restored panel sorts and dates its rows
+        // the way it did. `assignedBy` is the only name a task payload
+        // carries for WHO moved the row; it is passed through as-is and stays
+        // null where the backend attributed nothing. Nothing is substituted
+        // for it — see the note in `RecentActivity.tsx`.
+        created_at: item.created_at || item.task?.createdAt || null,
+        updated_at: item.task?.updatedAt || item.created_at || item.task?.createdAt || null,
+        assignedBy: item.assignedBy ?? null,
+        // The two fields the "My actions" rows print and the queue never
+        // did. Read straight off the task record; no default is invented for
+        // either — a task with no priority set draws no chip, and one with no
+        // description draws no second line rather than echoing its own title.
+        priority: item.task?.priority || item.priority || null,
+        description: item.task?.description || item.description || null,
         needsAction: open && assignedToMe,
         // Escalation does not reassign, so this is deliberately NOT folded
         // into `needsAction`: the task remains the assignee's to do and
@@ -368,6 +385,55 @@ export function useHomeData(projectId: string | undefined) {
       };
     });
   }, [tasks.data, currentUserId]);
+
+  /**
+   * ── My actions: the work that is genuinely THIS PERSON'S ────────────────
+   *
+   * The same `needsAction` predicate the queue uses — `assignedTo` contains
+   * the signed-in user and the status is neither done nor closed — and
+   * nothing else. It is deliberately NOT derived from `queue`: `queue` is
+   * permission-filtered and consequence-ranked for a different question
+   * ("what outranks what across the whole contract"), and a plain task lands
+   * at the bottom of that order, below every notice deadline and every
+   * certificate. An RFI a person has been asked to answer is not a footnote
+   * to somebody else's clock, and it was being rendered as one.
+   *
+   * **Ungated, and that is the point.** No `canViewFinance`, no
+   * `canViewCompliance`, no `filterQueueByPermission`. An architect, an
+   * engineer or a contractor with no finance permission at all still holds
+   * RFIs and site instructions, and this list is the only place on the page
+   * that tells them so. The rows carry no money and no risk rating — a task
+   * subject, its priority and its due date — so there is nothing here for a
+   * permission to protect.
+   *
+   * An escalation is excluded: `buildTaskQueue` already resolves a task that
+   * is both assigned to you AND escalated to you as the escalation, and the
+   * queue keeps those rows because what escalated to you is somebody else's
+   * lateness, not your own work. One fact, one row, one list.
+   *
+   * Order: overdue first, then by due date ascending, undated last. That is
+   * the previous homepage's sort, kept verbatim — it was correct.
+   */
+  const myActions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return taskList
+      .filter((t: any) => t.needsAction && !t.escalatedToMe)
+      .map((t: any) => {
+        const due = t.due_date ? new Date(t.due_date) : null;
+        const valid = due && Number.isFinite(due.getTime());
+        if (valid) due!.setHours(0, 0, 0, 0);
+        return {
+          ...t,
+          overdue: valid ? due!.getTime() < today.getTime() : false,
+          dueTime: valid ? due!.getTime() : Number.POSITIVE_INFINITY,
+        };
+      })
+      .sort((a: any, b: any) => {
+        if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+        return a.dueTime - b.dueTime;
+      });
+  }, [taskList]);
 
   // ── The queue ───────────────────────────────────────────────────────────
   const certificateList = certificates.rows;
@@ -858,6 +924,13 @@ export function useHomeData(projectId: string | undefined) {
     verdict,
     queue,
     queueSummary,
+    /** Tasks assigned to the signed-in user. Ungated — see the note above. */
+    myActions,
+    // The normalised tasks themselves. "Recent activity" is the only reader:
+    // it orders them by when they were last touched, which is a different
+    // question from either "what is mine" (`myActions`) or "what outranks
+    // what" (`queue`), and it is not derivable from either list.
+    taskList,
     money,
     time,
     /**

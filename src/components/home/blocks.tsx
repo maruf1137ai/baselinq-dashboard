@@ -71,8 +71,9 @@
  * looking at.
  */
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
@@ -272,13 +273,29 @@ export function Panel({
 export function SectionHeading({
   label,
   count,
+  note,
 }: {
   label: string;
   /** Rows under this heading. Said once here instead of on each row. */
   count?: number;
+  /**
+   * The heading's qualifier, in the tooltip rather than in the label.
+   *
+   * The queue's headings used to read "Contract deadlines · project-wide" and
+   * "Escalated to you to chase". Both suffixes are honest — they say whose
+   * the rows actually are — but a disclosure set in heading position reads as
+   * an apology attached to every row beneath it, and two of them made a
+   * ten-row list look like five lists. The qualification is still one hover
+   * away and is still written down in `SECTIONS`; it is no longer the second
+   * half of the label.
+   */
+  note?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50">
+    <div
+      className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50"
+      title={note}
+    >
       {/*
         `text-foreground`, not `text-muted-foreground`. Muted grey on this
         strip computes 4.19:1 against `bg-muted/50` over a card — under the
@@ -430,7 +447,7 @@ export function RowDate({ date }: { date: string | null | undefined }) {
 const firstDetected = (g: { signals: { first_detected_at?: string }[] }): string | null =>
   g.signals[0]?.first_detected_at ?? null;
 
-function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
+export function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
@@ -614,7 +631,7 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 // tier heading above each block of it, and the page's only "All signals" link.
 
 export function RiskConditionBlock({ data }: { data: HomeData }) {
-  const { riskGroups, riskCounts, riskUnavailable } = data;
+  const { riskGroups, riskCounts, riskUnavailable, canViewCompliance } = data;
 
   // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
   // governs, and only the worst tier present is drawn in colour. Groups
@@ -642,12 +659,35 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     5,
   );
 
+  /*
+    ── A PANEL NOBODY CAN FILL DOES NOT RENDER ───────────────────────────
+
+    Without `compliance.view`, `visibleRiskSignals` returns `[]` for every
+    signal on the project and the risk endpoint is never even requested. Drawn
+    as an ordinary empty panel that is a headed, bordered block reading
+    "No open risk signals" — which is an ALL-CLEAR, addressed to the one
+    viewer who has no way to know whether it is true. The seeded CONTRACTOR
+    role holds neither `compliance.view` nor `finance.view`, so this is what a
+    contractor was being told about a project with open critical signals.
+
+    So the two states are separated and must never be drawn the same way:
+
+      cannot populate (permission)  → nothing renders, here and in `Index.tsx`,
+                                      which drops the layout slot with it.
+      could populate, but empty     → the panel renders and says so below.
+
+    Nothing is disclosed by the absence beyond the absence: no count, no
+    "hidden by permission" strip. That a project has risk signals is itself
+    the fact `compliance.view` withholds.
+  */
+  if (!canViewCompliance) return null;
+
   // An outage must never read as "healthy".
   if (riskUnavailable) {
     return (
       <Panel
-        title="Risk"
-        emphasis="reference"
+        title="Project risk"
+        emphasis="primary"
         icon={ShieldQuestion}
         tone="orange"
         hint="The risk engine did not respond — posture unknown, not clear."
@@ -655,7 +695,20 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     );
   }
 
-  if (riskGroups.length === 0) return null;
+  // Genuinely nothing open, for a reader who WOULD be shown it. This is a
+  // real statement about the project and it keeps its empty state.
+  if (riskGroups.length === 0) {
+    return (
+      <Panel
+        title="Project risk"
+        emphasis="reference"
+        icon={CheckCircle2}
+        tone="green"
+        hint="No open risk signals on this project."
+        action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
+      />
+    );
+  }
 
   const tierCount = new Map(
     present.map((t) => [t.label, t.groups.reduce((n, g) => n + g.count, 0)]),
@@ -675,7 +728,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
   const worst = present[0];
   return (
     <Panel
-      title="Open risk"
+      title="Project risk"
       // "of 11 open" said what the number was OF only if you already knew what
       // this panel counts. The unit is named now — the rows below are folded
       // SIGNALS, and the tally at the head of each says how many it folds, so
@@ -832,55 +885,238 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 // ── Setup ─────────────────────────────────────────────────────────────────
 
 /**
- * Project setup as ONE line, at the very top of the page. It is a precondition
+ * Project setup as ONE row, at the very top of the page. It is a precondition
  * for the rest of the screen being trustworthy, so it sits above it — but a
- * precondition is not the work, so it gets a hairline strip and nothing more.
+ * precondition is not the work, so it gets a hairline row and nothing more.
  *
  * **It draws no container of its own.** It is a ROW inside the single
- * precondition panel that `Index.tsx` builds — see the note there. It used to
- * carry `bg-card border border-border rounded-xl` and be one of up to four
- * separately-bordered full-width blocks stacked above the actual work.
+ * precondition panel that `Index.tsx` builds — see the note there.
+ *
+ * ── Why the missing fields are chips, not a clause ────────────────────────
+ *
+ * The version this replaces said the same thing in the same space, as prose:
+ * "Project setup 3 of 7 — client details, scope of work, attached documents
+ * and the appointed company still to add." Every field name was already its
+ * own button, but it was styled as underlined text inside a sentence, so four
+ * separate things read as one sentence. The card that PRECEDED the prose used
+ * four full-width icon-and-description rows and half the fold; it was
+ * genuinely tidier, and what made it tidier was not the whitespace — it was
+ * that each missing field was a discrete, bounded, labelled OBJECT.
+ *
+ * So: keep the one-row height of the prose, restore the thing-ness of the
+ * card. Each missing field is a `badgeVariants({ variant: "neutral" })` chip
+ * — the app's own status-chip primitive, `border-border bg-muted
+ * text-muted-foreground rounded-md px-2 py-0.5 text-xs`, no new token — on a
+ * `button` so it stays individually actionable and still opens
+ * `ProjectSetupDialog` at its named section. Four things are now countable at
+ * a glance without reading a sentence.
+ *
+ * Neutral, not amber: under the severity rule at the top of this file an
+ * unfilled setup field is a MISSING PRECONDITION, not a breach that has
+ * already happened, so it carries no colour.
+ *
+ * The chip labels are `SETUP_LABELS` verbatim — the same words the prose
+ * used, unrenamed, so no step is invented, dropped or relabelled here.
  */
+/**
+ * ── The project summary banner ────────────────────────────────────────────
+ *
+ * The first thing on the page: which project this is, and the three figures
+ * that frame everything under it.
+ *
+ * **THE RING IS SETUP COMPLETENESS AND IT SAYS SO.** This is the single thing
+ * most likely to be misread on the whole page, so it is labelled in text
+ * ("Setup") inside the ring's own row and stated again in full on `title`.
+ * `projectStats` is `summariseProjectSetup` — how many of the project's
+ * RECORD FIELDS have been filled in — and it is what the old page's ring was
+ * measuring too, unlabelled, where it read as a completion percentage for the
+ * works. Baselinq holds no measure of physical progress; the page says so in
+ * two other places and this ring must not quietly contradict them.
+ *
+ * **The money chip is gated on `finance.view` and nothing else is.** A
+ * contractor's site agent must not be shown the contract sum, and the same
+ * person absolutely must be shown the project number, the address and how
+ * many days are left — those are on every drawing and every notice they
+ * already handle.
+ *
+ * **Every chip is omitted rather than zeroed.** No dates, no days chip. No
+ * contract sum recorded, no money chip even with the permission. A dash in a
+ * figure's place is a claim that the figure is nothing.
+ */
+export function ProjectSummaryBlock({ data }: { data: HomeData }) {
+  const { project, projectStats, time, money, canViewFinance } = data;
+  if (!project) return null;
+
+  const pct = projectStats?.percentage ?? null;
+  const number = project.project_number || project.projectNumber || null;
+  const location = project.location || null;
+  const days = time.hasDates && time.remainingDays !== null ? time.remainingDays : null;
+  const sum = canViewFinance ? money.revisedContractSum ?? money.contractSum : null;
+
+  // The setup ring. Geometry only — `r=16` in a 40px box, the same 2px stroke
+  // the app's other rings use. `--muted` for the track and `--primary` for the
+  // filled arc, so it inherits the theme rather than naming a hex.
+  const R = 16;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <section className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        {pct !== null && (
+          <div
+            className="relative h-10 w-10 shrink-0"
+            title={`Project setup: ${projectStats!.filledCount} of ${projectStats!.totalCount} record fields completed. This measures the PROJECT RECORD, not work done on site — Baselinq holds no measure of physical progress.`}
+          >
+            <svg className="h-10 w-10 -rotate-90" viewBox="0 0 40 40" aria-hidden>
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                className="stroke-muted"
+              />
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - pct / 100)}
+                className="stroke-primary"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs tabular-nums text-foreground">
+              {pct}%
+            </span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
+            {pct !== null && pct < 100 && (
+              // The ring's label, on the page and not only on a tooltip. Without
+              // it a percentage beside a project name reads as progress.
+              <span className="text-xs text-muted-foreground">Setup {pct}% complete</span>
+            )}
+          </div>
+          {(number || location) && (
+            <p className="text-xs text-muted-foreground truncate" title={location ?? undefined}>
+              {[number, location].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap shrink-0">
+        {days !== null && (
+          // The old summary's own three-step scale, restored verbatim: past
+          // the date is red, inside a month is orange, otherwise green. This
+          // is the one place on the page that reads as a status at a glance,
+          // and the owner asked for it back by name.
+          <span
+            className={cn(
+              "text-xs font-medium px-3 py-1 rounded-md border tabular-nums",
+              days < 0
+                ? "bg-red-50 text-red-600 border-red-200"
+                : days <= 30
+                  ? "bg-orange-50 text-orange-600 border-orange-200"
+                  : "bg-emerald-50 text-emerald-600 border-emerald-200",
+            )}
+          >
+            {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`}
+          </span>
+        )}
+        {sum !== null && (
+          <span
+            className="text-xs font-medium px-3 py-1 rounded-md border bg-card text-foreground border-border tabular-nums"
+            title="The contract sum as recorded, revised by approved variations. Ex-VAT."
+          >
+            {formatZAR(sum)}
+          </span>
+        )}
+        <span className="text-xs font-medium px-3 py-1 rounded-md border bg-primary/10 text-primary border-primary/20 tabular-nums">
+          {data.myActions.length} open action{data.myActions.length === 1 ? "" : "s"}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export function SetupLineBlock({
   data,
   onOpen,
-  onOpenSection,
-}: {
+  onOpenSection, onDismiss }: {
   data: HomeData;
   onOpen: () => void;
-  onOpenSection: (section: string) => void;
-}) {
+  onOpenSection: (section: string) => void; onDismiss?: () => void }) {
   const { projectStats, canEditProject } = data;
   if (!projectStats || projectStats.percentage === 100) return null;
 
+  // The chip. Identical geometry whether or not it is pressable, so the row
+  // does not reflow for a reader who lacks edit rights — only the hover and
+  // focus affordances appear, and only for someone who can act on them.
+  // `badgeVariants({ variant: "neutral" })` is `border-border bg-muted
+  // text-muted-foreground`, and --muted-foreground on --muted measures
+  // 4.53:1 — over the floor, but thin for `text-xs`. The label takes
+  // --foreground instead (13.66:1), which is also exactly what the prose
+  // this replaces used for the same field names. Nothing else changes, and
+  // it keeps the hierarchy right: the lead-in is muted, the chips are the
+  // content.
+  const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
+
   return (
-    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-      <p className="text-sm text-muted-foreground min-w-0">
-        <span className="text-foreground tabular-nums">
-          Project setup {projectStats.filledCount} of {projectStats.totalCount}
-        </span>
-        {" — "}
-        {projectStats.missing.map((item, i) => (
-          <span key={item}>
-            {i > 0 && (i === projectStats.missing.length - 1 ? " and " : ", ")}
-            {canEditProject ? (
-              <button
-                onClick={() => onOpenSection(item)}
-                className="text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-              >
-                {SETUP_LABELS[item]}
-              </button>
-            ) : (
-              <span className="text-foreground">{SETUP_LABELS[item]}</span>
-            )}
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap bg-amber-50 border-b border-amber-200">
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <span className="text-sm text-muted-foreground shrink-0">
+          Project setup{" "}
+          <span className="text-foreground tabular-nums">
+            {projectStats.filledCount} of {projectStats.totalCount}
           </span>
-        ))}
-        {" still to add."}
-      </p>
+          {" · still to add"}
+        </span>
+        {projectStats.missing.map((item) =>
+          canEditProject ? (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onOpenSection(item)}
+              // `--accent` and `--muted` are the same value, so a background
+              // hover would be invisible here. The hairline carries it
+              // instead: `--border` on `--muted` is 1.13:1 at rest and
+              // --muted-foreground on --muted is 4.53:1, so the chip's edge
+              // resolves on hover and is otherwise silent.
+              className={cn(
+                chip,
+                "hover:border-muted-foreground",
+                "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+              )}
+            >
+              {SETUP_LABELS[item]}
+            </button>
+          ) : (
+            <span key={item} className={chip}>
+              {SETUP_LABELS[item]}
+            </span>
+          )
+        )}
+      </div>
       {canEditProject && (
-        <Button size="xs" variant="outline" className="shrink-0" onClick={onOpen}>
+        <Button size="xs" variant="outline" className="shrink-0 w-36 justify-center" onClick={onOpen}>
           Complete setup
         </Button>
+      )}
+      {onDismiss && (
+        <button
+          type="button"
+          aria-label="Hide setup reminders"
+          onClick={onDismiss}
+          className="shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

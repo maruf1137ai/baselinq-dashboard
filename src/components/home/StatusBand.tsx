@@ -124,9 +124,11 @@
  * No endpoint is requested here that the page did not already request, and no
  * gate is loosened.
  */
+import { CalendarClock, Milestone, Shuffle, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { BALANCE_LABEL, FINANCE_TAB, REVISED_SUM_DOUBLE_COUNT } from "@/lib/homeSignals";
@@ -160,6 +162,9 @@ function Zone({
   note,
   children,
   footnote,
+  emptyIcon,
+  emptyTitle,
+  emptyHint,
 }: {
   name: string;
   to?: string;
@@ -168,33 +173,90 @@ function Zone({
   compare?: string | null;
   badge?: React.ReactNode;
   /**
-   * The long form, on `title`. Kept for the reader who wants the full
-   * derivation — but nothing load-bearing may live here alone. See `note`.
+   * The long form, on `title`. This is where the derivation lives — the VAT
+   * basis, the retention position, the tolerance's legal standing — because a
+   * reader scanning three figures should not be made to read forty words to
+   * reach them, and a reader who wants them is one hover away.
    */
   caveat?: string;
   /**
-   * **The load-bearing caveat, ON THE PAGE.**
+   * **The load-bearing caveat, ON THE PAGE — and now at most one short line.**
    *
-   * "Certified, not paid", "a commercial measure, not physical progress" and
-   * "ex-VAT" were `title` attributes, and a `title` attribute does not exist on
-   * a touch device, in print, in a screenshot, or in the PDF somebody sends an
-   * insurer — which are four of the ways these figures actually travel. A
-   * caveat that changes what a number MEANS is not a hover affordance;
-   * `CommercialTab` already argues this and renders its `warning` visibly, and
-   * this is the same rule applied to the same figures on the other screen.
-   *
-   * Held to one short line. What was cut to pay for it is the Money zone's
-   * fourth footnote clause — see below.
+   * "Certified, not paid", "ex-VAT" and "not physical progress" change what
+   * the number MEANS, and a `title` attribute does not exist on a touch
+   * device, in print, in a screenshot, or in the PDF somebody sends an
+   * insurer. So these stay visible. What went to `caveat` is everything that
+   * merely EXPLAINS a figure rather than changing its meaning.
    */
   note?: string | null;
   children?: React.ReactNode;
-  /** What this series could not show. Printed, never swallowed. */
+  /**
+   * What this series could not show — undated certificates, unpriced
+   * variations, unbaselined milestones. Printed, never swallowed, and stated
+   * as a count rather than as a sentence about a count.
+   */
   footnote?: string | null;
+  /** The zone's empty treatment. See the block comment below. */
+  emptyIcon?: typeof CalendarClock;
+  /** Falls back to `compare`, which already states WHY there is no figure. */
+  emptyTitle?: string;
+  emptyHint?: string;
 }) {
+  /*
+    ── The empty zone ────────────────────────────────────────────────────
+
+    A zone with no figure used to draw its name, an em-dash where the number
+    goes, and one bare sentence floating in a card sized for a chart — the
+    worst-looking thing on the page, and on a new project it was two thirds of
+    the band. It now draws the app's own `EmptyState` at `sm`, sized to the
+    zone, so an empty zone reads as a state rather than as a hole.
+
+    The title is the sentence the zone was already printing, which is the one
+    that distinguishes the two cases that must never be confused: a project
+    with no dates recorded, and a project whose record could not be READ.
+    Nothing is invented for either.
+  */
+  if (value === null) {
+    return (
+      <div className="px-4 py-3 min-w-0 flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-xs font-semibold text-foreground">{name}</p>
+          {to && (
+            <Link
+              to={to}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              {linkLabel}
+            </Link>
+          )}
+        </div>
+        <EmptyState
+          variant="plain"
+          size="sm"
+          icon={emptyIcon}
+          title={emptyTitle ?? compare ?? "Nothing recorded yet"}
+          description={emptyHint}
+          className="flex-1"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-3 min-w-0 flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-xs text-muted-foreground">{name}</p>
+        {/*
+          ── The zone title, given enough weight to read as a label ────────
+
+          It was `text-xs text-muted-foreground` — the same treatment as the
+          footnote three lines below it — sitting above an 18px figure, so
+          "Time", "Money" and "Change" disappeared and a reader met three
+          unlabelled numbers. It takes `text-foreground` and `font-semibold`
+          now: no new size and no new colour, and the same weight the primary
+          panel's own title carries, which is the correct claim — this IS the
+          heading of its zone.
+        */}
+        <p className="text-xs font-semibold text-foreground">{name}</p>
         {to && (
           <Link
             to={to}
@@ -207,7 +269,7 @@ function Zone({
 
       <div className="min-w-0" title={caveat}>
         <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
-          <p className="text-lg tabular-nums text-foreground break-words">{value ?? "—"}</p>
+          <p className="text-lg tabular-nums text-foreground break-words">{value}</p>
           {badge}
         </div>
         {compare && (
@@ -829,9 +891,12 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
       }
       caveat="Calendar days against the contract dates. Not a measure of what has been built — Baselinq records none."
       // On the page, not on a tooltip: the whole risk with a date axis is
-      // that a reader takes elapsed time for progress.
+      // that a reader takes elapsed time for progress. One clause, and it is
+      // the one that changes what the figure MEANS.
       note="Calendar days — not a measure of what has been built."
       footnote={canViewFinance ? driftLine : null}
+      emptyIcon={CalendarClock}
+      emptyHint="Add the contract start and completion dates to see the clock."
     >
       {timeline.hasAxis ? <ContractAxis timeline={timeline} /> : null}
     </Zone>,
@@ -847,6 +912,11 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         to={CERTIFICATES}
         linkLabel="Certificates"
         value={money.certified === null ? null : formatZAR(money.certified)}
+        emptyIcon={Wallet}
+        // Explicit, because this zone's `compare` line is a percentage of the
+        // contract sum and reads as a figure rather than as an absence.
+        emptyTitle="Nothing certified yet"
+        emptyHint="Certified value appears here once the first certificate is posted."
         compare={
           money.certifiedPct === null || money.revisedContractSum === null
             ? "certified to date"
@@ -867,7 +937,12 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             <Badge variant="danger">Over</Badge>
           ) : undefined
         }
-        caveat="Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
+        caveat={[
+          "Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built.",
+          money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         /*
           ── THE FOOTNOTE, CUT FROM FOUR CLAUSES TO TWO FIGURES ────────────
 
@@ -884,51 +959,62 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           unplotted counts), which are the ones a reader cannot recover from
           anywhere else on the page.
         */
+        /*
+          ── CUT TO THE ONE FIGURE A READER ACTS ON, PLUS THE DISCLOSURES ──
+
+          It ran four clauses and 24 words: the balance, retention with its
+          rate and its gross qualifier, the undated count, and a sentence
+          about unpriced variations. A reader took the first clause they could
+          parse and stopped, which meant the DISCLOSURES — the two clauses
+          that say the figures above are incomplete — were the ones being
+          skipped.
+
+          What survives: the balance still to certify, which is the figure a
+          principal agent came for and the only one here that implies a move;
+          and both disclosure counts, stated as counts. Retention moved to the
+          tooltip — it is a position, not an action, and it is listed with the
+          certificates it is withheld from on /finance, one click away and
+          named in the zone's own link.
+        */
         footnote={footnoteOf([
-          // `BALANCE_LABEL` lower-cased: "R 2 000 000,00 still to certify". It
-          // read "remaining", which named the same number differently from
-          // Project Health one click away, and named the WRONG question —
-          // what remains to be certified is not what remains to be paid, and
-          // the payload cannot answer the second.
           money.balance === null
             ? null
             : `${formatZAR(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
+          /*
+            Retention STAYS on the face, and this is the one clause that was
+            tried on a tooltip and put back. `statusBandGating.test.tsx`
+            asserts the gross qualifier is visible, and it is right to: where
+            no posted certificate carried a `retention_release`, this figure
+            reports money the employer may no longer hold, and that changes
+            what the number means rather than merely explaining it. A caveat
+            of that kind does not go on a hover affordance. It is two figures
+            and no prose, so it costs one short clause.
+          */
           retention.held === null
             ? null
-            : // "gross" is said outright where no posted certificate carried a
-              // `retention_release`, because the figure then reports money the
-              // employer may no longer hold. Project Health has stated this
-              // all along; Home printed the gross figure unqualified.
-              `${formatZAR(retention.held)} retention${
+            : `${formatZAR(retention.held)} retention${
                 retention.ratePct === null ? "" : ` at ${retention.ratePct}%`
               }${retentionReleaseKnown ? "" : ", gross — no releases recorded"}`,
-          // What the curve could not draw, and why it drew nothing at all.
+          // The two disclosures. A series that cannot state its own
+          // incompleteness is worse than no series, so these are counted in
+          // as few words as they can be counted in.
           curve.undated > 0 ? `${curve.undated} undated, not plotted` : null,
           certifiedCurveNote(curve.points, curve.ceiling),
-          // An approved variation with no `grand_total` is inside the revised
-          // sum at R0 — hence inside the percentage above and inside this
-          // curve's ceiling. Counted here rather than left silent, the same
-          // way the run discloses what it could not date.
           money.variationsUnpriced > 0
-            ? `${money.variationsUnpriced} approved variation${
+            ? `${money.variationsUnpriced} unpriced variation${
                 money.variationsUnpriced === 1 ? "" : "s"
-              } not priced, so counted at zero in the sum above`
+              }, counted at zero`
             : null,
         ])}
         /*
-          ── The two caveats that change what these numbers MEAN ───────────
-
-          Both were `title` attributes. The first is the one Project Health
-          renders as a visible `warning` on the same figure and Home did not:
-          the revised sum can count a signed variation twice, and Home prints
-          that sum in the percentage above AND draws the curve's dashed
-          ceiling from it. Same number, two screens, and only one of them said
-          so. The second is the certified basis, which decides whether "82%"
-          is a claim about money or about building.
+          The caveats that change what these numbers MEAN stay on the page,
+          and they are now one line rather than three sentences. The full
+          derivation of the double-count — which flow causes it and what the
+          server does — moved into `caveat` above, along with retention.
         */
         note={[
-          money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : null,
-          "Certified, not paid. Ex-VAT — a commercial measure, not physical progress.",
+          "Certified, not paid. Ex-VAT — not physical progress.",
+          money.variationCount > 0 ? "May double-count a signed variation." : null,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -949,12 +1035,16 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         name="Change"
         to={VARIATIONS}
         linkLabel="Variations"
-        value={vos.total === 0 ? "—" : String(vos.outstanding)}
+        // Null, not an em-dash. A zone with nothing in it gets the empty
+        // treatment below rather than a dash the reader has to interpret.
+        value={vos.total === 0 ? null : String(vos.outstanding)}
         compare={
           vos.total === 0
-            ? "no variations raised"
+            ? "No variations raised"
             : `awaiting decision, of ${vos.total} raised`
         }
+        emptyIcon={Shuffle}
+        emptyHint="Variations appear here as they are raised against the contract."
         badge={
           variationsTruncated ? <Badge variant="neutral">May be short</Badge> : undefined
         }
@@ -963,54 +1053,46 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             ? "Approved variation value against the original contract sum."
             : "Approved variation value against the original contract sum. The tolerance is a commercial and underwriting heuristic set on this project's risk policy — no JBCC, NEC, FIDIC or GCC clause is breached at it. The contractual ceiling is the principal agent's mandate."
         }
+        /*
+          ── One clause, and it is the share against its tolerance ─────────
+
+          The label was repaired in an earlier change and the repair is kept
+          verbatim in meaning: the denominator is `Project.contract_value`,
+          which `_apply_vo_to_project` grows when a variation is signed
+          through the sign-and-issue flow, so the figure is named against "the
+          sum as recorded" and never against "the original sum". What changed
+          is only the number of words it takes to say it. The full reasoning
+          is in the tooltip and in `ChangePosition`.
+        */
         footnote={footnoteOf([
-          /*
-            ── "of the original sum" WAS WRONG, AND THE LABEL IS WHAT WAS
-               FIXED ────────────────────────────────────────────────────────
-
-            The denominator is `Project.contract_value`, and
-            `tasks/views_signing.py::_apply_vo_to_project` adds a signed
-            variation's amount INTO that field. So it grows with the numerator
-            and it is not the original sum on any project that uses the
-            sign-and-issue flow.
-
-            The denominator cannot be repaired here — nothing on either payload
-            marks which variations took that flow, so the pre-variation sum is
-            not recoverable client-side — so the LABEL was repaired instead:
-            the figure is named against the sum as recorded, which is exactly
-            what it is measured against. See `ChangePosition`.
-          */
           c.pctOfContractSum === null
             ? null
             : c.tolerancePct === null
-              ? // The COMMON case, and it has to say so rather than stay
-                // quiet. `ProjectRiskPolicy.vo_tolerance_pct` is not on the
-                // project payload; the only route it takes to the client is
-                // inside a FIRED VO_TOLERANCE_BREACH signal's detail. So on a
-                // compliant project we genuinely do not know this project's
-                // threshold, and silence would let a reader assume the figure
-                // beside it had been checked against one. The rule's own 10%
-                // default is a policy default, not this policy, and printing
-                // it would draw a threshold that is not this project's.
-                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded · tolerance not published for this project`
+              ? // The COMMON case, and it still has to say so: a project's
+                // `vo_tolerance_pct` only reaches the client inside a FIRED
+                // signal, so on a compliant project we do not know it, and
+                // silence would let a reader assume the figure had been
+                // checked against one.
+                `${c.pctOfContractSum}% of the recorded sum · no tolerance published`
               : // Worded as a tolerance, never as a breach. `contractual: False`.
-                `Approved change ${c.pctOfContractSum}% of the contract sum as recorded, ${
+                `${c.pctOfContractSum}% of the recorded sum, ${
                   c.pastTolerance ? "past" : "within"
                 } the ${c.tolerancePct}% tolerance`,
           c.undated > 0 ? `${c.undated} with no instruction date` : null,
         ])}
-        // Two sentences a reader must not have to hover for: that the
-        // denominator moves, and that the tolerance is not a contract term.
-        note={[
-          c.pctOfContractSum === null
-            ? null
-            : "Signed variations are added into the recorded sum, so this share reads low.",
-          c.tolerancePct === null
-            ? null
-            : "The tolerance is an underwriting heuristic, not a contract term.",
-        ]
-          .filter(Boolean)
-          .join(" ") || null}
+        // One line, both facts: the denominator moves, and the tolerance is
+        // not a contract term. The reasoning for each is in the tooltip.
+        note={
+          [
+            c.pctOfContractSum === null
+              ? null
+              : "Signed variations inflate the recorded sum",
+            c.tolerancePct === null ? null : "the tolerance is a heuristic, not a contract term",
+          ]
+            .filter(Boolean)
+            .join("; ")
+            .replace(/^./, (ch) => ch.toUpperCase()) || null
+        }
       >
         <ChangeBar slices={changeSplit} />
       </Zone>,
@@ -1047,18 +1129,19 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             : `of ${milestoneDrift.tracked} baselined milestones past baseline`
         }
         caveat="Baseline finish against actual finish, or against the current planned finish where a milestone has not finished. Dates only — Baselinq holds no measure of physical progress."
+        // The two disclosures and nothing else. "worst N days" went: it is a
+        // figure about one milestone, the four worst are drawn in the bar
+        // directly underneath, and it was the third clause on a line a reader
+        // was already skipping.
         footnote={footnoteOf([
-          milestoneDrift.untracked > 0
-            ? `${milestoneDrift.untracked} unbaselined — neither slipped nor on time`
-            : null,
-          milestoneDrift.worstSlipDays === null
-            ? null
-            : `worst ${days(milestoneDrift.worstSlipDays)}`,
+          milestoneDrift.untracked > 0 ? `${milestoneDrift.untracked} unbaselined` : null,
           // The bar draws four rows; a programme with nine slipped milestones
           // was rendered as one with four and said nothing about it.
           milestoneCapNote(milestoneDrift),
         ])}
         note="Dates only — no measure of physical progress."
+        emptyIcon={Milestone}
+        emptyHint="Baseline the milestones on the programme to measure slip."
       >
         <MilestoneDrift drift={milestoneDrift} />
       </Zone>,
