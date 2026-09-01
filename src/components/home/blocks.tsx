@@ -891,7 +891,7 @@ export function SetupLineBlock({
   const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
 
   return (
-    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap bg-amber-50">
       <div className="flex items-center gap-2 flex-wrap min-w-0">
         <span className="text-sm text-muted-foreground shrink-0">
           Project setup{" "}
@@ -927,7 +927,7 @@ export function SetupLineBlock({
         )}
       </div>
       {canEditProject && (
-        <Button size="xs" variant="outline" className="shrink-0" onClick={onOpen}>
+        <Button size="xs" variant="outline" className="shrink-0 w-36 justify-center" onClick={onOpen}>
           Complete setup
         </Button>
       )}

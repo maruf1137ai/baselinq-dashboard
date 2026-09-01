@@ -85,7 +85,7 @@ export const InsuranceBanner = () => {
           project owners.
         </p>
       </div>
-      <Button variant="outline" size="xs" className="shrink-0" onClick={handleClick}>
+      <Button variant="outline" size="xs" className="shrink-0 w-36 justify-center" onClick={handleClick}>
         Upload certificate
       </Button>
     </div>

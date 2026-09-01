@@ -88,7 +88,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, ShieldAlert } from "lucide-react";
+import { FolderOpen, ShieldAlert, X } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -103,8 +103,6 @@ import {
   LoadIssueBanner,
   RiskConditionBlock,
   SetupLineBlock,
-  VerdictTail,
-  VerdictTitle,
 } from "@/components/home/blocks";
 import { StatusBandBlock } from "@/components/home/StatusBand";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
@@ -120,6 +118,19 @@ const Index = () => {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const data = useHomeData(projectId);
+
+  // The reminders are dismissible per project — someone who has decided to
+  // finish setup later should not meet the same rows every visit. Stored in
+  // localStorage because it is a per-person view preference, not a fact about
+  // the project, and keyed by project so hiding one does not hide another.
+  const dismissKey = projectId ? `home.preconditions.hidden.${projectId}` : null;
+  const [preconditionsHidden, setHidden] = useState(
+    () => !!dismissKey && localStorage.getItem(dismissKey) === "1",
+  );
+  const setPreconditionsHidden = (v: boolean) => {
+    setHidden(v);
+    if (dismissKey) localStorage.setItem(dismissKey, v ? "1" : "0");
+  };
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [setupSection, setSetupSection] = useState<string | null>(null);
@@ -262,7 +273,7 @@ const Index = () => {
           says so rather than asserting an all-clear about data that has not
           arrived. See the guard in `useHomeData`.
         */}
-        <PageHeader title={<VerdictTitle data={data} />} meta={<VerdictTail data={data} />} />
+        <PageHeader title="Home" />
 
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
@@ -292,6 +303,16 @@ const Index = () => {
           kept as a guard for the next foreign child dropped into this panel,
           and for the row hover they restore.
         */}
+        {!preconditionsHidden && (
+        <div className="relative">
+        <button
+          type="button"
+          aria-label="Hide setup reminders"
+          onClick={() => setPreconditionsHidden(true)}
+          className="absolute right-2 top-2 z-10 rounded-sm p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
         <div
           className={[
             "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
@@ -301,7 +322,7 @@ const Index = () => {
             // would otherwise decide. They target only the child's ROOT, and
             // `divide-y` above is untouched because it applies to the
             // container, not to a child class.
-            "[&>*]:!rounded-none [&>*]:!border-0 [&>*]:!bg-card",
+            "[&>*]:!rounded-none [&>*]:!border-0",
             // Restores the row hover the flattening removes, in the same
             // token every other list row on this page uses.
             "[&>*]:hover:!bg-muted/50 [&>*]:transition-colors",
@@ -317,6 +338,8 @@ const Index = () => {
           {/* State 3: partial outage — one line, one action. */}
           <LoadIssueBanner data={data} />
         </div>
+        </div>
+        )}
 
         {/* State 4: loading */}
         {data.isLoading ? (

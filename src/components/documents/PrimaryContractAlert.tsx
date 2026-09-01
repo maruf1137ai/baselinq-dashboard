@@ -86,7 +86,7 @@ export const PrimaryContractAlert = ({
       <Button
         variant="outline"
         size="xs"
-        className="shrink-0"
+        className="shrink-0 w-36 justify-center"
         onClick={() => navigate(href)}
       >
         Upload contract
