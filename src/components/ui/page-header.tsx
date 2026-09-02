@@ -67,8 +67,8 @@
  *   <PageHeader title="Documents" meta={<span>12 documents</span>} />
  *   <PageHeader title="Documents" reference={<Link>Document reference</Link>} actions={<Button/>} />
  *
- * `reference` renders on the title row (top-right, next to the title block).
- * `actions` renders on its own row below — buttons, filters, search, etc.
+ * `reference` and `actions` both render on the title row, right-aligned, and
+ * wrap to a second row only when they genuinely cannot fit.
  */
 import * as React from "react";
 
@@ -94,7 +94,7 @@ export interface PageHeaderProps
    * so pages that need it don't have to hand-roll the whole header back.
    */
   meta?: React.ReactNode;
-  /** Second-row controls — buttons, filters, search, etc. */
+  /** Page controls — buttons, filters, search. Right-aligned on the title row. */
   actions?: React.ReactNode;
   /** Right-aligned on the title row — the "? X reference" help link. */
   reference?: React.ReactNode;
@@ -111,7 +111,30 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className={cn(className)} {...props}>
-      <div className="flex items-start justify-between gap-4">
+      {/*
+        ── Actions ride the title row ──────────────────────────────────────
+
+        They used to render in a row of their own below the title, on
+        `mt-3`. Measured at 1440px that row cost 44px — 12px of margin and a
+        32px control — on every page that has one, and what it held was one
+        or two small buttons with a title row half empty beside them:
+
+          Documents        "Ask AI" / "Upload"
+          Compliance       "Analyse with AI" / "Track obligation"
+          Project Health   "Refresh"            (a single button, 44px)
+          Meetings         "Schedule"
+
+        Four pages, 44px each, for controls that fit next to the title. So
+        the header is one row: identity on the left, controls on the right.
+        `flex-wrap` means a page that genuinely cannot fit both still gets
+        its second row rather than a crushed one — it is a fallback now
+        instead of the default.
+
+        Actions sit outermost because a primary action belongs at the end of
+        the row; `reference` — the quiet "? X reference" link — sits inside
+        them, where it stays out of the way of the thing people click.
+      */}
+      <div className="flex items-start justify-between gap-x-4 gap-y-2 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 min-w-0">
             <h1 className="text-2xl font-normal tracking-tight text-foreground">
@@ -123,11 +146,13 @@ export function PageHeader({
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
           )}
         </div>
-        {reference && <div className="shrink-0">{reference}</div>}
+        {(reference || actions) && (
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            {reference}
+            {actions}
+          </div>
+        )}
       </div>
-      {actions && (
-        <div className="flex items-center justify-end gap-2 mt-3">{actions}</div>
-      )}
     </div>
   );
 }

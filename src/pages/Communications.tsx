@@ -213,7 +213,17 @@ const Communications = () => {
             }
           />
         </div>
-        <div className="flex flex-1 overflow-hidden">
+        {/*
+          ── The body keeps the page's 24px left inset ──────────────────
+
+          The chat pane is full-bleed on the RIGHT, which is why this page
+          takes `padding="p-0"` at all. But the channel list was full-bleed
+          on the LEFT too, so it started at 0 where every other page starts
+          at 24 — measured, and visible as the whole page sitting hard
+          against the nav rail. Full-bleed was only ever needed on the side
+          the conversation grows into.
+        */}
+        <div className="flex flex-1 overflow-hidden pl-6">
           <div className="border-r border-border bg-card flex-shrink-0">
             <ChatSidebar
               tasks={channels}
