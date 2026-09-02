@@ -88,7 +88,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, ShieldAlert } from "lucide-react";
+import { FolderOpen, ShieldAlert, X } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -101,14 +101,15 @@ import { ProjectSetupDialog } from "@/components/home/ProjectSetupDialog";
 import {
   ActionQueueBlock,
   LoadIssueBanner,
+  ProjectSummaryBlock,
   RiskConditionBlock,
   SetupLineBlock,
-  VerdictTail,
-  VerdictTitle,
 } from "@/components/home/blocks";
+import { MyActionsBlock } from "@/components/home/MyActions";
 import { StatusBandBlock } from "@/components/home/StatusBand";
+import { ContractWatchBlock } from "@/components/home/ContractWatch";
 import { PhaseCostProgressBlock } from "@/components/home/PhaseCostProgress";
-import { WhatChangedBlock } from "@/components/home/WhatChanged";
+import { RecentActivityBlock } from "@/components/home/RecentActivity";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 
@@ -120,6 +121,19 @@ const Index = () => {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const data = useHomeData(projectId);
+
+  // The reminders are dismissible per project — someone who has decided to
+  // finish setup later should not meet the same rows every visit. Stored in
+  // localStorage because it is a per-person view preference, not a fact about
+  // the project, and keyed by project so hiding one does not hide another.
+  const dismissKey = projectId ? `home.preconditions.hidden.${projectId}` : null;
+  const [preconditionsHidden, setHidden] = useState(
+    () => !!dismissKey && localStorage.getItem(dismissKey) === "1",
+  );
+  const setPreconditionsHidden = (v: boolean) => {
+    setHidden(v);
+    if (dismissKey) localStorage.setItem(dismissKey, v ? "1" : "0");
+  };
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [setupSection, setSetupSection] = useState<string | null>(null);
@@ -262,8 +276,23 @@ const Index = () => {
           says so rather than asserting an all-clear about data that has not
           arrived. See the guard in `useHomeData`.
         */}
-        <PageHeader title={<VerdictTitle data={data} />} meta={<VerdictTail data={data} />} />
+        <PageHeader title="Home" />
 
+        {/*
+          ── The project summary, above everything ──────────────────────────
+
+          Which project this is, how complete its RECORD is, and the three
+          figures that frame the page: days remaining, the contract sum (with
+          `finance.view` only) and how many actions are open against the
+          reader. It sits above the precondition stack because it is context
+          for the preconditions — "6 of 11 setup fields still to add" means
+          something different on a project that is 40% set up from one that is
+          90% — and because the project's identity should not appear below a
+          reminder about it.
+
+          The ring is SETUP COMPLETENESS and is labelled as such in text. See
+          `ProjectSummaryBlock`.
+        */}
         {/*
           ── The precondition stack: ONE block, not four ────────────────────
 
@@ -283,12 +312,17 @@ const Index = () => {
           precondition is satisfied and all four children render null, draws
           nothing at all rather than a 2px empty box.
 
-          `SetupLineBlock` and `LoadIssueBanner` were changed to draw no
-          chrome of their own. `PrimaryContractAlert` and `InsuranceBanner`
-          are owned elsewhere, so their card, border and radius are stripped
-          here at the composition layer — see the note in the report about
-          the amber fill that properly belongs in their own files.
+          All four children now draw no chrome of their own — the amber
+          fills, the amber ink, the 40px icon tile and the black filled
+          button that `PrimaryContractAlert` and `InsuranceBanner` used to
+          carry were removed IN THOSE FILES, not overridden here, because
+          `[&>*]:!bg-card` only ever reached each child's root and their ink
+          leaked through underneath it. The flattening utilities below are
+          kept as a guard for the next foreign child dropped into this panel,
+          and for the row hover they restore.
         */}
+        {!preconditionsHidden && (
+        <div>
         <div
           className={[
             "empty:hidden bg-card border border-border rounded-xl overflow-hidden",
@@ -298,13 +332,14 @@ const Index = () => {
             // would otherwise decide. They target only the child's ROOT, and
             // `divide-y` above is untouched because it applies to the
             // container, not to a child class.
-            "[&>*]:!rounded-none [&>*]:!border-0 [&>*]:!bg-card",
+            "[&>*]:!rounded-none [&>*]:!border-0",
             // Restores the row hover the flattening removes, in the same
             // token every other list row on this page uses.
             "[&>*]:hover:!bg-muted/50 [&>*]:transition-colors",
           ].join(" ")}
         >
           <SetupLineBlock
+            onDismiss={() => setPreconditionsHidden(true)}
             data={data}
             onOpen={() => openSetup(null)}
             onOpenSection={(s) => openSetup(s)}
@@ -314,32 +349,76 @@ const Index = () => {
           {/* State 3: partial outage — one line, one action. */}
           <LoadIssueBanner data={data} />
         </div>
+        </div>
+        )}
+
+        {/*
+          ── Why the strip is BELOW the setup stack now ────────────────────
+
+          It used to lead the page, on the reasoning that a project's identity
+          should not appear below a reminder about it. The owner has reversed
+          that, and the reversal is right for a reason the original argument
+          missed: the setup stack is TRANSIENT and closable. It is an
+          onboarding nag a user clears once, and every project that is
+          properly set up draws nothing there at all (`empty:hidden`). The
+          strip is permanent.
+
+          So on a finished project the strip still leads the page. On a fresh
+          one the reader meets the thing they must finish, closes it, and the
+          strip takes the top for good. Ordering the permanent block above a
+          block that disappears would have left a gap at the top of the page
+          the moment the nag was dismissed.
+        */}
+        {!data.isLoading && <ProjectSummaryBlock data={data} />}
 
         {/* State 4: loading */}
         {data.isLoading ? (
           <AwesomeLoader message="Reading what needs you" />
         ) : (
           <>
-            {/* Question 1: is anything on fire. */}
-            <StatusBandBlock data={data} />
+            {/*
+              ── The pair the client asked for, in the shape they had it ───
 
-            <PhaseCostProgressBlock projectId={projectId} />
+              My actions and the activity feed, side by side and directly
+              under the strip, which is where production put them
+              (`f4cdc51`, `md:grid-cols-2`) and what Darren and Werner asked
+              to have back. Everything the rebuild added is still on the page
+              — it is below these two rather than around them.
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:h-[640px]">
-              {/* Question 2: what do I have to do. */}
-              <div className="space-y-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <ActionQueueBlock data={data} />
-              </div>
-              {/* What is true whether or not anybody acts today. */}
-              <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0 lg:h-full">
-                <div className="lg:flex-1 lg:min-h-0">
-                  <RiskConditionBlock data={data} />
-                </div>
-                <div className="lg:flex-1 lg:min-h-0">
-                  <WhatChangedBlock feed={data.changeFeed} />
-                </div>
-              </div>
+              `items-start` rather than a stretched row: these are the two
+              panels whose length is genuinely data-driven (one is your work,
+              the other is the last eight events), and forcing them to a
+              common height padded whichever was shorter with dead space.
+            */}
+            <div className="grid gap-4 md:grid-cols-2 items-start">
+              <MyActionsBlock data={data} />
+              <RecentActivityBlock data={data} />
             </div>
+
+            {/*
+              ── Contract watch: one panel, three lists ──────────────────
+
+              "What needs you", "Project risk" and "My meetings" were three
+              stacked cards answering one question — what is standing on this
+              contract. Three headers, three borders and three empty states
+              for one question is chrome, and it left a reader working out the
+              boundary between them before the page was usable.
+
+              They are one panel with a segmented switcher now. Nothing is
+              removed: every row that was reachable is still reachable, and
+              the segment a role cannot populate is absent rather than
+              greyed — see the rules in `ContractWatch.tsx`.
+            */}
+            <ContractWatchBlock data={data} projectId={projectId} />
+
+            {/*
+              Time, money and change, then construction and professional, at
+              the foot of the page. These answer "where does the contract
+              stand", which is a question a reader asks after the two lists
+              above have told them whether anything is on fire today.
+            */}
+            <StatusBandBlock data={data} />
+            <PhaseCostProgressBlock projectId={projectId} />
           </>
         )}
       </div>

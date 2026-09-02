@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
 import { CreatePCDrawer, CreatePCApiPayload } from "./createPCDrawer";
 import useFetch from "@/hooks/useFetch";
-import { postData } from "@/lib/Api";
+import { postData, patchData } from "@/lib/Api";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { usePermission } from "@/hooks/usePermission";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,11 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
   const navigate = useNavigate();
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Which certificate is being edited, or null. Reuses the same drawer as
+  // "New Certificate" — see CreatePCDrawer's `editEntry` prop — rather than
+  // a second form, since the backend already accepts the identical payload
+  // shape on PATCH that it does on POST.
+  const [editingEntry, setEditingEntry] = useState<PCEntry | null>(null);
   // Search sits in the parent toolbar alongside the action, same as the other
   // three finance tabs.
   const [search, setSearch] = useState("");
@@ -118,12 +123,17 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
           selectedId={selectedId}
           onSelect={setSelectedId}
           unreadByPcId={unreadByPcId}
+          onEditRequest={setEditingEntry}
         />
       )}
 
       <CreatePCDrawer
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
+        isOpen={isCreateOpen || editingEntry !== null}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setEditingEntry(null);
+        }}
+        editEntry={editingEntry}
         projectId={projectId}
         // The failure is rethrown, not swallowed. It used to be caught into a
         // `console.error` while the drawer closed regardless, so a certificate
@@ -157,6 +167,19 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
           // The drawer needs the created certificate's id so it can register
           // any attached files against it.
           return created;
+        }}
+        // Draft-only, creator-only — the drawer only ever calls this when
+        // editEntry is set, which paymentCertificateTable.tsx only offers via
+        // entry.canEdit (server-computed, same rule PaymentCertificateViewSet
+        // enforces on the PATCH itself — see tasks/pc_workflow.py).
+        onEditSubmit={async (id, payload: CreatePCApiPayload) => {
+          const updated: any = await patchData({
+            url: `tasks/payment-certificates/${id}/`,
+            data: payload,
+          });
+          refetch();
+          toast.success(`${updated?.pcNumber ?? "Certificate"} updated.`);
+          return updated;
         }}
       />
     </main>

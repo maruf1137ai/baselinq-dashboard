@@ -19,7 +19,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check, Loader2 } from "lucide-react";
+import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { useRolesSidebar } from "@/components/roles/RolesSidebarContext";
+import { RolesNav } from "@/components/roles/RolesNav";
 import Trending from "./icons/Trending";
 import AiWorkspace from "./icons/AiWorkspace";
 import Communication from "./icons/Communication";
@@ -59,10 +61,19 @@ const settingsItems: { title: string; url: string; icon: React.ReactElement; per
   // Help lands on the hub page (/help), which offers the Tasks and
   // Finance reference guides as two options — see src/pages/Help.tsx.
   { title: "Help", url: "/help", icon: <Help />, permission: null },
+  // Roles & Permissions — content still to be decided. Left ungated for now
+  // (permission: null) so it is reachable while we work out what it shows;
+  // add a permission key here once that is settled.
+  { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: null },
 ];
 
 export function DashboardSidebar() {
   const { open } = useSidebar();
+  // Non-null only on /roles-permissions, where RolesPermissions mounts the
+  // provider above DashboardLayout. Everywhere else this stays null and the
+  // sidebar behaves exactly as it always has.
+  const rolesSidebar = useRolesSidebar();
+  const showRolesNav = rolesSidebar?.navMode === "roles";
   const location = useLocation();
   const { data: user } = useCurrentUser(); // Django auth hook
   const { can, canViewSettings } = usePermissions();
@@ -272,10 +283,56 @@ export function DashboardSidebar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+
+            {/* On /roles-permissions the nav swaps between the roles list and
+                the main menu. One control, right of the project switcher, and
+                the arrow points wherever it is about to take you. */}
+            {rolesSidebar && open && (
+              <button
+                type="button"
+                onClick={() => rolesSidebar.setNavMode(showRolesNav ? "main" : "roles")}
+                aria-label={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                title={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                className="ml-2 h-9 w-9 shrink-0 rounded-md border border-border bg-white/50 flex items-center justify-center hover:bg-card transition-colors group"
+              >
+                {showRolesNav ? (
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-x-0.5" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                )}
+              </button>
+            )}
           </div>
 
-          <div className="flex-1 overflow-auto px-3 pt-3">
-            {location.pathname.startsWith("/account") ? (
+          {/* The roles list is full-bleed to the right edge, so it drops the
+              shared gutter; every other nav keeps it. */}
+          <div
+            className={`subtle-scrollbar flex-1 overflow-auto pl-3 pt-3 ${
+              showRolesNav ? "pr-0" : "pr-3"
+            }`}
+          >
+            {/* Collapsed rail: no room beside the logo, so the same control
+                lives at the top of the nav body instead. */}
+            {rolesSidebar && !open && (
+              <button
+                type="button"
+                onClick={() => rolesSidebar.setNavMode(showRolesNav ? "main" : "roles")}
+                aria-label={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                title={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                className="mb-2 h-9 w-full rounded-md border border-border bg-white/50 flex items-center justify-center hover:bg-card transition-colors"
+              >
+                {showRolesNav ? (
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            )}
+
+            {showRolesNav ? (
+              // ── Roles nav — replaces the main menu on /roles-permissions ──
+              <RolesNav />
+            ) : location.pathname.startsWith("/account") ? (
               // ── Account nav ──
               <SidebarGroup>
                 <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2 normal-case h-auto pb-1.5 pt-0">

@@ -23,6 +23,12 @@ import { getWsBase } from "@/lib/ws";
 
 /** Fired on every server push. useUnreadSummary listens for this. */
 export const NOTIFICATIONS_CHANGED_EVENT = "notifications-changed";
+/**
+ * Fired when an admin changes what this user may do. Separate from the unread
+ * ping because the two invalidate different queries — refetching unread counts
+ * would not make a revoked button disappear.
+ */
+export const PERMISSIONS_CHANGED_EVENT = "permissions-changed";
 
 const MAX_BACKOFF_MS = 30_000;
 
@@ -83,9 +89,23 @@ export function useUserEventSocket(onPing?: () => void) {
         attempt = 0;
         setSocketHealthy(true);
       };
-      ws.onmessage = () => {
-        // Payload is deliberately empty — refetch rather than trust a push.
-        window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+      ws.onmessage = (message) => {
+        // The payload names which kind of change it was and nothing more —
+        // the client still refetches rather than trusting a push, so a stale
+        // or forged message cannot grant anyone anything.
+        let kind = "unread";
+        try {
+          kind = JSON.parse(message.data)?.event ?? "unread";
+        } catch {
+          // Unparseable: fall through to the unread path, which is what every
+          // listener predating this expected.
+        }
+
+        if (kind === "permissions") {
+          window.dispatchEvent(new Event(PERMISSIONS_CHANGED_EVENT));
+        } else {
+          window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+        }
         onPingRef.current?.();
       };
       ws.onclose = () => {

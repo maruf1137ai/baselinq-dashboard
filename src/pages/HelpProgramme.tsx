@@ -27,9 +27,24 @@
  *   - Risk Forecast                  → same programme.view gate, no separate permission code
  *
  * Update this page whenever those rules change.
+ *
+ * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
+ * matching permission code's current grants (Roles & Permissions), via
+ * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
+ * The discipline picker row unions two codes (either grants it — see
+ * canViewOtherDisciplines in hooks/usePermissions.ts). "View the Programme
+ * page at all", "Add a phase/milestone", "View your own discipline's fees"
+ * and Risk Forecast/Baseline stay static — programme.view itself has no
+ * backend enforcement (frontend route gate only), and the "own discipline"
+ * / baseline rows aren't role-enumerable facts to begin with.
  */
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useGrantedRoles } from "@/hooks/useGrantedRoles";
+import { useRoles } from "@/hooks/useRolePermissions";
+import { useSelectedProjectId } from "@/hooks/useSelectedProject";
+import { formatRoleList, unionRoleCodes } from "@/lib/formatRoleList";
 
 type Row = { action: string; who: string; when: string; note?: string };
 
@@ -40,7 +55,17 @@ interface ProgrammeSection {
   rows: Row[];
 }
 
-const SECTIONS: ProgrammeSection[] = [
+/** Row action -> permission code(s) whose grants decide its "who". Multiple codes = OR. */
+const ROW_PERMISSION: Record<string, string[]> = {
+  "Switch the discipline picker to see another discipline's phases": [
+    "programme.discipline.other.view",
+    "programme.discipline.fees.view_all",
+  ],
+  "View milestone fees across every discipline": ["programme.discipline.fees.view_all"],
+};
+const ROW_CODES = [...new Set(Object.values(ROW_PERMISSION).flat())];
+
+const STATIC_SECTIONS: ProgrammeSection[] = [
   {
     type: "SCHEDULE",
     title: "Schedule & Milestones",
@@ -135,16 +160,53 @@ const GLOBAL_NOTES = [
 ];
 
 export default function HelpProgramme() {
+  const navigate = useNavigate();
+  const projectId = useSelectedProjectId();
+  const grants = useGrantedRoles(ROW_CODES, projectId);
+  const { data: roles } = useRoles();
+
+  const roleNamesByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of roles ?? []) map[r.code] = r.name;
+    return map;
+  }, [roles]);
+
+  // Falls back to the static prose until both the grants and the role names
+  // have arrived — never renders a half-computed sentence.
+  const sections = useMemo(() => {
+    if (!grants || Object.keys(roleNamesByCode).length === 0) return STATIC_SECTIONS;
+    return STATIC_SECTIONS.map((section) => ({
+      ...section,
+      rows: section.rows.map((row) => {
+        const codes = ROW_PERMISSION[row.action];
+        if (!codes) return row;
+        const roleCodes = unionRoleCodes(...codes.map((c) => grants[c]));
+        return { ...row, who: `Anyone holding: ${formatRoleList(roleCodes, roleNamesByCode)}.` };
+      }),
+    }));
+  }, [grants, roleNamesByCode]);
+
+  // Back goes to wherever the user actually came from — the Help hub, a
+  // deep link out of /programme, anywhere — rather than always dumping them on
+  // /programme. history.state.idx is React Router's history index: 0 (or
+  // undefined) means this page is the first entry, so there is nothing to
+  // pop and we fall back to /programme.
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate("/programme", { replace: true });
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="help-reference-page min-h-screen bg-background">
       <div className="mx-auto max-w-4xl px-6 py-10">
-        <Link
-          to="/programme"
+        <button
+          type="button"
+          onClick={goBack}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Programme
-        </Link>
+          Back
+        </button>
 
         <h1 className="text-2xl font-normal text-foreground tracking-tight">
           Programme reference
@@ -158,7 +220,7 @@ export default function HelpProgramme() {
 
         {/* Quick jump nav */}
         <div className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <a
               key={s.type}
               href={`#${s.type.toLowerCase()}`}
@@ -171,7 +233,7 @@ export default function HelpProgramme() {
 
         {/* Per-area sections */}
         <div className="mt-10 space-y-10">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <section key={s.type} id={s.type.toLowerCase()} className="scroll-mt-6">
               <h2 className="text-lg font-normal text-foreground">{s.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">

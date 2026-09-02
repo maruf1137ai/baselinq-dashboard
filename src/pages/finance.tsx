@@ -35,6 +35,7 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
 import { markSurfaceNotificationsRead } from "@/lib/markNotificationsRead";
+import { useFinanceUnreadNotifications } from "@/hooks/useFinanceUnreadNotifications";
 import { HelpCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FinanceToolbar } from "@/components/finance/FinanceToolbar";
@@ -155,6 +156,17 @@ const Finance = () => {
 
   const projectId = localStorage.getItem("selectedProjectId") || "";
 
+  // Same hook PaymentCertificate calls for its per-row badges — shares that
+  // query's cache entry (no extra request), just rolled up here into one
+  // number so the tab strip can show WHICH tab an unread item is on. Only
+  // Payment Certificates gets a count: the "finance" notification surface is
+  // generated exclusively by PC lifecycle events today (see
+  // backend/notification/surfaces.py) — Variation Orders' notifications are
+  // typed under the "tasks" surface and already counted in the Tasks sidebar
+  // badge, and Cost Ledger has no notification type at all.
+  const { unreadByPcId } = useFinanceUnreadNotifications(projectId);
+  const pcUnreadCount = Object.values(unreadByPcId).reduce((sum, arr) => sum + arr.length, 0);
+
   const { data: voResponse, isLoading: isLoadingVO } = useFetch<{ count: number; results: any[] }>(
     projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
     { enabled: !!projectId }
@@ -274,11 +286,16 @@ const Finance = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => chooseTab(tab)}
-                  className={`text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  className={`flex items-center gap-1.5 text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
                   {tab}
+                  {tab === "Payment Certificates" && pcUnreadCount > 0 && (
+                    <span className="h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+                      {pcUnreadCount > 99 ? "99+" : pcUnreadCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

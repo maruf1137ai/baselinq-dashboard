@@ -48,7 +48,7 @@
  *
  * Update this page whenever those rules change.
  */
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 type Row = { action: string; who: string; when: string; note?: string };
@@ -168,16 +168,29 @@ const GLOBAL_NOTES = [
 ];
 
 export default function HelpMeetings() {
+  const navigate = useNavigate();
+
+  // Back goes to wherever the user actually came from — the Help hub, a
+  // deep link out of /meetings, anywhere — rather than always dumping them on
+  // /meetings. history.state.idx is React Router's history index: 0 (or
+  // undefined) means this page is the first entry, so there is nothing to
+  // pop and we fall back to /meetings.
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate("/meetings", { replace: true });
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="help-reference-page min-h-screen bg-background">
       <div className="mx-auto max-w-4xl px-6 py-10">
-        <Link
-          to="/meetings"
+        <button
+          type="button"
+          onClick={goBack}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Meetings
-        </Link>
+          Back
+        </button>
 
         <h1 className="text-2xl font-normal text-foreground tracking-tight">
           Meetings reference

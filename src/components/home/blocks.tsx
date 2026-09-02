@@ -70,9 +70,11 @@
  * and read as bland. Colour is kept, and made rare enough to be worth
  * looking at.
  */
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarClock, ShieldAlert, ShieldQuestion } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatZAR } from "@/lib/formatCurrency";
 import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
@@ -156,6 +158,7 @@ export function Panel({
   tone = "neutral",
   emphasis,
   action,
+  segments,
   children,
 }: {
   title: string;
@@ -167,7 +170,9 @@ export function Panel({
    * a line the panel already draws, so naming it here costs no height.
    * `danger` is only ever for a tier that is an actual breach (rule 1).
    */
-  leadTone?: "muted" | "danger";
+  /** `warning` exists so a panel whose worst state is "soon" can say so
+   *  without borrowing the red that means "already breached". */
+  leadTone?: "muted" | "warning" | "danger";
   /** A sentence under the title. Reserved for what a figure cannot carry. */
   hint?: string;
   icon?: typeof CalendarClock;
@@ -175,6 +180,20 @@ export function Panel({
   /** See the note above: `primary` is the work, `reference` is everything else. */
   emphasis?: Emphasis;
   action?: React.ReactNode;
+  /**
+   * A switcher drawn as a second header row, beneath the title.
+   *
+   * It lives in the header rather than above the panel so that one bordered
+   * container holds the control and the list it governs. A switcher floating
+   * outside the card reads as page furniture and leaves the reader to work
+   * out which panel it drives — which is the exact ambiguity folding three
+   * panels into one was meant to remove.
+   *
+   * The title and lead stay: they belong to the ACTIVE segment and say what
+   * is in the list, which a tab label alone cannot ("Project risk" plus
+   * "13 critical of 14 open signals").
+   */
+  segments?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   // An empty array is still truthy, and rendering it would draw a 1px divider
@@ -186,7 +205,7 @@ export function Panel({
     !(Array.isArray(children) && children.length === 0);
 
   return (
-    <section className="bg-card border border-border rounded-xl overflow-hidden lg:flex lg:flex-col lg:h-full">
+    <section className="bg-card border border-border rounded-xl overflow-hidden flex flex-col w-full">
       <header
         className={cn(
           "flex items-center justify-between gap-3 px-4 py-3 lg:shrink-0",
@@ -232,7 +251,11 @@ export function Panel({
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    leadTone === "danger" ? "text-destructive" : "text-muted-foreground",
+                    leadTone === "danger"
+                      ? "text-destructive"
+                      : leadTone === "warning"
+                        ? "text-amber-700"
+                        : "text-muted-foreground",
                   )}
                 >
                   {lead}
@@ -245,10 +268,20 @@ export function Panel({
         {action && <div className="shrink-0">{action}</div>}
       </header>
 
+      {segments && (
+        <div className="px-4 pb-3 lg:shrink-0 border-b border-border">{segments}</div>
+      )}
+
       {/* No body at all when there is nothing to list: an empty section is its
           header, and the lead or hint above has already said so. */}
       {hasBody && (
-        <div className="border-t border-border divide-y divide-border lg:flex-1 lg:min-h-0">
+        <div
+          className={cn(
+            "divide-y divide-border lg:flex-1 lg:min-h-0",
+            // The segments row already drew the rule under the header.
+            !segments && "border-t border-border",
+          )}
+        >
           {children}
         </div>
       )}
@@ -272,13 +305,29 @@ export function Panel({
 export function SectionHeading({
   label,
   count,
+  note,
 }: {
   label: string;
   /** Rows under this heading. Said once here instead of on each row. */
   count?: number;
+  /**
+   * The heading's qualifier, in the tooltip rather than in the label.
+   *
+   * The queue's headings used to read "Contract deadlines · project-wide" and
+   * "Escalated to you to chase". Both suffixes are honest — they say whose
+   * the rows actually are — but a disclosure set in heading position reads as
+   * an apology attached to every row beneath it, and two of them made a
+   * ten-row list look like five lists. The qualification is still one hover
+   * away and is still written down in `SECTIONS`; it is no longer the second
+   * half of the label.
+   */
+  note?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50">
+    <div
+      className="flex items-baseline justify-between gap-3 px-4 py-1.5 bg-muted/50"
+      title={note}
+    >
       {/*
         `text-foreground`, not `text-muted-foreground`. Muted grey on this
         strip computes 4.19:1 against `bg-muted/50` over a card — under the
@@ -375,7 +424,20 @@ export const ROW_DATE_SLOT = "w-20 shrink-0";
 export function RowDate({ date }: { date: string | null | undefined }) {
   const parsed = date ? new Date(date) : null;
   if (!parsed || Number.isNaN(parsed.getTime())) {
-    return <div className={ROW_DATE_SLOT} aria-hidden />;
+    // An EMPTY slot read as a date that failed to load, and left the column
+    // looking broken. These rows have no deadline on the wire — a rejected
+    // certificate, a proposed meeting action — and borrowing `updatedAt`
+    // would present "when somebody last touched it" as a due date. So the
+    // slot says what is true, in the same words `MyActions` already uses for
+    // the same absence.
+    return (
+      <div
+        className={`${ROW_DATE_SLOT} text-xs text-muted-foreground text-center`}
+        title="No deadline is recorded for this item"
+      >
+        No date
+      </div>
+    );
   }
 
   const day = parsed.getDate();
@@ -430,7 +492,7 @@ export function RowDate({ date }: { date: string | null | undefined }) {
 const firstDetected = (g: { signals: { first_detected_at?: string }[] }): string | null =>
   g.signals[0]?.first_detected_at ?? null;
 
-function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
+export function ViewAll({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
@@ -613,8 +675,15 @@ export { ActionQueueBlock, QueueRow } from "./ActionQueue";
 // Its distinguishing marks are the ones it earns: uniform full-width prose, a
 // tier heading above each block of it, and the page's only "All signals" link.
 
-export function RiskConditionBlock({ data }: { data: HomeData }) {
-  const { riskGroups, riskCounts, riskUnavailable } = data;
+export function RiskConditionBlock({
+  data,
+  segments,
+}: {
+  data: HomeData;
+  /** The Contract-watch switcher, drawn in this panel's header. */
+  segments?: React.ReactNode;
+}) {
+  const { riskGroups, riskCounts, riskUnavailable, canViewCompliance } = data;
 
   // Severity rule 2 and 3: the tier is said ONCE, at the head of the rows it
   // governs, and only the worst tier present is drawn in colour. Groups
@@ -625,37 +694,87 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
     { severity: "orange" as const, label: "Warning" },
     { severity: "green" as const, label: "Advisory" },
   ];
-  const present = TIERS.map((t) => ({
-    ...t,
-    groups: riskGroups.filter((g) => g.severity === t.severity),
-  })).filter((t) => t.groups.length > 0);
+  // Memoized on `riskGroups` (itself stable unless the underlying data
+  // changes) rather than recomputed as a fresh array every render — otherwise
+  // a render with no real data change still hands `useScrollPagination` a new
+  // array identity, and it resets the revealed rows back to one page.
+  const present = useMemo(
+    () =>
+      TIERS.map((t) => ({
+        ...t,
+        groups: riskGroups.filter((g) => g.severity === t.severity),
+      })).filter((t) => t.groups.length > 0),
+    [riskGroups],
+  );
 
   // Flattened, tier-tagged, worst-first — the order `present` already carries
   // — so pagination can walk it as one continuous list and still know which
   // tier boundary it just crossed.
-  const orderedGroups = present.flatMap((tier) =>
-    tier.groups.map((g) => ({ ...g, tierLabel: tier.label, tierSeverity: tier.severity })),
+  const orderedGroups = useMemo(
+    () =>
+      present.flatMap((tier) =>
+        tier.groups.map((g) => ({ ...g, tierLabel: tier.label, tierSeverity: tier.severity })),
+      ),
+    [present],
   );
   // Hooks must run unconditionally, ahead of the early returns below.
   const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
     orderedGroups,
-    5,
+    10,
   );
+
+  /*
+    ── A PANEL NOBODY CAN FILL DOES NOT RENDER ───────────────────────────
+
+    Without `compliance.view`, `visibleRiskSignals` returns `[]` for every
+    signal on the project and the risk endpoint is never even requested. Drawn
+    as an ordinary empty panel that is a headed, bordered block reading
+    "No open risk signals" — which is an ALL-CLEAR, addressed to the one
+    viewer who has no way to know whether it is true. The seeded CONTRACTOR
+    role holds neither `compliance.view` nor `finance.view`, so this is what a
+    contractor was being told about a project with open critical signals.
+
+    So the two states are separated and must never be drawn the same way:
+
+      cannot populate (permission)  → nothing renders, here and in `Index.tsx`,
+                                      which drops the layout slot with it.
+      could populate, but empty     → the panel renders and says so below.
+
+    Nothing is disclosed by the absence beyond the absence: no count, no
+    "hidden by permission" strip. That a project has risk signals is itself
+    the fact `compliance.view` withholds.
+  */
+  if (!canViewCompliance) return null;
 
   // An outage must never read as "healthy".
   if (riskUnavailable) {
     return (
       <Panel
-        title="Risk"
-        emphasis="reference"
+        title="Project risk"
+        emphasis="primary"
         icon={ShieldQuestion}
         tone="orange"
+        segments={segments}
         hint="The risk engine did not respond — posture unknown, not clear."
       />
     );
   }
 
-  if (riskGroups.length === 0) return null;
+  // Genuinely nothing open, for a reader who WOULD be shown it. This is a
+  // real statement about the project and it keeps its empty state.
+  if (riskGroups.length === 0) {
+    return (
+      <Panel
+        title="Project risk"
+        emphasis="primary"
+        icon={CheckCircle2}
+        tone="green"
+        segments={segments}
+        hint="No open risk signals on this project."
+        action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
+      />
+    );
+  }
 
   const tierCount = new Map(
     present.map((t) => [t.label, t.groups.reduce((n, g) => n + g.count, 0)]),
@@ -675,18 +794,19 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
   const worst = present[0];
   return (
     <Panel
-      title="Open risk"
+      title="Project risk"
       // "of 11 open" said what the number was OF only if you already knew what
       // this panel counts. The unit is named now — the rows below are folded
       // SIGNALS, and the tally at the head of each says how many it folds, so
       // the header and the column agree on what they are counting.
       lead={`${worst.groups.reduce((n, g) => n + g.count, 0)} ${worst.label.toLowerCase()} of ${riskCounts.total} open signals`}
       leadTone={worst.severity === "red" ? "danger" : "muted"}
-      emphasis="reference"
+      emphasis="primary"
       // The one link on this page that is SUPPOSED to go to Project health:
       // "show me every open signal" is a diagnosis, and that is the page that
       // diagnoses. Every ROW below goes to the object instead.
       action={<ViewAll to="/project-health?tab=risk-signals">All signals</ViewAll>}
+      segments={segments}
     >
       {/*
         ── Six coloured words became one ────────────────────────────────────
@@ -707,9 +827,14 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
         `text-destructive` and `text-muted-foreground` are the tokens. The
         raw `red-700` / `amber-700` palette classes this block used are gone.
       */}
+      {/* Bounded at every width — `ContractWatchBlock` renders full-width on
+          its own row (Index.tsx), not paired in a stretched grid, so a
+          max-height that only applied below `lg` used to cancel out on
+          desktop, leaving the container unclipped and the scroll-triggered
+          pagination below with no scroll to trigger on. */}
       <div
         ref={containerRef}
-        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+        className="max-h-[420px] overflow-y-auto divide-y divide-border"
       >
         {visibleItems.flatMap((g, index) => [
           // The worst tier is already named in the header, so no strip for it.
@@ -753,7 +878,11 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               of date it is, and it is stated in full with its year, which the
               pill never was.
             */
-            title={firstDetected(g) ? `Open since ${formatDateUk(firstDetected(g), "long")}` : undefined}
+            title={
+              firstDetected(g)
+                ? `${g.tierLabel} · open since ${formatDateUk(firstDetected(g), "long")}`
+                : g.tierLabel
+            }
             /*
               The row's own sentence already names the count where there is
               one to name, so this adds only the fact the row shows nowhere: the
@@ -764,6 +893,7 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
             */
             aria-label={
               [
+                g.tierLabel,
                 g.title,
                 g.contractual ? "contractual" : null,
                 g.count > 1 ? `${g.count} signals` : null,
@@ -787,6 +917,35 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
               line — and the severity word that used to compete for this space
               is gone, so the label starts wider than it was as well.
             */}
+            {/*
+              ── The dot, and why the tier-heading rule was not enough ─────
+
+              Severity rule 2 says the tier is named once above the rows it
+              governs. On the live project that rule degenerates: 13 of the 14
+              open signals are Critical, so every visible row is in the FIRST
+              tier, the header names it, and no strip is ever reached. The
+              panel arrived as five identical lines of body text with the only
+              urgency in a header the eye reads once.
+
+              A 6px dot per row is not the thing rule 3 forbids. What was
+              banned was drawing the whole row in its colour AND repeating the
+              severity as a word — six coloured words a row, which reads as a
+              background. This is one glyph at a fixed position: it ranks rows
+              against each other inside the panel, it survives a list that is
+              entirely one tier, and it leaves the sentence in body colour. The
+              severity is also still named in text on hover and to a screen
+              reader via `aria-label`, so the dot is never the only carrier.
+            */}
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                g.tierSeverity === "red"
+                  ? "bg-destructive"
+                  : g.tierSeverity === "orange"
+                    ? "bg-amber-500"
+                    : "bg-muted-foreground/40"
+              }`}
+            />
             <p className="text-sm text-foreground line-clamp-2 min-w-0 flex-1">
               {g.title}
               {/* Stated only when true of every signal in the group, so a
@@ -832,55 +991,238 @@ export function RiskConditionBlock({ data }: { data: HomeData }) {
 // ── Setup ─────────────────────────────────────────────────────────────────
 
 /**
- * Project setup as ONE line, at the very top of the page. It is a precondition
+ * Project setup as ONE row, at the very top of the page. It is a precondition
  * for the rest of the screen being trustworthy, so it sits above it — but a
- * precondition is not the work, so it gets a hairline strip and nothing more.
+ * precondition is not the work, so it gets a hairline row and nothing more.
  *
  * **It draws no container of its own.** It is a ROW inside the single
- * precondition panel that `Index.tsx` builds — see the note there. It used to
- * carry `bg-card border border-border rounded-xl` and be one of up to four
- * separately-bordered full-width blocks stacked above the actual work.
+ * precondition panel that `Index.tsx` builds — see the note there.
+ *
+ * ── Why the missing fields are chips, not a clause ────────────────────────
+ *
+ * The version this replaces said the same thing in the same space, as prose:
+ * "Project setup 3 of 7 — client details, scope of work, attached documents
+ * and the appointed company still to add." Every field name was already its
+ * own button, but it was styled as underlined text inside a sentence, so four
+ * separate things read as one sentence. The card that PRECEDED the prose used
+ * four full-width icon-and-description rows and half the fold; it was
+ * genuinely tidier, and what made it tidier was not the whitespace — it was
+ * that each missing field was a discrete, bounded, labelled OBJECT.
+ *
+ * So: keep the one-row height of the prose, restore the thing-ness of the
+ * card. Each missing field is a `badgeVariants({ variant: "neutral" })` chip
+ * — the app's own status-chip primitive, `border-border bg-muted
+ * text-muted-foreground rounded-md px-2 py-0.5 text-xs`, no new token — on a
+ * `button` so it stays individually actionable and still opens
+ * `ProjectSetupDialog` at its named section. Four things are now countable at
+ * a glance without reading a sentence.
+ *
+ * Neutral, not amber: under the severity rule at the top of this file an
+ * unfilled setup field is a MISSING PRECONDITION, not a breach that has
+ * already happened, so it carries no colour.
+ *
+ * The chip labels are `SETUP_LABELS` verbatim — the same words the prose
+ * used, unrenamed, so no step is invented, dropped or relabelled here.
  */
+/**
+ * ── The project summary banner ────────────────────────────────────────────
+ *
+ * The first thing on the page: which project this is, and the three figures
+ * that frame everything under it.
+ *
+ * **THE RING IS SETUP COMPLETENESS AND IT SAYS SO.** This is the single thing
+ * most likely to be misread on the whole page, so it is labelled in text
+ * ("Setup") inside the ring's own row and stated again in full on `title`.
+ * `projectStats` is `summariseProjectSetup` — how many of the project's
+ * RECORD FIELDS have been filled in — and it is what the old page's ring was
+ * measuring too, unlabelled, where it read as a completion percentage for the
+ * works. Baselinq holds no measure of physical progress; the page says so in
+ * two other places and this ring must not quietly contradict them.
+ *
+ * **The money chip is gated on `finance.view` and nothing else is.** A
+ * contractor's site agent must not be shown the contract sum, and the same
+ * person absolutely must be shown the project number, the address and how
+ * many days are left — those are on every drawing and every notice they
+ * already handle.
+ *
+ * **Every chip is omitted rather than zeroed.** No dates, no days chip. No
+ * contract sum recorded, no money chip even with the permission. A dash in a
+ * figure's place is a claim that the figure is nothing.
+ */
+export function ProjectSummaryBlock({ data }: { data: HomeData }) {
+  const { project, projectStats, time, money, canViewFinance } = data;
+  if (!project) return null;
+
+  const pct = projectStats?.percentage ?? null;
+  const number = project.project_number || project.projectNumber || null;
+  const location = project.location || null;
+  const days = time.hasDates && time.remainingDays !== null ? time.remainingDays : null;
+  const sum = canViewFinance ? money.revisedContractSum ?? money.contractSum : null;
+
+  // The setup ring. Geometry only — `r=16` in a 40px box, the same 2px stroke
+  // the app's other rings use. `--muted` for the track and `--primary` for the
+  // filled arc, so it inherits the theme rather than naming a hex.
+  const R = 16;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <section className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        {pct !== null && (
+          <div
+            className="relative h-10 w-10 shrink-0"
+            title={`Project setup: ${projectStats!.filledCount} of ${projectStats!.totalCount} record fields completed. This measures the PROJECT RECORD, not work done on site — Baselinq holds no measure of physical progress.`}
+          >
+            <svg className="h-10 w-10 -rotate-90" viewBox="0 0 40 40" aria-hidden>
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                className="stroke-muted"
+              />
+              <circle
+                cx="20"
+                cy="20"
+                r={R}
+                fill="none"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - pct / 100)}
+                className="stroke-primary"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs tabular-nums text-foreground">
+              {pct}%
+            </span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
+            {pct !== null && pct < 100 && (
+              // The ring's label, on the page and not only on a tooltip. Without
+              // it a percentage beside a project name reads as progress.
+              <span className="text-xs text-muted-foreground">Setup {pct}% complete</span>
+            )}
+          </div>
+          {(number || location) && (
+            <p className="text-xs text-muted-foreground truncate" title={location ?? undefined}>
+              {[number, location].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap shrink-0">
+        {days !== null && (
+          // The old summary's own three-step scale, restored verbatim: past
+          // the date is red, inside a month is orange, otherwise green. This
+          // is the one place on the page that reads as a status at a glance,
+          // and the owner asked for it back by name.
+          <span
+            className={cn(
+              "text-xs font-medium px-3 py-1 rounded-md border tabular-nums",
+              days < 0
+                ? "bg-red-50 text-red-600 border-red-200"
+                : days <= 30
+                  ? "bg-orange-50 text-orange-600 border-orange-200"
+                  : "bg-emerald-50 text-emerald-600 border-emerald-200",
+            )}
+          >
+            {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`}
+          </span>
+        )}
+        {sum !== null && (
+          <span
+            className="text-xs font-medium px-3 py-1 rounded-md border bg-card text-foreground border-border tabular-nums"
+            title="The contract sum as recorded, revised by approved variations. Ex-VAT."
+          >
+            {formatZAR(sum)}
+          </span>
+        )}
+        <span className="text-xs font-medium px-3 py-1 rounded-md border bg-primary/10 text-primary border-primary/20 tabular-nums">
+          {data.myActions.length} open action{data.myActions.length === 1 ? "" : "s"}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export function SetupLineBlock({
   data,
   onOpen,
-  onOpenSection,
-}: {
+  onOpenSection, onDismiss }: {
   data: HomeData;
   onOpen: () => void;
-  onOpenSection: (section: string) => void;
-}) {
+  onOpenSection: (section: string) => void; onDismiss?: () => void }) {
   const { projectStats, canEditProject } = data;
   if (!projectStats || projectStats.percentage === 100) return null;
 
+  // The chip. Identical geometry whether or not it is pressable, so the row
+  // does not reflow for a reader who lacks edit rights — only the hover and
+  // focus affordances appear, and only for someone who can act on them.
+  // `badgeVariants({ variant: "neutral" })` is `border-border bg-muted
+  // text-muted-foreground`, and --muted-foreground on --muted measures
+  // 4.53:1 — over the floor, but thin for `text-xs`. The label takes
+  // --foreground instead (13.66:1), which is also exactly what the prose
+  // this replaces used for the same field names. Nothing else changes, and
+  // it keeps the hierarchy right: the lead-in is muted, the chips are the
+  // content.
+  const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
+
   return (
-    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
-      <p className="text-sm text-muted-foreground min-w-0">
-        <span className="text-foreground tabular-nums">
-          Project setup {projectStats.filledCount} of {projectStats.totalCount}
-        </span>
-        {" — "}
-        {projectStats.missing.map((item, i) => (
-          <span key={item}>
-            {i > 0 && (i === projectStats.missing.length - 1 ? " and " : ", ")}
-            {canEditProject ? (
-              <button
-                onClick={() => onOpenSection(item)}
-                className="text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-              >
-                {SETUP_LABELS[item]}
-              </button>
-            ) : (
-              <span className="text-foreground">{SETUP_LABELS[item]}</span>
-            )}
+    <div className="px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap bg-amber-50 border-b border-amber-200">
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <span className="text-sm text-muted-foreground shrink-0">
+          Project setup{" "}
+          <span className="text-foreground tabular-nums">
+            {projectStats.filledCount} of {projectStats.totalCount}
           </span>
-        ))}
-        {" still to add."}
-      </p>
+          {" · still to add"}
+        </span>
+        {projectStats.missing.map((item) =>
+          canEditProject ? (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onOpenSection(item)}
+              // `--accent` and `--muted` are the same value, so a background
+              // hover would be invisible here. The hairline carries it
+              // instead: `--border` on `--muted` is 1.13:1 at rest and
+              // --muted-foreground on --muted is 4.53:1, so the chip's edge
+              // resolves on hover and is otherwise silent.
+              className={cn(
+                chip,
+                "hover:border-muted-foreground",
+                "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+              )}
+            >
+              {SETUP_LABELS[item]}
+            </button>
+          ) : (
+            <span key={item} className={chip}>
+              {SETUP_LABELS[item]}
+            </span>
+          )
+        )}
+      </div>
       {canEditProject && (
-        <Button size="xs" variant="outline" className="shrink-0" onClick={onOpen}>
+        <Button size="xs" variant="outline" className="shrink-0 w-36 justify-center" onClick={onOpen}>
           Complete setup
         </Button>
+      )}
+      {onDismiss && (
+        <button
+          type="button"
+          aria-label="Hide setup reminders"
+          onClick={onDismiss}
+          className="shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

@@ -10,6 +10,37 @@
   scrollbar-width: none;
 }
 
+/* Thin, low-contrast scrollbar for dense in-app lists (the 29-role sidebar
+   list, mainly). Firefox reads the standard properties; Chromium and WebKit
+   need the pseudo-elements. The track stays transparent so the bar reads as
+   an overlay on the panel instead of carving out a grey gutter.
+
+   Deliberately near-invisible: 2px at 5% alpha is barely a tint at rest, so
+   the list reads as one clean column and the bar only really resolves on
+   hover at 40%. If you ever need it visible at rest, raise the alpha rather
+   than the width — width is what makes it look like a native control.
+
+   Firefox pins `thin` to its own width and ignores the 2px, so it stays a
+   little wider there; the colour applies everywhere. */
+.subtle-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.05) transparent;
+}
+.subtle-scrollbar::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+.subtle-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.subtle-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.05);
+  border-radius: 9999px;
+}
+.subtle-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
@@ -322,4 +353,19 @@ body{
   height: 96%;
   opacity: 0.3;
   border-color: #A5B4FC;
+}
+
+/* Help reference pages (/help/tasks, /help/finance, …) navigate between their
+   sections with #anchor links, which the browser jumps to instantly by default.
+   Animate the jump instead. Scoped with :has() to those pages only, so the rest
+   of the app keeps its instant scrollIntoView behaviour (linked table rows in
+   Compliance, Programme, Finance rely on that). */
+html:has(.help-reference-page) {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.help-reference-page) {
+    scroll-behavior: auto;
+  }
 }

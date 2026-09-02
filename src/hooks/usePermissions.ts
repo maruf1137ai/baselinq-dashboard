@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { PERMISSIONS_CHANGED_EVENT } from "./useUserEventSocket";
 import { useCurrentUser } from "./useCurrentUser";
 import { useEffectivePermissions } from "./useEffectivePermissions";
 import { PermissionKey } from "@/lib/roleUtils";
@@ -66,7 +70,36 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   editVariationOrder:     "finance.edit",
 };
 
+/**
+ * Refetch this user's permissions the moment an admin changes them.
+ *
+ * Without it the change lands on the server and the browser keeps the old
+ * answer until something else forces a refetch — the button stays until the
+ * API refuses it, which reads as a bug rather than a permission.
+ *
+ * Lives here rather than in the socket hook so every page that asks about
+ * permissions gets it, not only the ones that open a socket for some other
+ * reason.
+ */
+function useInvalidateOnPermissionChange() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const handler = () => {
+      qc.invalidateQueries({ queryKey: ["effective-perms"] });
+      // Roles & Permissions is showing the very matrix that changed.
+      qc.invalidateQueries({ queryKey: ["role-matrix"] });
+      // A surface just hidden or revealed changes how many unreads the
+      // bell/sidebar should be counting — see unread_summary's permission
+      // filter on the backend.
+      qc.invalidateQueries({ queryKey: ["unread-summary"] });
+    };
+    window.addEventListener(PERMISSIONS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(PERMISSIONS_CHANGED_EVENT, handler);
+  }, [qc]);
+}
+
 export function usePermissions() {
+  useInvalidateOnPermissionChange();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const isOrgAdmin = user?.account_type === "organisation";
 

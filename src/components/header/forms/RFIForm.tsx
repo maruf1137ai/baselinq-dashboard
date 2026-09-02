@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
+import { useAutoCcRoles } from "@/hooks/useAutoCcRoles";
 import { usePatch } from "@/hooks/usePatch";
 import {
   Select,
@@ -41,6 +42,9 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
   const [meta, setMeta] = useState<TaskMetaValue>(
     draft?.meta ?? { to: [], cc: [], dateRequired: "" }
   );
+
+  // Roles configured to be copied in on a new RFI, from the permission matrix.
+  const autoCcRoles = useAutoCcRoles("rfi");
 
   // Keep the draft in sync so "minimize" can restore it later.
   useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
@@ -199,7 +203,12 @@ export default function RFIForm({ setOpen, initialStatus, initialData, taskId }:
         onChange={setMeta}
         toLabel="To (recipient)"
         toRoleFilter={TASK_TYPE_ROLE_RULES.rfi.toRoleFilter}
-        ccAutoRoles={TASK_TYPE_ROLE_RULES.rfi.ccAutoRoles}
+        /* Who gets copied in comes from task.auto_assign.rfi, so an admin can
+           change it on the Roles & Permissions page instead of it needing a
+           deploy. Stays undefined until the answer arrives — TaskMetaFields
+           applies the CC pre-fill once and latches, so an empty array now
+           would count as applied and the real list would never land. */
+        ccAutoRoles={autoCcRoles}
         defaultDueDays={3}
         discipline={discipline}
       />

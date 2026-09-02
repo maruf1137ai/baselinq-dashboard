@@ -20,6 +20,7 @@ import { usePatch } from "@/hooks/usePatch";
 import { patchData, registerS3TaskAttachment } from "@/lib/Api";
 import { TaskMetaFields, applyMetaToTask, type TaskMetaValue } from "./TaskMetaFields";
 import { TASK_TYPE_ROLE_RULES } from "@/lib/roleGroups";
+import { useAutoCcRoles } from "@/hooks/useAutoCcRoles";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
 import { DISCIPLINE_OPTIONS } from "@/data/disciplines";
@@ -81,6 +82,10 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
   const [meta, setMeta] = useState<TaskMetaValue>(
     draft?.meta ?? { to: [], cc: [], dateRequired: "" }
   );
+
+  // Roles configured to be copied in on a new Variation Order, from the
+  // permission matrix rather than a hardcoded list.
+  const autoCcRoles = useAutoCcRoles("vo");
 
   // Keep the draft in sync so "minimize" can restore it later.
   useTaskDraftAutosave(DRAFT_TYPE, draftEnabled, {
@@ -285,7 +290,7 @@ export default function VOForm({ setOpen, initialStatus, initialData, taskId }: 
         onChange={setMeta}
         toLabel="To (contractor)"
         toRoleFilter={TASK_TYPE_ROLE_RULES.vo.toRoleFilter}
-        ccAutoRoles={TASK_TYPE_ROLE_RULES.vo.ccAutoRoles}
+        ccAutoRoles={autoCcRoles}
         defaultDueDays={7}
         discipline={discipline}
       />

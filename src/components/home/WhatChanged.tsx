@@ -93,7 +93,7 @@ function ChangeRow({ item }: { item: ChangeItem }) {
       /* `py-2`, matching the risk rows. The right-hand column is passive
          reference by this page's own argument, so it is the column that gives
          height back to the one that is not. */
-      className="flex items-baseline gap-3 px-4 py-2 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:-ring-offset-1"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:-ring-offset-1"
       /* The ABSOLUTE date, in words and with its year, and the word that says
          what kind of date it is. The row shows the relative form; a reader who
          needs the calendar day gets it here. */
@@ -108,7 +108,20 @@ function ChangeRow({ item }: { item: ChangeItem }) {
           So `detail` is provenance that runs on after a separator and is the
           first thing to be truncated away — the row still resolves to the
           object, which is where the full record is. */}
-      <p className={`${HEADLINE_CLASS[item.significance]} truncate min-w-0`}>
+      {/* The old feed's status dot, restored. Tier is already carried by ink
+          weight; the dot repeats it as a shape so the eye can group the list
+          without reading it — which is what the old panel did well. */}
+      <span
+        aria-hidden
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+          item.significance === "decisive"
+            ? "bg-foreground"
+            : item.significance === "material"
+              ? "bg-muted-foreground"
+              : "bg-border"
+        }`}
+      />
+      <p className={`${HEADLINE_CLASS[item.significance]} truncate min-w-0 flex-1`}>
         {item.headline}
         {item.detail && (
           <span className="text-muted-foreground font-normal"> · {item.detail}</span>
@@ -184,7 +197,7 @@ export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
   if (feed.items.length === 0) {
     return (
       <Panel
-        title="What changed"
+        title="Recent activity"
         emphasis="reference"
         // "Nothing is tracked" and "nothing has moved" are different states and
         // the page must not say the second when it means the first — a brand
@@ -202,7 +215,7 @@ export function WhatChangedBlock({ feed }: { feed: ChangeFeed }) {
 
   return (
     <Panel
-      title="What changed"
+      title="Recent activity"
       emphasis="reference"
       /*
         "3 recent" was a count with no unit and no grammar. The rows now print

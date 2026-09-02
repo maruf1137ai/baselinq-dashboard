@@ -35,3 +35,6 @@ dist-ssr
 # vitest failed to load every suite. 112 tests existed and none had ever run.
 test 1
 /test
+
+# Per-worktree Vite dep cache (see vite.isolated.mts)
+.vite-cache/

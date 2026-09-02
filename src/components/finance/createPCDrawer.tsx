@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import type { PCEntry } from "./paymentCertificateTable";
 import useFetch from "@/hooks/useFetch";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useS3Upload } from "@/hooks/useS3Upload";
@@ -39,7 +40,7 @@ import {
 
 const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"] as const;
 
-interface WorkLineItem {
+export interface WorkLineItem {
   id: string;
   description: string;
   contractValue: number;
@@ -73,7 +74,7 @@ interface WorkLineItem {
   locked?: boolean;
 }
 
-interface VOLineItem {
+export interface VOLineItem {
   voNumber: string;
   description: string;
   approvedValue: number;
@@ -173,6 +174,21 @@ interface CreatePCDrawerProps {
    * destroyed the user's work and told them nothing.
    */
   onSubmit?: (payload: CreatePCApiPayload) => Promise<CreatedPC>;
+  /**
+   * Present ⇒ the drawer opens in edit mode, prefilled from this certificate
+   * instead of a blank/draft form. Only ever passed for a certificate the
+   * viewer is allowed to edit — see PCEntry.canEdit / tasks/pc_workflow.py's
+   * may_delete_payment_certificate (same rule for edit and delete).
+   */
+  editEntry?: PCEntry | null;
+  /**
+   * Called instead of onSubmit while editing. Same contract: await it, stay
+   * open with the form intact on rejection. Receives the certificate's id
+   * (from editEntry) alongside the same payload shape onSubmit gets, since
+   * PaymentCertificateSerializer.update() accepts the identical fields
+   * create() does.
+   */
+  onEditSubmit?: (id: number | string, payload: CreatePCApiPayload) => Promise<CreatedPC>;
 }
 
 interface DraftShape {
@@ -378,6 +394,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   onClose,
   projectId,
   onSubmit,
+  editEntry = null,
+  onEditSubmit,
 }) => {
   // Scoped per project so minimizing a draft on one project can't resurface
   // in another project's "New Certificate" drawer — see taskDrafts.ts.
@@ -519,10 +537,13 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * from `defaults` above — so the table is meaningful the moment it opens.
    *
    * Only fires while `workItems` is empty, so a restored draft or a manually
-   * edited table is never clobbered.
+   * edited table is never clobbered. Also skipped outright while editing —
+   * `applyEntry` already seeded `workItems` from the certificate itself, and
+   * a certificate with genuinely zero work items should stay that way rather
+   * than gaining a create-flow seed row.
    */
   useEffect(() => {
-    if (!isOpen || !defaultsReady || !defaults) return;
+    if (!isOpen || !defaultsReady || !defaults || editEntry) return;
     setWorkItems((items) =>
       items.length > 0
         ? items
@@ -535,7 +556,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
           locked: true,
         }]
     );
-  }, [isOpen, defaultsReady, defaults]);
+  }, [isOpen, defaultsReady, defaults, editEntry]);
 
   // Materials on Site
   const [materialsOnSite, setMaterialsOnSite] = useState(0);
@@ -745,7 +766,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       claim: calc.netValuationThisPeriod,
       retention: calc.retention,
       net: calc.amountDue,
-      approvalStatus: "pending",
+      // Create-only default — an edit must not silently reset an already
+      // Draft certificate's approval_status.
+      ...(editEntry ? {} : { approvalStatus: "pending" as const }),
       // Overridable per certificate — see the Retention/VAT/Currency section.
       retentionApplies,
       retentionRatePct,
@@ -757,9 +780,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     setIntegrity(null);
     setSubmitError(null);
     try {
-      const created = await onSubmit?.(payload);
-      if (created?.id) await registerAttachments(created.id);
-      clearTaskDraft(draftType);
+      if (editEntry) {
+        await onEditSubmit?.(editEntry.id, payload);
+        await registerAttachments(editEntry.id);
+      } else {
+        const created = await onSubmit?.(payload);
+        if (created?.id) await registerAttachments(created.id);
+        clearTaskDraft(draftType);
+      }
       onClose();
     } catch (err) {
       // Stay open. Every line item, note and VO amount is still on screen.
@@ -775,6 +803,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   /** Explicit Cancel — the only action that discards the draft, and only after confirming. */
   const handleCancel = () => {
     if (isSubmitting) return;
+    // Editing an existing certificate has nothing persisted to a local draft
+    // — there is nothing to "discard" beyond in-memory edits, so this skips
+    // straight to a simpler confirm and never touches taskDrafts at all.
+    if (editEntry) {
+      if (!window.confirm("Discard your changes to this certificate?")) return;
+      onClose();
+      return;
+    }
     const hasContent =
       workItems.some((w) => w.description.trim() !== "" || w.thisPeriod !== 0) ||
       voItems.some((v) => v.included) ||
@@ -796,7 +832,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // discards what was typed — those now behave like "minimize": the draft is
   // kept and restored the next time the drawer opens. Only the footer Cancel
   // button (above) clears it, and only after confirming.
-  useTaskDraftAutosave(draftType, isOpen, {
+  //
+  // Disabled entirely while editing: an edit session isn't a multi-day draft
+  // the way a new certificate is, and persisting it under the create-draft's
+  // key (scoped only by project) would risk colliding with an unrelated,
+  // in-progress *new* PC draft for the same project.
+  useTaskDraftAutosave(draftType, isOpen && !editEntry, {
     valuationPeriod: valuationPeriod?.toISOString(),
     certificateDate: certificateDate?.toISOString(),
     workItems,
@@ -880,15 +921,56 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     }
   }, []);
 
+  /**
+   * Everything the form holds, seeded from an existing Draft certificate
+   * instead of a saved local draft — see the `editEntry` prop. Unlike
+   * `applyDraft`, this reads directly from the server's own record of the
+   * certificate (already the source of truth), so there is no local
+   * draft/override merge to reconcile: `voItems` is set outright from
+   * `editEntry.voItems` and the live-register resync effect below reconciles
+   * it against `approvedVOs` the same way it already does after `applyDraft`.
+   */
+  const applyEntry = useCallback((entry: PCEntry) => {
+    const [y, m] = (entry.period || "").split("-").map(Number);
+    setValuationPeriod(
+      y && m ? new Date(y, m - 1, 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    );
+    setCertificateDate(entry.certificateDate ? new Date(entry.certificateDate) : new Date());
+    setWorkItems(entry.workItems ?? []);
+    setVoItems(entry.voItems ?? []);
+    setMaterialsOnSite(entry.materialsOnSite ?? 0);
+    setPenalties(entry.penalties ?? 0);
+    setAdvanceRecovery(entry.advanceRecovery ?? 0);
+    setRetentionRelease(entry.retentionRelease ?? 0);
+    setNotes(entry.notes ?? "");
+    setVoNotes({});
+    setClaimedPctByMilestone(
+      Object.fromEntries(
+        (entry.milestoneLinks ?? []).map((l) => [l.milestoneId, String(l.claimedPct)])
+      )
+    );
+    setRetentionApplies(entry.retentionApplies ?? true);
+    setRetentionRatePctOverride(entry.retentionRatePct != null ? Number(entry.retentionRatePct) : null);
+    setVatRatePctOverride(entry.vatRatePct != null ? Number(entry.vatRatePct) : null);
+    setCurrencyOverride(entry.currency ?? null);
+    setIntegrity(null);
+    setSubmitError(null);
+    setIsSubmitting(false);
+  }, []);
+
   const wasOpen = useRef(false);
   useEffect(() => {
     if (isOpen && !wasOpen.current) {
       wasOpen.current = true;
-      applyDraft(loadTaskDraft(draftType));
+      if (editEntry) {
+        applyEntry(editEntry);
+      } else {
+        applyDraft(loadTaskDraft(draftType));
+      }
     } else if (!isOpen) {
       wasOpen.current = false;
     }
-  }, [isOpen, applyDraft]);
+  }, [isOpen, applyDraft, applyEntry, editEntry, draftType]);
 
   // Escape, a focus trap and focus restore — none of which existed.
   const panelRef = useRef<HTMLDivElement>(null);
@@ -990,21 +1072,23 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               id="create-pc-title"
               className="text-sm font-medium text-foreground"
             >
-              New Payment Certificate
+              {editEntry ? `Edit ${editEntry.pcNumber}` : "New Payment Certificate"}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {pcNumber} · Creates as Draft — submit for certification afterwards from the table
+              {editEntry
+                ? "Editable while still a Draft — save to apply your changes."
+                : `${pcNumber} · Creates as Draft — submit for certification afterwards from the table`}
             </p>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => !isSubmitting && onClose()}
               disabled={isSubmitting}
-              title="Minimize — keep your progress"
+              title={editEntry ? "Minimize" : "Minimize — keep your progress"}
               className="rounded-lg p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Minus className="h-4 w-4" />
-              <span className="sr-only">Minimize — keep your progress</span>
+              <span className="sr-only">{editEntry ? "Minimize" : "Minimize — keep your progress"}</span>
             </button>
             <button
               onClick={handleCancel}
@@ -1068,7 +1152,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   </label>
                   <input
                     type="text"
-                    value={pcNumber}
+                    value={editEntry ? editEntry.pcNumber : pcNumber}
                     readOnly
                     className="w-full px-3 py-2 text-sm text-muted-foreground bg-muted/50 border border-border rounded-md cursor-not-allowed"
                   />
@@ -1810,8 +1894,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         {/* ── Footer ─────────────────────────────────────────────────────────── */}
         <footer className="flex items-center justify-between px-6 py-4 border-t border-border bg-card shrink-0">
           <p className="text-xs text-muted-foreground max-w-xs">
-            Creates the certificate as Draft. Submit it for certification
-            from the Payment Certificates table afterwards.
+            {editEntry
+              ? "Saves your changes to this Draft certificate."
+              : "Creates the certificate as Draft. Submit it for certification from the Payment Certificates table afterwards."}
           </p>
           <div className="flex items-center gap-3">
             <button
@@ -1839,8 +1924,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               {isSubmitting ? (
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Creating…
+                  {editEntry ? "Saving…" : "Creating…"}
                 </span>
+              ) : editEntry ? (
+                "Save Changes"
               ) : (
                 "Create Certificate"
               )}
