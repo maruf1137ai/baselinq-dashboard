@@ -131,8 +131,12 @@ export function usePermissions() {
 
   // Finance flags — edit implies view
   const canViewFinance     = perm("finance.view") || perm("finance.edit");
-  const canEditFinance     = isOrgAdmin || perm("finance.edit");
-  const canApprovePayment  = isOrgAdmin || perm("finance.approve_payment");
+  // Deliberately NOT escalated by isOrgAdmin: cost_ledger/views.py and
+  // tasks/views_payments.py never honor account_type=="organisation" for
+  // finance actions, so the bypass only ever showed edit/approve controls
+  // that would 403 on submit — pure dead-end UX, no real access lost here.
+  const canEditFinance     = perm("finance.edit");
+  const canApprovePayment  = perm("finance.approve_payment");
 
   // ── The three certificate-stage codes ────────────────────────────────────
   //
