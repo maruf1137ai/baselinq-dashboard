@@ -25,6 +25,30 @@
  * title still lands on the same 24px baseline as everything else. A
  * full-bleed body is not a licence for a differently-positioned title.
  *
+ * PAGES UNDER A p-0 HOST — use <PageBody>
+ * ---------------------------------------
+ * `Settings` is a `padding="p-0"` shell around an `<Outlet />`, so each of its
+ * twelve children had to supply its own inset — and twelve pages supplying
+ * their own inset produced six different answers:
+ *
+ *   p-6 space-y-6      audit, billing, dataManagement, integrations,
+ *                      notifications, security, teamManagement
+ *   max-w-5xl p-6      projectDetails            (no band rhythm)
+ *   max-w-5xl p-6 pb-32  Organization            (128px of dead bottom)
+ *   max-w-5xl p-6 pb-20  AssociatedCompanies     (80px of dead bottom)
+ *   p-6                Site                      (and a hand-rolled <h2>)
+ *   space-y-4 pb-24    permissions               (NO inset — title flush
+ *                                                 against the page edge)
+ *
+ * `PageBody` is that inset expressed once. It is for any page whose HOST
+ * supplies no padding; a page inside a default DashboardLayout already has
+ * `p-6` from the layout and keeps a plain `space-y-6` wrapper instead.
+ *
+ * The bottom inset is deliberately the same 24px as the top. The `pb-32` and
+ * `pb-20` this replaces were not clearing a sticky action bar — neither page
+ * has one — so they were 128px and 80px of arbitrary dead space at the foot
+ * of two sibling pages in the same section.
+ *
  * WHY THIS EXISTS
  * ---------------
  * Most dashboard pages already agree on the title treatment:
@@ -109,3 +133,31 @@ export function PageHeader({
 }
 
 export default PageHeader;
+
+/**
+ * The standard page body for a page whose HOST supplies no padding.
+ *
+ * `p-6 space-y-6` — the same 24px inset and the same 24px band rhythm a page
+ * inside a default `DashboardLayout` gets from the layout itself. Use it under
+ * any `padding="p-0"` host; do NOT use it inside a default `DashboardLayout`,
+ * which would double the inset to 48px.
+ *
+ * `width="prose"` caps the column at `max-w-5xl` for the long settings forms
+ * that read badly full-bleed. It is the same cap those forms already used —
+ * this only stops each of them re-declaring it.
+ */
+export function PageBody({
+  width = "full",
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { width?: "full" | "prose" }) {
+  return (
+    <div
+      className={cn("p-6 space-y-6", width === "prose" && "max-w-5xl", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}

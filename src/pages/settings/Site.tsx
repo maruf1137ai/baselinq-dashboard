@@ -1,3 +1,4 @@
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 import { useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -113,31 +114,35 @@ const Site = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-2xl font-normal tracking-tight text-foreground">Site Settings</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage site location, photos, and environmental settings.
-          </p>
-        </div>
-        {canEditProject ? (
-          isDirty && (
-            <Button
-              onClick={handleSave}
-              disabled={isUpdatingProject}
-              className="bg-primary text-white hover:opacity-90 rounded-lg h-9 px-4 font-normal"
-            >
-              {isUpdatingProject ? "Saving..." : "Save Details"}
-            </Button>
-          )
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
-            <Lock className="h-3.5 w-3.5" />
-            <span>Read-only access</span>
-          </div>
-        )}
-      </div>
+    <PageBody>
+      {/* Was a hand-rolled h2 carrying PageHeader's own title classes — the
+          last copy of them in Settings, and exactly the retyping PageHeader
+          exists to stop. `mb-6` went with it: PageBody's `space-y-6` already
+          supplies the 24px band gap. */}
+      <PageHeader
+        title="Site Settings"
+        description="Manage site location, photos, and environmental settings."
+        reference={
+          <>
+          {canEditProject ? (
+            isDirty && (
+              <Button
+                onClick={handleSave}
+                disabled={isUpdatingProject}
+                className="bg-primary text-white hover:opacity-90 rounded-lg h-9 px-4 font-normal"
+              >
+                {isUpdatingProject ? "Saving..." : "Save Details"}
+              </Button>
+            )
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border text-muted-foreground text-xs">
+              <Lock className="h-3.5 w-3.5" />
+              <span>Read-only access</span>
+            </div>
+          )}
+          </>
+        }
+      />
 
       {/* No location banner */}
       {!hasLocation && (
@@ -200,7 +205,7 @@ const Site = () => {
           </p>
         </div>
       </div>
-    </div>
+    </PageBody>
   );
 };
 

@@ -38,7 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -318,7 +318,7 @@ const ProjectDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-200px)] flex items-center justify-center">
+      <div className="h-[calc(100vh-var(--app-header-h)-3rem)] flex items-center justify-center">
         <AwesomeLoader message="Fetching project details" />
       </div>
     );
@@ -372,7 +372,7 @@ const ProjectDetails = () => {
   const isSaving = updateProjectMutation.isPending;
 
   return (
-    <div className="max-w-5xl p-6">
+    <PageBody width="prose">
       <form onSubmit={handleSave}>
         {/* ── Page Header ── */}
         <PageHeader
@@ -881,7 +881,7 @@ const ProjectDetails = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageBody>
   );
 };
 

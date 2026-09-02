@@ -7,7 +7,7 @@ import ApprovalChains from "@/components/settings/ApprovalChains";
 import AiRouting from "@/components/settings/AiRouting";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RolesTab } from "./permissions";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 const TeamManagement = () => {
   const { canViewSettings, canEditSettings } = usePermissions();
@@ -27,7 +27,7 @@ const TeamManagement = () => {
   const resolvedTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? "");
 
   return (
-    <div className="p-6 space-y-6">
+    <PageBody>
       <PageHeader
         title="User Management"
         description="Manage users, roles, permissions, and approval workflows."
@@ -63,7 +63,7 @@ const TeamManagement = () => {
         {resolvedTab === "Approval Chains" && <ApprovalChains />}
         {resolvedTab === "AI Routing" && <AiRouting />}
       </div>
-    </div>
+    </PageBody>
   );
 };
 

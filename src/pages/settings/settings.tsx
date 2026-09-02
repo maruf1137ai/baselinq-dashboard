@@ -6,7 +6,7 @@ import { Outlet } from 'react-router-dom';
 const Settings = () => {
   return (
     <DashboardLayout padding="p-0" overflow="overflow-hidden">
-      <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden">
+      <div className="flex h-[calc(100vh-var(--app-header-h))] w-full overflow-hidden">
         <div className="flex-shrink-0 border-r border-border bg-card h-full overflow-y-auto">
           <Sidebar />
         </div>

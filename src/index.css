@@ -124,6 +124,19 @@ All colors MUST be HSL.
        authoritative; softer geometry reads consumer. Best-in-class
        enterprise tooling sits in the 4-8px band. */
     --radius: 0.375rem;
+
+    /*
+      The app chrome's height, so a page that has to fill the rest of the
+      viewport can subtract it by NAME.
+
+      `DashboardHeader` is `h-16`. Five pages hard-coded that as a magic
+      number in `h-[calc(100vh-var(--app-header-h))]`, and three more guessed at it — Tasks
+      used 120px where the correct figure is 112px (64 header + 48 of the
+      layout's own vertical padding), and two Settings pages used 200px and
+      100px for the same quantity. Naming it means the next page cannot get
+      it wrong, and changing the header height is one edit rather than eight.
+    */
+    --app-header-h: 4rem;
     /* Was 40 11% 95% (#f3f2f0) — a warm cream, and the single warmest
        thing on screen. It sat next to cool-blue page chrome, which is the
        clash the user reported. It now joins hue 220 and keeps its role by
