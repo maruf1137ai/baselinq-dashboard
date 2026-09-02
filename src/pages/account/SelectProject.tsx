@@ -922,7 +922,7 @@ const SelectProject = () => {
                             {isDraft ? (
                               <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
                             ) : (
-                              <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+                              <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
                             )}
                             {isActive && (
                               <span className="text-xs text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>

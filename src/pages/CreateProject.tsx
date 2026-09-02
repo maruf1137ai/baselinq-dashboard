@@ -1445,13 +1445,13 @@ export default function CreateProject() {
                       {!CLIENT_ROLE_CODES.includes(user?.role?.code ?? '') && (
                         <div className={cn(
                           "p-5 rounded-xl transition-all duration-300 mb-2",
-                          isInvited || (inviteClientData.email.trim() && !isInvitingClient) ? "bg-emerald-50" : "bg-muted/50"
+                          isInvited || (inviteClientData.email.trim() && !isInvitingClient) ? "bg-green-50" : "bg-muted/50"
                         )}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                isInvited || inviteClientData.email.trim() ? "bg-emerald-100 text-emerald-600" : "bg-card text-primary shadow-sm"
+                                isInvited || inviteClientData.email.trim() ? "bg-green-100 text-green-600" : "bg-card text-primary shadow-sm"
                               )}>
                                 {isInvited || inviteClientData.email.trim() ? <Check className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
                               </div>

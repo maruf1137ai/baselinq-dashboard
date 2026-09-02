@@ -263,7 +263,7 @@ const AccountProfile = () => {
               <div className="flex items-center gap-2.5 px-3 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
                 <Mail className="h-4 w-4 shrink-0" />
                 <span className="truncate">{user?.email}</span>
-                <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">Verified</span>
+                <span className="ml-auto text-xs bg-gray-200 px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">Verified</span>
               </div>
             </Field>
             <Field label="Phone Number">

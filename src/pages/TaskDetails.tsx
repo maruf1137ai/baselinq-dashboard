@@ -1881,8 +1881,8 @@ export default function TaskDetails() {
                             className={cn(
                               "text-xs font-normal py-0 px-1.5 h-5 border",
                               displayTask.priority === "Urgent" && "bg-red-50 text-red-700 border-red-200",
-                              displayTask.priority === "High"   && "bg-orange-50 text-orange-700 border-orange-200",
-                              displayTask.priority === "Low"    && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                              displayTask.priority === "High"   && "bg-amber-50 text-amber-700 border-amber-200",
+                              displayTask.priority === "Low"    && "bg-green-50 text-green-700 border-green-200",
                             )}
                           >
                             {displayTask.priority}
@@ -2923,13 +2923,13 @@ export default function TaskDetails() {
                           id="siCostImpact"
                           checked={siCostImpact}
                           onChange={(e) => setSiCostImpact(e.target.checked)}
-                          className="h-4 w-4 text-orange-600 border-border rounded focus:ring-orange-500"
+                          className="h-4 w-4 text-amber-600 border-border rounded focus:ring-amber-500"
                         />
                         <span className="text-sm font-medium text-foreground">COST</span>
                       </label>
                     </div>
                     {(siTimeImpact || siCostImpact) && (
-                      <p className="text-xs text-orange-700 font-medium">
+                      <p className="text-xs text-amber-700 font-medium">
                         ⚠ PM &amp; QS will be added to the recipients and notified that a VO request is incoming.
                       </p>
                     )}

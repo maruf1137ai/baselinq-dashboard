@@ -8,17 +8,17 @@ import {
 import type { HealthStatus, HealthDetail } from "@/hooks/useProjectsHealth";
 
 const statusConfig: Record<HealthStatus, { dot: string; label: string; labelColor: string }> = {
-  green: { dot: "bg-emerald-500", label: "On Track", labelColor: "text-emerald-700" },
+  green: { dot: "bg-green-500", label: "On Track", labelColor: "text-green-700" },
   orange: { dot: "bg-amber-500", label: "At Risk", labelColor: "text-amber-700" },
   red: { dot: "bg-red-500", label: "Critical", labelColor: "text-red-700" },
-  grey: { dot: "bg-slate-400", label: "Not assessed", labelColor: "text-slate-500" },
+  grey: { dot: "bg-gray-400", label: "Not assessed", labelColor: "text-gray-500" },
 };
 
 const signalDot: Record<HealthStatus, string> = {
-  green: "bg-emerald-500",
+  green: "bg-green-500",
   orange: "bg-amber-500",
   red: "bg-red-500",
-  grey: "bg-slate-400",
+  grey: "bg-gray-400",
 };
 
 interface HealthBadgeProps {

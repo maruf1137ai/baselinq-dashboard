@@ -35,25 +35,25 @@ export function ProjectStatusCard({
     default: 'bg-muted text-foreground',
     destructive: 'bg-[#FEF2F2] text-[#EF4444] border-[#FECACA]',
     success: 'bg-[#F0FDF4] text-[#10B981] border-[#BBF7D0]',
-    warning: 'bg-orange-50 text-orange-700 border-orange-200',
+    warning: 'bg-amber-50 text-amber-700 border-amber-200',
   };
 
   const cardBg = {
     default: 'bg-muted/50',
     destructive: 'bg-red-50/80',
-    success: 'bg-emerald-50/60',
-    warning: 'bg-orange-50/60',
+    success: 'bg-green-50/60',
+    warning: 'bg-amber-50/60',
   };
 
   const valueColor = {
     default: 'text-foreground',
     destructive: 'text-red-600',
-    success: 'text-emerald-600',
-    warning: 'text-orange-600',
+    success: 'text-green-600',
+    warning: 'text-amber-600',
   };
 
   const trendIcon = trendArrow === 'up' ? '↑' : trendArrow === 'down' ? '↓' : trendArrow === 'flat' ? '→' : null;
-  const trendColor = trendArrow === 'up' ? 'text-emerald-500' : trendArrow === 'down' ? 'text-red-500' : 'text-gray-400';
+  const trendColor = trendArrow === 'up' ? 'text-green-500' : trendArrow === 'down' ? 'text-red-500' : 'text-gray-400';
 
   return (
     <Card className={`${cardBg[badgeVariant]} !border-0 rounded-xl shadow-none ${cardClassName || ''}`}>
@@ -98,7 +98,7 @@ export function ProjectStatusCard({
             <div className="mt-3">
               <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${badgeVariant === 'destructive' ? 'bg-red-400' : 'bg-emerald-400'}`}
+                  className={`h-full rounded-full transition-all ${badgeVariant === 'destructive' ? 'bg-red-400' : 'bg-green-400'}`}
                   style={{ width: `${Math.min(parseInt(value) || 50, 100)}%` }}
                 />
               </div>

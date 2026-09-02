@@ -199,7 +199,7 @@ export function ContractTermsPanel({
                 term.status === 'rejected'
                   ? 'border-border opacity-60'
                   : term.status === 'confirmed'
-                    ? 'border-emerald-100'
+                    ? 'border-green-100'
                     : 'border-border'
               )}
             >
@@ -212,7 +212,7 @@ export function ContractTermsPanel({
                     {term.sourceClauseReference && (
                       <span className="text-xs text-muted-foreground font-normal flex items-center gap-1">
                         {term.citationVerified
-                          ? <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                          ? <ShieldCheck className="h-3 w-3 text-green-600" />
                           : <ShieldAlert className="h-3 w-3 text-amber-600" />}
                         Clause {term.sourceClauseReference}
                         {!term.citationVerified && ' (unverified)'}
@@ -220,7 +220,7 @@ export function ContractTermsPanel({
                     )}
                     <Badge className={cn(
                       'text-xs font-normal border-0 px-2 py-0.5',
-                      term.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700' :
+                      term.status === 'confirmed' ? 'bg-green-50 text-green-700' :
                         term.status === 'rejected' ? 'bg-red-50 text-red-600' :
                           'bg-muted/40 text-muted-foreground'
                     )}>
