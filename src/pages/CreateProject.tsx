@@ -971,8 +971,8 @@ export default function CreateProject() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
-    if (!validateStep(6)) return;
+  const handleSubmit = (opts?: { skipValidation?: boolean }) => {
+    if (!opts?.skipValidation && !validateStep(6)) return;
     setIsSubmitting(true);
     // Snapshot mutable state so onSuccess closure always has the latest values
     const personnelSnapshot = [...clientPersonnelList];
@@ -2469,21 +2469,34 @@ export default function CreateProject() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                        className={cn(
-                          "flex items-center gap-2.5 h-[52px] px-10 rounded-lg text-sm font-normal text-white transition-all border-0 cursor-pointer",
-                          isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.99]"
-                        )}
-                        style={{
-                          background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
-                          boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
-                        }}>
-                        <Rocket className="h-4 w-4" />
-                        {isLoading ? "Creating…" : "Create Project"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit({ skipValidation: true })}
+                          disabled={isLoading}
+                          className={cn(
+                            "flex items-center gap-1.5 h-12 px-5 rounded-lg text-sm font-normal text-[#6b7280] border-[1.5px] border-border bg-card hover:bg-muted/50 hover:text-[#374151] transition-all",
+                            isLoading && "opacity-50 cursor-not-allowed"
+                          )}
+                          title="Create the project without setting a budget or timeline now — add them later from the project.">
+                          Skip
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit()}
+                          disabled={isLoading}
+                          className={cn(
+                            "flex items-center gap-2.5 h-[52px] px-10 rounded-lg text-sm font-normal text-white transition-all border-0 cursor-pointer",
+                            isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.99]"
+                          )}
+                          style={{
+                            background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
+                            boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
+                          }}>
+                          <Rocket className="h-4 w-4" />
+                          {isLoading ? "Creating…" : "Create Project"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

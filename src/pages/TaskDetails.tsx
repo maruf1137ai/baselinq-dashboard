@@ -1165,7 +1165,7 @@ export default function TaskDetails() {
           // PK fallback was producing "VO-43" when the canonical
           // "VO-001" actually existed on the entity → conflicting
           // numbers in board vs comms.
-          displayId: `#${task.voNumber || task.vo_number || `VO-${task._id}`}`,
+          displayId: `#${task.voNumber || task.vo_number || `VO-${apiResponse.taskId || task._id}`}`,
           title: task.title,
           task_code: task.voNumber || task.vo_number,
           dueDate: formatDateOrNoDate(task.dueDate),
@@ -1207,7 +1207,7 @@ export default function TaskDetails() {
         return {
           ...baseData,
           // Robust fallback — camelCase OR snake_case before PK synth.
-          displayId: `#${task.rfiNumber || task.rfi_number || `RFI-${task._id}`}`,
+          displayId: `#${task.rfiNumber || task.rfi_number || `RFI-${apiResponse.taskId || task._id}`}`,
           title: task.subject,
           task_code: task.rfiNumber || task.rfi_number,
           dueDate: formatDateOrNoDate(task.dueDate),
@@ -1242,7 +1242,7 @@ export default function TaskDetails() {
         return {
           ...baseData,
           // Robust fallback — camelCase OR snake_case before PK synth.
-          displayId: `#${task.siNumber || task.si_number || `SI-${task._id}`}`,
+          displayId: `#${task.siNumber || task.si_number || `SI-${apiResponse.taskId || task._id}`}`,
           title: task.title,
           task_code: task.siNumber || task.si_number,
           dueDate: formatDateOrNoDate(task.dueDate),
@@ -1281,9 +1281,9 @@ export default function TaskDetails() {
           ...baseData,
           // Werner rev H — use the canonical doc number (C-001, dc_number
           // = "C-001"). Falls back to the entity PK only if no number.
-          displayId: `#${task.dcNumber || task.dc_number || `DC-${task._id}`}`,
+          displayId: `#${task.dcNumber || task.dc_number || `DC-${apiResponse.taskId || task._id}`}`,
           title: task.title,
-          task_code: task.dcNumber || task.dc_number || `DC-${task._id}`,
+          task_code: task.dcNumber || task.dc_number || `DC-${apiResponse.taskId || task._id}`,
           dueDate: "No Date",
           formFields: {
             entityId: task._id,
@@ -1352,9 +1352,9 @@ export default function TaskDetails() {
       case "CRITICALPATHITEM":
         return {
           ...baseData,
-          displayId: `#CPI-${task._id}`,
+          displayId: `#CPI-${apiResponse.taskId || task._id}`,
           title: task.taskActivityName,
-          task_code: `CPI-${task._id}`,
+          task_code: `CPI-${apiResponse.taskId || task._id}`,
           dueDate: formatDateOrNoDate(task.finishDate),
           formFields: {
             title: task.taskActivityName,
@@ -1394,7 +1394,7 @@ export default function TaskDetails() {
         const giDate = task.dateRequired || task.date_required || task.dueDate;
         return {
           ...baseData,
-          displayId: `#${task.giNumber || task.gi_number || `GI-${task._id}`}`,
+          displayId: `#${task.giNumber || task.gi_number || `GI-${apiResponse.taskId || task._id}`}`,
           title: task.subject || "Untitled GI",
           task_code: task.giNumber || task.gi_number,
           dueDate: formatDateOrNoDate(giDate),
@@ -1432,7 +1432,7 @@ export default function TaskDetails() {
         const icDate = task.dateRequired || task.date_required || task.dueDate;
         return {
           ...baseData,
-          displayId: `#${task.icNumber || task.ic_number || `IC-${task._id}`}`,
+          displayId: `#${task.icNumber || task.ic_number || `IC-${apiResponse.taskId || task._id}`}`,
           title: task.subject || "Untitled IC",
           task_code: task.icNumber || task.ic_number,
           dueDate: formatDateOrNoDate(icDate),
@@ -1468,9 +1468,9 @@ export default function TaskDetails() {
         return {
           ...baseData,
           responses: apiResponse?.responses || [],
-          displayId: `#${taskType}-${task._id}`,
+          displayId: `#${taskType}-${apiResponse.taskId || task._id}`,
           title: task.title || task.subject || task.taskActivityName || "Unknown",
-          task_code: task._id,
+          task_code: apiResponse.taskId || task._id,
           dueDate: "No Date",
           formFields: {
             title: task.title,
