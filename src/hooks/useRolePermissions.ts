@@ -70,13 +70,22 @@ export function usePermissionCatalogue() {
   });
 }
 
-/** System roles plus this organisation's own custom ones. */
-export function useRoles() {
+/**
+ * System roles plus this organisation's own custom ones.
+ *
+ * projectId is optional and purely for the backend's permission GATE, not a
+ * filter on which roles come back — a caller whose global role lacks
+ * settings.view/edit but who is the given project's own Administrator can
+ * still be let in via their project-scoped role. See
+ * permissions/views.py::RoleViewSet._check_view_permission.
+ */
+export function useRoles(projectId?: string | number | null) {
   return useQuery<ApiRole[]>({
-    queryKey: ["roles"],
+    queryKey: ["roles", projectId ?? null],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const raw = await fetchData("permissions/roles/");
+      const qs = projectId ? `?project_id=${projectId}` : "";
+      const raw = await fetchData(`permissions/roles/${qs}`);
       return (Array.isArray(raw) ? raw : raw?.results ?? []) as ApiRole[];
     },
   });
@@ -257,15 +266,23 @@ export interface RoleHolders {
  * somebody is about to delete one — loading it for all 30 up front would be
  * 60 queries to answer a question nobody asked.
  */
-export function useRoleHolders(roleId: number | null, enabled: boolean) {
+export function useRoleHolders(
+  roleId: number | null,
+  enabled: boolean,
+  projectId?: string | number | null,
+) {
   return useQuery<RoleHolders>({
-    queryKey: ["role-holders", roleId],
+    queryKey: ["role-holders", roleId, projectId ?? null],
     enabled: roleId != null && enabled,
     // Always re-read: someone may have joined the project since it was last seen,
     // and this number is about to justify a destructive action.
     staleTime: 0,
-    queryFn: async () =>
-      (await fetchData(`permissions/roles/${roleId}/holders/`)) as RoleHolders,
+    queryFn: async () => {
+      // projectId is for the backend's permission gate only (see useRoles'
+      // comment) — the response still reports holders across every project.
+      const qs = projectId ? `?project_id=${projectId}` : "";
+      return (await fetchData(`permissions/roles/${roleId}/holders/${qs}`)) as RoleHolders;
+    },
   });
 }
 

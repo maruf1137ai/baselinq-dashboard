@@ -47,11 +47,15 @@ interface Props {
   onClose: () => void;
   /** Called after a successful delete, so the page can leave the dead role. */
   onDeleted: (deletedId: number) => void;
+  /** The page's selected project — passed through only for the backend's
+   * permission gate, so a project's own Administrator without a matching
+   * global role can still see who holds a role before deleting it. */
+  projectId?: string | null;
 }
 
-export function DeleteRoleDialog({ role, roles, onClose, onDeleted }: Props) {
+export function DeleteRoleDialog({ role, roles, onClose, onDeleted, projectId }: Props) {
   const open = role !== null;
-  const { data: holders, isLoading } = useRoleHolders(role?.id ?? null, open);
+  const { data: holders, isLoading } = useRoleHolders(role?.id ?? null, open, projectId);
   const del = useDeleteRole();
 
   const [mode, setMode] = useState<"reassign" | "remove">("reassign");

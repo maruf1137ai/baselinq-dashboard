@@ -278,11 +278,16 @@ const App = () => (
               <HelpSettings />
             </ProtectedRoute>
           } />
-          {/* Roles & Permissions — sidebar entry after Help. Content still to
-              be decided; the route exists so the navigation is in place. */}
+          {/* Roles & Permissions — sidebar entry after Help. Gated on the same
+              editSettings flag the sidebar link already uses (DashboardSidebar's
+              settingsItems filter), so direct URL navigation can't bypass what
+              the nav already hides. No ProjectProtectedRoute: the page shows its
+              own "pick a project" placeholder when none is selected. */}
           <Route path="/roles-permissions" element={
             <ProtectedRoute>
-              <RolesPermissions />
+              <RoleRoute permission="editSettings">
+                <RolesPermissions />
+              </RoleRoute>
             </ProtectedRoute>
           } />
           <Route path="/compliance" element={
