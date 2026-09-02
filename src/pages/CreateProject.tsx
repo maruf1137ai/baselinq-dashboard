@@ -207,11 +207,11 @@ const DEFAULT_FORM: FormState = {
   start_date: "",
   end_date: "",
   total_budget: "",
-  currency: "ZAR",
-  fx_rate: "1",
-  retention_rate: "5",
-  vat_rate: "15",
-  contract_type: "JBCC",
+  currency: "",
+  fx_rate: "",
+  retention_rate: "",
+  vat_rate: "",
+  contract_type: "",
 };
 
 const DEFAULT_CLIENT_FORM: ClientFormState = {
@@ -982,6 +982,11 @@ export default function CreateProject() {
     const fx = parseFloat(form.fx_rate) || 1;
     const ret = parseFloat(form.retention_rate) || 5;
     const vat = parseFloat(form.vat_rate) || 15;
+    // Currency/contract type now start blank on the form (no default shown
+    // to the user) — fall back the same way fx/ret/vat already do, so
+    // leaving them untouched still submits a valid project.
+    const currency = form.currency || "ZAR";
+    const contractType = form.contract_type || "JBCC";
 
     const data = {
       name: form.name,
@@ -998,14 +1003,14 @@ export default function CreateProject() {
       retentionRate: ret,
       vat_rate: vat,
       vatRate: vat,
-      contract_type: form.contract_type,
-      contractType: form.contract_type,
+      contract_type: contractType,
+      contractType: contractType,
       total_budget: b,
       totalBudget: b,
       location: form.location,
       latitude: form.latitude ? parseFloat(form.latitude).toFixed(8) : null,
       longitude: form.longitude ? parseFloat(form.longitude).toFixed(8) : null,
-      currency: form.currency,
+      currency: currency,
       status: "Active",
       // New onboarding fields — backend needs to support these
       client_details: {
@@ -2321,6 +2326,7 @@ export default function CreateProject() {
                               Currency
                             </label>
                             <SelectField value={form.currency} onChange={(v) => setField("currency", v)}>
+                              <option value="" disabled>Select currency</option>
                               {CURRENCIES.map((c) => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
@@ -2333,6 +2339,7 @@ export default function CreateProject() {
                               Contract Type
                             </label>
                             <SelectField value={form.contract_type} onChange={(v) => setField("contract_type", v)}>
+                              <option value="" disabled>Select contract type</option>
                               {CONTRACT_TYPES.map((c) => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
