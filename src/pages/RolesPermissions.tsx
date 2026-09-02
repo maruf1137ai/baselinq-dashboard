@@ -219,7 +219,7 @@ export default function RolesPermissions() {
   const { canEditSettings } = usePermissions();
 
   const { data: catalogue = [], isLoading: loadingCatalogue } = usePermissionCatalogue();
-  const { data: roles = [], isLoading: loadingRoles } = useRoles();
+  const { data: roles = [], isLoading: loadingRoles } = useRoles(projectId);
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
@@ -791,6 +791,7 @@ export default function RolesPermissions() {
           <DeleteRoleDialog
             role={deleting}
             roles={roles}
+            projectId={projectId}
             onClose={() => setDeleting(null)}
             onDeleted={(id) => {
               // Selecting a deleted role would refetch a matrix that 404s, so
