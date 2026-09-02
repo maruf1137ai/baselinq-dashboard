@@ -61,14 +61,11 @@ const settingsItems: { title: string; url: string; icon: React.ReactElement; per
   // Help lands on the hub page (/help), which offers the Tasks and
   // Finance reference guides as two options — see src/pages/Help.tsx.
   { title: "Help", url: "/help", icon: <Help />, permission: null },
-  // Roles & Permissions — visible only to roles that can act on it. Uses
-  // the plain settings.edit check (via can(), below), not the composite
-  // canEditSettings flag, so link visibility can't drift from what the
-  // /roles-permissions route itself allows (RoleRoute also checks plain
-  // can("editSettings"), with no isOrgAdmin bypass) — an org-account-type
-  // user without an explicit settings.edit grant must not see a link that
-  // would just bounce them to /unauthorized.
-  { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: "editSettings" },
+  // Roles & Permissions — temporarily hidden from the sidebar at request
+  // (2026-09-02). The page and its /roles-permissions route are untouched
+  // and still permission-gated; only this entry point is commented out.
+  // Uncomment to restore:
+  // { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: "editSettings" },
 ];
 
 export function DashboardSidebar() {
