@@ -81,8 +81,12 @@ import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { ROUTE } from "@/lib/homeSignals";
 import { cn } from "@/lib/utils";
 import type { HomeData } from "@/hooks/useHomeData";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 
 import { Panel } from "./blocks";
+
+/** Rows are revealed 5 at a time; scrolling to the bottom of the panel loads the next 5. */
+const PAGE_SIZE = 5;
 
 /**
  * The priority chip.
@@ -357,6 +361,12 @@ export function MyActionsBlock({
     const d = daysFromToday(r.due_date);
     return d !== null && d <= 7;
   }).length;
+  // Hooks must run unconditionally, ahead of the loading/empty early returns
+  // below.
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    rows,
+    PAGE_SIZE,
+  );
 
   if (data.isLoading) {
     return (
@@ -404,16 +414,20 @@ export function MyActionsBlock({
       leadTone={overdue > 0 ? "danger" : soon > 0 ? "warning" : "muted"}
     >
       {/*
-        Uncapped and scrollable. `max-h` below `lg` so the panel cannot run the
-        page off the bottom on a narrow screen; `lg:h-full` inside the fixed
-        row above it, where the column already has a height. Either way every
-        row is reachable — there is no cap on what is rendered, only on how
-        much of it is visible at once.
+        Bounded and scrollable at every width — this row is `items-start`
+        (Index.tsx), not a stretched grid, so there is no parent height for an
+        `lg:h-full` to fill; a max-height that only applied below `lg` used to
+        cancel out on desktop, leaving the container unclipped and the
+        scroll-triggered pagination below with no scroll to trigger on.
       */}
-      <div className="max-h-[420px] space-y-2 overflow-y-auto p-3 lg:max-h-none lg:h-full">
-        {rows.map((r) => (
+      <div
+        ref={containerRef}
+        className="max-h-[420px] space-y-2 overflow-y-auto p-3"
+      >
+        {visibleItems.map((r) => (
           <MyActionRow key={r.id} item={r} />
         ))}
+        {hasMore && <div ref={sentinelRef} />}
       </div>
     </Panel>
   );

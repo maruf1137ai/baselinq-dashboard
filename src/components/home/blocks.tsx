@@ -70,6 +70,7 @@
  * and read as bland. Colour is kept, and made rare enough to be worth
  * looking at.
  */
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, CheckCircle2, ShieldAlert, ShieldQuestion, X } from "lucide-react";
 
@@ -693,21 +694,33 @@ export function RiskConditionBlock({
     { severity: "orange" as const, label: "Warning" },
     { severity: "green" as const, label: "Advisory" },
   ];
-  const present = TIERS.map((t) => ({
-    ...t,
-    groups: riskGroups.filter((g) => g.severity === t.severity),
-  })).filter((t) => t.groups.length > 0);
+  // Memoized on `riskGroups` (itself stable unless the underlying data
+  // changes) rather than recomputed as a fresh array every render — otherwise
+  // a render with no real data change still hands `useScrollPagination` a new
+  // array identity, and it resets the revealed rows back to one page.
+  const present = useMemo(
+    () =>
+      TIERS.map((t) => ({
+        ...t,
+        groups: riskGroups.filter((g) => g.severity === t.severity),
+      })).filter((t) => t.groups.length > 0),
+    [riskGroups],
+  );
 
   // Flattened, tier-tagged, worst-first — the order `present` already carries
   // — so pagination can walk it as one continuous list and still know which
   // tier boundary it just crossed.
-  const orderedGroups = present.flatMap((tier) =>
-    tier.groups.map((g) => ({ ...g, tierLabel: tier.label, tierSeverity: tier.severity })),
+  const orderedGroups = useMemo(
+    () =>
+      present.flatMap((tier) =>
+        tier.groups.map((g) => ({ ...g, tierLabel: tier.label, tierSeverity: tier.severity })),
+      ),
+    [present],
   );
   // Hooks must run unconditionally, ahead of the early returns below.
   const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
     orderedGroups,
-    5,
+    10,
   );
 
   /*
@@ -814,9 +827,14 @@ export function RiskConditionBlock({
         `text-destructive` and `text-muted-foreground` are the tokens. The
         raw `red-700` / `amber-700` palette classes this block used are gone.
       */}
+      {/* Bounded at every width — `ContractWatchBlock` renders full-width on
+          its own row (Index.tsx), not paired in a stretched grid, so a
+          max-height that only applied below `lg` used to cancel out on
+          desktop, leaving the container unclipped and the scroll-triggered
+          pagination below with no scroll to trigger on. */}
       <div
         ref={containerRef}
-        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+        className="max-h-[420px] overflow-y-auto divide-y divide-border"
       >
         {visibleItems.flatMap((g, index) => [
           // The worst tier is already named in the header, so no strip for it.

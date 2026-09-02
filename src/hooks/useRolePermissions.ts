@@ -166,6 +166,10 @@ export function useSaveRoleMatrix() {
       qc.invalidateQueries({ queryKey: ["role-matrix", roleId, projectId] });
       // What this user may do can change as a result of what they just saved.
       qc.invalidateQueries({ queryKey: ["effective-perms"] });
+      // A surface just hidden or revealed changes how many unreads the
+      // bell/sidebar should be counting — see unread_summary's permission
+      // filter on the backend.
+      qc.invalidateQueries({ queryKey: ["unread-summary"] });
     },
   });
 }

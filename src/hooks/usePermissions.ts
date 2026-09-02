@@ -88,6 +88,10 @@ function useInvalidateOnPermissionChange() {
       qc.invalidateQueries({ queryKey: ["effective-perms"] });
       // Roles & Permissions is showing the very matrix that changed.
       qc.invalidateQueries({ queryKey: ["role-matrix"] });
+      // A surface just hidden or revealed changes how many unreads the
+      // bell/sidebar should be counting — see unread_summary's permission
+      // filter on the backend.
+      qc.invalidateQueries({ queryKey: ["unread-summary"] });
     };
     window.addEventListener(PERMISSIONS_CHANGED_EVENT, handler);
     return () => window.removeEventListener(PERMISSIONS_CHANGED_EVENT, handler);

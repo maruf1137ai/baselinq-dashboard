@@ -2,11 +2,12 @@
  * Recent activity — the old feed, restored.
  *
  * This is the previous homepage's Activity Feed brought back verbatim: the
- * same eight most-recently-touched tasks, the same status→verb map, the same
+ * same most-recently-touched tasks, the same status→verb map, the same
  * three display statuses, the same `ActivityFeedItem` row (which was never
  * deleted, only orphaned when the panel was replaced) and the same empty
  * state. The derivation below is `Index.tsx`'s at commit f4cdc51, moved into a
- * component and given a name.
+ * component and given a name. The old feed's fixed cap is now just the first
+ * page — scrolling the panel reveals more, same as the two panels beside it.
  *
  * ── The ONE thing that was not carried across ────────────────────────────
  *
@@ -42,15 +43,17 @@
  * no money, no risk rating — so there is nothing here for a permission to
  * protect, and no viewer gets a panel they cannot fill.
  */
+import { useMemo } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActivityFeedItem } from "@/components/ActivityFeedItem";
 import { formatDate } from "@/lib/utils";
 import { Panel } from "./blocks";
 import { ROUTE } from "@/lib/homeSignals";
 import type { HomeData } from "@/hooks/useHomeData";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 
-/** How many rows the panel shows. The old feed's cap, unchanged. */
-const CAP = 8;
+/** Rows shown up front. More are revealed on scroll. */
+const PAGE_SIZE = 10;
 
 /** The old map, verbatim. A status not in it is "updated". */
 const STATUS_VERB: Record<string, string> = {
@@ -79,8 +82,9 @@ export interface ActivityRow {
 /**
  * The old derivation, exported so it can be tested without a screen.
  *
- * Sorted by `updated_at || created_at` descending and capped — the same sort
- * the previous homepage used, kept because it is what "recent" means.
+ * Sorted by `updated_at || created_at` descending — the same sort the
+ * previous homepage used, kept because it is what "recent" means. Returns the
+ * full list; the panel below paginates it for display.
  */
 export function buildRecentActivity(tasks: any[]): ActivityRow[] {
   return [...tasks]
@@ -89,7 +93,6 @@ export function buildRecentActivity(tasks: any[]): ActivityRow[] {
       const dateB = new Date(a.updated_at || a.created_at).getTime();
       return dateA - dateB;
     })
-    .slice(0, CAP)
     .map((task: any) => {
       const s = (task.status ?? "").toString().toLowerCase();
       const verb = STATUS_VERB[s] || "updated";
@@ -125,7 +128,17 @@ export function buildRecentActivity(tasks: any[]): ActivityRow[] {
 }
 
 export function RecentActivityBlock({ data }: { data: HomeData }) {
-  const rows = buildRecentActivity(data.taskList as any[]);
+  // Memoized on `data.taskList` (itself stable unless the underlying data
+  // changes) rather than rebuilt as a fresh array every render — otherwise a
+  // render with no real data change still hands `useScrollPagination` a new
+  // array identity, and it resets the revealed rows back to one page.
+  const rows = useMemo(() => buildRecentActivity(data.taskList as any[]), [data.taskList]);
+  // Hooks must run unconditionally, ahead of the empty-state early return
+  // below.
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    rows,
+    PAGE_SIZE,
+  );
 
   if (rows.length === 0) {
     return (
@@ -147,13 +160,16 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
     <Panel
       title="Recent activity"
       emphasis="primary"
-      lead={`${rows.length} most recently updated`}
+      // Describes exactly what's rendered below, not the full feed behind
+      // it — "most recently updated" is only true of the visible window.
+      lead={`${visibleItems.length} most recently updated`}
     >
-      {/* Same scroll behaviour as the two panels above it in this column, so
-          the right-hand column still starts and ends on the left column's
-          line rather than growing with the feed. */}
-      <div className="max-h-[420px] overflow-y-auto px-2 lg:max-h-none lg:h-full">
-        {rows.map((r) => (
+      {/* Bounded at every width, not just below `lg` — this row is
+          `items-start` (Index.tsx), not a stretched grid, so a max-height
+          that cancelled out on desktop left the container unclipped and the
+          scroll-triggered pagination below with no scroll to trigger on. */}
+      <div ref={containerRef} className="max-h-[420px] overflow-y-auto px-2">
+        {visibleItems.map((r) => (
           <ActivityFeedItem
             key={r.id}
             title={r.title}
@@ -164,6 +180,7 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
             to={ROUTE.task(r.id)}
           />
         ))}
+        {hasMore && <div ref={sentinelRef} />}
       </div>
     </Panel>
   );

@@ -19,8 +19,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { Panel, ViewAll } from "./blocks";
 import type { HomeData } from "@/hooks/useHomeData";
+import { useScrollPagination } from "@/hooks/useScrollPagination";
 
-const CAP = 3;
+/** Rows are revealed 10 at a time; scrolling to the bottom of the panel loads the next 10. */
+const PAGE_SIZE = 10;
 
 export function UpcomingMeetingsBlock({
   data,
@@ -31,6 +33,11 @@ export function UpcomingMeetingsBlock({
   segments?: React.ReactNode;
 }) {
   const rows = data.upcomingMeetings ?? [];
+  // Hooks must run unconditionally, ahead of the empty-state branch below.
+  const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
+    rows,
+    PAGE_SIZE,
+  );
 
   return (
     <Panel
@@ -57,34 +64,42 @@ export function UpcomingMeetingsBlock({
           description="Meetings you are invited to appear here, soonest first."
         />
       ) : (
-        <ul className="divide-y divide-border">
-          {rows.slice(0, CAP).map((m: any) => (
-            <li key={m.id}>
-              <Link
-                to={`/meetings/${m.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-foreground">
-                    {m.title}
-                  </span>
-                  <span className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="tabular-nums">
-                      {formatDateUk(m.date) ?? m.date}
-                      {m.time ? ` · ${m.time}` : ""}
+        // Bounded at every width — `ContractWatchBlock` renders full-width
+        // on its own row (Index.tsx), not paired in a stretched grid, so a
+        // max-height that only applied below `lg` used to cancel out on
+        // desktop, leaving the container unclipped and the
+        // scroll-triggered pagination below with no scroll to trigger on.
+        <div ref={containerRef} className="max-h-[420px] overflow-y-auto">
+          <ul className="divide-y divide-border">
+            {visibleItems.map((m: any) => (
+              <li key={m.id}>
+                <Link
+                  to={`/meetings/${m.id}`}
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {m.title}
                     </span>
-                    {m.location ? (
-                      <span className="flex min-w-0 items-center gap-1">
-                        <MapPin className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{m.location}</span>
+                    <span className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="tabular-nums">
+                        {formatDateUk(m.date) ?? m.date}
+                        {m.time ? ` · ${m.time}` : ""}
                       </span>
-                    ) : null}
+                      {m.location ? (
+                        <span className="flex min-w-0 items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{m.location}</span>
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {hasMore && <div ref={sentinelRef} />}
+        </div>
       )}
     </Panel>
   );

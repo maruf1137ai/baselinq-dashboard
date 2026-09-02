@@ -72,6 +72,7 @@
  *     outstanding, a confident silence is the most expensive thing we could
  *     render.
  */
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, ShieldAlert } from "lucide-react";
 
@@ -466,13 +467,17 @@ export function ActionQueueBlock({
     them, and the page's verdict must not stop counting it because one panel
     stopped drawing it. `task-escalated` is deliberately kept — see SECTIONS.
   */
-  const queue = data.queue.filter((i) => i.kind !== "task");
+  // Memoized on `data.queue` (itself stable unless the underlying data
+  // changes) rather than recomputed as a fresh array every render — otherwise
+  // a render with no real data change still hands `useScrollPagination` a new
+  // array identity, and it resets the revealed rows back to one page.
+  const queue = useMemo(() => data.queue.filter((i) => i.kind !== "task"), [data.queue]);
   // The LEAD counts the unfolded queue. Four unpaid certificates are four
   // things outstanding however many lines they are drawn on, and the panel's
   // own count must not shrink because its presentation got tidier.
   const summary = summariseQueue(queue);
   // The ROWS are the folded list. See `foldPaymentChases`.
-  const rows = foldPaymentChases(queue);
+  const rows = useMemo(() => foldPaymentChases(queue), [queue]);
   // Hooks must run unconditionally, ahead of the loading/empty early returns
   // below.
   const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
@@ -558,9 +563,14 @@ export function ActionQueueBlock({
       height — weight and surface.
     */
     <Panel title={title} emphasis="primary" lead={queueLead(summary)} segments={segments}>
+      {/* Bounded at every width — `ContractWatchBlock` renders full-width on
+          its own row (Index.tsx), not paired in a stretched grid, so a
+          max-height that only applied below `lg` used to cancel out on
+          desktop, leaving the container unclipped and the scroll-triggered
+          pagination below with no scroll to trigger on. */}
       <div
         ref={containerRef}
-        className="max-h-[420px] overflow-y-auto divide-y divide-border lg:max-h-none lg:h-full"
+        className="max-h-[420px] overflow-y-auto divide-y divide-border"
       >
         {drawn}
         {hasMore && <div ref={sentinelRef} />}
