@@ -242,12 +242,14 @@ export default function RolesPermissions() {
       const members = res?.teamMembers || res?.results || res || [];
       const out: Record<string, string[]> = {};
       for (const m of members as any[]) {
-        // This endpoint exposes the role as orgRoleInfo/roleName, NOT as
-        // `role` — the shape UserMultiSelect assumes. Prefer the CODE, so the
-        // page never has to match on a human-entered display name.
-        const code =
-          m.orgRoleInfo?.code ?? m.user?.role?.code ?? m.roleCode ?? null;
-        const key = String(code || m.roleName || m.orgRoleName || "").trim();
+        // roleCode is the backend's already-resolved PROJECT-scoped role
+        // code (project role wins, falling back to org role only when the
+        // project role text is unmatched) — the same resolution
+        // permissions/core.py uses to decide what this member can actually
+        // do on this project, so trust it first. roleName/orgRoleName are
+        // last-resort display-text fallbacks for older rows that predate
+        // the code field.
+        const key = String(m.roleCode || m.roleName || m.orgRoleName || "").trim();
         if (!key) continue;
         const name = m.user?.name || m.user?.email || m.name || "Unknown";
         (out[key] ||= []).push(name);
