@@ -61,10 +61,11 @@ const settingsItems: { title: string; url: string; icon: React.ReactElement; per
   // Help lands on the hub page (/help), which offers the Tasks and
   // Finance reference guides as two options — see src/pages/Help.tsx.
   { title: "Help", url: "/help", icon: <Help />, permission: null },
-  // Roles & Permissions — content still to be decided. Left ungated for now
-  // (permission: null) so it is reachable while we work out what it shows;
-  // add a permission key here once that is settled.
-  { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: null },
+  // Roles & Permissions — visible only to roles that can act on it (the
+  // page itself gates Save/Reset/toggle behind the same settings.edit via
+  // canEditSettings). Read-only viewers of the page are not the audience
+  // for a nav entry inviting them to edit something they can't.
+  { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: "editSettings" },
 ];
 
 export function DashboardSidebar() {
@@ -76,7 +77,7 @@ export function DashboardSidebar() {
   const showRolesNav = rolesSidebar?.navMode === "roles";
   const location = useLocation();
   const { data: user } = useCurrentUser(); // Django auth hook
-  const { can, canViewSettings } = usePermissions();
+  const { can, canViewSettings, canEditSettings } = usePermissions();
   const { data: projectsData, isLoading } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
@@ -417,7 +418,12 @@ export function DashboardSidebar() {
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {settingsItems.filter((item) => !item.permission || (item.permission === "viewSettings" ? canViewSettings : can(item.permission))).map((item) => {
+                      {settingsItems.filter((item) =>
+                        !item.permission
+                          || (item.permission === "viewSettings" ? canViewSettings
+                            : item.permission === "editSettings" ? canEditSettings
+                            : can(item.permission))
+                      ).map((item) => {
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                         const badge = badgeFor(item.title);
                         return (

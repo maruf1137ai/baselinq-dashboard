@@ -207,11 +207,11 @@ const DEFAULT_FORM: FormState = {
   start_date: "",
   end_date: "",
   total_budget: "",
-  currency: "ZAR",
-  fx_rate: "1",
-  retention_rate: "5",
-  vat_rate: "15",
-  contract_type: "JBCC",
+  currency: "",
+  fx_rate: "",
+  retention_rate: "",
+  vat_rate: "",
+  contract_type: "",
 };
 
 const DEFAULT_CLIENT_FORM: ClientFormState = {
@@ -971,8 +971,8 @@ export default function CreateProject() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
-  const handleSubmit = () => {
-    if (!validateStep(6)) return;
+  const handleSubmit = (opts?: { skipValidation?: boolean }) => {
+    if (!opts?.skipValidation && !validateStep(6)) return;
     setIsSubmitting(true);
     // Snapshot mutable state so onSuccess closure always has the latest values
     const personnelSnapshot = [...clientPersonnelList];
@@ -982,6 +982,11 @@ export default function CreateProject() {
     const fx = parseFloat(form.fx_rate) || 1;
     const ret = parseFloat(form.retention_rate) || 5;
     const vat = parseFloat(form.vat_rate) || 15;
+    // Currency/contract type now start blank on the form (no default shown
+    // to the user) — fall back the same way fx/ret/vat already do, so
+    // leaving them untouched still submits a valid project.
+    const currency = form.currency || "ZAR";
+    const contractType = form.contract_type || "JBCC";
 
     const data = {
       name: form.name,
@@ -998,14 +1003,14 @@ export default function CreateProject() {
       retentionRate: ret,
       vat_rate: vat,
       vatRate: vat,
-      contract_type: form.contract_type,
-      contractType: form.contract_type,
+      contract_type: contractType,
+      contractType: contractType,
       total_budget: b,
       totalBudget: b,
       location: form.location,
       latitude: form.latitude ? parseFloat(form.latitude).toFixed(8) : null,
       longitude: form.longitude ? parseFloat(form.longitude).toFixed(8) : null,
-      currency: form.currency,
+      currency: currency,
       status: "Active",
       // New onboarding fields — backend needs to support these
       client_details: {
@@ -2321,6 +2326,7 @@ export default function CreateProject() {
                               Currency
                             </label>
                             <SelectField value={form.currency} onChange={(v) => setField("currency", v)}>
+                              <option value="" disabled>Select currency</option>
                               {CURRENCIES.map((c) => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
@@ -2333,6 +2339,7 @@ export default function CreateProject() {
                               Contract Type
                             </label>
                             <SelectField value={form.contract_type} onChange={(v) => setField("contract_type", v)}>
+                              <option value="" disabled>Select contract type</option>
                               {CONTRACT_TYPES.map((c) => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
@@ -2469,21 +2476,34 @@ export default function CreateProject() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                        className={cn(
-                          "flex items-center gap-2.5 h-[52px] px-10 rounded-lg text-sm font-normal text-white transition-all border-0 cursor-pointer",
-                          isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.99]"
-                        )}
-                        style={{
-                          background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
-                          boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
-                        }}>
-                        <Rocket className="h-4 w-4" />
-                        {isLoading ? "Creating…" : "Create Project"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit({ skipValidation: true })}
+                          disabled={isLoading}
+                          className={cn(
+                            "flex items-center gap-1.5 h-12 px-5 rounded-lg text-sm font-normal text-[#6b7280] border-[1.5px] border-border bg-card hover:bg-muted/50 hover:text-[#374151] transition-all",
+                            isLoading && "opacity-50 cursor-not-allowed"
+                          )}
+                          title="Create the project without setting a budget or timeline now — add them later from the project.">
+                          Skip
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit()}
+                          disabled={isLoading}
+                          className={cn(
+                            "flex items-center gap-2.5 h-[52px] px-10 rounded-lg text-sm font-normal text-white transition-all border-0 cursor-pointer",
+                            isLoading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] active:scale-[0.99]"
+                          )}
+                          style={{
+                            background: "linear-gradient(135deg, #6c5ce7, #5a4bd1)",
+                            boxShadow: isLoading ? "none" : "0 4px 14px rgba(108,92,231,0.4)",
+                          }}>
+                          <Rocket className="h-4 w-4" />
+                          {isLoading ? "Creating…" : "Create Project"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
