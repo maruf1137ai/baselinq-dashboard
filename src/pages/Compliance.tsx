@@ -124,6 +124,9 @@ const Compliance = () => {
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
+  /* The counts row is a filter now, so it needs somewhere to keep the choice.
+     "all" is not a ComplianceUrgency — it is the absence of a filter. */
+  const [urgency, setUrgency] = useState<ComplianceUrgency | "all">("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<ComplianceRow | null>(null);
   const [evidenceObligation, setEvidenceObligation] = useState<ComplianceObligation | null>(null);
@@ -240,10 +243,10 @@ const Compliance = () => {
   }, [obligations, timeBarData]);
 
   const counts = useMemo(() => summariseCompliance(rows), [rows]);
-  const visibleRows = useMemo(
-    () => filterComplianceRows(rows, searchTerm),
-    [rows, searchTerm],
-  );
+  const visibleRows = useMemo(() => {
+    const searched = filterComplianceRows(rows, searchTerm);
+    return urgency === "all" ? searched : searched.filter(r => r.urgency === urgency);
+  }, [rows, searchTerm, urgency]);
 
   // Stable identity so the dialog only resets its fields when the row changes.
   const editingDraft = useMemo(
@@ -402,17 +405,58 @@ const Compliance = () => {
           }
         />
 
-        {/* Counts are derived from the rows below — never from a stored score.
-            When something failed to load they are qualified rather than shown
-            bare: "0 overdue" is a sentence a user acts on. */}
-        <div className="flex items-center gap-6 text-sm flex-wrap">
-          <span className="text-muted-foreground">{counts.overdue} overdue</span>
-          <span className="text-muted-foreground">{counts.dueSoon} due within 14 days</span>
-          <span className="text-muted-foreground">{counts.noDate} with no date recorded</span>
-          <span className="text-muted-foreground">{counts.onTrack} on track</span>
-          <span className="text-muted-foreground">{counts.closed} closed</span>
+        {/*
+          ── The counts are the filter ────────────────────────────────────
+
+          They were five inert spans of grey text — a shape no other page in
+          the product uses, which is what made this page look unlike the
+          rest. Meetings already had exactly the right pattern for "a set of
+          named buckets with counts, one of which is active", so these are
+          that: same `px-4 py-2 rounded-xl border` pill, same active
+          treatment, same count in the same weight.
+
+          Making them clickable costs nothing and answers the obvious next
+          question. A reader who sees "1 overdue" wants the overdue one; the
+          old row made them type into search to get it.
+
+          Counts are still derived from the rows — never from a stored score
+          — and they count ALL rows, not the filtered set, so pressing a pill
+          never changes the numbers on the other pills.
+        */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {([
+            { key: "all", label: "All", count: counts.total },
+            { key: "overdue", label: "Overdue", count: counts.overdue },
+            { key: "due-soon", label: "Due within 14 days", count: counts.dueSoon },
+            { key: "no-date", label: "No date recorded", count: counts.noDate },
+            { key: "on-track", label: "On track", count: counts.onTrack },
+            { key: "closed", label: "Closed", count: counts.closed },
+          ] as const).map(({ key, label, count }) => {
+            const active = urgency === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setUrgency(key)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl border transition-colors ${
+                  active
+                    ? "bg-primary/10 text-primary border-primary/30"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+                <span
+                  className={`text-xs tabular-nums ${
+                    active ? "text-primary/70" : "text-muted-foreground/60"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
           {loadIssue.level === "partial" && (
-            <span className="text-muted-foreground">· of what could be loaded</span>
+            <span className="text-sm text-muted-foreground">· of what could be loaded</span>
           )}
         </div>
 

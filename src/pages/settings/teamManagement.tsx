@@ -47,7 +47,7 @@ const TeamManagement = () => {
           <button
             key={btn}
             onClick={() => setActiveTab(btn)}
-            className={`text-sm py-4 px-6 border-b-2 transition-all ${resolvedTab === btn
+            className={`text-sm py-3 px-6 border-b-2 whitespace-nowrap transition-all ${resolvedTab === btn
                 ? "border-primary text-foreground"
                 : "text-muted-foreground border-transparent"
               }`}>

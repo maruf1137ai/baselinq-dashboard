@@ -348,7 +348,7 @@ export default function ProjectHealth() {
                 tabIndex={activeTab === t ? 0 : -1}
                 onClick={() => chooseTab(t)}
                 className={cn(
-                  "text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none whitespace-nowrap",
+                  "text-sm py-3 px-6 border-b-2 -mb-px whitespace-nowrap transition-colors outline-none whitespace-nowrap",
                   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
                   activeTab === t
                     ? "border-primary text-foreground"

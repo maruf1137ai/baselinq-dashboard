@@ -46,18 +46,17 @@ import Asterisk from "@/components/icons/Asterisk";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
+import { TAB_LIST_RADIX, TAB_TRIGGER_RADIX } from "@/components/ui/tab-rail";
 
 /**
  * The app's tab strip, expressed for shadcn's <Tabs>. Same geometry as the
  * bare-<button> strips on Finance, Project Health and Settings → Users:
  * `text-sm py-4 px-6`, a 2px underline pulled onto the rail's own hairline.
  */
-const TAB_LIST =
-  "h-auto w-full justify-start gap-2 rounded-none bg-transparent p-0 border-b border-border";
-const TAB_TRIGGER =
-  "text-sm font-normal py-4 px-6 rounded-none border-b-2 border-transparent -mb-px text-muted-foreground " +
-  "data-[state=active]:bg-transparent data-[state=active]:shadow-none " +
-  "data-[state=active]:border-primary data-[state=active]:text-foreground hover:text-foreground";
+// The rail is defined once in `tab-rail.ts`; this page used to declare its
+// own copy of both strings.
+const TAB_LIST = TAB_LIST_RADIX;
+const TAB_TRIGGER = TAB_TRIGGER_RADIX;
 
 // JBCC contractual time limits per task type (in calendar days)
 const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: string }[]> = {

@@ -118,7 +118,7 @@ const Window = () => {
                  "Risk Forecast" wrapped to two lines and took the rail from
                  54px to 74px — giving back most of what moving the picker
                  saved. */
-              className={`text-sm py-4 px-6 border-b-2 -mb-px whitespace-nowrap transition-all ${
+              className={`text-sm py-3 px-6 border-b-2 -mb-px whitespace-nowrap transition-all ${
                 activeTab === tab
                   ? "border-primary text-foreground"
                   : "text-muted-foreground border-transparent"
