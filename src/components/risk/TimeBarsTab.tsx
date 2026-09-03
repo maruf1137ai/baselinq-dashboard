@@ -137,7 +137,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
         <EmptyState
           icon={ShieldAlert}
           title="Notice deadlines could not be loaded"
-          description="The deadlines tracked against this project could not be read. This is not a statement that there are none — nothing below has been checked."
+          description="The deadlines could not be read. Nothing below has been checked."
           action={
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               Try again
@@ -148,7 +148,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
         <EmptyState
           icon={CalendarClock}
           title="No deadlines tracked"
-          description="Add one when an event occurs that may lead to a claim — the clock runs from the date the responsible party became aware."
+          description="Add one when an event occurs that may lead to a claim."
         />
       ) : (
         <div className="space-y-3">

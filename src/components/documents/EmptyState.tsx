@@ -24,7 +24,7 @@ export const DocumentEmptyState: React.FC<EmptyStateProps> = ({ type, onAction, 
         className="mt-6"
         icon={FilterX}
         title="No documents match these filters"
-        description="Try clearing the filters or widening the date range — the document may be filed under another discipline or revision."
+        description="Try clearing the filters — it may be filed under another discipline."
         action={
           onClearFilters ? (
             <Button variant="outline" size="sm" className="font-normal" onClick={onClearFilters}>
@@ -41,7 +41,7 @@ export const DocumentEmptyState: React.FC<EmptyStateProps> = ({ type, onAction, 
       className="mt-6"
       icon={Upload}
       title="No documents yet"
-      description="Upload the contract, drawings and specifications for this project. Each one is versioned and referenced, so you can show what was issued and when."
+      description="Upload the contract, drawings and specifications. Each one is versioned."
       action={
         onAction ? (
           <Button size="sm" className="font-normal" onClick={onAction}>

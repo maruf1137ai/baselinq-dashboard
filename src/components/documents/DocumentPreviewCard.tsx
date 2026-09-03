@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Maximize2, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { XlsxPreview } from './XlsxPreview';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface DocumentPreviewCardProps {
   doc: {
@@ -191,7 +192,13 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
       {/* Preview body — content adapts to file type */}
       <div className="bg-muted/10">
         {!url && (
-          <EmptyState message="Preview unavailable — file URL not loaded yet." />
+          <EmptyState
+            className="min-h-[420px]"
+            variant="plain"
+            icon={FileText}
+            title="Preview unavailable"
+            description="The file URL has not loaded yet."
+          />
         )}
         {url && isImage && (
           <div className="flex items-center justify-center min-h-[420px] max-h-[640px] p-4">
@@ -209,7 +216,13 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
           </div>
         )}
         {url && isPdf && pdfError && (
-          <EmptyState message="Could not load PDF preview. Use Full view or Download." />
+          <EmptyState
+            className="min-h-[420px]"
+            variant="plain"
+            icon={FileText}
+            title="Could not load the PDF preview"
+            description="Use Full view or Download instead."
+          />
         )}
         {url && isPdf && pdfBlobUrl && (
           <iframe
@@ -225,18 +238,25 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
           </div>
         )}
         {url && !isImage && !isPdf && !isXlsx && (
-          <EmptyState message={`No inline preview for .${ext || 'unknown'} files. Use Full view or Download.`} />
+          <EmptyState
+            className="min-h-[420px]"
+            variant="plain"
+            icon={FileText}
+            title={`No inline preview for .${ext || 'unknown'} files`}
+            description="Use Full view or Download instead."
+          />
         )}
       </div>
     </div>
   );
 };
 
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[420px] gap-3 text-muted-foreground">
-      <FileText className="w-8 h-8" strokeWidth={1.5} />
-      <p className="text-sm">{message}</p>
-    </div>
-  );
-}
+/*
+  The local `EmptyState` that used to live here is gone.
+
+  It shadowed `@/components/ui/empty-state` by name while rendering something
+  different: one grey `text-sm` line, where the shared component draws a
+  `font-medium text-foreground` title above a `text-xs` description. Two
+  blocks called the same thing, looking different, on adjacent screens — part
+  of why the empty states across the app read as unrelated components.
+*/

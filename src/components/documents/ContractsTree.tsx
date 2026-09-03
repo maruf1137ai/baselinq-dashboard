@@ -512,7 +512,7 @@ export function ContractsTree({ projectId, documents, onDocumentClick, onViewReg
       <EmptyState
         icon={FolderIcon}
         title="No contract folders yet"
-        description="Contract documents are filed here by folder. If you expect to see folders, your project administrator may not have granted you access to them."
+        description="Filed here by folder. Your administrator may not have granted you access."
       />
     );
   }

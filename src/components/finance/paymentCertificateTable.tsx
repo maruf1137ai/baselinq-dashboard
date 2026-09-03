@@ -34,17 +34,7 @@ import {
 } from "../ui/alert-dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
-import {
-  AlertTriangle,
-  MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Send,
-  CheckCircle2,
-  XCircle,
-  Ban,
-} from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, ReceiptText, SearchX, Send, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
@@ -1296,6 +1286,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                 <td colSpan={HEADERS.length}>
                   {search ? (
                     <EmptyState
+              icon={SearchX}
                       variant="plain"
                       size="sm"
                       title="No payment certificates match this search"
@@ -1303,10 +1294,11 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                     />
                   ) : (
                     <EmptyState
+              icon={ReceiptText}
                       variant="plain"
                       size="sm"
                       title="No payment certificates issued yet"
-                      description="Certificates appear here once a payment claim is assessed, showing the amount certified, retention held and net due."
+                      description="Certificates appear here once a payment claim is assessed."
                     />
                   )}
                 </td>

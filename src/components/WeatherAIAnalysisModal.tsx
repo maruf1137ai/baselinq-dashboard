@@ -117,7 +117,7 @@ const WeatherAIAnalysisModal = ({ open, onOpenChange, project }: WeatherAIAnalys
 
         {/* Header AI narrative — reads project features + headline weather risk */}
         {data?.ai_project_header && (
-          <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 text-sm text-foreground">
+          <div className="rounded-xl border border-primary/10 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 text-sm text-foreground">
             <div className="flex items-center gap-2 mb-1.5 text-xs font-medium text-primary">
               <AiMark className="h-3.5 w-3.5" />
               AI project weather brief
@@ -307,7 +307,7 @@ const Metric = ({ icon, label, value }: { icon: ReactNode; label: string; value:
 );
 
 const AiNote = ({ text }: { text: string }) => (
-  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 text-sm text-foreground">
+  <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 text-sm text-foreground">
     <div className="flex items-center gap-2 mb-1.5 text-xs font-medium text-primary">
       <AiMark className="h-3.5 w-3.5" />
       AI analysis

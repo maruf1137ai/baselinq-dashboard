@@ -29,7 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, string> = {
   planned: "text-gray-600 bg-muted border-border",
-  in_progress: "text-purple-700 bg-purple-50 border-purple-200",
+  in_progress: "text-primary bg-primary/5 border-primary/20",
   completed: "text-green-600 bg-green-50 border-green-200",
   delayed: "text-red-600 bg-red-50 border-red-200",
 };

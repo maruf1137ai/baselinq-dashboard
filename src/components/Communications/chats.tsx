@@ -215,12 +215,12 @@ export default function Chats() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Type a message…"
-                className="flex-1 rounded-xl border border-border px-4 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-200 min-w-0"
+                className="flex-1 rounded-xl border border-border px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
               />
 
               <button
                 onClick={handleSend}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 disabled:opacity-60"
+                className="bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary disabled:opacity-60"
                 disabled={!text.trim() && files.length === 0}>
                 Send
               </button>

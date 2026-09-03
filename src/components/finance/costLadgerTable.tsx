@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Category, LedgerEntry } from "./costLadger";
-import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Receipt, SearchX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -176,7 +176,7 @@ const categoryColors: Record<string, string> = {
   [Category?.Materials]: "bg-amber-50 text-amber-700 border-amber-200",
   [Category?.PlantEquipment]: "bg-amber-50 text-amber-700 border-amber-200",
   [Category?.Labour]: "bg-green-50 text-green-700 border-green-200",
-  [Category?.ProfessionalFees]: "bg-purple-50 text-purple-700 border-purple-200",
+  [Category?.ProfessionalFees]: "bg-primary/5 text-primary border-primary/20",
   [Category?.Preliminaries]: "bg-cyan-50 text-cyan-700 border-cyan-200",
   [Category?.Contingency]: "bg-red-50 text-red-700 border-red-200",
   [Category?.Other]: "bg-muted text-muted-foreground border-border",
@@ -260,6 +260,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                 <td colSpan={9}>
                   {search ? (
                     <EmptyState
+              icon={SearchX}
                       variant="plain"
                       size="sm"
                       title="No ledger entries match this search"
@@ -267,10 +268,11 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                     />
                   ) : (
                     <EmptyState
+              icon={Receipt}
                       variant="plain"
                       size="sm"
                       title="No cost ledger entries yet"
-                      description="Committed and incurred cost is recorded here, linked to the variation orders and payment certificates it arises from."
+                      description="Committed and incurred cost, linked to the variation or certificate it arises from."
                     />
                   )}
                 </td>

@@ -143,7 +143,7 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
       <EmptyState
         icon={Banknote}
         title="No commercial position recorded"
-        description="This project has no contract sum and no payment certificates yet. The financial position will appear once either is captured."
+        description="No contract sum or certificates yet. The position appears once either is captured."
       />
     );
   }

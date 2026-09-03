@@ -252,22 +252,22 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
 
       {/* Verify Section - Show if Actioned and user is creator */}
       {decisionTimeline === "Actioned" && isCreator && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-5">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-5">
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-purple-600 mt-0.5 shrink-0" />
-              <h3 className="text-sm font-medium text-purple-900">Verify Completion</h3>
+              <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <h3 className="text-sm font-medium text-foreground">Verify Completion</h3>
             </div>
 
             <div className="space-y-3 pl-8">
-              <p className="text-sm text-purple-800">
+              <p className="text-sm text-foreground">
                 Review the feedback below and verify that this Site Instruction has been completed satisfactorily.
               </p>
 
               {formFields.feedbackText && (
                 <div className="bg-card rounded-lg p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">
+                    <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
                       Implementation Feedback
                     </label>
                     {formFields.feedbackBy && formFields.feedbackAt && (
@@ -288,7 +288,7 @@ export const TaskSI: React.FC<TaskSIProps> = ({ formFields, task, onRefresh }) =
               <Button
                 onClick={handleVerify}
                 disabled={loading}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full bg-primary hover:bg-primary text-white"
                 size="lg"
               >
                 {loading ? "Verifying..." : "Verify SI Completion"}

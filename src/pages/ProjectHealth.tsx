@@ -263,7 +263,7 @@ export default function ProjectHealth() {
           <EmptyState
             icon={ShieldAlert}
             title="Risk data unavailable"
-            description="The risk service did not respond. This page cannot confirm the project's risk posture — treat it as unknown, not as healthy."
+            description="The risk service did not respond. Treat the posture as unknown, not healthy."
           />
         </div>
       </DashboardLayout>
@@ -271,7 +271,7 @@ export default function ProjectHealth() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout overflow="overflow-auto no-scrollbar">
       {/* No padding or max-width here: DashboardLayout already applies p-6,
           and every other page runs full width with a plain space-y-6 wrapper. */}
       <div className="space-y-6">
@@ -426,7 +426,7 @@ export default function ProjectHealth() {
                   // Not "everything is within tolerance". A rule with no
                   // milestones, no certificates and no variations to read
                   // produces this same empty list.
-                  description="No rule fired against this project. That is not the same as a clear project — a rule with nothing to read reports nothing."
+                  description="No rule fired. That is not the same as a clear project."
                 />
               )}
             </>

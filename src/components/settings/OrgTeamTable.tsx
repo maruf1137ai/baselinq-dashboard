@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MoreHorizontal, User as UserIcon, Mail, X, Check, Trash2, Shield, Plus, Clock } from "lucide-react";
+import { Check, Clock, Mail, MoreHorizontal, Plus, Shield, Trash2, User as UserIcon, Users, X } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fetchData, postData, deleteData, patchData } from "@/lib/Api";
 import { toast } from "sonner";
@@ -373,6 +373,7 @@ const OrgTeamTable = () => {
                 <tr>
                   <td colSpan={isOrgOwner ? 4 : 3}>
                     <EmptyState
+              icon={Users}
                       variant="plain"
                       size="sm"
                       title="You're the only person in this organisation"

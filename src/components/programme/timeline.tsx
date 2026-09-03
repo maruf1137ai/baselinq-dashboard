@@ -108,7 +108,7 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
             variant="plain"
             icon={Calendar}
             title="No programme phases yet"
-            description="Add phases on the Milestones tab and they'll plot here against the contract dates, so delay and extension-of-time claims can be measured against a baseline."
+            description="Add phases on the Milestones tab and they plot here against the contract dates."
           />
         ) : (
           <div style={{ minWidth: 600 }}>

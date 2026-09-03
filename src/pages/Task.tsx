@@ -104,7 +104,7 @@ const getEntityStatusForColumn = (column: string, taskType: string): string => {
 
 // Document type text color mapping
 const DOC_TYPE_TEXT_COLORS: Record<string, string> = {
-  VO: 'text-purple-600',
+  VO: 'text-primary',
   RFI: 'text-blue-600',
   SI: 'text-green-600',
   DC: 'text-amber-600',
@@ -277,8 +277,10 @@ function TaskCard({ task, isDragging, currentUserId, notifications }: any) {
     return task.due_date ? formatDate(task.due_date) : '';
   })();
 
-  // Is this task resolved/done?
-  const isResolved = ['done', 'closed', 'approved'].includes((task.status || '').toLowerCase());
+  // Is this task resolved/done? Must match backend's RESOLVED_STATUSES
+  // (tasks/escalation.py) or an "in review" task will pass this gate and
+  // get a doomed escalate POST rejected with 400 "resolved".
+  const isResolved = ['done', 'closed', 'approved', 'in review'].includes((task.status || '').toLowerCase());
 
   // Escalation level: 0=on track, 1=SLA breached (0-3d), 2=escalated to PM (3-7d)
   // Only apply to non-resolved tasks

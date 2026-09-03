@@ -153,7 +153,16 @@ describe("when the deadlines cannot be loaded", () => {
     render(<TimeBarsTab projectId="1" />);
 
     expect(screen.getByText("Notice deadlines could not be loaded")).toBeInTheDocument();
-    expect(screen.getByText(/not a statement that there are none/i)).toBeInTheDocument();
+    /*
+      The copy was shortened — "This is not a statement that there are none —
+      nothing below has been checked" became "Nothing below has been checked"
+      — so the literal phrase this matched is gone. What the assertion is FOR
+      is unchanged and still the point of the test: an outage must not read as
+      an all-clear, so the block has to say the list was never checked rather
+      than that it is empty.
+    */
+    expect(screen.getByText(/nothing below has been checked/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no notice deadlines (yet|recorded)/i)).not.toBeInTheDocument();
     expect(screen.queryByText("No deadlines tracked")).not.toBeInTheDocument();
   });
 

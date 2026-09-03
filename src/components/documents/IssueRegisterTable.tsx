@@ -135,7 +135,7 @@ export function IssueRegisterTable({ folderId, projectId }: IssueRegisterTablePr
       <EmptyState
         icon={FileText}
         title="No documents in this folder yet"
-        description="The issue register tracks each revision issued and to whom, so you can prove what was in circulation on any date."
+        description="Each revision issued, and to whom, so you can prove what was in circulation."
       />
     );
   }
