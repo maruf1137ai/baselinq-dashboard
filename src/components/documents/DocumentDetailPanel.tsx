@@ -58,13 +58,13 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
           <SheetHeader className="px-6 py-4 border-b border-border bg-muted/50 shrink-0">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-purple-600" />
+                <div className="h-12 w-12 bg-primary/5 rounded-xl flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <SheetTitle>{document.name}</SheetTitle>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-0 font-normal">
+                    <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-0 font-normal">
                       {document.reference}
                     </Badge>
                     <span className="text-sm text-gray-400">• v{document.version}</span>

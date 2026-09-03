@@ -45,10 +45,20 @@ function walk(dir: string): string[] {
 }
 
 const SRC = join(process.cwd(), "src");
-const files = walk(SRC).map((f) => ({
-  name: f.replace(SRC + "/", ""),
-  src: readFileSync(f, "utf8"),
-}));
+/*
+  Files holding a CATEGORICAL scale, exempt by name.
+
+  `DocumentTable` maps thirteen disciplines to thirteen swatches. Green there
+  does not mean "good", it means "Mechanical" — so it needs more hues than
+  the four semantic ones, and merging its duplicates is actively wrong: doing
+  exactly that collapsed Mechanical onto Environmental and Health & Safety
+  onto Architectural, rendering two pairs of disciplines identically.
+*/
+const CATEGORICAL = new Set(["components/documents/DocumentTable.tsx"]);
+
+const files = walk(SRC)
+  .map((f) => ({ name: f.replace(SRC + "/", ""), src: readFileSync(f, "utf8") }))
+  .filter((f) => !CATEGORICAL.has(f.name));
 
 /** Retired hue -> the hue that already carries that meaning. */
 const RETIRED: Record<string, string> = {

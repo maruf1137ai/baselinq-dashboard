@@ -34,7 +34,7 @@ export function LifecycleBadge({ status }: { status: LifecycleStatus }) {
 
 export function ArtefactBadge({ artefactStatus }: { artefactStatus: ArtefactStatus }) {
   if (artefactStatus === "notes_ready") {
-    return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-0.5 rounded-full">Notes ready</Badge>;
+    return <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-xs px-2 py-0.5 rounded-full">Notes ready</Badge>;
   }
   if (artefactStatus === "transcribed") {
     return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 rounded-full">Transcribed</Badge>;

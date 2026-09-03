@@ -70,7 +70,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                     <p className="text-xs text-destructive font-medium mt-1 uppercase">Target: {value.completion_date}</p>
                   )}
                   {value.owner && (
-                    <p className="text-xs text-indigo-600 font-medium mt-1 uppercase">Owner: {value.owner}</p>
+                    <p className="text-xs text-primary font-medium mt-1 uppercase">Owner: {value.owner}</p>
                   )}
                 </div>
               ))}
@@ -81,29 +81,29 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
 
       {data.extension_of_time_analysis && (
         <div className={sectionClass(visibleSections, 4)}>
-          <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-xl">
-            <h4 className="text-base text-indigo-900 mb-5 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-indigo-600" />EOT & Delay Assessment
+          <div className="p-6 bg-primary/5 border border-primary/10 rounded-xl">
+            <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />EOT & Delay Assessment
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-card rounded-lg">
-                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Entitlement</p>
-                <Badge className={`${data.extension_of_time_analysis.eot_entitlement.entitled === 'yes' ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'}`}>
+                <p className="text-xs font-medium text-primary normal-case mb-2">Entitlement</p>
+                <Badge className={`${data.extension_of_time_analysis.eot_entitlement.entitled === 'yes' ? 'bg-green-600 text-white' : 'bg-primary text-white'}`}>
                   {data.extension_of_time_analysis.eot_entitlement.entitled.toUpperCase()}
                 </Badge>
                 {data.extension_of_time_analysis.eot_entitlement.clause_reference && (
-                  <p className="text-xs text-indigo-500 mt-1">Ref: {data.extension_of_time_analysis.eot_entitlement.clause_reference}</p>
+                  <p className="text-xs text-primary mt-1">Ref: {data.extension_of_time_analysis.eot_entitlement.clause_reference}</p>
                 )}
-                <p className="text-xs text-indigo-600 mt-2 font-medium">{data.extension_of_time_analysis.eot_entitlement.grounds}</p>
+                <p className="text-xs text-primary mt-2 font-medium">{data.extension_of_time_analysis.eot_entitlement.grounds}</p>
                 <p className="text-xs text-gray-500 mt-1 italic">{data.extension_of_time_analysis.eot_entitlement.finding}</p>
               </div>
               <div className="p-4 bg-card rounded-lg">
-                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Notice Requirements</p>
+                <p className="text-xs font-medium text-primary normal-case mb-2">Notice Requirements</p>
                 <p className="text-sm font-medium text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
                 {data.extension_of_time_analysis.notice_requirements.clause_reference && (
-                  <p className="text-xs text-indigo-500">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference}</p>
+                  <p className="text-xs text-primary">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference}</p>
                 )}
-                <p className="text-xs text-indigo-600 mt-1">{data.extension_of_time_analysis.notice_requirements.procedure}</p>
+                <p className="text-xs text-primary mt-1">{data.extension_of_time_analysis.notice_requirements.procedure}</p>
                 <p className="text-xs text-gray-500 mt-1">{data.extension_of_time_analysis.notice_requirements.finding}</p>
               </div>
             </div>
@@ -126,10 +126,10 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 )}
                 <p className="text-xs text-red-600">{data.potential_implications.liquidated_damages.assessment}</p>
               </div>
-              <div className="p-4 bg-indigo-50 rounded-lg">
-                <p className="text-xs font-medium text-indigo-700 normal-case mb-2">Acceleration</p>
-                <Badge className="bg-indigo-600 text-white mb-2">{data.potential_implications.acceleration.applicable ? 'APPLICABLE' : 'N/A'}</Badge>
-                <p className="text-xs text-indigo-600">{data.potential_implications.acceleration.assessment}</p>
+              <div className="p-4 bg-primary/5 rounded-lg">
+                <p className="text-xs font-medium text-primary normal-case mb-2">Acceleration</p>
+                <Badge className="bg-primary text-white mb-2">{data.potential_implications.acceleration.applicable ? 'APPLICABLE' : 'N/A'}</Badge>
+                <p className="text-xs text-primary">{data.potential_implications.acceleration.assessment}</p>
               </div>
             </div>
 

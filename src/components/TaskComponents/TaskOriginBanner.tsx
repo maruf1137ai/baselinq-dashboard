@@ -73,13 +73,13 @@ export function TaskOriginBanner({ entityType, entityId }: Props) {
   };
 
   return (
-    <Card className="p-0 bg-indigo-50/40 border-indigo-200 rounded-lg overflow-hidden mb-3">
+    <Card className="p-0 bg-primary/5 border-primary/20 rounded-lg overflow-hidden mb-3">
       <div className="px-4 py-3 flex items-start gap-3">
-        <div className="w-8 h-8 rounded-md bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
-          <Link2 className="h-4 w-4 text-indigo-700" />
+        <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+          <Link2 className="h-4 w-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-indigo-900">
+          <p className="text-sm text-foreground">
             Auto-created from{" "}
             <button
               type="button"
@@ -91,7 +91,7 @@ export function TaskOriginBanner({ entityType, entityId }: Props) {
             </button>
             .
           </p>
-          <p className="text-xs text-indigo-800/80 mt-0.5">
+          <p className="text-xs text-foreground mt-0.5">
             This doc was escalated from the {sourceLabel.toLowerCase()} above. Review the
             source for context before completing or signing.
           </p>

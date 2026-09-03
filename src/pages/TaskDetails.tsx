@@ -1614,7 +1614,7 @@ export default function TaskDetails() {
       TiptapLink.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: "text-indigo-600 underline cursor-pointer",
+          class: "text-primary underline cursor-pointer",
         },
       }),
       Placeholder.configure({
@@ -2979,7 +2979,7 @@ export default function TaskDetails() {
                 </div>
 
                 {/* Editor */}
-                <div className="bg-muted rounded-lg border-border focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent relative">
+                <div className="bg-muted rounded-lg border-border focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent relative">
                   {isLoadingAI && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50 rounded-lg">
                       <div className="ai-orb-loader">

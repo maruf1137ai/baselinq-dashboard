@@ -238,7 +238,7 @@ export default function RightSideDrawer() {
 
                   <button
                     disabled={!isAllComplete}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white text-base font-medium rounded-lg shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary text-white text-base font-medium rounded-lg shadow-sm hover:bg-primary disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors">
                     <CircleCheck className="h-4 w-4" />
                     Mark Complete
                   </button>

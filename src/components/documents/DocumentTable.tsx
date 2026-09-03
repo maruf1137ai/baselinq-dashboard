@@ -78,11 +78,30 @@ interface DocumentTableProps {
 }
 
 // Discipline chip colors — kept subtle so they don't overpower the table.
+/*
+  ── This map is a CATEGORICAL scale, and is exempt from the one-hue-per-
+     meaning rule in `palette.test.ts` ──────────────────────────────────
+
+  Thirteen disciplines, each needing a swatch a reader can tell apart from
+  the other twelve. That is a different job from a status colour: green
+  does not mean "good" here, it means "Mechanical".
+
+  A sweep that merged the semantic duplicates (emerald->green, orange->amber)
+  was run across the whole source and hit this map too, which collapsed
+  Mechanical onto Environmental and Health & Safety onto Architectural —
+  two pairs of disciplines that then rendered identically. Both are restored,
+  and `palette.test.ts` exempts this file by name so the merge cannot take
+  them again.
+
+  Everything here still sits on the same 50 fill / 100 border / 500 dot /
+  700 ink ramp as the rest of the product, which is what makes a categorical
+  swatch look like part of the same system rather than a loose colour.
+*/
 const DISCIPLINE_CHIP: Record<string, { bg: string; fg: string; border: string; dot: string }> = {
   Architectural:            { bg: 'bg-amber-50',   fg: 'text-amber-700',   border: 'border-amber-100',   dot: 'bg-amber-500' },
   Structural:               { bg: 'bg-blue-50',    fg: 'text-blue-700',    border: 'border-blue-100',    dot: 'bg-blue-500' },
   Civil:                    { bg: 'bg-muted/50',   fg: 'text-gray-700',   border: 'border-border',   dot: 'bg-gray-500' },
-  'Mechanical (MEP)':       { bg: 'bg-green-50', fg: 'text-green-700', border: 'border-green-100', dot: 'bg-green-500' },
+  'Mechanical (MEP)':       { bg: 'bg-emerald-50', fg: 'text-emerald-700', border: 'border-emerald-100', dot: 'bg-emerald-500' },
   'Electrical (MEP)':       { bg: 'bg-teal-50',    fg: 'text-teal-700',    border: 'border-teal-100',    dot: 'bg-teal-500' },
   'Plumbing (MEP)':         { bg: 'bg-cyan-50',    fg: 'text-cyan-700',    border: 'border-cyan-100',    dot: 'bg-cyan-500' },
   'Quantity Surveying':     { bg: 'bg-violet-50',  fg: 'text-violet-700',  border: 'border-violet-100',  dot: 'bg-violet-500' },
@@ -92,7 +111,7 @@ const DISCIPLINE_CHIP: Record<string, { bg: string; fg: string; border: string; 
   'Interior Design':        { bg: 'bg-pink-50',    fg: 'text-pink-700',    border: 'border-pink-100',    dot: 'bg-pink-500' },
   Environmental:            { bg: 'bg-green-50',   fg: 'text-green-700',   border: 'border-green-100',   dot: 'bg-green-500' },
   Geotechnical:             { bg: 'bg-stone-50',   fg: 'text-stone-700',   border: 'border-stone-200',   dot: 'bg-stone-500' },
-  'Health & Safety':        { bg: 'bg-amber-50',  fg: 'text-amber-700',  border: 'border-amber-100',  dot: 'bg-amber-500' },
+  'Health & Safety':        { bg: 'bg-orange-50',  fg: 'text-orange-700',  border: 'border-orange-100',  dot: 'bg-orange-500' },
   Legal:                    { bg: 'bg-purple-50',  fg: 'text-purple-700',  border: 'border-purple-100',  dot: 'bg-purple-500' },
 };
 
