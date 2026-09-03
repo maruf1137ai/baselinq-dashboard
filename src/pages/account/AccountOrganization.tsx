@@ -438,7 +438,7 @@ const AccountOrganization = () => {
               size="sm"
               icon={Users}
               title="No team members yet"
-              description="Invite the people who administer this contract — each one's actions are recorded against their name in the audit trail."
+              description="Invite the people who administer this contract."
             />
           ) : (
             <div className="space-y-2">

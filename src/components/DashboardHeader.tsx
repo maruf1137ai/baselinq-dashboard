@@ -278,7 +278,7 @@ export function DashboardHeader() {
                 size="sm"
                 icon={BellOff}
                 title="You're up to date"
-                description="New instructions, variations, certificates and notice deadlines will appear here as they are raised on your projects."
+                description="Instructions, variations, certificates and deadlines appear here as they are raised."
               />
             ) : (
               notifications.map((item) => (

@@ -165,7 +165,7 @@ export function ContractTermsPanel({
           size="sm"
           icon={AiMark as any}
           title="No contract terms extracted yet"
-          description="Extract commencement date, contract period, penalty rate, retention and other Contract Data facts as structured, confirmable fields — instead of prose buried in findings."
+          description="Extract dates, periods, rates and retention as confirmable fields."
           action={
             <Button
               size="sm"
@@ -185,7 +185,7 @@ export function ContractTermsPanel({
           size="sm"
           icon={AiMark as any}
           title="No Contract Data terms found"
-          description="The extraction ran but found no explicit dates, rates or amounts in the indexed pages. This document may not contain a Contract Data / Schedule section."
+          description="The extraction found no explicit dates, rates or amounts in this document."
         />
       )}
 

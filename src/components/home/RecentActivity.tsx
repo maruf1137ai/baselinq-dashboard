@@ -1,3 +1,4 @@
+import { Activity } from "lucide-react";
 /**
  * Recent activity — the old feed, restored.
  *
@@ -146,6 +147,7 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
       emphasis="primary">
         <div className="p-4">
           <EmptyState
+              icon={Activity}
             variant="plain"
             size="sm"
             title="No activity recorded yet"

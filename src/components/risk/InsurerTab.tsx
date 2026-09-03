@@ -145,7 +145,7 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
           <EmptyState
             icon={KeyRound}
             title="No keys issued"
-            description="Issue a key to give an insurer or broker read access — it discloses nothing until disclosure is switched on above."
+            description="Issue a key for read access. It discloses nothing until disclosure is on."
             variant="plain"
             size="sm"
           />

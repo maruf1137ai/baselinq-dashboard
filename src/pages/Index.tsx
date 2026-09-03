@@ -160,7 +160,7 @@ const Index = () => {
             <EmptyState
               icon={FolderOpen}
               title="No projects yet"
-              description="A project is where contract administration lives — instructions, variations, certificates and the documents behind them."
+              description="Where instructions, variations, certificates and their documents live."
               action={
                 <Button size="sm" onClick={() => navigate("/create-project")}>
                   Create your first project

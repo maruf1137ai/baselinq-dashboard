@@ -516,7 +516,7 @@ const Compliance = () => {
             <EmptyState
               icon={Shield}
               title="No contractual obligations tracked yet"
-              description="Obligations appear here once extracted from a document or added manually — with the date they fall due. Missing one can forfeit a claim or hold up a payment certificate."
+              description="Obligations appear once extracted or added, with the date they fall due."
               action={
                 <Button size="sm" onClick={() => setCreateOpen(true)}>
                   Track obligation
