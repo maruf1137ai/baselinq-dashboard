@@ -104,7 +104,7 @@ const getEntityStatusForColumn = (column: string, taskType: string): string => {
 
 // Document type text color mapping
 const DOC_TYPE_TEXT_COLORS: Record<string, string> = {
-  VO: 'text-purple-600',
+  VO: 'text-primary',
   RFI: 'text-blue-600',
   SI: 'text-green-600',
   DC: 'text-amber-600',

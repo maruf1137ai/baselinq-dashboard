@@ -111,10 +111,10 @@ const MediaTile = ({
     <button
       type="button"
       onClick={() => file.url && window.open(file.url, "_blank")}
-      className="relative aspect-square rounded-lg overflow-hidden border border-border bg-purple-50 flex items-center justify-center group"
+      className="relative aspect-square rounded-lg overflow-hidden border border-border bg-primary/5 flex items-center justify-center group"
       title={file.name}
     >
-      <FileAudio className="h-6 w-6 text-purple-500 group-hover:scale-110 transition-transform" />
+      <FileAudio className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
       <span className="absolute bottom-1 left-1 text-xs px-1 rounded bg-black/50 text-white">Audio</span>
     </button>
   );

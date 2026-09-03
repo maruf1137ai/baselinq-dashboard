@@ -177,13 +177,13 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
 
               <div className="grid grid-cols-2 gap-4">
                 {data.valuation_assessment.new_rates_permitted && (
-                  <div className="p-4 bg-indigo-50 rounded-lg">
-                    <p className="text-xs font-medium text-indigo-700 normal-case mb-2">New Rates Permitted</p>
+                  <div className="p-4 bg-primary/5 rounded-lg">
+                    <p className="text-xs font-medium text-primary normal-case mb-2">New Rates Permitted</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.new_rates_permitted.permitted ? "YES" : "NO"}</p>
                     {data.valuation_assessment.new_rates_permitted.clause_reference && (
-                      <p className="text-xs text-indigo-500">Ref: {data.valuation_assessment.new_rates_permitted.clause_reference}</p>
+                      <p className="text-xs text-primary">Ref: {data.valuation_assessment.new_rates_permitted.clause_reference}</p>
                     )}
-                    <p className="text-xs text-indigo-600 mt-1 italic">{data.valuation_assessment.new_rates_permitted.conditions}</p>
+                    <p className="text-xs text-primary mt-1 italic">{data.valuation_assessment.new_rates_permitted.conditions}</p>
                   </div>
                 )}
                 {data.valuation_assessment.threshold_triggered && (

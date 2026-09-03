@@ -176,7 +176,7 @@ const categoryColors: Record<string, string> = {
   [Category?.Materials]: "bg-amber-50 text-amber-700 border-amber-200",
   [Category?.PlantEquipment]: "bg-amber-50 text-amber-700 border-amber-200",
   [Category?.Labour]: "bg-green-50 text-green-700 border-green-200",
-  [Category?.ProfessionalFees]: "bg-purple-50 text-purple-700 border-purple-200",
+  [Category?.ProfessionalFees]: "bg-primary/5 text-primary border-primary/20",
   [Category?.Preliminaries]: "bg-cyan-50 text-cyan-700 border-cyan-200",
   [Category?.Contingency]: "bg-red-50 text-red-700 border-red-200",
   [Category?.Other]: "bg-muted text-muted-foreground border-border",

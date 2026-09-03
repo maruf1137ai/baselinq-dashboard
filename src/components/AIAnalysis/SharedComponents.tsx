@@ -145,12 +145,12 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
     <div className="mt-8 space-y-6">
       {data.recommendations && (
         <div className={sectionClass(visibleSections, startSelector)}>
-          <div className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
+          <div className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-primary/20">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary" />Recommendations</h4>
             <div className="grid grid-cols-2 gap-6">
               {data.recommendations.for_employer && (
                 <div>
-                  <p className="text-xs font-medium text-indigo-700 normal-case mb-3">For Employer</p>
+                  <p className="text-xs font-medium text-primary normal-case mb-3">For Employer</p>
                   <ul className="space-y-2">
                     {data.recommendations.for_employer.map((rec: string, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
@@ -163,7 +163,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
               )}
               {data.recommendations.for_contractor && (
                 <div>
-                  <p className="text-xs font-medium text-purple-700 normal-case mb-3">For Contractor</p>
+                  <p className="text-xs font-medium text-primary normal-case mb-3">For Contractor</p>
                   <ul className="space-y-2">
                     {data.recommendations.for_contractor.map((rec: string, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">

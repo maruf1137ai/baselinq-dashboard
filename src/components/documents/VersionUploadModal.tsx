@@ -139,11 +139,11 @@ export const VersionUploadModal: React.FC<VersionUploadModalProps> = ({ isOpen, 
               <div className="p-4 rounded-xl border border-border bg-card shadow-sm flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                    <div className="h-10 w-10 bg-primary/5 rounded-lg flex items-center justify-center">
                       {entry.status === 'error' ? (
                         <AlertCircle className="h-5 w-5 text-red-500" />
                       ) : (
-                        <FileText className="h-5 w-5 text-purple-600" />
+                        <FileText className="h-5 w-5 text-primary" />
                       )}
                     </div>
                     <div>

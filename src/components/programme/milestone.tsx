@@ -48,7 +48,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "text-gray-600 bg-muted",
-  in_progress: "text-purple-700 bg-purple-100",
+  in_progress: "text-primary bg-primary/10",
   completed: "text-green-700 bg-green-100",
   delayed: "text-red-700 bg-red-100",
 };

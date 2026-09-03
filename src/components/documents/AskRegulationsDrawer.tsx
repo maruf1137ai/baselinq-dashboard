@@ -271,7 +271,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                             ol: ({ children }) => <ol className="list-decimal list-outside space-y-2 my-3 ml-4 font-normal">{children}</ol>,
                             li: ({ children }) => <li className="text-sm leading-relaxed text-gray-700 pl-1 font-normal">{children}</li>,
                             blockquote: ({ children }) => (
-                              <blockquote className="border-l-3 border-purple-300 bg-purple-50/50 pl-4 pr-3 py-2 my-3 rounded-r-lg text-sm italic text-gray-600">
+                              <blockquote className="border-l-3 border-primary/20 bg-primary/5 pl-4 pr-3 py-2 my-3 rounded-r-lg text-sm italic text-gray-600">
                                 {children}
                               </blockquote>
                             ),
@@ -279,13 +279,13 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                             code: ({ children, className }) => {
                               const isInline = !className;
                               return isInline ? (
-                                <code className="bg-muted text-purple-700 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+                                <code className="bg-muted text-primary px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
                               ) : (
                                 <code className="block bg-muted/50 border border-border rounded-lg p-3 text-xs font-mono overflow-x-auto my-2">{children}</code>
                               );
                             },
                             a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-700 underline decoration-purple-300 underline-offset-2">
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary underline decoration-purple-300 underline-offset-2">
                                 {children}
                               </a>
                             ),
