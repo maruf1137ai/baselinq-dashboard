@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, SearchX, MessagesSquare, Plus } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { Input } from "../ui/input";
@@ -196,23 +197,22 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 );
               })}
               {!isLoading && filteredTasks.length === 0 && (
-                <div className="text-center py-8 px-4 text-muted-foreground text-sm">
-                  {searchQuery ? (
-                    <>
-                      <p>No channels match this search</p>
-                      <p className="text-xs mt-1 leading-relaxed">
-                        Try the item reference instead, or clear the search.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p>No channels yet</p>
-                      <p className="text-xs mt-1 leading-relaxed">
-                        Each instruction, RFI and variation gets its own channel, so correspondence stays attached to the record it concerns.
-                      </p>
-                    </>
-                  )}
-                </div>
+                /* Was hand-rolled: two bare <p>s inheriting the wrapper's
+                   `text-muted-foreground text-sm`, so this title rendered
+                   grey and regular-weight while every other empty state in
+                   the app draws its title in `text-foreground font-medium`.
+                   That is the "different colour and boldness". */
+                <EmptyState
+                  variant="plain"
+                  size="sm"
+                  icon={searchQuery ? SearchX : MessagesSquare}
+                  title={searchQuery ? "No channels match this search" : "No channels yet"}
+                  description={
+                    searchQuery
+                      ? "Try the item reference, or clear the search."
+                      : "Every instruction, RFI and variation gets its own channel."
+                  }
+                />
               )}
             </div>
           </>

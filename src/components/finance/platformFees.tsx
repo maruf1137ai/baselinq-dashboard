@@ -24,15 +24,7 @@
  * `totalAmount` across the array gives a wrong answer, so nothing here does.
  */
 import React, { useMemo, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronRight as DisclosureChevron,
-  FileText,
-  Lock,
-  Receipt,
-  RotateCcw,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronRight as DisclosureChevron, FileText, Lock, Receipt, RotateCcw, SearchX } from "lucide-react";
 import { FinanceToolbar } from "./FinanceToolbar";
 
 import useFetch from "@/hooks/useFetch";
@@ -632,7 +624,7 @@ const PlatformFees: React.FC = () => {
         <EmptyState
           icon={Receipt}
           title="Platform fees could not be loaded"
-          description="The fee ledger did not respond. Reload the page, and if it persists the charges remain recorded against the cost ledger in the meantime."
+          description="The fee ledger did not respond. Charges remain recorded against the cost ledger."
         />
       </main>
     );
@@ -646,7 +638,7 @@ const PlatformFees: React.FC = () => {
         <EmptyState
           icon={Receipt}
           title="Billing is not enabled for this project"
-          description="No platform fee configuration exists here, so nothing has accrued and nothing will. Fees begin accruing on approved variations and posted certificates once billing is switched on for the project."
+          description="No fee configuration here, so nothing has accrued and nothing will."
         />
       </main>
     );
@@ -781,10 +773,11 @@ const PlatformFees: React.FC = () => {
                     <td colSpan={COLUMNS}>
                       {search ? (
                         <EmptyState
+              icon={SearchX}
                           variant="plain"
                           size="sm"
                           title="No charges match this search"
-                          description="Try a different certificate or variation reference, or clear the search to see every fee raised on this project."
+                          description="Try a different reference, or clear the search."
                         />
                       ) : (
                         <EmptyState
@@ -792,7 +785,7 @@ const PlatformFees: React.FC = () => {
                           size="sm"
                           icon={FileText}
                           title="No platform fees have accrued yet"
-                          description="A fee is raised when a variation order is approved or a payment certificate is posted. Nothing has reached either point on this project."
+                          description="A fee is raised when a variation is approved or a certificate posted."
                         />
                       )}
                     </td>

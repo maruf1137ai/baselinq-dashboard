@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { MoreIcon } from "../icons/icons";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDiff, SearchX } from "lucide-react";
 import { UserChip } from "@/components/TaskComponents/UserChip";
 import {
   DropdownMenu,
@@ -199,6 +199,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                 <td colSpan={8}>
                   {search ? (
                     <EmptyState
+              icon={SearchX}
                       variant="plain"
                       size="sm"
                       title="No variation orders match this search"
@@ -206,6 +207,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                     />
                   ) : (
                     <EmptyState
+              icon={FileDiff}
                       variant="plain"
                       size="sm"
                       title="No variation orders yet"

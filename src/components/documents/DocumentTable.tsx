@@ -320,7 +320,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
           variant="plain"
           icon={FileText}
           title="No documents uploaded yet"
-          description="Drawings, specifications and contract documents uploaded to this project appear here with their revision and discipline."
+          description="Drawings, specifications and contract documents, with their revision."
         />
       </div>
     );

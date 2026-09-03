@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Category, LedgerEntry } from "./costLadger";
-import { MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Receipt, SearchX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -260,6 +260,7 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                 <td colSpan={9}>
                   {search ? (
                     <EmptyState
+              icon={SearchX}
                       variant="plain"
                       size="sm"
                       title="No ledger entries match this search"
@@ -267,10 +268,11 @@ const CostLedgerTable: React.FC<CostLedgerTableProps> = ({
                     />
                   ) : (
                     <EmptyState
+              icon={Receipt}
                       variant="plain"
                       size="sm"
                       title="No cost ledger entries yet"
-                      description="Committed and incurred cost is recorded here, linked to the variation orders and payment certificates it arises from."
+                      description="Committed and incurred cost, linked to the variation or certificate it arises from."
                     />
                   )}
                 </td>

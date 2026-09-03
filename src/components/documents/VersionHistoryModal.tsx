@@ -76,7 +76,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
               variant="plain"
               icon={History}
               title="No revisions recorded yet"
-              description="Each upload of this document is kept as a superseded revision, so you can show which version was current on any date."
+              description="Every upload is kept as a superseded revision, so you can show what was current."
             />
           ) : (
             <div className="px-8 py-10 relative">

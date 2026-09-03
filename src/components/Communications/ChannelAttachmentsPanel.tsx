@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Play, Link as LinkIcon, ExternalLink, FileAudio, Paperclip } from "lucide-react";
+import { ExternalLink, FileAudio, Image, Link as LinkIcon, Link2, Paperclip, Play } from "lucide-react";
 import {
   Accordion,
   AccordionItem,
@@ -185,6 +185,7 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
               <TabsContent value="attachments">
                 {attachments.length === 0 ? (
                   <EmptyState
+              icon={Paperclip}
                     variant="plain"
                     size="sm"
                     title="No files shared yet"
@@ -202,6 +203,7 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
               <TabsContent value="media">
                 {media.length === 0 ? (
                   <EmptyState
+              icon={Image}
                     variant="plain"
                     size="sm"
                     title="No photos or video shared yet"
@@ -223,6 +225,7 @@ export const ChannelAttachmentsPanel = ({ messages, onPreview }: ChannelAttachme
               <TabsContent value="links">
                 {links.length === 0 ? (
                   <EmptyState
+              icon={Link2}
                     variant="plain"
                     size="sm"
                     title="No links shared yet"

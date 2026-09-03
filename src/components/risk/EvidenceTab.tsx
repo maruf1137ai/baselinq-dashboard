@@ -105,7 +105,7 @@ export default function EvidenceTab({ projectId }: { projectId: string }) {
         <EmptyState
           icon={FileArchive}
           title="No evidence packs yet"
-          description="Compile one when a claim is notified, so the supporting records are captured as they stand today rather than reconstructed later."
+          description="Compile one when a claim is notified, so records are captured as they stand."
         />
       ) : (
         <div className="space-y-3">

@@ -841,7 +841,7 @@ const DocumentDetail = () => {
                   size="sm"
                   icon={AiMark as unknown as LucideIcon}
                   title="No AI findings yet"
-                  description="Run an analysis to surface missing clauses, notice periods and compliance gaps in this document before they become disputes."
+                  description="Run an analysis to surface missing clauses, notice periods and gaps."
                   action={
                     <Button
                       size="sm"
@@ -945,7 +945,7 @@ const DocumentDetail = () => {
                   size="sm"
                   icon={Link2}
                   title="No linked records yet"
-                  description="Link this document to the site instruction, RFI or variation it relates to, so the paper trail holds together if the claim is ever tested."
+                  description="Link this document to the instruction, RFI or variation it relates to."
                   action={
                     <Button
                       size="sm"
@@ -1070,7 +1070,7 @@ const DocumentDetail = () => {
                   size="sm"
                   icon={CheckCircle2}
                   title="No obligations recorded yet"
-                  description="Obligations are extracted automatically when this version is analyzed, or you can record one manually — notice periods, submissions, approvals — and they sync to the project programme with their due dates."
+                  description="Extracted when this version is analysed, or record one manually."
                   action={
                     <Button
                       size="sm"

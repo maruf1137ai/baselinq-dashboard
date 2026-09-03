@@ -188,7 +188,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           variant="plain"
           icon={Send}
           title="No issue records yet"
-          description="Every issue to site or office is logged here with revision, recipient and date — the record that shows which drawing site was building to."
+          description="Every issue is logged with revision, recipient and date."
           action={
             <Button
               variant="outline"

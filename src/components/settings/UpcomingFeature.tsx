@@ -13,7 +13,7 @@ const UpcomingFeature = ({ title }: UpcomingFeatureProps) => {
         variant="plain"
         icon={Construction}
         title={`${title} is not available yet`}
-        description="This section is still in development. Nothing is missing from your project — there is simply nothing to show here yet."
+        description="Still in development. Nothing is missing from your project."
       />
     </div>
   );

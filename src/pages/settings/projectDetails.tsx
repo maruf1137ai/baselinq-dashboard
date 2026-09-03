@@ -835,7 +835,7 @@ const ProjectDetails = () => {
             size="sm"
             icon={FolderOpen}
             title="No documents yet"
-            description="Contract documents, drawings and specifications attached to this project appear here with their revision history."
+            description="Documents attached to this project, with their revision history."
           />
         )}
       </SectionCard>
