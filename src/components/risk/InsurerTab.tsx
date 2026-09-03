@@ -102,7 +102,14 @@ export default function InsurerTab({ projectId }: { projectId: string }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Insurer disclosure</p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-2xl">
+            {/* No `max-w-2xl`. It capped this paragraph at 672px inside a
+                full-width card, so the most consequential copy on the page —
+                a POPIA and policy-prejudice warning — stopped around 60% of
+                the way across and left a band of empty card beside it. No
+                sibling card caps its text, so the cap read as a rendering
+                fault rather than as a measure. The switch to its right keeps
+                the line from running the full width anyway. */}
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               While this is off, no project data is exposed on any insurer endpoint —
               issued keys return nothing and shared evidence links stop working.
               Before enabling, confirm you have the necessary consent from the other

@@ -403,12 +403,12 @@ const DocumentDetail = () => {
               <span aria-hidden className="mx-1">·</span>
               <span className={cn(
                 "inline-flex items-center gap-1.5",
-                doc.status === 'Active' ? "text-emerald-700" :
+                doc.status === 'Active' ? "text-green-700" :
                   doc.status === 'Archived' ? "text-muted-foreground" : "text-amber-700"
               )}>
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full",
-                  doc.status === 'Active' ? "bg-emerald-500" :
+                  doc.status === 'Active' ? "bg-green-500" :
                     doc.status === 'Archived' ? "bg-muted-foreground" : "bg-amber-500"
                 )} />
                 {doc.status}
@@ -998,7 +998,7 @@ const DocumentDetail = () => {
                   <span className="text-xs text-muted-foreground font-normal">({obligations.length})</span>
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-xs font-normal">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 text-xs font-normal">
                     Auto-synced to Programme
                   </Badge>
                   <Button
@@ -1138,7 +1138,7 @@ const DocumentDetail = () => {
                               )}
                               <Badge className={cn(
                                 "text-xs font-normal border-0 px-2 py-0.5",
-                                ob.status === 'Completed' ? "bg-emerald-50 text-emerald-700" :
+                                ob.status === 'Completed' ? "bg-green-50 text-green-700" :
                                   ob.status === 'Overdue' ? "bg-red-50 text-red-600" :
                                     ob.status === 'In Progress' ? "bg-blue-50 text-blue-600" :
                                       "bg-muted/40 text-muted-foreground"

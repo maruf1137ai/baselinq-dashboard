@@ -13,9 +13,9 @@ const ISSUE_TYPE_CONFIG: Record<
 > = {
   site_copy: {
     label: 'Site Copy',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-100',
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-100',
   },
   office_copy: {
     label: 'Office Copy',
@@ -25,9 +25,9 @@ const ISSUE_TYPE_CONFIG: Record<
   },
   for_construction: {
     label: 'For Construction',
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-100',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-100',
   },
   for_review: {
     label: 'For Review',
@@ -104,7 +104,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
           </div>
           {latestSiteCopy ? (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-medium">
+              <div className="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-medium">
                 {latestSiteCopy.revision}
               </div>
               <div>
@@ -222,7 +222,7 @@ const DrawingIssueTimeline: React.FC<DrawingIssueTimelineProps> = ({
                 className={cn(
                   'grid grid-cols-[2rem_6rem_8rem_1fr_6rem] gap-4 items-center px-4 py-3.5 rounded-xl border transition-all',
                   isLatestSite
-                    ? 'bg-emerald-50/50 border-emerald-100'
+                    ? 'bg-green-50/50 border-green-100'
                     : isLatestOffice
                     ? 'bg-blue-50/30 border-blue-100'
                     : 'bg-card border-border hover:border-border'

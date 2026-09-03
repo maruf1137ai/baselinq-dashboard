@@ -1,7 +1,8 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, User, Users } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { X, User, Users, SlidersHorizontal } from 'lucide-react';
 
 // Werner rev H — full set of contractual doc types per the spec.
 // GI / IC / DC (display: Claim) were missing from the original filter
@@ -89,11 +90,34 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
     filters.messageFilter !== 'all' ||
     filters.myItems;
 
+  /*
+    ── One line, measured ───────────────────────────────────────────────────
+
+    This bar was two stacked rows: the My/All toggle plus eight type chips
+    (36px), then Assignee / Due date / Messages / Clear on a row of their own
+    (32px), plus `pb-6`. 108px in total, which put the board 188px down the
+    page against 80px on Home and Finance.
+
+    The three selects move into a popover. They are REFINEMENTS — a board is
+    usable with none of them set, and the defaults ("All Assignees", "All
+    Dates", "All messages") say so — whereas the toggle and the type chips
+    change what the board IS and are read on every visit. Refinements behind
+    one control, the two things that matter always visible.
+
+    The trigger states how many refinements are active, so nothing is hidden
+    silently: a board filtered to one assignee says "Filters 1" on its face,
+    which the old row could only convey by the reader scanning three selects.
+  */
+  const refinementCount =
+    (filters.assignee !== 'all' ? 1 : 0) +
+    (filters.dateRange !== 'all' ? 1 : 0) +
+    (filters.messageFilter !== 'all' ? 1 : 0);
+
   return (
-    <div className="flex flex-wrap items-center justify-between w-full gap-4 pb-6">
-      <div className="flex items-center gap-4 flex-wrap">
+    <div className="flex items-center justify-between w-full gap-4 pb-6">
+      <div className="flex items-center gap-4 min-w-0 flex-wrap">
         {/* My Items / All Items toggle */}
-        <div className="flex items-center bg-muted rounded-lg p-0.5">
+        <div className="flex items-center bg-muted rounded-lg p-0.5 shrink-0">
           <button
             onClick={() => onFiltersChange({ ...filters, myItems: true })}
             className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs transition-colors ${filters.myItems
@@ -117,7 +141,7 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
 
         {/* Document type chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5">
           {DOC_TYPES.map(type => {
             const isActive = type === 'All' ? allSelected : (!allSelected && filters.docTypes.includes(type));
             const colors = DOC_TYPE_COLORS[type];
@@ -135,61 +159,85 @@ export default function TaskFilterBar({ filters, onFiltersChange, assigneeOption
         </div>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Assignee filter */}
-        <Select
-          value={filters.assignee}
-          onValueChange={val => onFiltersChange({ ...filters, assignee: val })}
-        >
-          <SelectTrigger className="w-[150px] h-8 text-xs border-border bg-card rounded-lg">
-            <SelectValue placeholder="Assignee" />
-          </SelectTrigger>
-          <SelectContent className="bg-card">
-            <SelectItem value="all">All Assignees</SelectItem>
-            {assigneeOptions.map(a => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center gap-2 shrink-0">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs border transition-colors ${
+                refinementCount > 0
+                  ? 'bg-primary/10 text-primary border-primary'
+                  : 'bg-card text-foreground border-border hover:bg-muted/50'
+              }`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filters
+              {refinementCount > 0 && (
+                <span className="tabular-nums font-medium">{refinementCount}</span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-3 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Assignee</label>
+              <Select
+                value={filters.assignee}
+                onValueChange={val => onFiltersChange({ ...filters, assignee: val })}
+              >
+                <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                  <SelectValue placeholder="Assignee" />
+                </SelectTrigger>
+                <SelectContent className="bg-card">
+                  <SelectItem value="all">All Assignees</SelectItem>
+                  {assigneeOptions.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Date range filter */}
-        <Select
-          value={filters.dateRange}
-          onValueChange={val => onFiltersChange({ ...filters, dateRange: val })}
-        >
-          <SelectTrigger className="w-[140px] h-8 text-xs border-border bg-card rounded-lg">
-            <SelectValue placeholder="Due Date" />
-          </SelectTrigger>
-          <SelectContent className="bg-card">
-            <SelectItem value="all">All Dates</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-            <SelectItem value="today">Due Today</SelectItem>
-            <SelectItem value="this_week">Due This Week</SelectItem>
-            <SelectItem value="this_month">Due This Month</SelectItem>
-          </SelectContent>
-        </Select>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Due date</label>
+              <Select
+                value={filters.dateRange}
+                onValueChange={val => onFiltersChange({ ...filters, dateRange: val })}
+              >
+                <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                  <SelectValue placeholder="Due Date" />
+                </SelectTrigger>
+                <SelectContent className="bg-card">
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="today">Due Today</SelectItem>
+                  <SelectItem value="this_week">Due This Week</SelectItem>
+                  <SelectItem value="this_month">Due This Month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Unread messages filter */}
-        <Select
-          value={filters.messageFilter}
-          onValueChange={val => onFiltersChange({ ...filters, messageFilter: val as 'all' | 'unread' })}
-        >
-          <SelectTrigger className="w-[150px] h-8 text-xs border-border bg-card rounded-lg">
-            <SelectValue placeholder="Messages" />
-          </SelectTrigger>
-          <SelectContent className="bg-card">
-            <SelectItem value="all">All messages</SelectItem>
-            <SelectItem value="unread">Unread messages</SelectItem>
-          </SelectContent>
-        </Select>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Messages</label>
+              <Select
+                value={filters.messageFilter}
+                onValueChange={val => onFiltersChange({ ...filters, messageFilter: val as 'all' | 'unread' })}
+              >
+                <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                  <SelectValue placeholder="Messages" />
+                </SelectTrigger>
+                <SelectContent className="bg-card">
+                  <SelectItem value="all">All messages</SelectItem>
+                  <SelectItem value="unread">Unread messages</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </PopoverContent>
+        </Popover>
 
-        {/* Clear filters */}
         {hasActiveFilters && (
           <button
             onClick={() => onFiltersChange(defaultFilters)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
+            className="flex items-center gap-1 px-3 h-8 rounded-lg text-xs text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
           >
             <X className="h-3.5 w-3.5" />
             Clear

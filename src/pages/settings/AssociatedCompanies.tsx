@@ -700,7 +700,7 @@ const AssociatedCompanies = () => {
                               ? "bg-green-600"
                               : hasInsurance && isExpired
                                 ? "bg-amber-500"
-                                : "bg-slate-400"
+                                : "bg-gray-400"
                           )}>
                             <div className="flex items-center gap-2 text-white">
                               {hasInsurance && !isExpired
@@ -723,7 +723,7 @@ const AssociatedCompanies = () => {
                                 ? "bg-green-500 text-white"
                                 : hasInsurance && isExpired
                                   ? "bg-amber-400 text-white"
-                                  : "bg-slate-300 text-slate-600"
+                                  : "bg-gray-300 text-gray-600"
                             )}>
                               {hasInsurance && !isExpired ? "VALID" : hasInsurance && isExpired ? "EXPIRED" : "PENDING"}
                             </span>
@@ -745,7 +745,7 @@ const AssociatedCompanies = () => {
                                   ? "bg-green-100 text-green-600"
                                   : hasInsurance && isExpired
                                     ? "bg-amber-100 text-amber-600"
-                                    : "bg-muted text-slate-400"
+                                    : "bg-muted text-gray-400"
                               )}>
                                 <FileText className="h-4 w-4" />
                               </div>

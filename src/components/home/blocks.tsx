@@ -90,7 +90,7 @@ import { useScrollPagination } from "@/hooks/useScrollPagination";
 const TONE: Record<string, string> = {
   red: "bg-red-50 text-red-700 border-red-200",
   orange: "bg-amber-50 text-amber-700 border-amber-200",
-  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  green: "bg-green-50 text-green-700 border-green-200",
   neutral: "bg-muted text-muted-foreground border-border",
 };
 
@@ -1128,8 +1128,8 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
               days < 0
                 ? "bg-red-50 text-red-600 border-red-200"
                 : days <= 30
-                  ? "bg-orange-50 text-orange-600 border-orange-200"
-                  : "bg-emerald-50 text-emerald-600 border-emerald-200",
+                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                  : "bg-green-50 text-green-600 border-green-200",
             )}
           >
             {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`}

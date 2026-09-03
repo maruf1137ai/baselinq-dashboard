@@ -28,6 +28,7 @@ import Communication from "./icons/Communication";
 import Task from "./icons/Task";
 import SaveMoney from "./icons/SaveMoney";
 import Shield from "./icons/Shield";
+import Pulse from "./icons/Pulse";
 import Meetings from "./icons/Meeting";
 import Programme from "./icons/Programme";
 import Settings from "./icons/Settings";
@@ -52,7 +53,9 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: "viewDocuments" },
   { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
-  { title: "Project Health", url: "/project-health", icon: <Shield />, permission: "viewCompliance" },
+  // Not <Shield /> — Compliance already uses it, and two identical adjacent
+  // nav rows can only be told apart by reading. See `Pulse`.
+  { title: "Project Health", url: "/project-health", icon: <Pulse />, permission: "viewCompliance" },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ];
 

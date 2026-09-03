@@ -366,7 +366,7 @@ const OnboardingDashboard = () => {
                               {isDraft ? (
                                 <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Draft</span>
                               ) : (
-                                <span className="text-xs font-normal text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
+                                <span className="text-xs font-normal text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded uppercase tracking-wider">Active</span>
                               )}
                               {isActive && (
                                 <span className="text-xs font-normal text-primary bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-wider">Current</span>
@@ -412,7 +412,7 @@ const OnboardingDashboard = () => {
                   <div className="flex items-center gap-3 px-3.5 h-10 bg-muted rounded-lg text-sm text-muted-foreground border border-border cursor-not-allowed">
                     <Mail className="h-4 w-4" />
                     {user?.email}
-                    <span className="ml-auto text-xs bg-slate-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
+                    <span className="ml-auto text-xs bg-gray-200 px-1.5 py-0.5 rounded uppercase font-normal tracking-tighter">Verified</span>
                   </div>
                 </Field>
                 <Field label="Phone Number">

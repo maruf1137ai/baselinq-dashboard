@@ -89,6 +89,23 @@ beforeEach(() => {
   });
 });
 
+/**
+ * The "On track" count, read off its filter pill.
+ *
+ * These counts used to render as one string — "2 on track" — and the
+ * assertions matched that literally. They are filter pills now, so the label
+ * and the number are separate elements. The thing being asserted is
+ * unchanged: the counts describe everything that loaded, not what a deep
+ * link named.
+ */
+function onTrackCount(): string {
+  const pill = screen
+    .getAllByRole("button")
+    .find((b) => (b.textContent || "").startsWith("On track"));
+  if (!pill) throw new Error("no On track pill rendered");
+  return (pill.textContent || "").replace("On track", "").trim();
+}
+
 describe("/compliance?obligation=", () => {
   it("opens the obligation the link names", async () => {
     renderCompliance("/compliance?obligation=ob-2");
@@ -114,7 +131,7 @@ describe("/compliance?obligation=", () => {
     expect(screen.getByText("Submit the health and safety plan")).toBeInTheDocument();
     expect(document.querySelector("[data-highlighted]")).toBeNull();
     // The counts still describe all of what loaded, not what the link named.
-    expect(screen.getByText("2 on track")).toBeInTheDocument();
+    expect(onTrackCount()).toBe("2");
     expect(screen.queryByText("No contractual obligations tracked yet")).not.toBeInTheDocument();
   });
 
@@ -133,7 +150,7 @@ describe("/compliance?obligation=", () => {
 
     expect(await screen.findByText("Provide the construction guarantee")).toBeInTheDocument();
     expect(screen.queryByTestId("detail-modal")).not.toBeInTheDocument();
-    expect(screen.getByText("1 on track")).toBeInTheDocument();
+    expect(onTrackCount()).toBe("1");
     expect(screen.queryByText(/not found/i)).not.toBeInTheDocument();
   });
 });

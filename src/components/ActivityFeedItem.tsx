@@ -44,8 +44,8 @@ export function ActivityFeedItem({
 }: ActivityFeedItemProps) {
   const statusDot = {
     "In Progress": "bg-blue-500",
-    Pending: "bg-orange-400",
-    Completed: "bg-emerald-500",
+    Pending: "bg-amber-400",
+    Completed: "bg-green-500",
   };
 
   const initials = (author ?? "")

@@ -406,7 +406,7 @@ export default function CertificatePage() {
             );
           })()}
           {cert.type === "pc" && !cert.jbcc_form && cert.jbcc_form_error && (
-            <div className="border-t border-border bg-orange-50 px-8 py-5 text-sm text-orange-800">
+            <div className="border-t border-border bg-amber-50 px-8 py-5 text-sm text-amber-800">
               {cert.jbcc_form_error}
             </div>
           )}

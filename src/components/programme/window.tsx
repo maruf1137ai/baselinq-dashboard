@@ -92,43 +92,60 @@ const Window = () => {
         discipline={discipline}
       />
 
-      {/* Discipline picker — a Contractor (no cross-discipline permission)
-          never even mounts the Select, so this user can never issue a
-          request for another discipline's phases or fees. */}
-      <div className="flex items-center gap-2 py-3">
-        <span className="text-xs text-muted-foreground">Discipline</span>
-        {canViewOtherDisciplines ? (
-          <Select value={discipline} onValueChange={setDiscipline}>
-            <SelectTrigger className="w-48 h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DISCIPLINES.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-sm text-foreground font-medium">Construction</span>
-        )}
-      </div>
+      {/*
+        ── The discipline picker rides the tab rail ────────────────────────
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => chooseTab(tab)}
-            className={`text-sm py-4 px-6 border-b-2 -mb-px transition-all ${
-              activeTab === tab
-                ? "border-primary text-foreground"
-                : "text-muted-foreground border-transparent"
-            }`}>
-            {tab}
-          </button>
-        ))}
+        It used to sit on a row of its own: `py-3` around a 32px select, so
+        56px of page for one control, directly above a 54px tab strip. The
+        chart started 190px down against 80px on Home and Finance.
+
+        The rail is already 54px tall and its right two-thirds are empty, so
+        the picker costs nothing there — and the two controls that scope this
+        view now sit on one line instead of stacked, which is what they are:
+        a discipline axis and a view axis over the same programme.
+
+        A Contractor (no cross-discipline permission) still never mounts the
+        Select, so this user can never issue a request for another
+        discipline's phases or fees. Only where it is drawn has changed.
+      */}
+      <div className="flex items-center justify-between gap-4 border-b border-border">
+        <div className="flex items-center gap-2 min-w-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => chooseTab(tab)}
+              /* `whitespace-nowrap`: with the picker now sharing the rail,
+                 "Risk Forecast" wrapped to two lines and took the rail from
+                 54px to 74px — giving back most of what moving the picker
+                 saved. */
+              className={`text-sm py-3 px-6 border-b-2 -mb-px whitespace-nowrap transition-all ${
+                activeTab === tab
+                  ? "border-primary text-foreground"
+                  : "text-muted-foreground border-transparent"
+              }`}>
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 shrink-0 pr-1">
+          <span className="text-xs text-muted-foreground">Discipline</span>
+          {canViewOtherDisciplines ? (
+            <Select value={discipline} onValueChange={setDiscipline}>
+              <SelectTrigger className="w-44 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DISCIPLINES.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-sm text-foreground font-medium">Construction</span>
+          )}
+        </div>
       </div>
 
       {/* Tab Content — Full Width */}

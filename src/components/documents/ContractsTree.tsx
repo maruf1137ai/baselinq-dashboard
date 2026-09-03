@@ -305,7 +305,7 @@ function FolderNode({ folder, depth, projectId, docsByFolderId, descendantCountB
         </span>
       )}
       {hasRecent && (
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Recent activity" />
       )}
 
       {unreadCount > 0 && (
