@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2, AlertCircle, RotateCw, Eye } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import { toast } from "sonner";
@@ -918,9 +919,20 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
   if (!channel) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-[#9CA3AF] gap-3">
-        <MessageSquare className="h-10 w-10 stroke-[1.5]" />
-        <p className="text-sm">Select a channel to view conversation</p>
+      /*
+        Was hand-rolled, and the only block on the page still painting itself
+        a literal `text-[#9CA3AF]` — a hex, not a token, so it could not track
+        the theme — with a 40px icon where every other empty state draws 32px
+        and a `text-sm` line where they draw a `font-medium` title over a
+        `text-xs` description. Three ways of being different in four lines.
+      */
+      <div className="h-full flex items-center justify-center">
+        <EmptyState
+          variant="plain"
+          icon={MessageSquare}
+          title="No channel selected"
+          description="Choose a channel to read its correspondence."
+        />
       </div>
     );
   }

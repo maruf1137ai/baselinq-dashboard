@@ -204,7 +204,12 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                    That is the "different colour and boldness". */
                 <EmptyState
                   variant="plain"
-                  size="sm"
+                  /* No `size="sm"`. This sits directly beside the chat pane's
+                     own empty state on the same screen, and `sm` drops the
+                     icon to 24px against the pane's 32px — two empty states a
+                     few hundred pixels apart at different scales. `sm` is for
+                     a genuinely tight container; a full-height 300px column
+                     is not one. */
                   icon={searchQuery ? SearchX : MessagesSquare}
                   title={searchQuery ? "No channels match this search" : "No channels yet"}
                   description={

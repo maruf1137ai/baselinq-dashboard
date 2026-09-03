@@ -61,12 +61,27 @@ describe("EmptyState call sites", () => {
   it("keeps every description to one sentence", () => {
     const tooLong: string[] = [];
     for (const f of withEmptyState) {
-      const re = /description=(?:"([^"]+)"|\{[^}]*?"([^"]+)")/g;
+      /*
+        BOTH quote styles, and every string inside a `description={…}`
+        expression — not just the first double-quoted one.
+
+        The first version of this matched double quotes only. Finance's cost
+        ledger writes its copy as a single-quoted ternary, so a 165-character
+        description sat on the page while this test reported the rule as
+        held. A guard that cannot see half the call sites is worse than none,
+        because it is believed.
+      */
+      const re = /description=(?:"([^"]+)"|'([^']+)'|\{([\s\S]{0,400}?)\})/g;
       let m: RegExpExecArray | null;
       while ((m = re.exec(f.src))) {
-        const d = m[1] ?? m[2];
-        if (d && d.length > MAX_DESCRIPTION) {
-          tooLong.push(`${f.name}: ${d.length} chars — "${d.slice(0, 60)}…"`);
+        const literal = m[1] ?? m[2];
+        const candidates = literal
+          ? [literal]
+          : [...(m[3] ?? "").matchAll(/["']([^"']{40,})["']/g)].map((x) => x[1]);
+        for (const d of candidates) {
+          if (d.length > MAX_DESCRIPTION) {
+            tooLong.push(`${f.name}: ${d.length} chars — "${d.slice(0, 60)}…"`);
+          }
         }
       }
     }

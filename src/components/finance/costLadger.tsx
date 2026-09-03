@@ -316,8 +316,8 @@ const CostLadger = () => {
             }
             description={
               selectedCategories.length > 0
-                ? 'Try clearing the category filters — the entry may be recorded under a different cost head.'
-                : 'Entries are created automatically when a variation order is approved or a payment certificate is issued, so committed cost stays reconciled with the contract record.'
+                ? 'Try clearing the category filters — it may sit under another cost head.'
+                : 'Entries are created when a variation is approved or a certificate issued.'
             }
             action={
               <button
