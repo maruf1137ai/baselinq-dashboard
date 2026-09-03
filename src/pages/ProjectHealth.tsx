@@ -271,7 +271,7 @@ export default function ProjectHealth() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout overflow="overflow-auto no-scrollbar">
       {/* No padding or max-width here: DashboardLayout already applies p-6,
           and every other page runs full width with a plain space-y-6 wrapper. */}
       <div className="space-y-6">

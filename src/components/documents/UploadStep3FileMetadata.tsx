@@ -189,7 +189,7 @@ export function UploadStep3FileMetadata({
 
   const filteredTasks = allTasks.filter((t: any) => {
     const matchesSearch =
-      t.id?.toLowerCase().includes(linkSearch.toLowerCase()) ||
+      t.rawId?.toLowerCase().includes(linkSearch.toLowerCase()) ||
       t.title.toLowerCase().includes(linkSearch.toLowerCase());
     const matchesType = activeFilter === 'All' || t.type === activeFilter;
     return matchesSearch && matchesType;
