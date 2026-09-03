@@ -108,6 +108,10 @@ const AREAS: Record<string, { title: string; icon: AreaIcon; help: string | null
   meeting: { title: "Meetings", icon: Meetings, help: "/help/meetings" },
   settings: { title: "Settings", icon: Settings, help: "/help/settings" },
   audit: { title: "Audit", icon: AuditIcon, help: null },
+  // roles.view/roles.edit (user/migrations/0059_seed_roles_permission_category.py)
+  // — the 4 default-granted roles manage who else gets into this very page
+  // through this same area, the same self-service way every other category works.
+  roles: { title: "Roles & Permissions", icon: Shield, help: null },
 };
 
 const AREA_ORDER = Object.keys(AREAS);
@@ -216,7 +220,10 @@ function LayerTrace({
 
 export default function RolesPermissions() {
   const projectId = useSelectedProjectId();
-  const { canEditSettings } = usePermissions();
+  // canEditRolesPermissions -> roles.edit, the dedicated Roles & Permissions
+  // category (user/migrations/0059_seed_roles_permission_category.py), not
+  // the general settings.edit this page used to key off.
+  const { canEditRolesPermissions } = usePermissions();
 
   const { data: catalogue = [], isLoading: loadingCatalogue } = usePermissionCatalogue();
   const { data: roles = [], isLoading: loadingRoles } = useRoles(projectId);
@@ -442,7 +449,7 @@ export default function RolesPermissions() {
       selectedRoleId={effectiveRoleId}
       onSelectRole={selectRole}
       holders={holdersByCode}
-      canManageRoles={canEditSettings}
+      canManageRoles={canEditRolesPermissions}
       onRequestDelete={setDeleting}
       onRequestDuplicate={(role) => setRoleForm({ mode: "duplicate", role })}
       onRequestEdit={(role) => setRoleForm({ mode: "edit", role })}
@@ -457,7 +464,7 @@ export default function RolesPermissions() {
               /* The only thing naming the role whose switches are on screen. */
               meta={role ? <span className="text-foreground">{role.name}</span> : undefined}
               description={
-                canEditSettings
+                canEditRolesPermissions
                   ? "Changes apply to this project only. A green dot marks the roles someone currently holds here."
                   : "What each role can do on this project. Only an administrator can change these."
               }
@@ -468,7 +475,7 @@ export default function RolesPermissions() {
                       {editCount} unsaved {editCount === 1 ? "change" : "changes"}
                     </span>
                   )}
-                  {canEditSettings && (
+                  {canEditRolesPermissions && (
                     <>
                       <Button
                         variant="outline"
@@ -614,13 +621,13 @@ export default function RolesPermissions() {
                         <label
                           className={cn(
                             "flex items-start gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3.5",
-                            canEditSettings && "cursor-pointer hover:bg-muted/60",
+                            canEditRolesPermissions && "cursor-pointer hover:bg-muted/60",
                           )}
                         >
                           <Checkbox
                             className="mt-0.5"
                             checked={createState.checked}
-                            disabled={!canEditSettings}
+                            disabled={!canEditRolesPermissions}
                             onCheckedChange={(next) => setAllCreates(next === true)}
                             aria-label={`Create every type of ${AREAS[area!]?.title.toLowerCase()} item`}
                           />
@@ -740,7 +747,7 @@ export default function RolesPermissions() {
                                         <td className="px-4 py-3 text-right">
                                           <Switch
                                             checked={on}
-                                            disabled={!canEditSettings || !p.is_project_scoped}
+                                            disabled={!canEditRolesPermissions || !p.is_project_scoped}
                                             onCheckedChange={(next) =>
                                               setEdits((prev) => {
                                                 // Toggling back to the saved value

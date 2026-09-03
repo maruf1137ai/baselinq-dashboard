@@ -68,6 +68,12 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   editPaymentCertificate: "finance.edit",
   viewVariationOrder:     "finance.view",
   editVariationOrder:     "finance.edit",
+  // Roles & Permissions — its own category, decoupled from settings.*
+  // (see user/migrations/0059_seed_roles_permission_category.py). Default
+  // access: Administrator, Principal Agent, Project Manager, Super User
+  // only — no isOrgAdmin bypass, unlike every settings.* flag above.
+  viewRolesPermissions: ["roles.view", "roles.edit"],
+  editRolesPermissions: "roles.edit",
 };
 
 /**
@@ -159,6 +165,13 @@ export function usePermissions() {
   const canPostCertificate    = perm("finance.post_certificate");
   const canPrepareCertificate = perm("finance.create_certificate");
 
+  // Roles & Permissions — deliberately NOT OR'd with isOrgAdmin or
+  // canEditSettings: this is its own category with its own, stricter
+  // default (Administrator/Principal Agent/Project Manager/Super User),
+  // not a subset of general Settings access.
+  const canViewRolesPermissions = perm("roles.view") || perm("roles.edit");
+  const canEditRolesPermissions = perm("roles.edit");
+
   return {
     isLoading,
     isOrgAdmin,
@@ -218,5 +231,8 @@ export function usePermissions() {
     canEditPaymentCertificate: canEditFinance,
     canViewVariationOrder:     canViewFinance,
     canEditVariationOrder:     canEditFinance,
+    // Roles & Permissions — own category, see FLAG_TO_CODE comment above.
+    canViewRolesPermissions,
+    canEditRolesPermissions,
   };
 }

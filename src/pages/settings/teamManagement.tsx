@@ -10,12 +10,18 @@ import { RolesTab } from "./permissions";
 import { PageHeader } from "@/components/ui/page-header";
 
 const TeamManagement = () => {
-  const { canViewSettings, canEditSettings } = usePermissions();
+  const { canViewSettings, canViewRolesPermissions, canEditRolesPermissions } = usePermissions();
 
   const allTabs = [
     { id: "Users",            show: canViewSettings },
-    { id: "Role Permissions", show: canViewSettings },
-    { id: "Custom Roles",     show: canEditSettings },
+    // Role Permissions / Custom Roles both render content from
+    // pages/settings/permissions.tsx, which hits the same permissions/roles/
+    // APIs as the dedicated /roles-permissions page — gated the same way
+    // (roles.view/roles.edit, not settings.*; see
+    // user/migrations/0059_seed_roles_permission_category.py), so a
+    // settings.edit-only user can't see a tab whose actions would then 403.
+    { id: "Role Permissions", show: canViewRolesPermissions },
+    { id: "Custom Roles",     show: canEditRolesPermissions },
     { id: "Approval Chains",  show: true },
     { id: "AI Routing",       show: true },
   ];
@@ -58,7 +64,7 @@ const TeamManagement = () => {
 
       <div>
         {resolvedTab === "Users" && <TeamMembersTable />}
-        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditSettings} />}
+        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditRolesPermissions} />}
         {resolvedTab === "Custom Roles" && <RolesTab />}
         {resolvedTab === "Approval Chains" && <ApprovalChains />}
         {resolvedTab === "AI Routing" && <AiRouting />}
