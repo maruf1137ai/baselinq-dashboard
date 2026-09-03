@@ -19,7 +19,7 @@ import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 const Security = () => {
   const queryClient = useQueryClient();
@@ -136,7 +136,7 @@ const Security = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <PageBody>
       <PageHeader
         title="Security"
         description="Manage account security, sessions, and authentication settings."
@@ -353,7 +353,7 @@ const Security = () => {
           </p>
         </div>
       </div>
-    </div>
+    </PageBody>
   );
 };
 

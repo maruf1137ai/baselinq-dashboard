@@ -944,7 +944,7 @@ export default function Task() {
             <AwesomeLoader message="Fetching task board" />
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+          <div className="w-full h-[calc(100vh-var(--app-header-h)-3rem)] flex flex-col overflow-hidden">
             {/* The board is a fixed-height flex column rather than the usual
                 `space-y-6` stack, so the 24px band gap under the header is
                 carried by `mb-6` here. Same 24px, same baseline. */}

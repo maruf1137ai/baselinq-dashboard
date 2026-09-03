@@ -190,7 +190,7 @@ const Communications = () => {
 
   return (
     <DashboardLayout padding="p-0">
-      <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="h-[calc(100vh-var(--app-header-h))] flex flex-col overflow-hidden">
         {/* EXCEPTION to the page-top rule, on the BODY only: the chat pane
             below has to reach the viewport edges, so DashboardLayout is asked
             for padding="p-0". The header band then re-applies the canonical

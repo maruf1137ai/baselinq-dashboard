@@ -328,7 +328,7 @@ const AiWorkSpace = () => {
 
   return (
     <DashboardLayout padding="p-0">
-      <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="flex flex-col h-[calc(100vh-var(--app-header-h))]">
         {/* EXCEPTION to the page-top rule, on the BODY only: the chat canvas
             below is full-bleed, so DashboardLayout is asked for padding="p-0"
             and this header band re-applies the canonical p-6. Was `py-4`,

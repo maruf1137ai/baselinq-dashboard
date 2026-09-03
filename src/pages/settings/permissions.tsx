@@ -37,7 +37,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Info, ShieldPlus } from "lucide-react";
 
 import useFetch from "@/hooks/useFetch";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 const PERM_DESCRIPTIONS: Record<string, string> = {
   // Settings
@@ -685,7 +685,7 @@ function MatrixGrid({
   const groupEntries = Object.entries(groups);
 
   return (
-    <div className="space-y-4 pb-24">
+    <PageBody>
       {/* Warn that org-level saves will clear any project-level overrides for the same permissions */}
       {!readOnly && !projectId && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -822,6 +822,6 @@ function MatrixGrid({
       <p className="text-xs text-muted-foreground">
         Changes affect all projects in your organisation. Use the "Save" buttons above once you've toggled permissions.
       </p>
-    </div>
+    </PageBody>
   );
 }

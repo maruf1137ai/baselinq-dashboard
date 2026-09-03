@@ -79,7 +79,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
 
   return (
     <div
-      className="h-full flex flex-col justify-between max-h-[calc(100vh-65px)] overflow-y-auto w-[300px]">
+      className="h-full flex flex-col justify-between max-h-[calc(100vh-var(--app-header-h))] overflow-y-auto w-[300px]">
       <div className="p-3">
         {open && (
           <>
