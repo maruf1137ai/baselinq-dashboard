@@ -46,7 +46,7 @@ export const CATEGORIES: DocCategory[] = ["Drawings", "Documents", "Contracts"];
 // Map category → allowed document types
 export const CATEGORY_TO_TYPES: Record<DocCategory, string[]> = {
   Drawings: ["Drawing"],
-  Documents: ["Specification", "Report", "Certificate"],
+  Documents: ["Specification", "Report", "Certificate", "Drawing"],
   Contracts: ["Contract", "Contract Agreement"],
 };
 

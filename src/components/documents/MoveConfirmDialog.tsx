@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ import {
 } from '@/lib/documentTaxonomy';
 import type { ApiDocument } from '@/components/documents/DocumentTable';
 import type { FolderTab } from '@/types/folder';
+import { UserMultiSelect } from './UserMultiSelect';
 
 /** A move/copy awaiting confirmation. Built by the clipboard provider. */
 export interface PendingMove {
@@ -50,6 +50,7 @@ export interface CrossTabFields {
   type: string;
   discipline?: string;
   issuedTo?: string;
+  issuedToUsers?: string[];
   issueStatus?: string;
   certificateSubtype?: string;
 }
@@ -83,6 +84,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
   const [type, setType] = useState('');
   const [discipline, setDiscipline] = useState('');
   const [issuedTo, setIssuedTo] = useState('All');
+  const [issuedToUsers, setIssuedToUsers] = useState<string[]>([]);
   const [issueStatus, setIssueStatus] = useState<string>(ISSUE_STATUSES[0]);
   const [certificateSubtype, setCertificateSubtype] = useState('');
   const [attempted, setAttempted] = useState(false);
@@ -100,6 +102,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
     setType(defaultTypeFor(pending.doc, pending.destCategory));
     setDiscipline(pending.doc.discipline ?? '');
     setIssuedTo('All');
+    setIssuedToUsers([]);
     setIssueStatus(ISSUE_STATUSES[0]);
     setCertificateSubtype('');
   }, [pending]);
@@ -115,7 +118,9 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
   const needsCertSubtype = destCategory === 'Documents' && type === 'Certificate';
 
   const missingType = needsType && !type;
-  const missingIssuedTo = needsIssue && !issuedTo.trim();
+  const missingIssuedTo =
+    (needsIssue && !issuedTo.trim()) ||
+    (issuedTo === 'Limited Users' && issuedToUsers.length === 0);
   const missingIssueStatus = needsIssue && !issueStatus;
   const missingCertSubtype = needsCertSubtype && !certificateSubtype;
   const step2Valid = !missingType && !missingIssuedTo && !missingIssueStatus && !missingCertSubtype;
@@ -139,6 +144,7 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
       type,
       discipline: discipline || undefined,
       issuedTo: needsIssue ? issuedTo.trim() || 'All' : undefined,
+      issuedToUsers: needsIssue && issuedTo === 'Limited Users' ? issuedToUsers : undefined,
       issueStatus: needsIssue ? issueStatus : undefined,
       certificateSubtype: needsCertSubtype ? certificateSubtype : undefined,
     });
@@ -235,34 +241,52 @@ export const MoveConfirmDialog: React.FC<MoveConfirmDialogProps> = ({
               )}
 
               {needsIssue && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
-                      Issued To <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      value={issuedTo}
-                      onChange={(e) => setIssuedTo(e.target.value)}
-                      placeholder="e.g. Contractor, All"
-                      className={cn('h-10 border-border rounded-lg', errCls(missingIssuedTo))}
-                    />
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
+                        Issued To <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={issuedTo} onValueChange={setIssuedTo}>
+                        <SelectTrigger className={cn('h-10 border-border rounded-lg', errCls(missingIssuedTo))}>
+                          <SelectValue placeholder="Who can view this document" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="All">All</SelectItem>
+                          <SelectItem value="Limited Users">Limited Users</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
+                        Status <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={issueStatus} onValueChange={setIssueStatus}>
+                        <SelectTrigger className={cn('h-10 border-border rounded-lg', errCls(missingIssueStatus))}>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ISSUE_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
-                      Status <span className="text-red-500">*</span>
-                    </Label>
-                    <Select value={issueStatus} onValueChange={setIssueStatus}>
-                      <SelectTrigger className={cn('h-10 border-border rounded-lg', errCls(missingIssueStatus))}>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ISSUE_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+
+                  {issuedTo === 'Limited Users' && (
+                    <div>
+                      <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
+                        Who can view <span className="text-red-500">*</span>
+                      </Label>
+                      <UserMultiSelect
+                        projectId={projectId}
+                        value={issuedToUsers}
+                        onChange={setIssuedToUsers}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               <div>

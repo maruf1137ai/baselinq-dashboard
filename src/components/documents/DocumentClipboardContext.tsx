@@ -214,6 +214,7 @@ export const DocumentClipboardProvider: React.FC<{
       };
       if (fields.discipline) data.discipline = fields.discipline;
       if (fields.issuedTo) data.issued_to = fields.issuedTo;
+      if (fields.issuedToUsers) data.issued_to_users = fields.issuedToUsers;
       if (fields.issueStatus) data.issue_status = fields.issueStatus;
       if (fields.certificateSubtype) data.certificate_subtype = fields.certificateSubtype;
       patchMoveMutation.mutate(
