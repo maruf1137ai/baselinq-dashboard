@@ -150,7 +150,7 @@ export function RequestInfoResponseRow({ request, currentUserId, onChanged }: Pr
             Resolved
           </Badge>
         ) : (
-          <Badge className="bg-amber-50 text-amber-600 py-1.5 px-3 hover:bg-orange-50 border-amber-200 text-xs">
+          <Badge className="bg-amber-50 text-amber-600 py-1.5 px-3 hover:bg-amber-50 border-amber-200 text-xs">
             Pending
           </Badge>
         )}

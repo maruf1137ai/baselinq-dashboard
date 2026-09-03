@@ -50,9 +50,9 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
               variant="outline"
               className={cn(
                 "text-xs font-normal px-2 py-0.5",
-                badge.variant === 'warning' && "bg-orange-50 text-orange-700 border-orange-200",
+                badge.variant === 'warning' && "bg-amber-50 text-amber-700 border-amber-200",
                 badge.variant === 'destructive' && "bg-red-50 text-red-700 border-red-200",
-                badge.variant === 'success' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                badge.variant === 'success' && "bg-green-50 text-green-700 border-green-200",
                 badge.variant === 'default' && "bg-muted text-gray-700 border-border"
               )}
             >

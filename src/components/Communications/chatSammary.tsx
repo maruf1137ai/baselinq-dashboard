@@ -99,7 +99,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
     const s = status.toLowerCase();
     if (s.includes('overdue') || s.includes('risk')) return 'bg-red-50 text-red-700 border-red-200';
     if (s.includes('approved') || s.includes('done') || s.includes('closed')) return 'bg-green-50 text-green-700 border-green-200';
-    if (s.includes('progress') || s.includes('pending')) return 'bg-orange-50 text-orange-700 border-orange-200';
+    if (s.includes('progress') || s.includes('pending')) return 'bg-amber-50 text-amber-700 border-amber-200';
     return 'bg-blue-50 text-blue-700 border-blue-200';
   };
 
@@ -220,7 +220,7 @@ const ChatSammary = ({ task: channelTask, messages = [] }: { task: any; messages
         {/* <div className="grid grid-cols-3 gap-2">
           <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={handleViewTask}>Approve</Button>
           <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleViewTask}>Reject</Button>
-          <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50" onClick={handleViewTask}>Escalate</Button>
+          <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={handleViewTask}>Escalate</Button>
         </div> */}
 
         {/* Documents Section */}

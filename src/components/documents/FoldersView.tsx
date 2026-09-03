@@ -244,7 +244,7 @@ function FolderRow({ folder, docs, tab, onDocumentClick, onViewRegister, onRenam
             </span>
           )}
           {hasRecent && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Recent activity" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" title="Recent activity" />
           )}
 
           {unreadCount > 0 && (
@@ -445,7 +445,7 @@ export function FoldersView({ projectId, tab, documents, onDocumentClick, onView
                 {folders.length > 1 && <> · {folders.length} folders</>}
               </span>
               {hasRecent && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Recent activity" />
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Recent activity" />
               )}
               {disciplineUnread > 0 && (
                 <span

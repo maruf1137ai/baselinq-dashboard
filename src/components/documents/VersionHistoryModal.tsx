@@ -88,7 +88,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     <div key={ver._id} className="relative pl-16">
                       <div className={cn(
                         "absolute left-[-15px] top-0 h-8 w-8 rounded-full border-4 border-card shadow-sm flex items-center justify-center z-10",
-                        ver.isCurrent ? "bg-emerald-500" : "bg-muted"
+                        ver.isCurrent ? "bg-green-500" : "bg-muted"
                       )}>
                         {ver.isCurrent && <CheckCircle2 className="h-4 w-4 text-white" />}
                       </div>

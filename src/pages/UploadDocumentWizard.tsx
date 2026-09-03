@@ -209,6 +209,7 @@ export default function UploadDocumentWizard() {
             notifyTeam: formData.notifyTeam,
             linkIds: formData.linkIds,
             issuedTo: formData.issuedTo,
+            issuedToUsers: formData.issuedToUsers,
             issueStatus: formData.issueStatus,
           },
         });
@@ -240,6 +241,7 @@ export default function UploadDocumentWizard() {
             notify_team: formData.notifyTeam,
             link_ids: formData.linkIds,
             issued_to: formData.issuedTo,
+            issued_to_users: formData.issuedToUsers,
             issue_status: formData.issueStatus,
           },
         });

@@ -28,6 +28,7 @@ import Communication from "./icons/Communication";
 import Task from "./icons/Task";
 import SaveMoney from "./icons/SaveMoney";
 import Shield from "./icons/Shield";
+import Pulse from "./icons/Pulse";
 import Meetings from "./icons/Meeting";
 import Programme from "./icons/Programme";
 import Settings from "./icons/Settings";
@@ -52,7 +53,9 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: "viewDocuments" },
   { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
-  { title: "Project Health", url: "/project-health", icon: <Shield />, permission: "viewCompliance" },
+  // Not <Shield /> — Compliance already uses it, and two identical adjacent
+  // nav rows can only be told apart by reading. See `Pulse`.
+  { title: "Project Health", url: "/project-health", icon: <Pulse />, permission: "viewCompliance" },
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ];
 
@@ -61,11 +64,15 @@ const settingsItems: { title: string; url: string; icon: React.ReactElement; per
   // Help lands on the hub page (/help), which offers the Tasks and
   // Finance reference guides as two options — see src/pages/Help.tsx.
   { title: "Help", url: "/help", icon: <Help />, permission: null },
-  // Roles & Permissions — temporarily hidden from the sidebar at request
-  // (2026-09-02). The page and its /roles-permissions route are untouched
-  // and still permission-gated; only this entry point is commented out.
-  // Uncomment to restore:
-  // { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: "editSettings" },
+  // Roles & Permissions — visible only to roles that can act on it. Own
+  // permission category now (viewRolesPermissions -> roles.view/roles.edit,
+  // see user/migrations/0059_seed_roles_permission_category.py), not
+  // settings.edit — default access is exactly Administrator/Principal
+  // Agent/Project Manager/Super User. Uses the plain check (via can(),
+  // below), matching what the /roles-permissions route itself requires
+  // (RoleRoute also checks plain can("viewRolesPermissions"), no bypass) —
+  // link visibility can't drift from actual access.
+  { title: "Roles & Permissions", url: "/roles-permissions", icon: <Shield />, permission: "viewRolesPermissions" },
 ];
 
 export function DashboardSidebar() {

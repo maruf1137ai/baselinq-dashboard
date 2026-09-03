@@ -271,7 +271,7 @@ const OrgTeamTable = () => {
                 <tr key={member.id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-slate-500 text-xs font-normal">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-gray-500 text-xs font-normal">
                         {(member.name || member.email)[0].toUpperCase()}
                       </div>
                       <div>
@@ -331,7 +331,7 @@ const OrgTeamTable = () => {
                 <tr key={invite.id} className="bg-muted/50 hover:bg-muted/50 transition-colors italic">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 opacity-70">
-                      <div className="w-8 h-8 rounded-full bg-muted/50 border border-border border-dashed flex items-center justify-center text-slate-400">
+                      <div className="w-8 h-8 rounded-full bg-muted/50 border border-border border-dashed flex items-center justify-center text-gray-400">
                         <Mail className="h-4 w-4" />
                       </div>
                       <div>

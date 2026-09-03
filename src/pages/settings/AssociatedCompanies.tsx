@@ -40,7 +40,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
 import { COMPANY_TYPES, filterRolesByCompanyType } from "@/lib/roleUtils";
 import useFetch from "@/hooks/useFetch";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ const AssociatedCompanies = () => {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-200px)] flex items-center justify-center">
+      <div className="h-[calc(100vh-var(--app-header-h)-3rem)] flex items-center justify-center">
         <AwesomeLoader message="Fetching associated companies" />
       </div>
     );
@@ -303,7 +303,7 @@ const AssociatedCompanies = () => {
 
   return (
     <div className="w-full">
-      <div className="max-w-5xl p-6 pb-20">
+      <PageBody width="prose">
 
         {/* ── Page Header ── */}
         <PageHeader
@@ -700,7 +700,7 @@ const AssociatedCompanies = () => {
                               ? "bg-green-600"
                               : hasInsurance && isExpired
                                 ? "bg-amber-500"
-                                : "bg-slate-400"
+                                : "bg-gray-400"
                           )}>
                             <div className="flex items-center gap-2 text-white">
                               {hasInsurance && !isExpired
@@ -723,7 +723,7 @@ const AssociatedCompanies = () => {
                                 ? "bg-green-500 text-white"
                                 : hasInsurance && isExpired
                                   ? "bg-amber-400 text-white"
-                                  : "bg-slate-300 text-slate-600"
+                                  : "bg-gray-300 text-gray-600"
                             )}>
                               {hasInsurance && !isExpired ? "VALID" : hasInsurance && isExpired ? "EXPIRED" : "PENDING"}
                             </span>
@@ -745,7 +745,7 @@ const AssociatedCompanies = () => {
                                   ? "bg-green-100 text-green-600"
                                   : hasInsurance && isExpired
                                     ? "bg-amber-100 text-amber-600"
-                                    : "bg-muted text-slate-400"
+                                    : "bg-muted text-gray-400"
                               )}>
                                 <FileText className="h-4 w-4" />
                               </div>
@@ -885,7 +885,7 @@ const AssociatedCompanies = () => {
           </div>
         </div>
 
-      </div>
+      </PageBody>
     </div>
   );
 };

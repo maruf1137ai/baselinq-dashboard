@@ -60,7 +60,7 @@ export const StatusHeader = ({
         </div>
       </div>
       <div className="text-right">
-        <Badge className={`${risk === "LOW" ? "bg-green_light text-green-800" : risk === "MEDIUM" ? "bg-orenge_light text-orange-800" : "bg-red_light text-red-800"}`}>
+        <Badge className={`${risk === "LOW" ? "bg-green_light text-green-800" : risk === "MEDIUM" ? "bg-orenge_light text-amber-800" : "bg-red_light text-red-800"}`}>
           {risk} RISK
         </Badge>
         {time && <p className="text-xs text-muted-foreground mt-1">Analyzed in {time.toFixed(1)}s</p>}
@@ -191,7 +191,7 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">{flag.title || flag}</span>
                     {flag.severity && (
-                      <Badge className={`${flag.severity === 'HIGH' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                      <Badge className={`${flag.severity === 'HIGH' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                         {flag.severity}
                       </Badge>
                     )}

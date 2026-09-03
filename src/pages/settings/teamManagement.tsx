@@ -7,15 +7,21 @@ import ApprovalChains from "@/components/settings/ApprovalChains";
 import AiRouting from "@/components/settings/AiRouting";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RolesTab } from "./permissions";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 const TeamManagement = () => {
-  const { canViewSettings, canEditSettings } = usePermissions();
+  const { canViewSettings, canViewRolesPermissions, canEditRolesPermissions } = usePermissions();
 
   const allTabs = [
     { id: "Users",            show: canViewSettings },
-    { id: "Role Permissions", show: canViewSettings },
-    { id: "Custom Roles",     show: canEditSettings },
+    // Role Permissions / Custom Roles both render content from
+    // pages/settings/permissions.tsx, which hits the same permissions/roles/
+    // APIs as the dedicated /roles-permissions page — gated the same way
+    // (roles.view/roles.edit, not settings.*; see
+    // user/migrations/0059_seed_roles_permission_category.py), so a
+    // settings.edit-only user can't see a tab whose actions would then 403.
+    { id: "Role Permissions", show: canViewRolesPermissions },
+    { id: "Custom Roles",     show: canEditRolesPermissions },
     { id: "Approval Chains",  show: true },
     { id: "AI Routing",       show: true },
   ];
@@ -27,7 +33,7 @@ const TeamManagement = () => {
   const resolvedTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? "");
 
   return (
-    <div className="p-6 space-y-6">
+    <PageBody>
       <PageHeader
         title="User Management"
         description="Manage users, roles, permissions, and approval workflows."
@@ -47,7 +53,7 @@ const TeamManagement = () => {
           <button
             key={btn}
             onClick={() => setActiveTab(btn)}
-            className={`text-sm py-4 px-6 border-b-2 transition-all ${resolvedTab === btn
+            className={`text-sm py-3 px-6 border-b-2 whitespace-nowrap transition-all ${resolvedTab === btn
                 ? "border-primary text-foreground"
                 : "text-muted-foreground border-transparent"
               }`}>
@@ -58,12 +64,12 @@ const TeamManagement = () => {
 
       <div>
         {resolvedTab === "Users" && <TeamMembersTable />}
-        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditSettings} />}
+        {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditRolesPermissions} />}
         {resolvedTab === "Custom Roles" && <RolesTab />}
         {resolvedTab === "Approval Chains" && <ApprovalChains />}
         {resolvedTab === "AI Routing" && <AiRouting />}
       </div>
-    </div>
+    </PageBody>
   );
 };
 

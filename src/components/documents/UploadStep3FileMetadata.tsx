@@ -75,6 +75,7 @@ export interface UploadFormData {
   visibility: FolderVisibility;
   visibilityUsers: string[];
   issuedTo: string;
+  issuedToUsers: string[];
   issueStatus: string;
 }
 
@@ -130,6 +131,7 @@ export function UploadStep3FileMetadata({
   const [visibility, setVisibility] = useState<FolderVisibility>('all');
   const [visibilityUsers, setVisibilityUsers] = useState<string[]>([]);
   const [issuedTo, setIssuedTo] = useState('All');
+  const [issuedToUsers, setIssuedToUsers] = useState<string[]>([]);
   const [issueStatus, setIssueStatus] = useState('For Information');
 
   // Linking
@@ -248,8 +250,12 @@ export function UploadStep3FileMetadata({
 
   const missingType = !docType;
   const missingName = !name.trim();
-  // Drawings — Issued To and Status are required per the documents-folder plan
-  const missingIssuedTo = selectedTab === 'drawings' && !issuedTo.trim();
+  // Drawings — Issued To and Status are required per the documents-folder plan.
+  // "Limited Users" additionally always needs at least one person picked,
+  // regardless of tab — an empty ACL would silently lock the document to no one.
+  const missingIssuedTo =
+    (selectedTab === 'drawings' && !issuedTo.trim()) ||
+    (issuedTo === 'Limited Users' && issuedToUsers.length === 0);
   const missingIssueStatus = selectedTab === 'drawings' && !issueStatus;
   const showFieldErrors = attemptedSubmit;
   const canSubmit =
@@ -284,6 +290,7 @@ export function UploadStep3FileMetadata({
       visibility,
       visibilityUsers,
       issuedTo: issuedTo.trim() || 'All',
+      issuedToUsers: issuedTo === 'Limited Users' ? issuedToUsers : [],
       issueStatus,
     });
   };
@@ -512,12 +519,15 @@ export function UploadStep3FileMetadata({
                   Issued To
                   {selectedTab === 'drawings' && <span className="text-red-500"> *</span>}
                 </Label>
-                <Input
-                  placeholder="e.g. Contractor, All, Architect"
-                  value={issuedTo}
-                  onChange={e => setIssuedTo(e.target.value)}
-                  className={cn("h-10 border-border rounded-lg", errCls(missingIssuedTo))}
-                />
+                <Select value={issuedTo} onValueChange={setIssuedTo}>
+                  <SelectTrigger className={cn("h-10 border-border rounded-lg", errCls(missingIssuedTo))}>
+                    <SelectValue placeholder="Who can view this document" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All</SelectItem>
+                    <SelectItem value="Limited Users">Limited Users</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-normal text-muted-foreground">
@@ -536,6 +546,19 @@ export function UploadStep3FileMetadata({
                 </Select>
               </div>
             </div>
+
+            {issuedTo === 'Limited Users' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">
+                  Who can view <span className="text-red-500">*</span>
+                </Label>
+                <UserMultiSelect
+                  projectId={projectId}
+                  value={issuedToUsers}
+                  onChange={setIssuedToUsers}
+                />
+              </div>
+            )}
 
             {/* AI Analysis */}
             <div className="flex items-center justify-between rounded-lg bg-primary/5 px-4 py-2.5">

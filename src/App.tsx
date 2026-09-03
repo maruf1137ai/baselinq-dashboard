@@ -278,14 +278,17 @@ const App = () => (
               <HelpSettings />
             </ProtectedRoute>
           } />
-          {/* Roles & Permissions — sidebar entry after Help. Gated on the same
-              editSettings flag the sidebar link already uses (DashboardSidebar's
-              settingsItems filter), so direct URL navigation can't bypass what
-              the nav already hides. No ProjectProtectedRoute: the page shows its
-              own "pick a project" placeholder when none is selected. */}
+          {/* Roles & Permissions — its own permission category (roles.view/
+              roles.edit), not settings.edit — default access is exactly
+              Administrator/Principal Agent/Project Manager/Super User (see
+              user/migrations/0059_seed_roles_permission_category.py).
+              viewRolesPermissions is enough to enter (read-only); the page
+              gates Save/Reset/toggle separately with editRolesPermissions.
+              No ProjectProtectedRoute: the page shows its own "pick a
+              project" placeholder when none is selected. */}
           <Route path="/roles-permissions" element={
             <ProtectedRoute>
-              <RoleRoute permission="editSettings">
+              <RoleRoute permission="viewRolesPermissions">
                 <RolesPermissions />
               </RoleRoute>
             </ProtectedRoute>

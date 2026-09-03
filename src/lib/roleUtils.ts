@@ -121,6 +121,13 @@ export const PERMISSIONS = {
   // Document actions
   viewDocuments:   ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER", "PLANNER", "SE", "SS", "FOREMAN", "QS", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG"],
   uploadDocument:  ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "ELEC_ENG", "QS", "STRUCT_ENG", "MECH_ENG"],
+  // Roles & Permissions — its own permission category (roles.view/roles.edit,
+  // see user/migrations/0059_seed_roles_permission_category.py), NOT the
+  // settings.* tiers above. Real enforcement is the live DB matrix via
+  // usePermissions()/can() — this legacy backbone-code table isn't consulted
+  // for this feature, kept here only to satisfy the shared PermissionKey type.
+  viewRolesPermissions: ["CLIENT", "CPM", "PM"],
+  editRolesPermissions: ["CLIENT", "CPM", "PM"],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

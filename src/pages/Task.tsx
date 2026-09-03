@@ -107,7 +107,7 @@ const DOC_TYPE_TEXT_COLORS: Record<string, string> = {
   VO: 'text-purple-600',
   RFI: 'text-blue-600',
   SI: 'text-green-600',
-  DC: 'text-orange-600',
+  DC: 'text-amber-600',
   CPI: 'text-amber-600',
   GI: 'text-gray-500',
 };
@@ -149,7 +149,7 @@ const getDueDateInfo = (dueDate: string | null, createdAt: string | null) => {
     } else if (diffDays <= 2) {
       return { text: `Due in ${diffDays} days`, color: 'text-red-600', isOverdue: false };
     } else if (diffDays <= 7) {
-      return { text: `Due in ${diffDays} days`, color: 'text-orange-600', isOverdue: false };
+      return { text: `Due in ${diffDays} days`, color: 'text-amber-600', isOverdue: false };
     } else {
       return { text: `Due in ${diffDays} days`, color: 'text-gray-600', isOverdue: false };
     }
@@ -242,7 +242,7 @@ function TaskCard({ task, isDragging, currentUserId, notifications }: any) {
   // Priority config
   const priorityConfig: Record<string, { dot: string; label: string }> = {
     critical: { dot: 'bg-red-500', label: 'Critical' },
-    high: { dot: 'bg-orange-500', label: 'High' },
+    high: { dot: 'bg-amber-500', label: 'High' },
     medium: { dot: 'bg-blue-500', label: 'Medium' },
     low: { dot: 'bg-muted-foreground/40', label: 'Low' },
   };
@@ -361,7 +361,7 @@ function TaskCard({ task, isDragging, currentUserId, notifications }: any) {
               <span className={`text-xs font-medium ${docTypeTextColor}`}>{displayId}</span>
               {priorityInfo && (
                 <span className={`text-xs px-1.5 py-0.5 rounded ${priority === 'critical' ? 'bg-red-50 text-red-600' :
-                  priority === 'high' ? 'bg-orange-50 text-orange-600' :
+                  priority === 'high' ? 'bg-amber-50 text-amber-600' :
                     priority === 'medium' ? 'bg-blue-50 text-blue-600' :
                       'bg-muted text-muted-foreground'
                   }`}>{priorityInfo.label}</span>
@@ -944,7 +944,7 @@ export default function Task() {
             <AwesomeLoader message="Fetching task board" />
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+          <div className="w-full h-[calc(100vh-var(--app-header-h)-3rem)] flex flex-col overflow-hidden">
             {/* The board is a fixed-height flex column rather than the usual
                 `space-y-6` stack, so the 24px band gap under the header is
                 carried by `mb-6` here. Same 24px, same baseline. */}

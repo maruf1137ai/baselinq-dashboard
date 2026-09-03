@@ -35,7 +35,7 @@ const activities = [
 const statusColors = {
   success: "bg-green-500/10 text-green-700 hover:bg-green-500/20",
   info: "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20",
-  warning: "bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20",
+  warning: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20",
 };
 
 export function RecentActivity() {

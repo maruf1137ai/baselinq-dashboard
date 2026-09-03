@@ -28,7 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { hasPermission } from "@/lib/roleUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageBody, PageHeader } from "@/components/ui/page-header";
 
 // ── Shared UI Components ──────────────────────────────────────────────────────
 
@@ -150,7 +150,7 @@ const OrganizationPage = () => {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-100px)] flex items-center justify-center">
+      <div className="h-[calc(100vh-var(--app-header-h)-3rem)] flex items-center justify-center">
         <AwesomeLoader message="Initialising profile settings" />
       </div>
     );
@@ -226,7 +226,7 @@ const OrganizationPage = () => {
 
   return (
     <div className="w-full">
-      <div className="max-w-5xl p-6 pb-32">
+      <PageBody width="prose">
 
         {/* ── Page Header ── */}
         <PageHeader
@@ -664,7 +664,7 @@ const OrganizationPage = () => {
         ) : (
           <OrgUsersTable />
         )}
-      </div>
+      </PageBody>
     </div>
   );
 };

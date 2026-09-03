@@ -190,7 +190,7 @@ const Communications = () => {
 
   return (
     <DashboardLayout padding="p-0">
-      <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="h-[calc(100vh-var(--app-header-h))] flex flex-col overflow-hidden">
         {/* EXCEPTION to the page-top rule, on the BODY only: the chat pane
             below has to reach the viewport edges, so DashboardLayout is asked
             for padding="p-0". The header band then re-applies the canonical
@@ -213,15 +213,41 @@ const Communications = () => {
             }
           />
         </div>
+        {/*
+          ── Flush, exactly as Linq is ──────────────────────────────────
+
+          A 24px left inset was tried here and looked wrong: it left a strip
+          of page background between the nav rail and the channel list, so
+          the list read as a floating column rather than as a pane, and the
+          header's full-width rule above it ran past the notch.
+
+          This is a THREE-PANE layout — channel list, conversation, summary
+          — and panes butt against their container; that is what makes them
+          read as panes. `AiWorkSpace` (Linq) is the same shape and is the
+          reference for it. The page's 24px inset is carried by the header
+          band above, which is where the alignment with other pages is
+          actually made and where the title sits.
+        */}
         <div className="flex flex-1 overflow-hidden">
-          <div className="border-r border-border bg-card flex-shrink-0">
-            <ChatSidebar
-              tasks={channels}
-              isLoading={isLoading}
-              selectedTask={selectedChannel}
-              onSelectTask={handleSelectChannel}
-              onNewChat={() => setShowNewChannel(true)}
-            />
+          {/*
+            A divider, and nothing else — which is what Linq has.
+
+            This wrapper was `border-r border-border bg-card`. `ChatSidebar`'s
+            own root carries no fill, so `bg-card` painted the channel list as
+            a white card sitting on the page background: the "weird left
+            panel". Measured against Linq, the only chrome that page's sidebar
+            has is a 1px right border, so that is all this keeps. The fill is
+            gone; the column now reads as a pane of the same page rather than
+            a card dropped onto it.
+          */}
+          <div className="border-r border-border flex-shrink-0">
+          <ChatSidebar
+            tasks={channels}
+            isLoading={isLoading}
+            selectedTask={selectedChannel}
+            onSelectTask={handleSelectChannel}
+            onNewChat={() => setShowNewChannel(true)}
+          />
           </div>
           <div className="chatWindow flex-1">
             <ChatWindow

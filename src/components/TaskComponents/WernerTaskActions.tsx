@@ -582,7 +582,7 @@ export function WernerTaskActions({
       {canCloseOut && (
         <Button
           variant="outline"
-          className="font-normal text-slate-700 border-border hover:bg-muted/50"
+          className="font-normal text-gray-700 border-border hover:bg-muted/50"
           onClick={openCloseModal}
         >
           <Lock className="mr-1" />
@@ -821,7 +821,7 @@ export function WernerTaskActions({
               Cancel
             </Button>
             <Button
-              className="bg-slate-700 hover:bg-slate-800 text-white disabled:bg-slate-700/40 disabled:cursor-not-allowed"
+              className="bg-gray-700 hover:bg-gray-800 text-white disabled:bg-gray-700/40 disabled:cursor-not-allowed"
               disabled={closing}
               onClick={handleCloseOut}
             >

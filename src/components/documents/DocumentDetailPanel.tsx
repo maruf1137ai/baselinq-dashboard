@@ -158,7 +158,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                             <div className={cn(
                               "mt-1 shrink-0",
                               finding.severity === 'high' ? 'text-red-500' :
-                                finding.severity === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+                                finding.severity === 'medium' ? 'text-amber-500' : 'text-green-500'
                             )}>
                               <AlertCircle className="h-4 w-4" />
                             </div>
@@ -168,7 +168,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                                 <Badge variant="outline" className={cn(
                                   "text-xs px-1.5 h-4 font-normal uppercase",
                                   finding.severity === 'high' ? 'bg-red-50 text-red-700 border-red-100' :
-                                    finding.severity === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                    finding.severity === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-green-50 text-green-700 border-green-100'
                                 )}>
                                   {finding.severity}
                                 </Badge>
@@ -237,7 +237,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
                           </div>
                         </div>
                         {ver.current ? (
-                          <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-normal uppercase">
+                          <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs font-normal uppercase">
                             <CheckCircle2 className="h-3 w-3" /> Current
                           </div>
                         ) : (

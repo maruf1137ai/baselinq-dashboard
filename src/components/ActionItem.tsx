@@ -23,7 +23,7 @@ export function ActionItem({
 
   const priorityStyles = {
     Critical: "bg-red-50 text-red-700 border-red-200",
-    High: "bg-orange-50 text-orange-700 border-orange-200",
+    High: "bg-amber-50 text-amber-700 border-amber-200",
     Medium: "bg-blue-50 text-blue-700 border-blue-200",
     Low: "bg-muted/50 text-gray-700 border-border",
   };

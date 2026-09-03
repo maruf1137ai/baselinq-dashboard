@@ -86,7 +86,7 @@ const ChecklistItem: React.FC<{
       )}
       <span
         className={`text-gray-700 text-base ${
-          item.completed ? "line-through text-gray-500" : "text-slate-800"
+          item.completed ? "line-through text-gray-500" : "text-gray-800"
         }`}>
         {item.label}
       </span>

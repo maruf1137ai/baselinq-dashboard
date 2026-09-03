@@ -25,6 +25,30 @@
  * title still lands on the same 24px baseline as everything else. A
  * full-bleed body is not a licence for a differently-positioned title.
  *
+ * PAGES UNDER A p-0 HOST — use <PageBody>
+ * ---------------------------------------
+ * `Settings` is a `padding="p-0"` shell around an `<Outlet />`, so each of its
+ * twelve children had to supply its own inset — and twelve pages supplying
+ * their own inset produced six different answers:
+ *
+ *   p-6 space-y-6      audit, billing, dataManagement, integrations,
+ *                      notifications, security, teamManagement
+ *   max-w-5xl p-6      projectDetails            (no band rhythm)
+ *   max-w-5xl p-6 pb-32  Organization            (128px of dead bottom)
+ *   max-w-5xl p-6 pb-20  AssociatedCompanies     (80px of dead bottom)
+ *   p-6                Site                      (and a hand-rolled <h2>)
+ *   space-y-4 pb-24    permissions               (NO inset — title flush
+ *                                                 against the page edge)
+ *
+ * `PageBody` is that inset expressed once. It is for any page whose HOST
+ * supplies no padding; a page inside a default DashboardLayout already has
+ * `p-6` from the layout and keeps a plain `space-y-6` wrapper instead.
+ *
+ * The bottom inset is deliberately the same 24px as the top. The `pb-32` and
+ * `pb-20` this replaces were not clearing a sticky action bar — neither page
+ * has one — so they were 128px and 80px of arbitrary dead space at the foot
+ * of two sibling pages in the same section.
+ *
  * WHY THIS EXISTS
  * ---------------
  * Most dashboard pages already agree on the title treatment:
@@ -43,8 +67,8 @@
  *   <PageHeader title="Documents" meta={<span>12 documents</span>} />
  *   <PageHeader title="Documents" reference={<Link>Document reference</Link>} actions={<Button/>} />
  *
- * `reference` renders on the title row (top-right, next to the title block).
- * `actions` renders on its own row below — buttons, filters, search, etc.
+ * `reference` and `actions` both render on the title row, right-aligned, and
+ * wrap to a second row only when they genuinely cannot fit.
  */
 import * as React from "react";
 
@@ -70,7 +94,7 @@ export interface PageHeaderProps
    * so pages that need it don't have to hand-roll the whole header back.
    */
   meta?: React.ReactNode;
-  /** Second-row controls — buttons, filters, search, etc. */
+  /** Page controls — buttons, filters, search. Right-aligned on the title row. */
   actions?: React.ReactNode;
   /** Right-aligned on the title row — the "? X reference" help link. */
   reference?: React.ReactNode;
@@ -87,7 +111,30 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className={cn(className)} {...props}>
-      <div className="flex items-start justify-between gap-4">
+      {/*
+        ── Actions ride the title row ──────────────────────────────────────
+
+        They used to render in a row of their own below the title, on
+        `mt-3`. Measured at 1440px that row cost 44px — 12px of margin and a
+        32px control — on every page that has one, and what it held was one
+        or two small buttons with a title row half empty beside them:
+
+          Documents        "Ask AI" / "Upload"
+          Compliance       "Analyse with AI" / "Track obligation"
+          Project Health   "Refresh"            (a single button, 44px)
+          Meetings         "Schedule"
+
+        Four pages, 44px each, for controls that fit next to the title. So
+        the header is one row: identity on the left, controls on the right.
+        `flex-wrap` means a page that genuinely cannot fit both still gets
+        its second row rather than a crushed one — it is a fallback now
+        instead of the default.
+
+        Actions sit outermost because a primary action belongs at the end of
+        the row; `reference` — the quiet "? X reference" link — sits inside
+        them, where it stays out of the way of the thing people click.
+      */}
+      <div className="flex items-start justify-between gap-x-4 gap-y-2 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 min-w-0">
             <h1 className="text-2xl font-normal tracking-tight text-foreground">
@@ -99,13 +146,43 @@ export function PageHeader({
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
           )}
         </div>
-        {reference && <div className="shrink-0">{reference}</div>}
+        {(reference || actions) && (
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            {reference}
+            {actions}
+          </div>
+        )}
       </div>
-      {actions && (
-        <div className="flex items-center justify-end gap-2 mt-3">{actions}</div>
-      )}
     </div>
   );
 }
 
 export default PageHeader;
+
+/**
+ * The standard page body for a page whose HOST supplies no padding.
+ *
+ * `p-6 space-y-6` — the same 24px inset and the same 24px band rhythm a page
+ * inside a default `DashboardLayout` gets from the layout itself. Use it under
+ * any `padding="p-0"` host; do NOT use it inside a default `DashboardLayout`,
+ * which would double the inset to 48px.
+ *
+ * `width="prose"` caps the column at `max-w-5xl` for the long settings forms
+ * that read badly full-bleed. It is the same cap those forms already used —
+ * this only stops each of them re-declaring it.
+ */
+export function PageBody({
+  width = "full",
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { width?: "full" | "prose" }) {
+  return (
+    <div
+      className={cn("p-6 space-y-6", width === "prose" && "max-w-5xl", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}

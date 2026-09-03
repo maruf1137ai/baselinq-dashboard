@@ -286,7 +286,7 @@ const Finance = () => {
                   role="tab"
                   aria-selected={activeTab === tab}
                   onClick={() => chooseTab(tab)}
-                  className={`flex items-center gap-1.5 text-sm py-4 px-6 border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
+                  className={`flex items-center gap-1.5 text-sm py-3 px-6 border-b-2 -mb-px whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm ${activeTab === tab
                     ? "border-primary text-foreground"
                     : "text-muted-foreground border-transparent hover:text-foreground"
                     }`}>
