@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PaymentCertificateTable, PCEntry } from "./paymentCertificateTable";
 import { CreatePCDrawer, CreatePCApiPayload } from "./createPCDrawer";
-import useFetch from "@/hooks/useFetch";
+import useFetchAllPages from "@/hooks/useFetchAllPages";
 import { postData, patchData } from "@/lib/Api";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { usePermission } from "@/hooks/usePermission";
@@ -12,13 +12,6 @@ import { formatZAR } from "@/lib/formatCurrency";
 import { FinanceToolbar } from "./FinanceToolbar";
 import { findByDeepLinkId } from "@/lib/deepLink";
 import { useFinanceUnreadNotifications } from "@/hooks/useFinanceUnreadNotifications";
-
-interface PCListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: PCEntry[];
-}
 
 interface PaymentCertificateProps {
   /** Raw `?pc=` value from /finance, or null. Resolved here rather than on the
@@ -41,7 +34,7 @@ const PaymentCertificate = ({ certificateParam = null }: PaymentCertificateProps
   // three finance tabs.
   const [search, setSearch] = useState("");
 
-  const { data, isLoading, refetch } = useFetch<PCListResponse>(
+  const { data, isLoading, refetch } = useFetchAllPages<PCEntry>(
     projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
   );
 

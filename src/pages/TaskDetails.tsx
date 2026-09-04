@@ -94,6 +94,7 @@ import useFetch from "@/hooks/useFetch";
 import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate, formatDateOrNoDate, formatDateTime, formatTime } from "@/lib/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateProjectCommercials } from "@/hooks/useProjectCommercials";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
 import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
@@ -3286,6 +3287,15 @@ export default function TaskDetails() {
                           // query so the project detail page reflects the new
                           // values without a manual reload.
                           queryClient.invalidateQueries({ queryKey: ["projects"] });
+                          // The above is the LIST key (useProjects) — it never
+                          // matched ["project", projectId], the single-project
+                          // key useProjectCommercials actually reads, so the
+                          // Cost Ledger tab's cards and Project Health's
+                          // Financial Overview never refreshed after a VO was
+                          // signed. Invalidate what that hook really uses.
+                          if (projectId) {
+                            invalidateProjectCommercials(queryClient, String(projectId));
+                          }
                           // References sub-panel reads /entity-references/
                           // via its own useFetch; invalidate so it refreshes.
                           if (entityId && taskType) {

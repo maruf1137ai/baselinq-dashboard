@@ -1,13 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { MoreIcon } from "../icons/icons";
 import { ChevronLeft, ChevronRight, FileDiff, SearchX } from "lucide-react";
 import { UserChip } from "@/components/TaskComponents/UserChip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { formatZAR } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +11,6 @@ interface VariationOrdersTableProps {
   /** Opens the underlying VO record. Receives the task id, which is what
    *  `/tasks/:taskId` resolves against — not the display VO number. */
   onViewDetails?: (taskId: string) => void;
-  onEdit?: (order: VariationOrder) => void;
-  onDelete?: (order: VariationOrder) => void;
   /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
   search: string;
   /** Task id of the currently selected variation, or null for none.
@@ -117,7 +108,9 @@ const ImpactBadge: React.FC<{ days: number }> = ({ days }) => (
 );
 
 /** Sentence case, numerics right-aligned — same shape as the other three
- *  finance tables. */
+ *  finance tables. No Actions column: a VO is never edited or deleted as a
+ *  raw record from this register — it moves forward through its own
+ *  workflow (task board / sign-and-issue), same as an SI or RFI. */
 const HEADERS: { label: string; align?: "right" }[] = [
   { label: "VO #" },
   { label: "Title" },
@@ -126,14 +119,11 @@ const HEADERS: { label: string; align?: "right" }[] = [
   { label: "Requested by" },
   { label: "Updated" },
   { label: "Impact" },
-  { label: "Actions", align: "right" },
 ];
 
 export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
   orders,
   onViewDetails,
-  onEdit,
-  onDelete,
   search,
   highlightTaskId = null,
 }) => {
@@ -196,7 +186,7 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
           <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={7}>
                   {search ? (
                     <EmptyState
               icon={SearchX}
@@ -266,28 +256,6 @@ export const VariationOrdersTable: React.FC<VariationOrdersTableProps> = ({
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          aria-label="More actions" className="text-muted-foreground hover:text-foreground">
-                          <MoreIcon className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card w-32">
-                        <DropdownMenuItem
-                          className="cursor-pointer text-sm"
-                          onClick={() => onEdit?.(order)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer text-sm text-red-600 focus:text-red-600"
-                          onClick={() => onDelete?.(order)}>
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </td>
                 </tr>
                 );

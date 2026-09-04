@@ -2018,6 +2018,27 @@ export function summariseMoney(
   project: any,
   certificates: CertificateLike[] | null | undefined,
   variations: VariationLike[] | null | undefined,
+  /**
+   * Manual Cost Ledger credit entries not already represented by a real
+   * posted certificate (`linked_pc`/`linked_vo` both null on the ledger row —
+   * see `backend/cost_ledger/views.py`'s `summary` action). Added to
+   * `certified` so a manual credit counts without double-counting a PC that
+   * already has its own auto-generated ledger mirror under a different basis
+   * (net_amount, not claim_amount). `null`/`undefined` — the ledger summary
+   * couldn't be read, or wasn't asked for — adds nothing, same "absent is not
+   * zero" rule as every other input here.
+   */
+  manualCreditsTotal?: number | null,
+  /**
+   * Manual Cost Ledger debit entries not already represented by a real
+   * approved Variation Order (`linked_pc`/`linked_vo` both null — same source
+   * as `manualCreditsTotal`, see `backend/cost_ledger/views.py`'s `summary`
+   * action). A cost recorded with no VO/PC link still eats into what's left
+   * of the contract, so it comes off `balance` — but NOT off `certified`: a
+   * debit is a cost, not a certification. `null`/`undefined` subtracts
+   * nothing, same "absent is not zero" rule as every other input here.
+   */
+  manualDebitsTotal?: number | null,
 ): MoneyPosition {
   const rawSum = project?.contractValue ?? project?.contract_value;
   const parsedSum = rawSum === null || rawSum === undefined || rawSum === "" ? NaN : Number(rawSum);
@@ -2033,7 +2054,8 @@ export function summariseMoney(
   const variationsTotal = approvedVos.reduce((s, v) => s + variationValue(v), 0);
 
   const certifiedCerts = (certificates ?? []).filter(certificateIsCertified);
-  const certified = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
+  const certifiedFromCertificates = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
+  const certified = certifiedFromCertificates + (manualCreditsTotal ?? 0);
   const retentionHeld = certifiedCerts.reduce((s, c) => s + (c.retentionAmount ?? 0), 0);
 
   // Original + approved variations. Null on a null original rather than
@@ -2049,7 +2071,9 @@ export function summariseMoney(
   // for the balance: it says the contract sum is known, and says nothing about
   // whether anything has been certified against it.
   const balance =
-    revisedContractSum === null || !certificatesKnown ? null : revisedContractSum - certified;
+    revisedContractSum === null || !certificatesKnown
+      ? null
+      : revisedContractSum - certified - (manualDebitsTotal ?? 0);
 
   return {
     contractSum,
