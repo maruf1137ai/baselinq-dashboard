@@ -1050,63 +1050,39 @@ export function RiskConditionBlock({
  * figure's place is a claim that the figure is nothing.
  */
 export function ProjectSummaryBlock({ data }: { data: HomeData }) {
-  const { project, projectStats, time, money, canViewFinance } = data;
+  const { project, time, money, canViewFinance } = data;
   if (!project) return null;
 
-  const pct = projectStats?.percentage ?? null;
   const number = project.project_number || project.projectNumber || null;
   const location = project.location || null;
   const days = time.hasDates && time.remainingDays !== null ? time.remainingDays : null;
-  const sum = canViewFinance ? money.revisedContractSum ?? money.contractSum : null;
+  // The commercial position, in the four figures the owner asked for.
+  //
+  // "Budget" here is the REVISED CONTRACT SUM — the contract as recorded plus
+  // approved variations — not the `total_budget` setup field. That field is
+  // written during setup and read by nothing, and it is unset on most
+  // projects, so a strip built on it would be blank where this one is not.
+  // The revised sum is also the figure the rest of the page already reasons
+  // about, so the strip cannot disagree with the status band below it.
+  //
+  // "Spent" is CERTIFIED TO DATE: money that has become payable under a
+  // signed certificate. It is the closest thing the platform holds to spend,
+  // and it is deliberately not called "spent" in the UI, because certified
+  // and paid are not the same thing and a QS will read the difference.
+  //
+  // All four are null without finance.view — not blanked here, never fetched.
+  const budget = canViewFinance ? money.revisedContractSum ?? money.contractSum : null;
+  const certified = canViewFinance ? money.certified : null;
+  const remaining = canViewFinance ? money.balance : null;
+  const certifiedPct = canViewFinance ? money.certifiedPct : null;
 
-  // The setup ring. Geometry only — `r=16` in a 40px box, the same 2px stroke
-  // the app's other rings use. `--muted` for the track and `--primary` for the
-  // filled arc, so it inherits the theme rather than naming a hex.
-  const R = 16;
-  const C = 2 * Math.PI * R;
 
   return (
     <section className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
-        {pct !== null && (
-          <div
-            className="relative h-10 w-10 shrink-0"
-            title={`Project setup: ${projectStats!.filledCount} of ${projectStats!.totalCount} record fields completed. This measures the PROJECT RECORD, not work done on site — Baselinq holds no measure of physical progress.`}
-          >
-            <svg className="h-10 w-10 -rotate-90" viewBox="0 0 40 40" aria-hidden>
-              <circle
-                cx="20"
-                cy="20"
-                r={R}
-                fill="none"
-                strokeWidth="3"
-                className="stroke-muted"
-              />
-              <circle
-                cx="20"
-                cy="20"
-                r={R}
-                fill="none"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={C}
-                strokeDashoffset={C * (1 - pct / 100)}
-                className="stroke-primary"
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs tabular-nums text-foreground">
-              {pct}%
-            </span>
-          </div>
-        )}
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
-            {pct !== null && pct < 100 && (
-              // The ring's label, on the page and not only on a tooltip. Without
-              // it a percentage beside a project name reads as progress.
-              <span className="text-xs text-muted-foreground">Setup {pct}% complete</span>
-            )}
           </div>
           {(number || location) && (
             <p className="text-xs text-muted-foreground truncate" title={location ?? undefined}>
@@ -1135,12 +1111,37 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
             {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days remaining`}
           </span>
         )}
-        {sum !== null && (
+        {budget !== null && (
+          // One bordered group, not three chips: these are three readings of
+          // a single quantity and separating them would invite them to be
+          // read as unrelated figures.
           <span
             className="text-xs font-medium px-3 py-1 rounded-md border bg-card text-foreground border-border tabular-nums"
-            title="The contract sum as recorded, revised by approved variations. Ex-VAT."
+            title="Budget is the contract sum as recorded, revised by approved variations. Certified is the value of certificates signed to date. Remaining is the difference. All ex-VAT. Certified is not the same as paid."
           >
-            {formatZAR(sum)}
+            <span className="text-muted-foreground font-normal">Budget{" "}</span>
+            {formatZAR(budget)}
+            {certified !== null && (
+              <>
+                <span className="text-muted-foreground font-normal">{" · Certified "}</span>
+                {formatZAR(certified)}
+                {certifiedPct !== null && (
+                  <span className="text-muted-foreground font-normal">{" (" + certifiedPct + "%)"}</span>
+                )}
+              </>
+            )}
+            {remaining !== null && (
+              <>
+                <span className="text-muted-foreground font-normal">{" · Remaining "}</span>
+                {formatZAR(remaining)}
+              </>
+            )}
+            {certified === null && (
+              // Not "R 0,00 certified" — nothing has been certified yet is a
+              // different statement from a certified value of zero, and only
+              // one of them is true here.
+              <span className="text-muted-foreground font-normal">{" · nothing certified yet"}</span>
+            )}
           </span>
         )}
         <span className="text-xs font-medium px-3 py-1 rounded-md border bg-primary/10 text-primary border-primary/20 tabular-nums">
@@ -1173,9 +1174,39 @@ export function SetupLineBlock({
   // content.
   const chip = cn(badgeVariants({ variant: "neutral" }), "text-foreground");
 
+  // The setup ring, moved here from the summary strip. Geometry only — the
+  // same 2px stroke the app's other rings use, at 32px rather than 40 so it
+  // sits inside a compact row. It belongs beside the list of what is still
+  // missing: next to a project name a bare percentage reads as build
+  // progress, which is the one thing it is not.
+  const R = 13;
+  const C = 2 * Math.PI * R;
+
   return (
     <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap bg-amber-50 border-b border-amber-200">
       <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+        <div
+          className="relative h-8 w-8 shrink-0"
+          title={`Project setup: ${projectStats.filledCount} of ${projectStats.totalCount} record fields completed. This measures the PROJECT RECORD, not work done on site — Baselinq holds no measure of physical progress.`}
+        >
+          <svg className="h-8 w-8 -rotate-90" viewBox="0 0 32 32" aria-hidden>
+            <circle cx="16" cy="16" r={R} fill="none" strokeWidth="3" className="stroke-muted" />
+            <circle
+              cx="16"
+              cy="16"
+              r={R}
+              fill="none"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={C}
+              strokeDashoffset={C * (1 - projectStats.percentage / 100)}
+              className="stroke-primary"
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[10px] tabular-nums text-foreground">
+            {projectStats.percentage}%
+          </span>
+        </div>
         <span className="text-sm text-muted-foreground shrink-0">
           Project setup{" "}
           <span className="text-foreground tabular-nums">
