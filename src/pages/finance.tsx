@@ -4,33 +4,13 @@ import {
   VariationOrdersTable,
   VariationOrder,
 } from "@/components/finance/VariationOrdersTable";
-import { Button } from "@/components/ui/button";
 import React, { useEffect, useMemo, useState } from "react";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
-import useFetch from "@/hooks/useFetch";
+import useFetchAllPages from "@/hooks/useFetchAllPages";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePermission } from "@/hooks/usePermission";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import VOForm from "@/components/header/forms/VOForm";
-import { deleteData } from "@/lib/Api";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
@@ -58,8 +38,7 @@ const formatDate = (dateStr: string): string => {
 };
 
 const Finance = () => {
-  const { canViewFinance, canEditFinance } = usePermissions();
-  const canEditVariationOrder = canEditFinance;
+  const { canViewFinance } = usePermissions();
 
   const selectedProjectId =
     parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
@@ -149,8 +128,9 @@ const Finance = () => {
     setSearchParams(params, { replace: true });
   };
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  // Selection is HIGHLIGHT-ONLY now — set from a `?vo=` deep link, never
+  // from an in-page edit/delete action (there is none; see
+  // VariationOrdersTable.tsx's HEADERS comment for why).
   const [selectedOrder, setSelectedOrder] = useState<VariationOrder | null>(null);
   const [voSearch, setVoSearch] = useState("");
 
@@ -167,7 +147,7 @@ const Finance = () => {
   const { unreadByPcId } = useFinanceUnreadNotifications(projectId);
   const pcUnreadCount = Object.values(unreadByPcId).reduce((sum, arr) => sum + arr.length, 0);
 
-  const { data: voResponse, isLoading: isLoadingVO } = useFetch<{ count: number; results: any[] }>(
+  const { data: voResponse, isLoading: isLoadingVO } = useFetchAllPages<any>(
     projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
     { enabled: !!projectId }
   );
@@ -225,32 +205,6 @@ const Finance = () => {
   useEffect(() => {
     if (linkedOrder) setSelectedOrder(linkedOrder);
   }, [linkedOrder]);
-
-  const handleEdit = (order: VariationOrder) => {
-    setSelectedOrder(order);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDelete = (order: VariationOrder) => {
-    setSelectedOrder(order);
-    setIsDeleteModalOpen(true);
-  };
-
-  const queryClient = useQueryClient();
-
-  const handleConfirmDelete = async () => {
-    if (!selectedOrder) return;
-    try {
-      await deleteData({ url: `tasks/tasks/${selectedOrder.taskId}/`, data: undefined });
-      toast.success("Variation order deleted successfully");
-      await queryClient.invalidateQueries({ queryKey: [`tasks/tasks/?taskType=VO&project=${projectId}`] });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Failed to delete");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setSelectedOrder(null);
-    }
-  };
 
   return (
     <DashboardLayout>
@@ -340,8 +294,6 @@ const Finance = () => {
                   search={voSearch}
                   highlightTaskId={selectedOrder?.taskId ?? null}
                   onViewDetails={(taskId) => navigate(`/tasks/${taskId}`)}
-                  onEdit={canEditVariationOrder ? handleEdit : undefined}
-                  onDelete={canEditVariationOrder ? handleDelete : undefined}
                 />
               )}
             </main>
@@ -355,54 +307,11 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* The create-VO drawer is gone with its trigger — leaving a Sheet
-          mounted that nothing can open is the dead-UI pattern this page has
-          just been cleared of. Variations are raised from the task board. */}
-
-      {/* Edit VO drawer */}
-      <Sheet open={canEditVariationOrder && isEditModalOpen} onOpenChange={(open) => { setIsEditModalOpen(open); if (!open) setSelectedOrder(null); }}>
-        <SheetContent side="right" size="lg" className="p-0 flex flex-col">
-          <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
-            <SheetTitle>Edit Variation Order</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 flex flex-col overflow-hidden px-6">
-            {selectedOrder && (
-              <VOForm
-                setOpen={setIsEditModalOpen}
-                initialStatus={selectedOrder.status}
-                taskId={selectedOrder.taskId}
-                initialData={{
-                  title: selectedOrder.rawTask?.title,
-                  discipline: selectedOrder.rawTask?.discipline,
-                  category: selectedOrder.rawTask?.category,
-                  description: selectedOrder.rawTask?.description,
-                  lineItems: selectedOrder.rawTask?.lineItems,
-                }}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Delete confirmation modal */}
-      <Dialog open={canEditVariationOrder && isDeleteModalOpen} onOpenChange={(open) => { setIsDeleteModalOpen(open); if (!open) setSelectedOrder(null); }}>
-        <DialogContent size="sm">
-          <DialogHeader>
-            <DialogTitle>Delete Variation Order</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1">
-              Are you sure you want to delete <span className="font-medium text-foreground">{selectedOrder?.id}</span>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="pt-4">
-            <Button variant="outline" onClick={() => { setIsDeleteModalOpen(false); setSelectedOrder(null); }}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* The create-VO drawer is gone with its trigger, and so is the
+          edit/delete Sheet+Dialog pair that used to live here — leaving
+          mounted UI that nothing can open is the dead-UI pattern this page
+          has just been cleared of. Variations are raised from the task
+          board and move forward through their own workflow from there. */}
     </DashboardLayout>
   );
 };

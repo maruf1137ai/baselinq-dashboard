@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
 } from '../ui/dropdown-menu';
 import { CostLedgerDrawer } from './costLedgerDrawer';
-import useFetch from '@/hooks/useFetch';
+import useFetchAllPages from '@/hooks/useFetchAllPages';
 import { PlusIcon, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
@@ -73,13 +73,6 @@ interface LedgerApiEntry {
   updatedAt: string;
 }
 
-interface LedgerListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: LedgerApiEntry[];
-}
-
 /** Format API date YYYY-MM-DD to DD/MM/YY for display */
 const formatLedgerDate = (dateStr: string): string => {
   if (!dateStr) return '—';
@@ -115,7 +108,7 @@ const CostLadger = () => {
     ? `cost-ledger/?project_id=${projectId}`
     : '';
 
-  const { data: listData, isLoading } = useFetch<LedgerListResponse>(listUrl);
+  const { data: listData, isLoading } = useFetchAllPages<LedgerApiEntry>(listUrl);
 
   // Same derivation Project Health's Commercial position tab uses, so this
   // tab's "Financial overview" cannot drift from that one — see

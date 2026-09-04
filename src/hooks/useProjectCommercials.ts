@@ -32,6 +32,7 @@
  * pages cannot drift on what a balance or a retention figure means.
  */
 import { useMemo } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 
 import useFetch from "@/hooks/useFetch";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -59,6 +60,23 @@ const STATE_RANK: Record<string, number> = {
   draft: 3,
   posted: 4,
 };
+
+/**
+ * Invalidates every query this hook reads for one project.
+ *
+ * Exists because two call sites (posting/approving a Payment Certificate,
+ * signing a Variation Order) each need to refresh this hook's figures after
+ * their own mutation, and each previously hardcoded a *different*, incomplete
+ * guess at these keys in its own file — which is exactly how they drifted out
+ * of sync with what's declared here. Call this instead of re-guessing them a
+ * third time.
+ */
+export function invalidateProjectCommercials(queryClient: QueryClient, projectId: string) {
+  queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["commercials-certificates", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["commercials-vo-tasks", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["project-variation-orders", projectId] });
+}
 
 export function useProjectCommercials(projectId: string | undefined) {
   const perms = usePermissions();
@@ -106,6 +124,19 @@ export function useProjectCommercials(projectId: string | undefined) {
     { enabled: wants },
   );
 
+  /**
+   * Manual Cost Ledger credit entries not already counted via a real posted
+   * certificate's own claim_amount (`linked_pc`/`linked_vo` both null on the
+   * ledger row) — see `backend/cost_ledger/views.py`'s `summary` action. Added
+   * into `certified` below so a manual credit entry counts without
+   * double-counting a PC that already has its own auto-generated ledger
+   * mirror (which uses a different basis, net_amount, than claim_amount).
+   */
+  const ledgerSummary = useFetch<{ manualCreditsTotal?: number; manualDebitsTotal?: number }>(
+    wants ? `cost-ledger/summary/?project_id=${projectId}` : "",
+    { enabled: wants },
+  );
+
   const certificateList = certificates.rows;
 
   const variationList = useMemo(() => {
@@ -142,6 +173,8 @@ export function useProjectCommercials(projectId: string | undefined) {
               grandTotal: v.value,
               signedAt: v.signedAt,
             })),
+        ledgerSummary.isError ? null : ledgerSummary.data?.manualCreditsTotal ?? null,
+        ledgerSummary.isError ? null : ledgerSummary.data?.manualDebitsTotal ?? null,
       ),
     [
       project,
@@ -151,6 +184,8 @@ export function useProjectCommercials(projectId: string | undefined) {
       variationTasks.isError,
       variationRecords.isError,
       variationRecords.truncated,
+      ledgerSummary.data,
+      ledgerSummary.isError,
     ],
   );
 
