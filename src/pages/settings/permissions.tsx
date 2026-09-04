@@ -455,7 +455,18 @@ function MatrixGrid({
   const groups = useMemo(() => {
     const byGroup: Record<string, Permission[]> = {};
     const hiddenGroups = ["audit", "compliance", "programme", "project"];
-    const hiddenCodes = ["project.create"];
+    // project.create: superseded by task.create's per-type creates.
+    // finance.qs_approve / finance.client_approve / finance.post_certificate:
+    // decommissioned, not merely unused — see RolesPermissions.tsx's
+    // HIDDEN_CODES comment for the full history (user/migrations 0038, 0040,
+    // 0042). All three Permission rows still exist but are ungranted and
+    // read by no code path, so they don't get a row here either.
+    const hiddenCodes = [
+      "project.create",
+      "finance.qs_approve",
+      "finance.client_approve",
+      "finance.post_certificate",
+    ];
     // Remap certain permissions into a different display group
     const GROUP_OVERRIDES: Record<string, string> = {
       "project.edit": "settings",

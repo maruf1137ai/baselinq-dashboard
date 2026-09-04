@@ -730,7 +730,7 @@ const financialBuildUp = (entry: PCEntry) => {
   return { grossWorkValue, voThisPeriod, materialsOnSite, grossValuation, penalties, advanceRecovery };
 };
 
-const PCDetailsDialog = ({
+export const PCDetailsDialog = ({
   entry,
   open,
   onOpenChange,
@@ -802,7 +802,9 @@ const PCDetailsDialog = ({
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
-            <DialogDescription>Period: {entry.period}</DialogDescription>
+            <DialogDescription>
+              Date: {entry.certificateDate ? formatDate(entry.certificateDate) : "—"} · Period: {entry.period}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Who / when — creation is always known; certification only once it's happened. */}
@@ -826,6 +828,58 @@ const PCDetailsDialog = ({
             <p>
               <span className="text-muted-foreground">Updated:</span> {formatDate(entry.updatedAt)}
             </p>
+          </div>
+
+          {/* Link to Programme Phases — Programme Phase 3's milestones this
+              certificate's claim was measured against, frozen at creation.
+              Same relation createPCDrawer.tsx's own "Link to Programme
+              Phases" section lets the drafter set (see its milestones map). */}
+          <div className="mt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Link to Programme Phases
+            </p>
+            {(entry.milestoneLinks ?? []).length > 0 ? (
+              <ul className="rounded-lg border border-border divide-y divide-border">
+                {(entry.milestoneLinks ?? []).map((m) => (
+                  <li key={m.linkId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="text-foreground truncate">{m.milestoneName}</span>
+                    <span className="text-muted-foreground tabular-nums whitespace-nowrap">
+                      {m.claimedPct}% claimed
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Not linked to any programme phase</p>
+            )}
+          </div>
+
+          {/* Linked VO — approved Variation Orders included in this
+              certificate's claim (see createPCDrawer.tsx's "Approved
+              Variation Orders" table, `included` toggle). */}
+          <div className="mt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Linked VO
+            </p>
+            {(entry.voItems ?? []).filter((v) => v.included).length > 0 ? (
+              <ul className="rounded-lg border border-border divide-y divide-border">
+                {(entry.voItems ?? [])
+                  .filter((v) => v.included)
+                  .map((v) => (
+                    <li key={v.voNumber} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                      <span className="text-foreground truncate">
+                        {v.voNumber}
+                        {v.description ? ` — ${v.description}` : ""}
+                      </span>
+                      <span className="text-muted-foreground tabular-nums whitespace-nowrap">
+                        {formatCurrency(v.thisPeriod)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No variation orders linked</p>
+            )}
           </div>
 
           {/* Financial Summary — same build-up createPCDrawer.tsx shows while
