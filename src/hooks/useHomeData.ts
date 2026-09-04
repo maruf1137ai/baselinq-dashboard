@@ -262,6 +262,18 @@ export function useHomeData(projectId: string | undefined) {
     wantsMoney ? `projects/${projectId}/payments/` : "",
     on(wantsMoney),
   );
+  /**
+   * Manual Cost Ledger credit entries not already counted via a real posted
+   * certificate's own claim_amount (`linked_pc`/`linked_vo` both null) — see
+   * `useProjectCommercials`'s identical read for the full reasoning. Read
+   * here too so Home's certified curve can't drift from Project Health's
+   * Financial Overview, the exact drift this file's `summariseMoney` header
+   * already describes fixing once.
+   */
+  const ledgerSummary = useFetch<{ manualCreditsTotal?: number; manualDebitsTotal?: number }>(
+    wantsMoney ? `cost-ledger/summary/?project_id=${projectId}` : "",
+    on(wantsMoney),
+  );
   // The variation RECORDS, as distinct from the assignment tasks above. Both
   // are read and merged below — see `useProjectVariations` for why neither
   // alone is sufficient. Same `finance.view` gate: not requested without it.
@@ -564,8 +576,18 @@ export function useHomeData(projectId: string | undefined) {
               signedAt: v.signedAt,
             }))
           : null,
+        ledgerSummary.isError ? null : ledgerSummary.data?.manualCreditsTotal ?? null,
+        ledgerSummary.isError ? null : ledgerSummary.data?.manualDebitsTotal ?? null,
       ),
-    [project, certificateList, variationRecordList, certificatesReadable, variationsReadable],
+    [
+      project,
+      certificateList,
+      variationRecordList,
+      certificatesReadable,
+      variationsReadable,
+      ledgerSummary.data,
+      ledgerSummary.isError,
+    ],
   );
 
   // ── Key indicators ──────────────────────────────────────────────────────

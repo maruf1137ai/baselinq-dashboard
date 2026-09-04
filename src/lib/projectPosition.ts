@@ -285,9 +285,10 @@ export function financialOverview(
         ? `${basis?.vatInclusiveRows} of ${basis?.certifiedRows} posted certificates carry no ex-VAT claim value, so their VAT-inclusive total is in this figure. It reads high against an ex-VAT contract sum.`
         : undefined,
       caveat:
-        "Σ claim_amount over posted certificates — the value of work " +
-        "certified, excluding VAT. Certified, not paid. A commercial measure, " +
-        "not physical progress.",
+        "Σ claim_amount over posted certificates, plus any Cost Ledger credit " +
+        "entry not already linked to one of those certificates (a manual " +
+        "entry, or one linked to a Variation Order instead). Certified, not " +
+        "paid. A commercial measure, not physical progress.",
     },
     {
       key: "retention",
@@ -310,13 +311,15 @@ export function financialOverview(
       label: BALANCE_LABEL,
       value: zar(balanceToCertify),
       derived: true,
-      formula: "revised sum − certified to date",
+      formula: "revised sum minus certified to date minus unlinked Cost Ledger debits",
       caveat:
-        "What remains of the revised contract sum to be certified. Retention " +
-        "is NOT deducted: it is withheld out of value that has already been " +
-        "certified, so it is inside the certified figure already. This is not " +
-        "cash still to flow — the payload does not distinguish paid from " +
-        "posted, so that figure cannot be stated.",
+        "What remains of the revised contract sum to be certified, less any " +
+        "Cost Ledger debit entry not already linked to an approved Variation " +
+        "Order (a manual cost eats into the balance immediately, not only " +
+        "once certified). Retention is NOT deducted: it is withheld out of " +
+        "value that has already been certified, so it is inside the certified " +
+        "figure already. This is not cash still to flow — the payload does " +
+        "not distinguish paid from posted, so that figure cannot be stated.",
     },
   ];
 }

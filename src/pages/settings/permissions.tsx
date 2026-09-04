@@ -64,7 +64,12 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   // Finance
   "finance.view":            "View-only access to every Finance page — Cost Ledger, Payment Certificates, Variation Orders, project budget.",
   "finance.edit":            "Edit everything in Finance — cost ledger entries, payment certificates, variation orders, project budget.",
-  "finance.approve_payment": "Final sign-off authority on payment certificates. Independent of edit access.",
+  // Shows/hides the Platform Fees tab (cost_ledger's _can_view_platform_fees)
+  // — borrowed for that purpose, per frontend/src/pages/finance.tsx's own
+  // comment. The name still comes from its other job, reversing an
+  // already-recorded payment (tasks/views_payments.py's
+  // PaymentReceiptReverseView), but no screen in the app exposes that action.
+  "finance.approve_payment": "View the Platform Fees tab on the Finance page.",
   // Meetings
   "meeting.schedule": "Can schedule new meetings. Without this, the Schedule Meeting button is hidden.",
   "meeting.update":   "Can update meeting status — cancel, mark completed, mark cancelled, confirm no-show.",

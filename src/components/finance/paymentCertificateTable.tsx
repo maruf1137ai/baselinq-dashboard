@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
+import { invalidateProjectCommercials } from "@/hooks/useProjectCommercials";
 import { postData, deleteData, registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
@@ -1096,13 +1097,20 @@ const PCRow = ({
     { enabled: waitingOnOpen }
   );
 
-  const invalidatePcQueries = () =>
+  const invalidatePcQueries = () => {
     queryClient.invalidateQueries({
       predicate: (query) =>
         typeof query.queryKey[0] === "string" &&
         (query.queryKey[0].startsWith("tasks/payment-certificates") ||
           query.queryKey[0].startsWith("cost-ledger")),
     });
+    // The predicate above only matches URL-keyed queries. Project Health's
+    // Financial Overview and the Cost Ledger tab's cards read certificates
+    // through useProjectCommercials's plain-string-keyed query instead, which
+    // never matched it — so posting/approving a certificate left those two
+    // screens stale until a full reload. See invalidateProjectCommercials.
+    invalidateProjectCommercials(queryClient, String(entry.projectId));
+  };
 
   const runTransition = async (transition: string, reason?: string) => {
     setActingOn(transition);
