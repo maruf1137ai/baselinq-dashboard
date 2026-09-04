@@ -1,7 +1,8 @@
 /**
  * Help hub — landing page for the sidebar's "Help" link.
  *
- * Just a chooser between the plain-English reference pages: HelpTasks.tsx
+ * Just a chooser between the plain-English reference pages: HelpHome.tsx
+ * (/help/home), HelpTasks.tsx
  * (/help/tasks), HelpFinance.tsx (/help/finance), HelpProgramme.tsx
  * (/help/programme), HelpMeetings.tsx (/help/meetings), HelpCommunication.tsx
  * (/help/communication), HelpDocumentation.tsx (/help/documentation),
@@ -10,9 +11,16 @@
  * card here whenever a new /help/<area> reference page ships.
  */
 import { Link } from "react-router-dom";
-import { ClipboardList, Wallet, CalendarClock, Users, MessageSquare, FileText, ShieldCheck, HeartPulse, UserCog, ChevronRight } from "lucide-react";
+import { House, ClipboardList, Wallet, CalendarClock, Users, MessageSquare, FileText, ShieldCheck, HeartPulse, UserCog, ChevronRight } from "lucide-react";
 
 const OPTIONS = [
+  {
+    to: "/help/home",
+    icon: House,
+    title: "Home",
+    description:
+      "Every section of the landing page — the setup block, summary strip, My actions, Recent activity, Contract watch, the status band — what each shows and where the figures come from.",
+  },
   {
     to: "/help/tasks",
     icon: ClipboardList,

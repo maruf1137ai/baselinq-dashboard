@@ -304,12 +304,34 @@ export default function RolesPermissions() {
   const area = selectedArea && areas.includes(selectedArea) ? selectedArea : areas[0] ?? null;
 
   /**
-   * The catch-all create permission is rendered as a parent control over the
-   * per-type creates rather than as a row of its own — see MASTER_CREATE.
-   * Nothing reads it, so showing it as an eighth switch would only invite the
-   * question of what happens when it disagrees with the seven.
+   * Permission codes hidden from the matrix UI entirely — never rendered as
+   * a row, never counted in any area's or sub-part's "N of M granted". Two
+   * different reasons:
+   *  - task.create: rendered instead as the master "Create every type"
+   *    toggle above the per-type creates (see MASTER_CREATE below). Nothing
+   *    reads task.create itself, so showing it as an eighth switch would
+   *    only invite the question of what happens when it disagrees with the
+   *    seven.
+   *  - finance.qs_approve / finance.client_approve / finance.post_certificate:
+   *    decommissioned, not merely unused. They governed a two-stage
+   *    QS-then-Client Payment Certificate certification flow
+   *    (user/migrations/0038_pc_stage_permissions.py) that was collapsed
+   *    into one finance.approve_certificate act two migrations later
+   *    (0040_pc_single_approve_permission.py — see its docstring: "a
+   *    Permission row with zero grants is inert"); finance.post_certificate's
+   *    own manual HTTP route was removed outright in
+   *    0042_remove_pc_manual_post.py. All three Permission rows still exist
+   *    (deliberately not deleted, so a custom org RolePermission override
+   *    doesn't 500 on a missing FK) but are ungranted and read by no code
+   *    path anywhere — toggling them here would visibly do nothing, so they
+   *    don't get a row to toggle.
    */
-  const SUPERSEDED = "task.create";
+  const HIDDEN_CODES = new Set([
+    "task.create",
+    "finance.qs_approve",
+    "finance.client_approve",
+    "finance.post_certificate",
+  ]);
 
   /** Permissions of the open area, grouped into their sub-parts, order preserved. */
   const parts = useMemo(() => {
@@ -317,7 +339,7 @@ export default function RolesPermissions() {
     const index = new Map<string, number>();
     for (const p of catalogue) {
       if (p.group !== area) continue;
-      if (p.code === SUPERSEDED) continue;
+      if (HIDDEN_CODES.has(p.code)) continue;
       const title = p.subgroup || "Other";
       if (!index.has(title)) {
         index.set(title, out.length);
@@ -345,7 +367,7 @@ export default function RolesPermissions() {
   const createPerms = useMemo(
     () =>
       catalogue.filter(
-        (p) => p.group === area && p.code !== SUPERSEDED && p.code.endsWith(".create"),
+        (p) => p.group === area && !HIDDEN_CODES.has(p.code) && p.code.endsWith(".create"),
       ),
     [catalogue, area],
   );
@@ -539,7 +561,7 @@ export default function RolesPermissions() {
 
                     {areas.map((key) => {
                       const meta = AREAS[key];
-                      const perms = catalogue.filter((p) => p.group === key);
+                      const perms = catalogue.filter((p) => p.group === key && !HIDDEN_CODES.has(p.code));
                       const resolved = perms.map((p) => resolveFromLayers(matrix, p.code));
                       const overrides = resolved.filter((r) => r.origin !== "global").length;
                       const conflicts = resolved.filter((r) => r.conflict).length;

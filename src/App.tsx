@@ -15,6 +15,7 @@ import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
 import Help from "./pages/Help";
+import HelpHome from "./pages/HelpHome";
 import HelpTasks from "./pages/HelpTasks";
 import HelpFinance from "./pages/HelpFinance";
 import HelpProgramme from "./pages/HelpProgramme";
@@ -204,6 +205,15 @@ const App = () => (
           <Route path="/help" element={
             <ProtectedRoute>
               <Help />
+            </ProtectedRoute>
+          } />
+          {/* Home reference — what every section of the landing page shows,
+              who can see it, and where each figure comes from. Home itself
+              has no permission, so neither does its reference page. No
+              project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/home" element={
+            <ProtectedRoute>
+              <HelpHome />
             </ProtectedRoute>
           } />
           {/* Werner task workflow reference — who can do what per doc type.

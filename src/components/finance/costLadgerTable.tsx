@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Category, LedgerEntry } from "./costLadger";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Receipt, SearchX } from "lucide-react";
+import { PCDetailsDialog, PCEntry } from "./paymentCertificateTable";
+import useFetch from "@/hooks/useFetch";
+import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, Receipt, SearchX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -108,6 +110,72 @@ const LedgerDetailsDialog = ({
   );
 };
 
+/**
+ * A ledger credit created from a POSTED payment certificate (see
+ * cost_ledger/signals.py's `_create_credit_for_pc`, which stamps
+ * `linked_pc`) points at a real PaymentCertificate row, not just its number.
+ * Fetches that row's full shape and hands it to the SAME details dialog the
+ * Payment Certificates tab uses (paymentCertificateTable.tsx's
+ * PCDetailsDialog), rather than the bare `LedgerDetailsDialog` below — so a
+ * certificate looks the same everywhere it's found. Its action buttons are
+ * inert here on purpose: only a POSTED certificate ever gets a linked_pc
+ * credit, and a posted certificate offers no transitions/edit/delete, so the
+ * handlers are never actually invoked.
+ */
+const LinkedPCDetailsDialog = ({
+  pcId,
+  open,
+  onOpenChange,
+}: {
+  pcId: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  const { data: pc, isLoading, isError } = useFetch<PCEntry>(
+    `tasks/payment-certificates/${pcId}/`,
+    { enabled: open }
+  );
+
+  if (pc) {
+    return (
+      <PCDetailsDialog
+        entry={pc}
+        open={open}
+        onOpenChange={onOpenChange}
+        actingOn={null}
+        onTransitionClick={() => {}}
+        onDeleteClick={() => {}}
+      />
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isError ? "Couldn't load certificate" : "Loading certificate…"}</DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center justify-center py-10">
+          {isError ? (
+            <p className="text-sm text-muted-foreground">
+              This payment certificate's details could not be loaded.
+            </p>
+          ) : (
+            isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
+              Close
+            </button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const LedgerRow = ({
   entry,
   onEdit,
@@ -158,11 +226,19 @@ const LedgerRow = ({
           canEdit={canEdit}
           onViewDetails={() => setShowViewDialog(true)}
         />
-        <LedgerDetailsDialog
-          entry={entry}
-          open={showViewDialog}
-          onOpenChange={setShowViewDialog}
-        />
+        {entry.linkedPCId ? (
+          <LinkedPCDetailsDialog
+            pcId={entry.linkedPCId}
+            open={showViewDialog}
+            onOpenChange={setShowViewDialog}
+          />
+        ) : (
+          <LedgerDetailsDialog
+            entry={entry}
+            open={showViewDialog}
+            onOpenChange={setShowViewDialog}
+          />
+        )}
       </td>
     </tr>
   );
