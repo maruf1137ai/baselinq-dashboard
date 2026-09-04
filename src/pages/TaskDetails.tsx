@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { buildMemberIndex, resolveHeaderPeople } from "@/lib/taskHeaderPeople";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapUnderline from "@tiptap/extension-underline";
@@ -487,6 +488,11 @@ export default function TaskDetails() {
       m.user?.role?.name ||
       "",
   }));
+
+  // Project-scoped identity index for the document header's From / To / CC.
+  // The rules, and why the project role beats the organisation role here, are
+  // in src/lib/taskHeaderPeople.ts.
+  const memberIndex = useMemo(() => buildMemberIndex(projectMembers), [projectMembers]);
 
   // ── Reference picker — load all linkable docs on this project ─────────
   // Reply.references supports any Werner entity (RFI/SI/VO/IC/Claim/GI).
@@ -1019,8 +1025,11 @@ export default function TaskDetails() {
 
     const taskType = apiResponse.taskType;
     const task = apiResponse.task || {};
-    const assignedBy = apiResponse.assignedBy;
-    const assignedTo = apiResponse.assignedTo || [];
+
+    // Who this document is from, to and copied to — resolved against THIS
+    // project rather than the organisation. See src/lib/taskHeaderPeople.ts
+    // for why the payload answers this question twice and which copy is right.
+    const headerPeople = resolveHeaderPeople(apiResponse, memberIndex);
 
     // Map action requests if data is provided
     const mappedActionRequests = actionRequestsData?.map(req => {
@@ -1061,16 +1070,16 @@ export default function TaskDetails() {
       type: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
       creator: {
         badge: taskType === "CRITICALPATHITEM" ? "CPI" : taskType,
-        id: assignedBy?.userId || task.createdBy?.userId || task.issuedBy?.userId,
-        name: assignedBy?.name || task.issuedBy?.name || task.createdBy?.name || task.raisedBy?.name || task.submittedBy?.name || "",
-        role: assignedBy?.role || task.issuedBy?.role || task.createdBy?.role || "",
+        id: headerPeople.from.id,
+        name: headerPeople.from.name,
+        role: headerPeople.from.role,
       },
       watcher: {
-        name: assignedTo[0]?.name || "Watcher",
-        role: assignedTo[0]?.role || "Watcher",
+        name: headerPeople.to[0]?.name || "Watcher",
+        role: headerPeople.to[0]?.role || "Watcher",
       },
-      assignedTo: assignedTo,
-      ccUsers: apiResponse.responseBy || apiResponse.response_by || apiResponse.ccUsers || apiResponse.cc_users || [],
+      assignedTo: headerPeople.to,
+      ccUsers: headerPeople.cc,
       actionRequests: mappedActionRequests,
       responses: apiResponse.responses || [],
       status: task.status || apiResponse.status || "Pending",
