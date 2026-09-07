@@ -58,6 +58,15 @@ describe("daysUntil / relativeDays", () => {
     expect(daysUntil("not a date", NOW)).toBeNull();
   });
 
+  it("counts a bare YYYY-MM-DD date without a timezone-induced off-by-one", () => {
+    // Bare dates (obligation/task due dates) must parse as a LOCAL day, not
+    // get shifted by `new Date(iso)` treating them as UTC midnight — the
+    // exact bug `shortDate` below already guards against.
+    expect(daysUntil("2026-08-20", NOW)).toBe(3);
+    expect(daysUntil("2026-08-17", NOW)).toBe(0);
+    expect(daysUntil("2026-08-11", NOW)).toBe(-6);
+  });
+
   it("reads in British English with no exclamation", () => {
     expect(relativeDays(0)).toBe("today");
     expect(relativeDays(1)).toBe("tomorrow");
@@ -76,27 +85,30 @@ describe("buildCertificateQueue", () => {
     { id: 4, pcNumber: "PC-004", workflowState: "draft" },
   ];
 
-  it("surfaces only certificates that need a human", () => {
+  it("surfaces only submitted certificates — approving now auto-posts, so there is nothing left to do at 'approved'", () => {
+    // views_pc_workflow.py::_run_transition chains approve straight into
+    // post atomically — a certificate essentially never rests at
+    // "approved" — and the permission this branch used to be gated on,
+    // finance.post_certificate, was revoked from every role
+    // (0042_remove_pc_manual_post.py), so it was unreachable anyway.
     const q = buildCertificateQueue(certs);
-    expect(q.map((i) => i.key)).toEqual(["certificate-1", "certificate-2"]);
+    expect(q.map((i) => i.key)).toEqual(["certificate-1"]);
   });
 
   it("names the next move rather than the state", () => {
     const q = buildCertificateQueue(certs);
     expect(q[0].headline).toContain("Certify PC-003");
-    expect(q[1].headline).toContain("Post PC-002");
   });
 
-  it("gates each row on the permission for the ACT it names", () => {
+  it("gates the row on the permission for the ACT it names", () => {
     // It used to be `["finance.view"]` on every row, so "Certify PC-003"
     // rendered identically for the principal agent, the contractor's QS and
     // any finance viewer on the project — under a heading reading
-    // "Certificates awaiting you". The codes below are the server's own
-    // `TRANSITION_PERMISSIONS` (tasks/pc_workflow.py), and
-    // `finance.approve_certificate` is granted to PRINCIPAL_PM alone.
+    // "Certificates awaiting you". The code below is the server's own
+    // `TRANSITION_PERMISSIONS` (tasks/pc_workflow.py) — granted to
+    // PRINCIPAL_PM alone.
     expect(buildCertificateQueue(certs).map((i) => i.requires)).toEqual([
       ["finance.view", "finance.approve_certificate"],
-      ["finance.view", "finance.post_certificate"],
     ]);
   });
 
@@ -104,14 +116,9 @@ describe("buildCertificateQueue", () => {
     // Not "no rush" — a gap in the API. The band matrix is what stops this
     // absence from burying the most valuable thing a principal agent does.
     const q = buildCertificateQueue(certs);
-    expect(q.map((i) => i.daysRemaining)).toEqual([null, null]);
-    expect(q.map((i) => i.clock)).toEqual([null, null]);
+    expect(q.map((i) => i.daysRemaining)).toEqual([null]);
+    expect(q.map((i) => i.clock)).toEqual([null]);
     expect(q.every((i) => i.consequence === "money" && i.pressure === "none")).toBe(true);
-  });
-
-  it("puts certifying ahead of posting within the money class", () => {
-    const q = buildCertificateQueue(certs);
-    expect(q[0].subRank).toBeLessThan(q[1].subRank as number);
   });
 
   it("routes every row to the certificate it names, not to bare /finance", () => {
@@ -141,7 +148,7 @@ describe("buildRejectedCertificateQueue", () => {
       { id: 6, workflowState: "posted" },
     ]);
     expect(q).toHaveLength(1);
-    expect(q[0].headline).toBe("Rework PC-005 — it was rejected");
+    expect(q[0].headline).toBe("PC-005 was rejected — raise a new certificate");
     // Reworking is the preparer's act — `TRANSITION_PERMISSIONS` maps submit
     // and cancel to `finance.create_certificate` — not a certifier's.
     expect(q[0].requires).toEqual(["finance.view", "finance.create_certificate"]);
@@ -406,9 +413,12 @@ describe("buildTimeBarQueue", () => {
     expect(buildTimeBarQueue([{ id: 5, label: "x", days_remaining: 2, status: "served" }])).toHaveLength(0);
   });
 
-  it("is not gated — a lapsing notice prejudices every party to the contract", () => {
+  it("requires risk.timebar.manage — the act, not merely seeing the deadline, is gated", () => {
+    // Viewing stays reachable to everyone via the page-level compliance.view
+    // gate on Project Health; this only controls whether the Home queue
+    // implies the viewer personally can serve/cancel it.
     const q = buildTimeBarQueue([{ id: 6, label: "x", days_remaining: 2, status: "open" }]);
-    expect(q[0].requires).toEqual([]);
+    expect(q[0].requires).toEqual(["risk.timebar.manage"]);
     expect(q[0].href).toBe("/project-health?tab=notice-deadlines");
   });
 });
@@ -455,7 +465,7 @@ describe("headlines identify their row when truncated", () => {
       ...buildCertificateQueue(
         [
           { id: 1, pcNumber: "PC-006", workflowState: "submitted" },
-          { id: 2, pcNumber: "PC-007", workflowState: "approved" },
+          { id: 2, pcNumber: "PC-007", workflowState: "submitted" },
         ],
         NOW,
       ),
@@ -1000,7 +1010,9 @@ describe("resolveFinanceAccess", () => {
       ...buildTaskQueue([{ id: "t", title: "Respond", needsAction: true }], NOW),
     ]);
     // The contractor holds compliance.view but not finance.view, which is the
-    // live configuration on project 45.
+    // live configuration on project 45. canManageTimeBars is set true here so
+    // this test still isolates the FINANCE-hiding behaviour it's about —
+    // time-bar gating on risk.timebar.manage is covered separately above.
     const visible = filterQueueByPermission(items, {
       canViewFinance: access.canViewFinance,
       canViewCompliance: true,
@@ -1008,6 +1020,7 @@ describe("resolveFinanceAccess", () => {
       canCertify: access.canCertifyCertificate,
       canPostCertificate: access.canPostCertificate,
       canPrepareCertificate: access.canPrepareCertificate,
+      canManageTimeBars: true,
     });
     expect(visible.every((i) => !i.requires.includes("finance.view"))).toBe(true);
     expect(visible.map((i) => i.kind).sort()).toEqual(["task", "time-bar"]);

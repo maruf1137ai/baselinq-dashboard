@@ -68,6 +68,45 @@ const STATUS_VERB: Record<string, string> = {
   in_progress: "updated",
 };
 
+/** Entity-type-aware verbs, keyed by [type][entity status]. Falls back to
+ * STATUS_VERB (the 3-bucket Task.status) when the entity status is
+ * missing or not in this table, so every row still renders something
+ * true. "Draft" is intentionally absent — falls through to the bucket's
+ * "created", which is correct for a freshly drafted doc. */
+const ENTITY_STATUS_VERB: Record<string, Record<string, string>> = {
+  VO: {
+    Submitted: "submitted", "Under Review": "submitted for review",
+    Priced: "priced", Recommended: "recommended for approval",
+    Approved: "approved", Rejected: "rejected", Closed: "closed",
+  },
+  SI: {
+    Issued: "issued", Acknowledged: "acknowledged", Actioned: "actioned",
+    Verified: "verified", Completed: "closed", Closed: "closed",
+  },
+  RFI: {
+    "Sent for Review": "submitted for review",
+    "Further Info Required": "requested more information on",
+    "Response Provided": "responded to", Closed: "closed", Answered: "closed",
+  },
+  DC: {
+    "Notice Issued": "issued a delay notice for",
+    "Under Assessment": "began assessing",
+    "Determination Made": "made a determination on",
+    "EOT Awarded": "awarded an extension of time on",
+    Rejected: "rejected", "Re-evaluate": "sent back for re-evaluation",
+  },
+  IC: {
+    Sent: "sent", Acknowledged: "acknowledged",
+    "Escalated to Claim": "escalated to a claim", Closed: "closed",
+  },
+  GI: { Sent: "sent", Replied: "replied to", Closed: "closed" },
+  CPI: {
+    "In Review": "began progress on", "In Progress": "began progress on",
+    "On Hold": "put on hold", Approved: "approved",
+    Closed: "closed", Completed: "closed",
+  },
+};
+
 type DisplayStatus = "In Progress" | "Pending" | "Completed";
 
 export interface ActivityRow {
@@ -96,7 +135,8 @@ export function buildRecentActivity(tasks: any[]): ActivityRow[] {
     })
     .map((task: any) => {
       const s = (task.status ?? "").toString().toLowerCase();
-      const verb = STATUS_VERB[s] || "updated";
+      const entityVerb = ENTITY_STATUS_VERB[task.type as string]?.[task.entityStatus as string];
+      const verb = entityVerb || STATUS_VERB[s] || "updated";
       const status: DisplayStatus =
         s === "done" || s === "closed"
           ? "Completed"

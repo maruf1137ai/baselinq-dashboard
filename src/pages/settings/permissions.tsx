@@ -49,7 +49,7 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   "document.upload": "Upload new documents and new versions of existing documents.",
   "document.edit":   "Edit document metadata, manage findings, AI chat and analysis.",
   "document.delete": "Delete documents from the project.",
-  "document.manage": "Change document status — gate, un-gate, archive, restore.",
+  "document.manage": "Create folders, and move documents between them. Also gates status changes — gate, un-gate, archive, restore.",
   // Tasks — creation
   "task.create":     "Can create tasks (general access gate)",
   "task.vo.create":  "Can create Variation Order (VO) tasks",

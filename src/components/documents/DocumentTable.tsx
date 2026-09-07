@@ -59,6 +59,7 @@ export interface ApiDocument {
     canUploadVersion: boolean;
     canChat: boolean;
     canResolve: boolean;
+    canMove: boolean;
   };
 }
 

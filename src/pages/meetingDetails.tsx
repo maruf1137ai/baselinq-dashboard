@@ -14,6 +14,12 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GenerateAiNotesDialog } from "@/components/meetings/generateAiNotesDialog";
 import { useMeetingRsvp, type RsvpStatus } from "@/hooks/useMeetingRsvp";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 import { formatMeetingDateTime } from "@/lib/dateUtils";
 import { LifecycleBadge, ArtefactBadge } from "@/components/meetings/MeetingStatusBadges";
@@ -131,6 +137,17 @@ export default function MeetingDetails() {
   const [showTranscript, setShowTranscript] = useState(false);
   const [showRawTranscript, setShowRawTranscript] = useState(false);
   const [approvingIndex, setApprovingIndex] = useState<number | null>(null);
+  // Shown when the backend can't match the AI's owner guess to a real user
+  // and needs a human pick before it will create the task (see
+  // `handleApprove`'s `assignee_required` handling below).
+  const [assigneePicker, setAssigneePicker] = useState<{
+    item: ActionItem;
+    index: number;
+    taskType: string;
+    aiOwnerGuess: string | null;
+    candidates: { id: number; name: string; email: string }[];
+  } | null>(null);
+  const [pickedAssigneeId, setPickedAssigneeId] = useState<number | null>(null);
   const [aiNotesOpen, setAiNotesOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [outcomeDismissed, setOutcomeDismissed] = useState(
@@ -212,6 +229,17 @@ export default function MeetingDetails() {
         return;
       } catch (e: any) {
         const status = e?.response?.status;
+        // The AI's owner guess didn't match anyone — the backend wants a
+        // human pick before it will create the task. Open the picker
+        // instead of treating this as a failure.
+        if (status === 400 && e?.response?.data?.code === "assignee_required") {
+          setAssigneePicker({
+            item, index, taskType,
+            aiOwnerGuess: e.response.data.ai_owner_guess ?? null,
+            candidates: e.response.data.candidates ?? [],
+          });
+          return;
+        }
         // 404 means this backend doesn't have the new endpoint yet — fall
         // back to the legacy direct-create flow. Any other error is real.
         if (status && status !== 404) {
@@ -235,6 +263,24 @@ export default function MeetingDetails() {
       toast.error(err?.response?.data?.error ?? err?.response?.data?.detail ?? err?.message ?? "Failed to create task.");
     } finally {
       setApprovingIndex(null);
+    }
+  };
+
+  const confirmAssigneeAndApprove = async () => {
+    if (!assigneePicker || !pickedAssigneeId) return;
+    const { item, taskType } = assigneePicker;
+    try {
+      await postRequest({
+        url: `meetings/${id}/action-items/${item.id}/approve/`,
+        data: { task_type: taskType, assigned_to: pickedAssigneeId },
+      });
+      persistDecision(String(item.id), "approved");
+      toast.success(`${taskType} task created.`);
+      setAssigneePicker(null);
+      setPickedAssigneeId(null);
+      await refetch();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? "Failed to create task.");
     }
   };
 
@@ -806,6 +852,35 @@ export default function MeetingDetails() {
           onSuccess={refetch}
         />
       )}
+      <Dialog
+        open={!!assigneePicker}
+        onOpenChange={(o) => { if (!o) { setAssigneePicker(null); setPickedAssigneeId(null); } }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Who should this action item be assigned to?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {assigneePicker?.aiOwnerGuess
+              ? `The AI's owner guess ("${assigneePicker.aiOwnerGuess}") didn't match anyone on this meeting or project.`
+              : "The AI could not determine an owner for this item."} Pick who it should go to.
+          </p>
+          <Select onValueChange={(v) => setPickedAssigneeId(Number(v))}>
+            <SelectTrigger><SelectValue placeholder="Select assignee" /></SelectTrigger>
+            <SelectContent>
+              {assigneePicker?.candidates.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssigneePicker(null)}>Cancel</Button>
+            <Button disabled={!pickedAssigneeId} onClick={confirmAssigneeAndApprove}>
+              Approve & create task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

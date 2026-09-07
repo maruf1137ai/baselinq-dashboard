@@ -210,17 +210,44 @@ export function riskGroupHref(group: {
   return SOURCE_LIST_ROUTE[type] ?? ROUTE.riskSignals;
 }
 
+/**
+ * Parses a bare `YYYY-MM-DD` into a local `Date` at local midnight — the same
+ * insight `shortDate` below acts on: `new Date("YYYY-MM-DD")` parses a bare
+ * date as UTC midnight, and converting that back to a negative-offset local
+ * timezone can roll it onto the previous day.
+ *
+ * This does NOT share `shortDate`'s own regex. `shortDate` is only ever
+ * handed a bare date and deliberately ignores any trailing time it finds (see
+ * its own tests). `daysUntil` is also handed real instants — `scheduled_utc`,
+ * `escalatedAt` — which carry a genuine time and zone that must NOT be
+ * discarded. So this only intercepts a string that is nothing but
+ * `YYYY-MM-DD`; anything with a time component falls through to
+ * `new Date(iso)`, which parses a real instant correctly.
+ */
+function parseLocalDate(iso: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (m) {
+    const [, y, mo, d] = m;
+    const month = Number(mo);
+    if (month < 1 || month > 12) return null;
+    const date = new Date(Number(y), month - 1, Number(d));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 /** Whole days from today to `iso`, or null when unparseable. */
 export function daysUntil(iso: string | null | undefined, now: Date = new Date()): number | null {
   if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (!Number.isFinite(then)) return null;
+  const then = parseLocalDate(iso);
+  if (!then) return null;
   const startOfDay = (t: number) => {
     const d = new Date(t);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   };
-  return Math.round((startOfDay(then) - startOfDay(now.getTime())) / 86_400_000);
+  return Math.round((startOfDay(then.getTime()) - startOfDay(now.getTime())) / 86_400_000);
 }
 
 /** "in 3 days" / "today" / "6 days ago" — plain, British, no exclamation. */
@@ -363,41 +390,46 @@ export function daysWaiting(iso: string | null | undefined, now: Date = new Date
  * identically for the principal agent, the contractor's QS and any finance
  * viewer on the project. The transitions are separately permissioned on the
  * server and always have been — `TRANSITION_PERMISSIONS` in
- * `tasks/pc_workflow.py` — so each row now declares the permission for the act
+ * `tasks/pc_workflow.py` — so the row now declares the permission for the act
  * it names:
  *
  *   Certify  `finance.approve_certificate`  PRINCIPAL_PM alone: the project's
  *                                           Designated Principal Agent, the
  *                                           single certifying role.
- *   Post     `finance.post_certificate`     the client-side roles that pay.
  *
  * A viewer who cannot perform the act is not shown the row, which is what the
  * panel's title claims and what it could not previously support.
  *
+ * There used to be a second row here — "Post PC-x to release payment", for
+ * `workflowState === "approved"` — but approving a certificate now auto-posts
+ * it atomically in the same request (`tasks/views_pc_workflow.py::_run_transition`
+ * chains straight from `approve` into `post`; there is no separate manual
+ * posting step any more). A certificate essentially never rests at
+ * `"approved"`, and even if a stale pre-fix row somehow did, the permission it
+ * was gated on (`finance.post_certificate`) was revoked from every role in
+ * `user/migrations/0042_remove_pc_manual_post.py` with no later re-grant — so
+ * that row was permanently unreachable for every viewer. Removed rather than
+ * left as dead code that could mislead a future reader into reintroducing it.
+ *
  * `subRank` orders the money states against each other, because the axes
  * cannot: a rejected certificate is dead in the water and must be reworked by
- * a person; a submitted one is waiting on a signature; an approved one only
- * needs posting.
+ * a person; a submitted one is waiting on a signature.
  */
 export function buildCertificateQueue(
   certificates: CertificateLike[],
   now: Date = new Date(),
 ): QueueItem[] {
   return certificates
-    .filter((c) => c.workflowState === "submitted" || c.workflowState === "approved")
+    .filter((c) => c.workflowState === "submitted")
     .map((c) => {
       const ref = c.pcNumber || `PC-${c.id}`;
-      const awaitingCertification = c.workflowState === "submitted";
       const waited = daysWaiting(c.updatedAt, now);
       return {
         key: `certificate-${c.id}`,
         kind: "certificate" as const,
         // The verb leads and the reference is the third word, so the row is
-        // still "Certify PC-006" when it truncates. "— submitted and waiting
-        // on you" went: "submitted" is the state the section heading and the
-        // verb already imply, and "waiting" is time, which `detail` counts
-        // exactly ("In this state for 11 days") rather than gesturing at.
-        headline: awaitingCertification ? `Certify ${ref}` : `Post ${ref} to release payment`,
+        // still "Certify PC-006" when it truncates.
+        headline: `Certify ${ref}`,
         detail:
           waited === null
             ? null
@@ -408,21 +440,18 @@ export function buildCertificateQueue(
         pressure: "none" as const,
         daysRemaining: null,
         clock: null,
-        // The certificate LIST carries no date for these two states, and a
+        // The certificate LIST carries no date for this state, and a
         // certificate that is not posted is not yet an obligation to pay, so
-        // `projects/{id}/payments/` does not date them either. The slot stays
+        // `projects/{id}/payments/` does not date it either. The slot stays
         // empty rather than borrowing `updatedAt`, which is when somebody last
         // touched the row and is not a deadline. Reported as a payload gap.
         date: null,
         overdue: false,
         href: ROUTE.certificate(c.id),
-        action: awaitingCertification ? "Open to certify" : "Open to post",
+        action: "Open to certify",
         waitingSince: c.updatedAt ?? null,
-        subRank: awaitingCertification ? 1 : 2,
-        requires: [
-          "finance.view",
-          awaitingCertification ? "finance.approve_certificate" : "finance.post_certificate",
-        ] as QueueRequirement[],
+        subRank: 1,
+        requires: ["finance.view", "finance.approve_certificate"] as QueueRequirement[],
       };
     });
 }
@@ -562,8 +591,19 @@ export function buildPaymentOverdueQueue(
  *
  * `subRank: 0` puts it at the head of the money band for that reason.
  *
- * Reworking is the PREPARER's act, not a certifier's —
- * `TRANSITION_PERMISSIONS` maps submit and cancel to
+ * REJECTED is terminal in `pc_workflow.TRANSITIONS` — there is no way out of
+ * it, on purpose: editing a rejected certificate in place would destroy the
+ * record of what was rejected (see that module's docstring). So "Rework
+ * PC-005" promised an in-place fix that does not exist — the certificate
+ * table itself already renders zero action buttons on a rejected row for the
+ * same reason (`availableTransitions` arrives empty). The only real move is
+ * raising a fresh certificate; the row says that instead, and `href` still
+ * points at the certificate's own (now view-only) page — the closest thing
+ * to "read why it was bounced", since there is no separate "raise a new
+ * certificate" route to deep-link to.
+ *
+ * Preparing that fresh certificate is the PREPARER's act, not a
+ * certifier's — `TRANSITION_PERMISSIONS` maps submit and cancel to
  * `finance.create_certificate` — so that is the permission the row declares.
  * It used to declare `finance.view` alone and show the contractor's QS a job
  * that belongs to whoever raises certificates on this project.
@@ -579,15 +619,11 @@ export function buildRejectedCertificateQueue(
       return {
         key: `rejected-certificate-${c.id}`,
         kind: "rejected" as const,
-          // Was "PC-005 was rejected — it needs reworking before it can be
-        // certified": sixty-six characters, of which the last forty restate
-        // the section heading and the `action`. The verb leads now, which also
-        // separates this row from the "Certify PC-005" one at a glance.
-        headline: `Rework ${c.pcNumber || `PC-${c.id}`} — it was rejected`,
+        headline: `${c.pcNumber || `PC-${c.id}`} was rejected — raise a new certificate`,
         // The reason is not returned by the API, so none is shown.
         detail:
           waited === null || waited <= 0
-            ? "Payment on it has stopped until it is reworked"
+            ? "Payment on it has stopped until a new certificate is raised"
             : `Payment on it has stopped for ${waited} day${waited === 1 ? "" : "s"}`,
         consequence: "money" as const,
         pressure: "none" as const,
@@ -597,7 +633,7 @@ export function buildRejectedCertificateQueue(
         date: null,
         overdue: false,
         href: ROUTE.certificate(c.id),
-        action: "Open to rework",
+        action: "View rejection details",
         waitingSince: c.updatedAt ?? null,
         subRank: 0,
         requires: ["finance.view", "finance.create_certificate"] as QueueRequirement[],
@@ -1008,7 +1044,7 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
     overdue: r.days !== null && r.days < 0,
     href: ROUTE.timeBars,
     action: "Open the deadline",
-    requires: [] as PermissionCode[],
+    requires: ["risk.timebar.manage"] as QueueRequirement[],
   });
 
   const out: QueueItem[] = [];
@@ -1069,7 +1105,7 @@ export function buildTimeBarQueue(bars: TimeBarLike[]): QueueItem[] {
       overdue: false,
       href: ROUTE.timeBars,
       action: "Open the deadlines",
-      requires: [],
+      requires: ["risk.timebar.manage"] as QueueRequirement[],
     });
   }
 

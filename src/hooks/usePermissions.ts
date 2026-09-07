@@ -165,6 +165,20 @@ export function usePermissions() {
   const canPostCertificate    = perm("finance.post_certificate");
   const canPrepareCertificate = perm("finance.create_certificate");
 
+  // Serving or cancelling a contractual notice-deadline clock — PM /
+  // Principal Agent by default (risk/views_evidence.py::TimeBarActionView,
+  // backed by `risk.timebar.manage`, user/migrations/0064). Read directly,
+  // like the three certificate-stage flags above, since nothing routes on
+  // it — only the Home "Needs You" queue and TimeBarsTab's own buttons
+  // gate on this flag.
+  const canManageTimeBars = perm("risk.timebar.manage");
+
+  // Folder filing — create/delete a folder (documents/permissions.py::
+  // can_manage_folders, backed by document.manage). Read directly, like
+  // canManageTimeBars above, since nothing routes on it — only inline
+  // folder actions in the Documents page gate on this flag.
+  const canManageFolders = perm("document.manage");
+
   // Roles & Permissions — deliberately NOT OR'd with isOrgAdmin or
   // canEditSettings: this is its own category with its own, stricter
   // default (Administrator/Principal Agent/Project Manager/Super User),
@@ -213,6 +227,8 @@ export function usePermissions() {
     // Documents — route-level gates
     canViewDocuments:      perm("document.view"),
     canUploadDocument:     perm("document.upload"),
+    // Documents — inline folder-filing actions (not a route gate)
+    canManageFolders,
     // Meetings — 2 flags
     canScheduleMeeting:    isOrgAdmin || perm("meeting.schedule"),
     canUpdateMeeting:      isOrgAdmin || perm("meeting.update"),
@@ -224,6 +240,8 @@ export function usePermissions() {
     canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
+    // Risk / notice deadlines — serve or cancel a time-bar clock
+    canManageTimeBars,
     // Legacy finance flags — all collapse to view/edit
     canViewCostLedger:         canViewFinance,
     canEditCostLedger:         canEditFinance,

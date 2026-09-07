@@ -13,10 +13,17 @@
  * feature's document.view/upload/edit/delete/manage codes ARE genuinely
  * checked server-side on nearly every path (documents/permissions.py,
  * called directly from views — not the unused HasPerm DRF class). Don't
- * describe them as UI-only. Two real gaps do exist and are documented on
- * purpose, not by omission: folder create/delete has no document
- * permission check at all, and the links()/obligations() actions on a
- * document only require document.view, not document.edit. Also: Documents
+ * describe them as UI-only. Folder create/delete and both document-move
+ * paths (same-tab drag/cut-paste, and cross-category re-filing via the
+ * Edit dialog) now require document.manage (documents/permissions.py::
+ * can_manage_folders / can_move_document) — this was dead code for a
+ * while (the permission existed, nothing called it), so if you find an
+ * older description on this page claiming folders/moves are ungated,
+ * that's stale, not intentional. One real, still-open gap remains,
+ * documented on purpose: adding/removing a document's links to other
+ * records, or adding a NEW compliance obligation, only requires
+ * document.view, not document.edit (editing an EXISTING obligation was
+ * closed the same time folders/moves were). Also: Documents
  * does NOT use a same-origin proxy for preview like Meeting/Channel
  * attachments do — every link (preview or download) is a freshly-minted
  * presigned S3 URL, generated only after the permission check passes.
@@ -30,9 +37,11 @@
  *     (DocumentViewSet.get_queryset — project access + document.view +
  *     visible_folder_q; denied access is a 404, not a 403)
  *   - Permission codes & grants       → documents/permissions.py
- *     (can_read/edit/delete/upload_document*, can_change_document_status),
- *     user/migrations/0026_simplify_document_permissions.py (the final,
- *     current grant table — nothing after it touches these codes)
+ *     (can_read/edit/delete/upload_document*, can_manage_folders,
+ *     can_move_document, can_change_document_status),
+ *     user/migrations/0026_simplify_document_permissions.py (the original
+ *     grant table) + 0065 (adds Project Administrator/Super User to
+ *     document.manage)
  *   - Per-project override            → project/models.py
  *     (ProjectRolePermission), permissions/core.py (Layer 3)
  *   - Upload / storage                → storage/views.py (content-type
@@ -41,22 +50,25 @@
  *   - Download / preview              → documents/serializers.py
  *     (_presigned_download_url — always fresh, no proxy, no separate
  *     stale-checkable endpoint)
- *   - Folder management gap           → documents/views.py
- *     (DocumentFolderViewSet.create/destroy — project access only)
- *   - Links/obligations gap           → documents/views.py
- *     (links(), obligations() — document.view only, not document.edit)
+ *   - Folder create/delete + move     → documents/views.py
+ *     (DocumentFolderViewSet.create/destroy, DocumentViewSet.move and
+ *     partial_update's folder_id branch — all gated on document.manage)
+ *   - Links/new-obligation gap        → documents/views.py
+ *     (links(), obligations() POST — document.view only, not
+ *     document.edit; update_obligation() PATCH was closed, see above)
  *
  * Update this page whenever those rules change.
  *
  * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
  * matching permission code's current grants (Roles & Permissions), via
  * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
- * Three of them (Edit details, Upload version, Delete) keep a static
+ * Four of them (Edit details, Upload version, Delete, Move) keep a static
  * "uploader, always" clause alongside the dynamic role list, since that
  * carve-out is an identity check (documents/permissions.py), not part of the
- * permission grant itself. Folder create/delete and the restricted-folder
- * row stay entirely static — no document permission code governs either, by
- * design (see the file header above).
+ * permission grant itself. Only the restricted-folder-visibility row stays
+ * entirely static — no document permission code governs folder VISIBILITY,
+ * only folder create/delete/move, which are now live rows (see the file
+ * header above).
  */
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -107,6 +119,19 @@ const ROW_PERMISSION: Record<string, { codes: string[]; render: (list: string) =
     codes: ["document.manage"],
     render: (list) => `Anyone holding: ${list}. The uploader has no special access to this one, unlike editing or versioning.`,
   },
+  "Create a new folder (Drawings / Documents tabs)": {
+    codes: ["document.manage"],
+    render: (list) => `Anyone holding: ${list}. No uploader carve-out — a folder has no owner the way a document does.`,
+  },
+  "Delete a folder": {
+    codes: ["document.manage"],
+    render: (list) => `Anyone holding: ${list} — as long as it isn't one of the app's built-in Contracts folders. No uploader carve-out.`,
+  },
+  "Move a document to a different folder": {
+    codes: ["document.manage"],
+    render: (list) =>
+      `Whoever originally uploaded it — always. Anyone else needs to hold: ${list}. This is the same rule whether you drag/cut-paste within a tab, or re-file it into a different category from the Edit dialog.`,
+  },
   "Add or remove a document's links to other records, or add/edit its compliance obligations": {
     codes: ["document.view"],
     render: (list) => `Anyone who can view the document — anyone holding: ${list}.`,
@@ -155,17 +180,16 @@ const STATIC_SECTIONS: DocumentationSection[] = [
       },
       {
         action: "Create a new folder (Drawings / Documents tabs)",
-        who: "Anyone who can upload documents.",
+        who: "Client/Owner, Client Project Manager, Project Manager, Administrator, Project Administrator, Principal/PM, or Super User.",
         when: "During the upload flow, when filing into a new folder.",
         note:
-          "This isn't restricted to admins — anyone who can upload can also create a folder and set who it's visible to. It's really the upload screen itself that's gated, not folder creation specifically: there's no separate permission check on creating a folder, only on being allowed onto that screen in the first place. The Contracts tab is different: its folder structure is fixed and can't be added to.",
+          "This is its own permission, separate from being allowed to upload — you can be able to upload documents without being able to create the folder you'd file them into. The Contracts tab is different: its folder structure is fixed and can't be added to.",
       },
       {
         action: "Delete a folder",
-        who: "Anyone who can see it, as long as it isn't one of the app's built-in Contracts folders.",
+        who: "Client/Owner, Client Project Manager, Project Manager, Administrator, Project Administrator, Principal/PM, or Super User — as long as it isn't one of the app's built-in Contracts folders.",
         when: "Anytime.",
-        note:
-          "There's currently no extra check here beyond being able to see the folder — it doesn't require the same permission that gates deleting a document itself. Worth being careful with, since it's more open than you might expect.",
+        note: "Same permission as creating a folder — no uploader carve-out, since a folder has no single owner.",
       },
     ],
   },
@@ -188,7 +212,7 @@ const STATIC_SECTIONS: DocumentationSection[] = [
     type: "EDITING",
     title: "Editing, Versioning & Deleting",
     description:
-      "Changing a document's details, adding a new version, or removing it — three different rules, not one.",
+      "Changing a document's details, adding a new version, moving it, or removing it — several different rules, not one.",
     rows: [
       {
         action: "Edit a document's details",
@@ -203,6 +227,14 @@ const STATIC_SECTIONS: DocumentationSection[] = [
         when: "Anytime.",
         note:
           "A new version is treated more like \"another upload\" than \"an edit\" — worth knowing if you're wondering why someone can add a revision but not edit the document's other details.",
+      },
+      {
+        action: "Move a document to a different folder",
+        who:
+          "Whoever originally uploaded it — always. Anyone else needs the same role list as creating or deleting a folder: Client/Owner, Client Project Manager, Project Manager, Administrator, Project Administrator, Principal/PM, or Super User.",
+        when: "Anytime — whether you drag-and-drop or cut-and-paste within a tab, or re-file it into a different category from the Edit dialog.",
+        note:
+          "Both ways of moving a document — same-tab, and the cross-category re-file from Edit — use the same rule, so a document isn't easier to move one way than the other.",
       },
       {
         action: "Delete a document",
@@ -220,10 +252,10 @@ const STATIC_SECTIONS: DocumentationSection[] = [
       },
       {
         action: "Add or remove a document's links to other records, or add/edit its compliance obligations",
-        who: "Anyone who can view the document.",
+        who: "Anyone who can view the document — but only for adding a link or logging a brand-new obligation. Editing an obligation that already exists needs the same document-edit rights as everything else in this section.",
         when: "Anytime.",
         note:
-          "Unlike almost everything else on this page, this one currently doesn't require document-edit rights — merely being able to see the document is enough. If that surprises you, it should — it's inconsistent with how editing a document's own details works, and is worth flagging if you rely on it as a real restriction.",
+          "Adding a link or a new obligation is more open than the rest of this page — merely being able to see the document is enough, no edit rights required. That's a real, deliberate gap in this one specific case, not a typo; editing an existing obligation was tightened up to match everything else.",
       },
     ],
   },
@@ -232,7 +264,7 @@ const STATIC_SECTIONS: DocumentationSection[] = [
 const GLOBAL_NOTES = [
   "Unlike Meetings and Communication, Documentation's permission codes are genuinely checked by the server on nearly every action described above — not just used to hide buttons in the interface.",
   "The role lists on this page are organisation-wide defaults. A project admin can grant or revoke any of the document permissions for a specific role on a specific project via Settings → Permissions, so what you actually see may differ from this page for a particular project.",
-  "Two actions on this page are more open than the rest: deleting a folder, and adding/editing a document's links or compliance obligations. Both currently require less than you'd expect by comparison to editing or deleting the document itself — this page calls that out rather than describing them as more restricted than they really are.",
+  "One thing on this page is more open than the rest: adding a document's links to other records, or logging a brand-new compliance obligation against it. Both currently require only that you can see the document, not that you can edit it — this page calls that out rather than describing it as more restricted than it really is. Editing an obligation that already exists does require edit rights, same as everything else in this section.",
   "Documents are also visible through Django's own staff admin panel to anyone with staff/superuser access on the server — a separate, broader surface entirely outside the permissions described on this page.",
 ];
 

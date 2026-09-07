@@ -185,6 +185,11 @@ export function useHomeData(projectId: string | undefined) {
   // `/project-health` is gated on compliance.view (App.tsx), so the homepage
   // strip that links there is too — and is not requested without it.
   const canViewCompliance = !permissionsLoading && perms.canViewCompliance;
+  // Same fail-closed-while-loading treatment as canViewCompliance above —
+  // this is not a finance flag, so it does not go through
+  // resolveFinanceAccess. A queue-visibility decision must fail CLOSED
+  // while permissions are still loading, not open.
+  const canManageTimeBars = !permissionsLoading && perms.canManageTimeBars === true;
   const risk = useFetch<SignalsResponse>(
     has && canViewCompliance ? `projects/${projectId}/risk-signals/` : "",
     on(has && canViewCompliance),
@@ -362,6 +367,12 @@ export function useHomeData(projectId: string | undefined) {
         title: item.task?.subject || item.task?.title || item.task?.taskActivityName || "",
         type: type || undefined,
         status,
+        // Raw per-entity status (e.g. VO "Rejected", RFI "Closed") behind
+        // the Task.status bucket above. Already on the payload via
+        // TaskSerializer's nested entity serializer (item.task.status) —
+        // RecentActivity uses it to pick an accurate verb instead of
+        // collapsing every terminal state to "approved".
+        entityStatus: item.task?.status ?? null,
         due_date: item.task?.dueDate || item.task?.finishDate || null,
         // ── The three fields "Recent activity" reads, and nothing else ─────
         //
@@ -509,10 +520,12 @@ export function useHomeData(projectId: string | undefined) {
     // QS. Those codes are the server's own `TRANSITION_PERMISSIONS`; see
     // `buildCertificateQueue`.
     //
-    // Every flag here has been through `resolveFinanceAccess`, so all six are
-    // false while the permission map is in flight. `filterQueueByPermission`
-    // treats an absent flag as false for the same reason: an unknown authority
-    // is not an authority.
+    // Every finance flag here has been through `resolveFinanceAccess`, and
+    // `canManageTimeBars` gets the same fail-closed-while-loading treatment
+    // above (not finance-specific, so not routed through that helper) —
+    // all are false while the permission map is in flight.
+    // `filterQueueByPermission` treats an absent flag as false for the same
+    // reason: an unknown authority is not an authority.
     return rankQueue(
       filterQueueByPermission(items, {
         canViewFinance,
@@ -521,6 +534,7 @@ export function useHomeData(projectId: string | undefined) {
         canCertify: canCertifyCertificate,
         canPostCertificate,
         canPrepareCertificate,
+        canManageTimeBars,
       }),
     );
   }, [
@@ -537,6 +551,7 @@ export function useHomeData(projectId: string | undefined) {
     canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
+    canManageTimeBars,
   ]);
 
   const queueSummary = useMemo(() => summariseQueue(queue), [queue]);

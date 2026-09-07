@@ -105,11 +105,23 @@ export function ContractWatchBlock({
         urgent: data.riskGroups.some((g) => g.severity === "red"),
       });
     }
+    /*
+      A meeting starting imminently should be able to win the default tab —
+      but only when the viewer has not already dealt with it. `starting_soon`
+      is not reimplemented here: it is read straight off the backend's own
+      ~15-minute window (`meetings/serializers.py::_compute_display_status`,
+      via `MeetingListSerializer.status`), so this can never drift from the
+      one other place the product draws the same line. `my_rsvp === "invited"`
+      is the second half: a meeting the viewer already accepted starting soon
+      needs no rescue from the queue tab; one they have not answered and is
+      about to start does.
+    */
+    const meetings = data.upcomingMeetings ?? [];
     out.push({
       id: "meetings",
       label: "Meetings",
-      count: (data.upcomingMeetings ?? []).length,
-      urgent: false,
+      count: meetings.length,
+      urgent: meetings.some((m) => m.status === "starting_soon" && m.my_rsvp === "invited"),
     });
     return out;
   }, [data]);

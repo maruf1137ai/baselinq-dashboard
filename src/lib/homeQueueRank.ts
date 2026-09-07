@@ -226,7 +226,8 @@ export type ActPermissionCode =
   | "finance.edit"
   | "finance.approve_certificate"
   | "finance.post_certificate"
-  | "finance.create_certificate";
+  | "finance.create_certificate"
+  | "risk.timebar.manage";
 
 /** Everything a queue row may require: a module gate, or an act gate. */
 export type QueueRequirement = PermissionCode | ActPermissionCode;
@@ -429,6 +430,8 @@ export interface HeldPermissions {
   canPostCertificate?: boolean;
   /** Raise, submit, rework or withdraw a certificate. */
   canPrepareCertificate?: boolean;
+  /** Serve or cancel a time-bar notice clock. PM / Principal Agent. */
+  canManageTimeBars?: boolean;
 }
 
 /** Drop everything the viewer is not permitted to see. Fails closed. */
@@ -448,6 +451,7 @@ export function filterQueueByPermission(
     "finance.approve_certificate": held.canCertify === true,
     "finance.post_certificate": held.canPostCertificate === true,
     "finance.create_certificate": held.canPrepareCertificate === true,
+    "risk.timebar.manage": held.canManageTimeBars === true,
   };
   return items.filter((i) => i.requires.every((code) => grant[code]));
 }

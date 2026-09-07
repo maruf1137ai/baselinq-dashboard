@@ -630,17 +630,22 @@ const CERTIFICATE_EVENT: Record<
 // what a sentence about what "posted" means is not.
 
 /**
- * The three certificate states that are NOT here, and why. See §5.
+ * The certificate states that are NOT here, and why. See §5.
  *
  *   `submitted`  → `buildCertificateQueue` renders "Certify PC-006"
- *   `approved`   → `buildCertificateQueue` renders "Post PC-006 to release payment"
- *   `rejected`   → `buildRejectedCertificateQueue` renders "Rework PC-005 — it was rejected"
+ *   `rejected`   → `buildRejectedCertificateQueue` renders "PC-005 was rejected — raise a new certificate"
  *
- * All three are drawn in "What needs you", in the left-hand column of the same
+ * Both are drawn in "What needs you", in the left-hand column of the same
  * screen, for exactly this feed's audience — both surfaces are `finance.view`
  * and neither queue builder filters per user, so there is no viewer who sees
  * the feed row and not the queue row. A second copy of a row the reader is
  * already looking at is how a panel stops being read.
+ *
+ * `approved` no longer gets its own queue row either: approving a
+ * certificate now auto-posts it atomically in the same request
+ * (`tasks/views_pc_workflow.py::_run_transition`) — there is no manual
+ * posting step to be "needed" for, and `workflowState` essentially never
+ * rests at `approved` long enough to surface here.
  *
  * `posted` and `draft` are the two states with no queue row: posting closes
  * the loop and nobody is waiting on a draft.
