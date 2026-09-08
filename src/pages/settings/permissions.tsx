@@ -45,11 +45,12 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   "settings.edit": "Edit everything in Settings — team, roles, permissions, billing, integrations. Does NOT include editing project details.",
   "project.edit":  "View AND update project details (Project Details + Site Settings pages under Settings).",
   // Documents
-  "document.view":   "Read and download any document in the project.",
-  "document.upload": "Upload new documents and new versions of existing documents.",
-  "document.edit":   "Edit document metadata, manage findings, AI chat and analysis.",
-  "document.delete": "Delete documents from the project.",
-  "document.manage": "Change document status — gate, un-gate, archive, restore.",
+  "document.view":           "Read and download any document in the project.",
+  "document.upload":         "Upload brand-new documents to the project.",
+  "document.version.upload": "Upload a new version of an existing document, or restore an earlier one.",
+  "document.edit":           "Edit document metadata, manage findings, AI chat and analysis.",
+  "document.delete":         "Delete documents from the project.",
+  "document.manage":         "Create folders, and move documents between them. Also gates status changes — gate, un-gate, archive, restore.",
   // Tasks — creation
   "task.create":     "Can create tasks (general access gate)",
   "task.vo.create":  "Can create Variation Order (VO) tasks",
@@ -87,10 +88,11 @@ const PERMISSION_PARENTS: Record<string, string> = {
   "finance.edit":            "finance.view",
   "finance.approve_payment": "finance.view",
   // Documents: every action hangs off view (can't act on what you can't see)
-  "document.upload": "document.view",
-  "document.edit":   "document.view",
-  "document.delete": "document.view",
-  "document.manage": "document.view",
+  "document.upload":         "document.view",
+  "document.version.upload": "document.view",
+  "document.edit":           "document.view",
+  "document.delete":         "document.view",
+  "document.manage":         "document.view",
   // Tasks
   "task.vo.create":    "task.create",
   "task.si.create":    "task.create",
@@ -499,11 +501,12 @@ function MatrixGrid({
       "meeting.schedule": 0,
       "meeting.update":   1,
       // Document
-      "document.view":   0,
-      "document.upload": 1,
-      "document.edit":   2,
-      "document.delete": 3,
-      "document.manage": 4,
+      "document.view":           0,
+      "document.upload":         1,
+      "document.edit":           2,
+      "document.version.upload": 3,
+      "document.delete":         4,
+      "document.manage":         5,
       // Task
       "task.create":    0,
     };

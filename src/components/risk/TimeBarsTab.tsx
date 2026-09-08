@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import useFetch from "@/hooks/useFetch";
 import { usePost } from "@/hooks/usePost";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,6 +77,7 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
     `projects/${projectId}/time-bars/`
   );
   const { mutateAsync: post } = usePost();
+  const { canManageTimeBars } = usePermissions();
 
   const bars = data?.time_bars ?? [];
 
@@ -102,6 +104,16 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
     try {
       await post({ url: `time-bars/${id}/serve/`, data: {} });
       toast.success("Recorded as served");
+      refetch();
+    } catch {
+      toast.error("Could not update");
+    }
+  };
+
+  const cancel = async (id: number) => {
+    try {
+      await post({ url: `time-bars/${id}/cancel/`, data: {} });
+      toast.success("Deadline cancelled");
       refetch();
     } catch {
       toast.error("Could not update");
@@ -190,9 +202,31 @@ export default function TimeBarsTab({ projectId }: { projectId: string }) {
                     {countdown.text}
                   </span>
                   {bar.status === "open" && (
-                    <Button variant="outline" size="sm" onClick={() => serve(bar.id)}>
-                      Mark served
-                    </Button>
+                    canManageTimeBars ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => serve(bar.id)}>
+                          Mark served
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => cancel(bar.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      // Backend says this viewer can't serve/cancel a notice
+                      // clock (risk.timebar.manage). Name who can act instead
+                      // of showing a button that would 403.
+                      <span
+                        className="text-xs text-muted-foreground bg-muted border border-border px-2.5 py-1 rounded-full"
+                        title="Only the PM or Principal Agent can mark this served or cancel it."
+                      >
+                        Awaiting PM / Principal Agent
+                      </span>
+                    )
                   )}
                 </div>
               </div>

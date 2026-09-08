@@ -478,6 +478,12 @@ export function ActionQueueBlock({
   const summary = summariseQueue(queue);
   // The ROWS are the folded list. See `foldPaymentChases`.
   const rows = useMemo(() => foldPaymentChases(queue), [queue]);
+  // How many rows folding actually removed — the exact gap between
+  // `queueLead`'s count (the unfolded queue, on purpose, above) and what a
+  // fully-scrolled reader sees. Zero whenever fewer than two chases exist,
+  // i.e. whenever `foldPaymentChases` left `queue` untouched.
+  const foldedCount = queue.filter((i) => i.key.startsWith(PAYMENT_CHASE_PREFIX)).length;
+  const foldedAway = queue.length - rows.length;
   // Hooks must run unconditionally, ahead of the loading/empty early returns
   // below.
   const { visibleItems, hasMore, containerRef, sentinelRef } = useScrollPagination(
@@ -575,6 +581,19 @@ export function ActionQueueBlock({
         {drawn}
         {hasMore && <div ref={sentinelRef} />}
       </div>
+      {/*
+        `queueLead`'s count, above, is the UNFOLDED queue on purpose — the
+        panel's own figure must not shrink because `foldPaymentChases` tidied
+        several rows into one (see the comment on `summary`). Left
+        unexplained, that reads as the badge overstating the list rather than
+        as tidying, so the gap is named once here, only when folding actually
+        changed the row count.
+      */}
+      {foldedAway > 0 && (
+        <p className="px-4 py-2 text-xs text-muted-foreground">
+          {foldedCount} certificates folded into 1 row above — the {summary.total} to do at the top still counts each one.
+        </p>
+      )}
     </Panel>
   );
 }

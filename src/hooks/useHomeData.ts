@@ -185,6 +185,19 @@ export function useHomeData(projectId: string | undefined) {
   // `/project-health` is gated on compliance.view (App.tsx), so the homepage
   // strip that links there is too — and is not requested without it.
   const canViewCompliance = !permissionsLoading && perms.canViewCompliance;
+  // Same fail-closed-while-loading treatment as canViewCompliance above —
+  // this is not a finance flag, so it does not go through
+  // resolveFinanceAccess. A queue-visibility decision must fail CLOSED
+  // while permissions are still loading, not open.
+  const canManageTimeBars = !permissionsLoading && perms.canManageTimeBars === true;
+  // Same treatment again — gates the Home links that resolve to /programme
+  // (StatusBand's Time/Programme zones, delay-category risk groups) and
+  // /documents/<id>, neither of which had any way to express this gate
+  // before (homeQueueRank.ts's PermissionCode only covered finance/
+  // compliance).
+  const canViewProgramme = !permissionsLoading && perms.canViewProgramme === true;
+  const canViewDocuments = !permissionsLoading && perms.canViewDocuments === true;
+  const canUploadDocument = !permissionsLoading && perms.canUploadDocument === true;
   const risk = useFetch<SignalsResponse>(
     has && canViewCompliance ? `projects/${projectId}/risk-signals/` : "",
     on(has && canViewCompliance),
@@ -362,6 +375,12 @@ export function useHomeData(projectId: string | undefined) {
         title: item.task?.subject || item.task?.title || item.task?.taskActivityName || "",
         type: type || undefined,
         status,
+        // Raw per-entity status (e.g. VO "Rejected", RFI "Closed") behind
+        // the Task.status bucket above. Already on the payload via
+        // TaskSerializer's nested entity serializer (item.task.status) —
+        // RecentActivity uses it to pick an accurate verb instead of
+        // collapsing every terminal state to "approved".
+        entityStatus: item.task?.status ?? null,
         due_date: item.task?.dueDate || item.task?.finishDate || null,
         // ── The three fields "Recent activity" reads, and nothing else ─────
         //
@@ -509,10 +528,12 @@ export function useHomeData(projectId: string | undefined) {
     // QS. Those codes are the server's own `TRANSITION_PERMISSIONS`; see
     // `buildCertificateQueue`.
     //
-    // Every flag here has been through `resolveFinanceAccess`, so all six are
-    // false while the permission map is in flight. `filterQueueByPermission`
-    // treats an absent flag as false for the same reason: an unknown authority
-    // is not an authority.
+    // Every finance flag here has been through `resolveFinanceAccess`, and
+    // `canManageTimeBars` gets the same fail-closed-while-loading treatment
+    // above (not finance-specific, so not routed through that helper) —
+    // all are false while the permission map is in flight.
+    // `filterQueueByPermission` treats an absent flag as false for the same
+    // reason: an unknown authority is not an authority.
     return rankQueue(
       filterQueueByPermission(items, {
         canViewFinance,
@@ -521,6 +542,7 @@ export function useHomeData(projectId: string | undefined) {
         canCertify: canCertifyCertificate,
         canPostCertificate,
         canPrepareCertificate,
+        canManageTimeBars,
       }),
     );
   }, [
@@ -537,6 +559,7 @@ export function useHomeData(projectId: string | undefined) {
     canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
+    canManageTimeBars,
   ]);
 
   const queueSummary = useMemo(() => summariseQueue(queue), [queue]);
@@ -671,8 +694,8 @@ export function useHomeData(projectId: string | undefined) {
 
   // ── Risk ────────────────────────────────────────────────────────────────
   const riskSignals = useMemo(
-    () => visibleRiskSignals(risk.data?.signals ?? [], { canViewCompliance, canViewFinance }),
-    [risk.data, canViewCompliance, canViewFinance],
+    () => visibleRiskSignals(risk.data?.signals ?? [], { canViewCompliance, canViewFinance, canViewProgramme }),
+    [risk.data, canViewCompliance, canViewFinance, canViewProgramme],
   );
   // Counts are recomputed from what this viewer may actually see, so the
   // header never says "3 red" beside two visible rows.
@@ -786,7 +809,7 @@ export function useHomeData(projectId: string | undefined) {
           buildMeetingChanges(meetingList),
           buildTaskChanges(taskList),
         ],
-        { canViewFinance, canViewCompliance },
+        { canViewFinance, canViewCompliance, canViewProgramme, canViewDocuments },
         // No `limit` here: the old fixed count was sized to a page that grew
         // to fit its content and had to hold one screen. The panel now scrolls
         // within its own fixed height instead, so the feed hands over
@@ -802,6 +825,8 @@ export function useHomeData(projectId: string | undefined) {
       taskList,
       canViewFinance,
       canViewCompliance,
+      canViewProgramme,
+      canViewDocuments,
     ],
   );
 
@@ -925,6 +950,12 @@ export function useHomeData(projectId: string | undefined) {
     // rendering that as a zero would assert a clear project to somebody who was
     // simply not shown it.
     canViewCompliance,
+    // Same "empty vs. not shown" reasoning as canViewCompliance above — gates
+    // the Home links resolving to /programme and /documents/<id> that
+    // homeQueueRank.ts's PermissionCode had no way to express before.
+    canViewProgramme,
+    canViewDocuments,
+    canUploadDocument,
     /**
      * `finance.approve_payment` — REVERSING a recorded payment, per
      * `tasks/views_payments.py`. Kept and exposed, and deliberately not used

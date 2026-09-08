@@ -44,9 +44,11 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   manageIntegrations:  "settings.edit",
   editPermissions:     "settings.edit",
   manageRoles:         "settings.edit",
-  addTeamMember:       "settings.edit",
-  removeTeamMember:    "settings.edit",
-  editTeamMember:      "settings.edit",
+  // Team-member add/remove/role-change — its own dedicated permission,
+  // not part of the settings.edit group above (see canManageTeamMembers).
+  addTeamMember:       "project.team.manage",
+  removeTeamMember:    "project.team.manage",
+  editTeamMember:      "project.team.manage",
   manageAssociatedCompanies: "settings.edit",
   addCompanyMember:          "settings.edit",
   editCompanyMember:         "settings.edit",
@@ -98,6 +100,13 @@ function useInvalidateOnPermissionChange() {
       // bell/sidebar should be counting — see unread_summary's permission
       // filter on the backend.
       qc.invalidateQueries({ queryKey: ["unread-summary"] });
+      // Per-document userPermissions (canEdit/canDelete/canUploadVersion)
+      // are embedded in the document list/detail responses, not derived
+      // client-side — an open Documents page needs a refetch too, or its
+      // Edit/Delete controls keep reflecting the permission that was just
+      // revoked.
+      qc.invalidateQueries({ queryKey: ["document"] });
+      qc.invalidateQueries({ queryKey: ["documents"] });
     };
     window.addEventListener(PERMISSIONS_CHANGED_EVENT, handler);
     return () => window.removeEventListener(PERMISSIONS_CHANGED_EVENT, handler);
@@ -135,6 +144,17 @@ export function usePermissions() {
   // Read access to non-project settings sub-pages (billing, permissions, etc.)
   const canReadSettingsCore = perm("settings.view") || perm("settings.edit");
 
+  // Team-member add/remove/role-change — its own dedicated permission
+  // (project/role_permissions.py::can_add_member et al., backed by
+  // project.team.manage), not a subset of the broad settings.edit. Used to
+  // key off settings.edit like everything else in this file's "Settings"
+  // group, but that permission's own backend check was dead code (call
+  // sites never passed user=/project=) — now that it's wired up, the
+  // button needs to track the permission that's actually enforced. Named
+  // canManageTeamMembers, not canManageTeam, to avoid colliding with the
+  // unrelated (and currently unused) canManageTeam flag below.
+  const canManageTeamMembers = isOrgAdmin || perm("project.team.manage");
+
   // Finance flags — edit implies view
   const canViewFinance     = perm("finance.view") || perm("finance.edit");
   // Deliberately NOT escalated by isOrgAdmin: cost_ledger/views.py and
@@ -164,6 +184,20 @@ export function usePermissions() {
   const canCertifyCertificate = perm("finance.approve_certificate");
   const canPostCertificate    = perm("finance.post_certificate");
   const canPrepareCertificate = perm("finance.create_certificate");
+
+  // Serving or cancelling a contractual notice-deadline clock — PM /
+  // Principal Agent by default (risk/views_evidence.py::TimeBarActionView,
+  // backed by `risk.timebar.manage`, user/migrations/0064). Read directly,
+  // like the three certificate-stage flags above, since nothing routes on
+  // it — only the Home "Needs You" queue and TimeBarsTab's own buttons
+  // gate on this flag.
+  const canManageTimeBars = perm("risk.timebar.manage");
+
+  // Folder filing — create/delete a folder (documents/permissions.py::
+  // can_manage_folders, backed by document.manage). Read directly, like
+  // canManageTimeBars above, since nothing routes on it — only inline
+  // folder actions in the Documents page gate on this flag.
+  const canManageFolders = perm("document.manage");
 
   // Roles & Permissions — deliberately NOT OR'd with isOrgAdmin or
   // canEditSettings: this is its own category with its own, stricter
@@ -200,9 +234,9 @@ export function usePermissions() {
     canViewPermissions:    canReadSettingsCore,
     canEditPermissions:    canEditSettings,
     canManageRoles:        canEditSettings,
-    canAddTeamMember:      canEditSettings,
-    canRemoveTeamMember:   canEditSettings,
-    canEditTeamMember:     canEditSettings,
+    canAddTeamMember:      canManageTeamMembers,
+    canRemoveTeamMember:   canManageTeamMembers,
+    canEditTeamMember:     canManageTeamMembers,
     canManageAssociatedCompanies: canEditSettings,
     canAddCompanyMember:          canEditSettings,
     canEditCompanyMember:         canEditSettings,
@@ -213,6 +247,8 @@ export function usePermissions() {
     // Documents — route-level gates
     canViewDocuments:      perm("document.view"),
     canUploadDocument:     perm("document.upload"),
+    // Documents — inline folder-filing actions (not a route gate)
+    canManageFolders,
     // Meetings — 2 flags
     canScheduleMeeting:    isOrgAdmin || perm("meeting.schedule"),
     canUpdateMeeting:      isOrgAdmin || perm("meeting.update"),
@@ -224,6 +260,8 @@ export function usePermissions() {
     canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
+    // Risk / notice deadlines — serve or cancel a time-bar clock
+    canManageTimeBars,
     // Legacy finance flags — all collapse to view/edit
     canViewCostLedger:         canViewFinance,
     canEditCostLedger:         canEditFinance,

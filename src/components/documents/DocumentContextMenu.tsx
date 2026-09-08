@@ -36,6 +36,7 @@ export const DocItemContextMenu: React.FC<{
   const canPaste = canPasteInto(tab) && !!pasteFolderId;
   const canEdit = doc.userPermissions?.canEdit === true;
   const canDelete = doc.userPermissions?.canDelete === true;
+  const canMove = doc.userPermissions?.canMove === true;
 
   const handleCopyPath = async () => {
     const path = getDocPath(doc);
@@ -58,7 +59,7 @@ export const DocItemContextMenu: React.FC<{
           <Copy className="h-4 w-4 mr-2" />
           Copy
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => cut(doc, tab)}>
+        <ContextMenuItem disabled={!canMove} onSelect={() => cut(doc, tab)}>
           <Scissors className="h-4 w-4 mr-2" />
           Cut
         </ContextMenuItem>

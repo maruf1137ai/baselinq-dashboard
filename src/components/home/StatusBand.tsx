@@ -806,6 +806,7 @@ function ChangeBar({ slices }: { slices: { key: string; label: string; count: nu
 export function StatusBandBlock({ data }: { data: HomeData }) {
   const {
     canViewFinance,
+    canViewProgramme,
     time,
     timeline,
     milestoneDrift,
@@ -825,8 +826,10 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
   const zones: React.ReactNode[] = [];
 
   // ── TIME ────────────────────────────────────────────────────────────────
-  // Ungated. A contractor who may not see the contract sum still has to know
-  // when the works are due.
+  // The FIGURE is ungated — a contractor who may not see the contract sum
+  // still has to know when the works are due. The LINK to /programme is
+  // gated on programme.view (App.tsx's RoleRoute for that route), since a
+  // link into a page the viewer will bounce out of is worse than no link.
   const overrun = time.overrun && time.remainingDays !== null;
   const driftLine =
     milestonesUnavailable
@@ -844,7 +847,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
     <Zone
       key="time"
       name="Time"
-      to="/programme"
+      to={canViewProgramme ? "/programme" : undefined}
       linkLabel="Programme"
       value={
         !time.hasDates || time.remainingDays === null
@@ -1106,7 +1109,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
       <Zone
         key="programme"
         name="Programme"
-        to="/programme"
+        to={canViewProgramme ? "/programme" : undefined}
         linkLabel="Milestones"
         value={
           milestonesUnavailable

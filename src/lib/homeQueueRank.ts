@@ -193,13 +193,21 @@ export function pressureFromDays(days: number | null | undefined, clock: Clock):
 // ── The item ──────────────────────────────────────────────────────────────
 
 /**
- * A MODULE gate — may this viewer see finance at all, may they see compliance
- * at all. Two values, and deliberately still two: `buildChangeFeed` in
- * `homeVisuals.ts` builds a `Record<PermissionCode, boolean>` over exactly
- * these, and the act codes below have no meaning for a feed of things that
- * have already happened.
+ * A MODULE gate — may this viewer see finance at all, compliance at all,
+ * programme at all, documents at all. `buildChangeFeed` in `homeVisuals.ts`
+ * builds a `Record<PermissionCode, boolean>` over exactly these, and the act
+ * codes below have no meaning for a feed of things that have already
+ * happened.
+ *
+ * `programme.view` and `document.view` were added alongside `finance.view`/
+ * `compliance.view` after an audit found several Home links resolving to
+ * `/programme` (StatusBand's Time/Programme zones, delay-category risk
+ * groups) and `/documents/<id>` with no way to express that gate at all —
+ * every "held permissions" map in this file was built from only the first
+ * two codes, so those routes were structurally incapable of being hidden
+ * from a viewer who lacks the underlying permission.
  */
-export type PermissionCode = "finance.view" | "compliance.view";
+export type PermissionCode = "finance.view" | "compliance.view" | "programme.view" | "document.view";
 
 /**
  * An ACT gate — may this viewer perform the move the row names.
@@ -226,7 +234,8 @@ export type ActPermissionCode =
   | "finance.edit"
   | "finance.approve_certificate"
   | "finance.post_certificate"
-  | "finance.create_certificate";
+  | "finance.create_certificate"
+  | "risk.timebar.manage";
 
 /** Everything a queue row may require: a module gate, or an act gate. */
 export type QueueRequirement = PermissionCode | ActPermissionCode;
@@ -421,6 +430,13 @@ export function summariseQueue(items: QueueItem[]): QueueSummary {
 export interface HeldPermissions {
   canViewFinance?: boolean;
   canViewCompliance?: boolean;
+  /** No queue row requires this today — present so the type compiles and a
+   * future row can use it. Home's risk-signal visibility already reads
+   * `canViewProgramme` directly (`homeSignals.ts::visibleRiskSignals`),
+   * outside this queue-row mechanism. */
+  canViewProgramme?: boolean;
+  /** Same as `canViewProgramme` — inert here, present for exhaustiveness. */
+  canViewDocuments?: boolean;
   /** Record a payment against a certificate. */
   canEditFinance?: boolean;
   /** Certify or reject. PRINCIPAL_PM alone. */
@@ -429,6 +445,8 @@ export interface HeldPermissions {
   canPostCertificate?: boolean;
   /** Raise, submit, rework or withdraw a certificate. */
   canPrepareCertificate?: boolean;
+  /** Serve or cancel a time-bar notice clock. PM / Principal Agent. */
+  canManageTimeBars?: boolean;
 }
 
 /** Drop everything the viewer is not permitted to see. Fails closed. */
@@ -444,10 +462,13 @@ export function filterQueueByPermission(
   const grant: Record<QueueRequirement, boolean> = {
     "finance.view": held.canViewFinance === true,
     "compliance.view": held.canViewCompliance === true,
+    "programme.view": held.canViewProgramme === true,
+    "document.view": held.canViewDocuments === true,
     "finance.edit": held.canEditFinance === true,
     "finance.approve_certificate": held.canCertify === true,
     "finance.post_certificate": held.canPostCertificate === true,
     "finance.create_certificate": held.canPrepareCertificate === true,
+    "risk.timebar.manage": held.canManageTimeBars === true,
   };
   return items.filter((i) => i.requires.every((code) => grant[code]));
 }

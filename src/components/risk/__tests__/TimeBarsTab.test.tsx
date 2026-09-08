@@ -14,9 +14,11 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useFetchMock = vi.fn();
+const mockUsePermissions = vi.fn();
 
 vi.mock("@/hooks/useFetch", () => ({ default: (url: string) => useFetchMock(url) }));
 vi.mock("@/hooks/usePost", () => ({ usePost: () => ({ mutateAsync: vi.fn() }) }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => mockUsePermissions() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TimeBarsTab from "../TimeBarsTab";
@@ -53,6 +55,10 @@ const state = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   useFetchMock.mockReset();
+  // Default: a PM/Principal-Agent-equivalent viewer, so every existing test
+  // above (none of which is about permission gating) keeps seeing the real
+  // "Mark served"/"Cancel" buttons unchanged.
+  mockUsePermissions.mockReturnValue({ canManageTimeBars: true });
 });
 
 // ── 1. The unit ────────────────────────────────────────────────────────────
@@ -188,5 +194,42 @@ describe("when the deadlines cannot be loaded", () => {
     render(<TimeBarsTab projectId="1" />);
 
     expect(screen.getByText("No deadlines tracked")).toBeInTheDocument();
+  });
+});
+
+// ── 5. Who may act ───────────────────────────────────────────────────────
+//
+// Serving or cancelling a clock is a PM / Principal Agent decision
+// (risk.timebar.manage) — a viewer without it must never see a button that
+// will 403 on click.
+
+describe("acting on a deadline", () => {
+  it("shows Mark served / Cancel to a viewer who holds risk.timebar.manage", () => {
+    mockUsePermissions.mockReturnValue({ canManageTimeBars: true });
+    useFetchMock.mockReturnValue(state({ data: { time_bars: [bar()] } }));
+    render(<TimeBarsTab projectId="1" />);
+
+    expect(screen.getByRole("button", { name: "Mark served" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.queryByText(/Awaiting PM/i)).not.toBeInTheDocument();
+  });
+
+  it("replaces the buttons with an 'Awaiting PM' pill for a viewer who doesn't", () => {
+    mockUsePermissions.mockReturnValue({ canManageTimeBars: false });
+    useFetchMock.mockReturnValue(state({ data: { time_bars: [bar()] } }));
+    render(<TimeBarsTab projectId="1" />);
+
+    expect(screen.queryByRole("button", { name: "Mark served" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Awaiting PM \/ Principal Agent/i)).toBeInTheDocument();
+  });
+
+  it("shows no action at all — neither buttons nor the pill — once a clock is no longer open", () => {
+    mockUsePermissions.mockReturnValue({ canManageTimeBars: false });
+    useFetchMock.mockReturnValue(state({ data: { time_bars: [bar({ status: "served" })] } }));
+    render(<TimeBarsTab projectId="1" />);
+
+    expect(screen.queryByRole("button", { name: "Mark served" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Awaiting PM/i)).not.toBeInTheDocument();
   });
 });

@@ -43,8 +43,18 @@ const dateAgo = (daysAgo: number) => ago(daysAgo).slice(0, 10);
 const CERTIFICATES = `/finance?tab=${encodeURIComponent(FINANCE_TAB.certificates)}`;
 const VARIATIONS = `/finance?tab=${encodeURIComponent(FINANCE_TAB.variations)}`;
 
-const ALL = { canViewFinance: true, canViewCompliance: true };
-const CONTRACTOR = { canViewFinance: false, canViewCompliance: true };
+const ALL = { canViewFinance: true, canViewCompliance: true, canViewProgramme: true, canViewDocuments: true };
+// A contractor holds document.view (any project member can see documents),
+// compliance.view and programme.view (they're executing the programme), but
+// not finance.view — used throughout to isolate the finance-restricted-
+// vocabulary guard from the (separate) base document.view/programme.view
+// gates.
+const CONTRACTOR = {
+  canViewFinance: false,
+  canViewCompliance: true,
+  canViewDocuments: true,
+  canViewProgramme: true,
+};
 
 // ── The event model ───────────────────────────────────────────────────────
 
@@ -452,7 +462,10 @@ describe("a contractor sees no finance", () => {
     const visible = filterChangesByPermission(items, CONTRACTOR);
     expect(visible.map((i) => i.key)).toEqual(["document-d1"]);
     // And it is not merely hidden by wording — it declares the requirement.
-    expect(items.find((i) => i.key === "document-d2")!.requires).toEqual(["finance.view"]);
+    // (document.view is the base requirement every row from this builder
+    // carries — see the base-requirement test below — on top of which the
+    // vocabulary guard adds finance.view for d2's restricted wording.)
+    expect(items.find((i) => i.key === "document-d2")!.requires).toEqual(["document.view", "finance.view"]);
   });
 
   it("catches the restricted vocabulary in every form the guard claims to", () => {
@@ -797,7 +810,9 @@ describe("milestones", () => {
     expect(undated).toBe(0);
   });
 
-  it("is open to everyone — dates are not money", () => {
+  it("is not gated on finance.view — dates are not money", () => {
+    // But it IS gated on programme.view, since every row links to
+    // /programme — see the next test.
     const { items } = buildMilestoneChanges(
       [
         {
@@ -810,7 +825,25 @@ describe("milestones", () => {
       ],
       NOW,
     );
-    expect(items[0].requires).toEqual([]);
+    expect(items[0].requires).not.toContain("finance.view");
+  });
+
+  it("is gated on programme.view — every row links to /programme", () => {
+    const { items } = buildMilestoneChanges(
+      [
+        {
+          _id: "m1",
+          name: "Practical completion",
+          endDate: "2026-11-30",
+          baselineEnd: "2026-10-31",
+          updatedAt: ago(2),
+        },
+      ],
+      NOW,
+    );
+    expect(items[0].requires).toEqual(["programme.view"]);
+    expect(filterChangesByPermission(items, { canViewProgramme: false })).toHaveLength(0);
+    expect(filterChangesByPermission(items, { canViewProgramme: true })).toHaveLength(1);
   });
 });
 
@@ -845,6 +878,22 @@ describe("documents", () => {
       NOW,
     );
     expect(items[0].headline).toBe("A-101 — Ground floor plan revised to Rev B");
+  });
+
+  it("is gated on document.view — every row links to /documents/<id>", () => {
+    const { items } = buildDocumentChanges(
+      [{ _id: "d1", name: "Ground floor plan", createdAt: ago(1) }],
+      NOW,
+    );
+    expect(items[0].requires).toContain("document.view");
+    // Dropped without it even though finance/compliance are both granted —
+    // the base requirement is independent of the vocabulary guard.
+    expect(
+      filterChangesByPermission(items, { canViewFinance: true, canViewCompliance: true, canViewDocuments: false }),
+    ).toHaveLength(0);
+    expect(
+      filterChangesByPermission(items, { canViewFinance: false, canViewCompliance: false, canViewDocuments: true }),
+    ).toHaveLength(1);
   });
 });
 
@@ -1053,10 +1102,10 @@ describe("the compliance half of the vocabulary guard", () => {
       [{ _id: "d3", name: "Risk register rev B", createdAt: ago(2) }],
       NOW,
     ).items;
-    expect(item.requires).toEqual(["compliance.view"]);
-    // A QS holding finance but not compliance must not see it either.
+    expect(item.requires).toEqual(["document.view", "compliance.view"]);
+    // A QS holding finance and documents but not compliance must not see it.
     expect(
-      filterChangesByPermission([item], { canViewFinance: true, canViewCompliance: false }),
+      filterChangesByPermission([item], { canViewFinance: true, canViewCompliance: false, canViewDocuments: true }),
     ).toHaveLength(0);
     expect(filterChangesByPermission([item], CONTRACTOR)).toHaveLength(1);
   });

@@ -11,6 +11,9 @@ import { useInsuranceStatus } from '@/hooks/useInsuranceStatus';
  *
  * Visibility rules:
  *   - Hide if user has no `role` (client, not a professional)
+ *   - Hide unless the viewer holds `document.upload` — the button navigates
+ *     to `/documents/upload`, a route `document.upload` gates (App.tsx), and
+ *     showing it to someone who will 403 on click is worse than no button.
  *   - Hide if no project is selected in localStorage
  *   - Hide while the status is loading or if satisfied === true
  *   - Show only when the project is missing an insurance certificate
@@ -23,7 +26,9 @@ import { useInsuranceStatus } from '@/hooks/useInsuranceStatus';
  * Insurance_Certificates folder, the banner clears for ALL members of
  * that project (the endpoint's `satisfied` field reflects the whole project).
  */
-export const InsuranceBanner = () => {
+export const InsuranceBanner = ({
+  visibleToCurrentUser = true,
+}: { visibleToCurrentUser?: boolean } = {}) => {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
 
@@ -35,6 +40,7 @@ export const InsuranceBanner = () => {
 
   // Non-professionals, no project selected, still loading, or already satisfied.
   if (!user || !user.role) return null;
+  if (!visibleToCurrentUser) return null;
   if (!projectId) return null;
   if (isLoading || !status || status.satisfied !== false) return null;
 

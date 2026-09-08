@@ -225,7 +225,7 @@ export default function RolesPermissions() {
   // the general settings.edit this page used to key off.
   const { canEditRolesPermissions } = usePermissions();
 
-  const { data: catalogue = [], isLoading: loadingCatalogue } = usePermissionCatalogue();
+  const { data: catalogue = [], isLoading: loadingCatalogue } = usePermissionCatalogue(projectId);
   const { data: roles = [], isLoading: loadingRoles } = useRoles(projectId);
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
@@ -325,12 +325,29 @@ export default function RolesPermissions() {
    *    doesn't 500 on a missing FK) but are ungranted and read by no code
    *    path anywhere — toggling them here would visibly do nothing, so they
    *    don't get a row to toggle.
+   *  - project.create: not project-scoped (is_project_scoped=False) — it
+   *    can never actually be overridden for one project, which is exactly
+   *    why it rendered here disabled with an "account-wide" badge. That
+   *    read-only row on a page titled "Changes apply to this project only"
+   *    read as broken rather than informative, so it's hidden here; it's
+   *    still visible and editable on the org-wide Settings > Permissions
+   *    page, where account-wide toggles actually belong.
+   *  - settings.edit: unlike the rest of this list, this one is real and
+   *    project-scoped — toggling it here does do something. It's hidden
+   *    at the product owner's request because its description ("also
+   *    currently confers permission-matrix editing rights") is stale —
+   *    that stopped being true when roles.edit became its own dedicated
+   *    permission (user/migrations/0059_seed_roles_permission_category.py)
+   *    — and reads as a live warning rather than dead history. Still
+   *    visible and editable on the org-wide Settings > Permissions page.
    */
   const HIDDEN_CODES = new Set([
     "task.create",
     "finance.qs_approve",
     "finance.client_approve",
     "finance.post_certificate",
+    "project.create",
+    "settings.edit",
   ]);
 
   /** Permissions of the open area, grouped into their sub-parts, order preserved. */

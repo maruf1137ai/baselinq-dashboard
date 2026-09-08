@@ -26,7 +26,7 @@ import { useFolders } from '@/hooks/useFolders';
 import { cn } from '@/lib/utils';
 import type { Folder, FolderTab } from '@/types/folder';
 
-const STATUSES = ['Active', 'Under Review', 'Archived'] as const;
+const STATUSES = ['Active', 'Finance Gated', 'Archived'] as const;
 
 // User-facing Category label <-> backend `tab` slug. The backend stores
 // `contracts | drawings | documents` on the Folder; we present "Contracts"
