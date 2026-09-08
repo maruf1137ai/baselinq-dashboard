@@ -10,16 +10,22 @@
  * the same reference family rather than a second design.
  *
  * IMPORTANT — read before editing: unlike Meetings/Channels, this
- * feature's document.view/upload/edit/delete/manage codes ARE genuinely
- * checked server-side on nearly every path (documents/permissions.py,
- * called directly from views — not the unused HasPerm DRF class). Don't
- * describe them as UI-only. Folder create/delete and both document-move
- * paths (same-tab drag/cut-paste, and cross-category re-filing via the
- * Edit dialog) now require document.manage (documents/permissions.py::
- * can_manage_folders / can_move_document) — this was dead code for a
- * while (the permission existed, nothing called it), so if you find an
- * older description on this page claiming folders/moves are ungated,
- * that's stale, not intentional. One real, still-open gap remains,
+ * feature's document.view/upload/version.upload/edit/delete/manage codes
+ * ARE genuinely checked server-side on nearly every path
+ * (documents/permissions.py, called directly from views — not the unused
+ * HasPerm DRF class). Don't describe them as UI-only. document.upload
+ * only covers uploading a brand-new document — uploading a new version
+ * (or restoring an old one) of an EXISTING document is the separate
+ * document.version.upload permission; they used to be the same code, see
+ * user/migrations/0069_split_document_upload_version.py if you find an
+ * older description on this page claiming they're still one permission.
+ * Folder create/delete/rename and both document-move paths (same-tab
+ * drag/cut-paste, and cross-category re-filing via the Edit dialog) all
+ * require document.manage (documents/permissions.py::can_manage_folders /
+ * can_move_document) — this was dead code for a while (the permission
+ * existed, nothing called it), so if you find an older description on
+ * this page claiming folders/moves are ungated, that's stale, not
+ * intentional. One real, still-open gap remains,
  * documented on purpose: adding/removing a document's links to other
  * records, or adding a NEW compliance obligation, only requires
  * document.view, not document.edit (editing an EXISTING obligation was
@@ -107,8 +113,12 @@ const ROW_PERMISSION: Record<string, { codes: string[]; render: (list: string) =
       `Whoever originally uploaded it — always. Anyone else needs their role to hold document-edit rights: ${list}.`,
   },
   "Upload a new version of a document": {
-    codes: ["document.upload"],
+    codes: ["document.version.upload"],
     render: (list) => `Whoever originally uploaded it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Restore an earlier version of a document": {
+    codes: ["document.version.upload"],
+    render: (list) => `Whoever originally uploaded it — always. Anyone else needs to hold: ${list}. Same permission as uploading a new version — restoring also adds a new version entry.`,
   },
   "Delete a document": {
     codes: ["document.delete"],
@@ -124,6 +134,10 @@ const ROW_PERMISSION: Record<string, { codes: string[]; render: (list: string) =
     render: (list) => `Anyone holding: ${list}. No uploader carve-out — a folder has no owner the way a document does.`,
   },
   "Delete a folder": {
+    codes: ["document.manage"],
+    render: (list) => `Anyone holding: ${list} — as long as it isn't one of the app's built-in Contracts folders. No uploader carve-out.`,
+  },
+  "Rename a folder, or change its discipline/visibility": {
     codes: ["document.manage"],
     render: (list) => `Anyone holding: ${list} — as long as it isn't one of the app's built-in Contracts folders. No uploader carve-out.`,
   },
@@ -191,6 +205,12 @@ const STATIC_SECTIONS: DocumentationSection[] = [
         when: "Anytime.",
         note: "Same permission as creating a folder — no uploader carve-out, since a folder has no single owner.",
       },
+      {
+        action: "Rename a folder, or change its discipline/visibility",
+        who: "Client/Owner, Client Project Manager, Project Manager, Administrator, Project Administrator, Principal/PM, or Super User — as long as it isn't one of the app's built-in Contracts folders.",
+        when: "Anytime.",
+        note: "Same permission as creating or deleting a folder — no uploader carve-out, since a folder has no single owner.",
+      },
     ],
   },
   {
@@ -223,10 +243,14 @@ const STATIC_SECTIONS: DocumentationSection[] = [
       {
         action: "Upload a new version of a document",
         who:
-          "Whoever originally uploaded it — always. Anyone else needs the same role list as uploading a document (a slightly wider list than editing).",
+          "Whoever originally uploaded it — always. Anyone else needs their role to hold document-version-upload rights — its own permission, separate from both uploading a brand-new document and editing a document's other details.",
         when: "Anytime.",
-        note:
-          "A new version is treated more like \"another upload\" than \"an edit\" — worth knowing if you're wondering why someone can add a revision but not edit the document's other details.",
+      },
+      {
+        action: "Restore an earlier version of a document",
+        who:
+          "Whoever originally uploaded it — always. Anyone else needs the same document-version-upload rights as uploading a new version — restoring adds a new version entry too, it just reuses an old file.",
+        when: "Anytime.",
       },
       {
         action: "Move a document to a different folder",

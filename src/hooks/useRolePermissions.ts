@@ -56,15 +56,21 @@ export interface RoleMatrix {
 
 /* ── Reads ──────────────────────────────────────────────────────────────── */
 
-/** Every permission the system defines, with its grouping and wording. */
-export function usePermissionCatalogue() {
+/**
+ * Every permission the system defines, with its grouping and wording.
+ *
+ * Pass the current project id when known — the backend accepts settings.view
+ * OR roles.view/roles.edit (account-wide or project-scoped) here, and a
+ * project-scoped grant needs project_id on the request to be seen at all.
+ */
+export function usePermissionCatalogue(projectId?: string | number | null) {
   return useQuery<ApiPermission[]>({
-    queryKey: ["permission-catalogue"],
+    queryKey: ["permission-catalogue", projectId ?? null],
     // The catalogue only changes on deploy, so it does not need re-fetching
     // while someone works through a role.
     staleTime: 60 * 60 * 1000,
     queryFn: async () => {
-      const raw = await fetchData("permissions/");
+      const raw = await fetchData(projectId ? `permissions/?project_id=${projectId}` : "permissions/");
       return (Array.isArray(raw) ? raw : raw?.results ?? []) as ApiPermission[];
     },
   });
@@ -179,6 +185,12 @@ export function useSaveRoleMatrix() {
       // bell/sidebar should be counting — see unread_summary's permission
       // filter on the backend.
       qc.invalidateQueries({ queryKey: ["unread-summary"] });
+      // Per-document userPermissions (canEdit/canDelete/canUploadVersion)
+      // are embedded in the document list/detail responses — an open
+      // Documents page needs a refetch too, or its Edit/Delete controls
+      // keep reflecting the permission that was just changed here.
+      qc.invalidateQueries({ queryKey: ["document"] });
+      qc.invalidateQueries({ queryKey: ["documents"] });
     },
   });
 }

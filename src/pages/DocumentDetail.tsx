@@ -436,7 +436,7 @@ const DocumentDetail = () => {
             >
               <AiMark size={16} className="mr-1.5" /> Ask AI
             </Button>
-            {doc.userPermissions?.canDownload !== false && (
+            {doc.userPermissions?.canDownload === true && (
               <Button
                 variant="outline"
                 className="h-8 text-xs rounded-lg border-border text-foreground hover:bg-muted"
@@ -460,7 +460,7 @@ const DocumentDetail = () => {
             {/* Payment Certificates have a real filed PDF alongside the branded
                 certificate view — VO/SI/Claim link-docs have no real file, so this
                 never renders for them. */}
-            {doc.userPermissions?.canDownload !== false &&
+            {doc.userPermissions?.canDownload === true &&
               doc.certificateUrl &&
               (selectedVersion?.downloadUrl || doc.downloadUrl) && (
                 <Button
@@ -476,7 +476,7 @@ const DocumentDetail = () => {
                   <Download className="h-4 w-4" />
                 </Button>
               )}
-            {doc.userPermissions?.canUploadVersion !== false && (
+            {doc.userPermissions?.canUploadVersion === true && (
               <Button
                 className="h-8 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90"
                 onClick={() => setIsVersionUploadOpen(true)}
@@ -484,7 +484,7 @@ const DocumentDetail = () => {
                 <Plus className="mr-1.5" /> Upload revision
               </Button>
             )}
-            {(doc.userPermissions?.canEdit !== false || doc.userPermissions?.canDelete !== false) && (
+            {(doc.userPermissions?.canEdit === true || doc.userPermissions?.canDelete === true) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -497,15 +497,15 @@ const DocumentDetail = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
-                  {doc.userPermissions?.canEdit !== false && (
+                  {doc.userPermissions?.canEdit === true && (
                     <DropdownMenuItem onClick={() => setIsEditModalOpen(true)} className="text-xs">
                       <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
                     </DropdownMenuItem>
                   )}
-                  {doc.userPermissions?.canEdit !== false && doc.userPermissions?.canDelete !== false && (
+                  {doc.userPermissions?.canEdit === true && doc.userPermissions?.canDelete === true && (
                     <DropdownMenuSeparator />
                   )}
-                  {doc.userPermissions?.canDelete !== false && (
+                  {doc.userPermissions?.canDelete === true && (
                     <DropdownMenuItem
                       onClick={() => setShowDeleteConfirm(true)}
                       className="text-xs text-red-600 focus:text-red-600 focus:bg-red-50"
