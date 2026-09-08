@@ -190,6 +190,14 @@ export function useHomeData(projectId: string | undefined) {
   // resolveFinanceAccess. A queue-visibility decision must fail CLOSED
   // while permissions are still loading, not open.
   const canManageTimeBars = !permissionsLoading && perms.canManageTimeBars === true;
+  // Same treatment again — gates the Home links that resolve to /programme
+  // (StatusBand's Time/Programme zones, delay-category risk groups) and
+  // /documents/<id>, neither of which had any way to express this gate
+  // before (homeQueueRank.ts's PermissionCode only covered finance/
+  // compliance).
+  const canViewProgramme = !permissionsLoading && perms.canViewProgramme === true;
+  const canViewDocuments = !permissionsLoading && perms.canViewDocuments === true;
+  const canUploadDocument = !permissionsLoading && perms.canUploadDocument === true;
   const risk = useFetch<SignalsResponse>(
     has && canViewCompliance ? `projects/${projectId}/risk-signals/` : "",
     on(has && canViewCompliance),
@@ -686,8 +694,8 @@ export function useHomeData(projectId: string | undefined) {
 
   // ── Risk ────────────────────────────────────────────────────────────────
   const riskSignals = useMemo(
-    () => visibleRiskSignals(risk.data?.signals ?? [], { canViewCompliance, canViewFinance }),
-    [risk.data, canViewCompliance, canViewFinance],
+    () => visibleRiskSignals(risk.data?.signals ?? [], { canViewCompliance, canViewFinance, canViewProgramme }),
+    [risk.data, canViewCompliance, canViewFinance, canViewProgramme],
   );
   // Counts are recomputed from what this viewer may actually see, so the
   // header never says "3 red" beside two visible rows.
@@ -801,7 +809,7 @@ export function useHomeData(projectId: string | undefined) {
           buildMeetingChanges(meetingList),
           buildTaskChanges(taskList),
         ],
-        { canViewFinance, canViewCompliance },
+        { canViewFinance, canViewCompliance, canViewProgramme, canViewDocuments },
         // No `limit` here: the old fixed count was sized to a page that grew
         // to fit its content and had to hold one screen. The panel now scrolls
         // within its own fixed height instead, so the feed hands over
@@ -817,6 +825,8 @@ export function useHomeData(projectId: string | undefined) {
       taskList,
       canViewFinance,
       canViewCompliance,
+      canViewProgramme,
+      canViewDocuments,
     ],
   );
 
@@ -940,6 +950,12 @@ export function useHomeData(projectId: string | undefined) {
     // rendering that as a zero would assert a clear project to somebody who was
     // simply not shown it.
     canViewCompliance,
+    // Same "empty vs. not shown" reasoning as canViewCompliance above — gates
+    // the Home links resolving to /programme and /documents/<id> that
+    // homeQueueRank.ts's PermissionCode had no way to express before.
+    canViewProgramme,
+    canViewDocuments,
+    canUploadDocument,
     /**
      * `finance.approve_payment` — REVERSING a recorded payment, per
      * `tasks/views_payments.py`. Kept and exposed, and deliberately not used

@@ -191,7 +191,7 @@ export function RecentActivityBlock({ data }: { data: HomeData }) {
             variant="plain"
             size="sm"
             title="No activity recorded yet"
-            description="Every instruction issued, response given and status change on this project is logged here as it happens."
+            description="Instructions, responses and status changes you're party to on this project will be logged here as they happen."
           />
         </div>
       </Panel>

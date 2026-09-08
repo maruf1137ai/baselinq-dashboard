@@ -1673,7 +1673,7 @@ export interface RiskGateLike {
 /**
  * Risk signals the viewer may see.
  *
- * Two separate gates apply:
+ * Three separate gates apply:
  *
  *  - The strip as a whole is `compliance.view`, because that is what the
  *    `/project-health` route it links to is gated on (App.tsx). Showing a
@@ -1685,14 +1685,30 @@ export interface RiskGateLike {
  *    itself is more permissive — it shows every category to anyone holding
  *    compliance.view. That divergence is real and should be settled on the
  *    page, not just worked around here.
+ *
+ *  - `delay` signals (SCHEDULE_SLIPPAGE, MILESTONE_OVERDUE) additionally
+ *    require `programme.view`, for the same reason as the `financial` gate
+ *    above: `riskGroupHref` (`blocks.tsx`) resolves a delay-category group to
+ *    `/programme?milestone=<id>` — a route gated on `programme.view`
+ *    (App.tsx) — and a link into a page the viewer will bounce out of is
+ *    worse than no link.
+ *
+ * `status`: both `open` and `acknowledged` count as visible, matching the
+ * backend's own `RiskSignal.objects.active()` (`risk/models.py`) and
+ * `/project-health`'s `AcknowledgedList` — an acknowledged-but-unresolved
+ * signal is still a real, open risk, and Home's stricter `"open"`-only
+ * filter was silently under-counting it with no comment explaining why.
  */
 export function visibleRiskSignals<T extends RiskGateLike>(
   signals: T[],
-  held: { canViewCompliance: boolean; canViewFinance: boolean },
+  held: { canViewCompliance: boolean; canViewFinance: boolean; canViewProgramme: boolean },
 ): T[] {
   if (!held.canViewCompliance) return [];
   return signals.filter(
-    (s) => s.status === "open" && (s.category !== "financial" || held.canViewFinance),
+    (s) =>
+      (s.status === "open" || s.status === "acknowledged") &&
+      (s.category !== "financial" || held.canViewFinance) &&
+      (s.category !== "delay" || held.canViewProgramme),
   );
 }
 

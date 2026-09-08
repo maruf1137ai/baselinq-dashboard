@@ -344,8 +344,11 @@ const Index = () => {
             onOpen={() => openSetup(null)}
             onOpenSection={(s) => openSetup(s)}
           />
-          <PrimaryContractAlert projectId={projectId} visibleToCurrentUser={data.canEditProject} />
-          <InsuranceBanner />
+          <PrimaryContractAlert
+            projectId={projectId}
+            visibleToCurrentUser={data.canEditProject && data.canViewDocuments}
+          />
+          <InsuranceBanner visibleToCurrentUser={data.canUploadDocument} />
           {/* State 3: partial outage — one line, one action. */}
           <LoadIssueBanner data={data} />
         </div>

@@ -880,9 +880,13 @@ export function buildNoticeChanges(
  * news and pushed out is not — and it is derived by comparing the two dates,
  * both of which are on the payload.
  *
- * Not gated: dates are not money. A contractor who cannot see the contract sum
- * can still see when the works are due, which is the call `summariseTime`
- * already makes.
+ * Not gated on `finance.view`: dates are not money. A contractor who cannot
+ * see the contract sum can still see when the works are due, which is the
+ * call `summariseTime` already makes. It IS gated on `programme.view` below,
+ * though — every row here links to `ROUTE.milestone`, which resolves to
+ * `/programme?milestone=<id>`, a route `programme.view` gates (App.tsx). The
+ * "not gated" claim above was always about money-sensitivity, never about
+ * route access.
  */
 export function buildMilestoneChanges(
   milestones: MilestoneChangeLike[],
@@ -926,7 +930,7 @@ export function buildMilestoneChanges(
       ageDays: age,
       href: ROUTE.milestone(m._id),
       count: 1,
-      requires: [],
+      requires: ["programme.view"],
     });
   }
 
@@ -1033,7 +1037,12 @@ export function buildDocumentChanges(
       ageDays: age,
       href: documentHref(doc._id),
       count: 1,
-      requires: requirementsFor([], headline, detail),
+      // Base requirement, not vocabulary-sniffed like the finance/compliance
+      // guard inside `requirementsFor` — every row here links to
+      // `documentHref`, unconditionally gated on `document.view` (App.tsx),
+      // so every row needs it regardless of what the headline/detail text
+      // happens to say.
+      requires: requirementsFor(["document.view"], headline, detail),
     });
   }
 
@@ -1331,11 +1340,18 @@ export function buildTaskChanges(
  */
 export function filterChangesByPermission(
   items: ChangeItem[],
-  held: { canViewFinance?: boolean; canViewCompliance?: boolean },
+  held: {
+    canViewFinance?: boolean;
+    canViewCompliance?: boolean;
+    canViewProgramme?: boolean;
+    canViewDocuments?: boolean;
+  },
 ): ChangeItem[] {
   const grant: Record<PermissionCode, boolean> = {
     "finance.view": held.canViewFinance === true,
     "compliance.view": held.canViewCompliance === true,
+    "programme.view": held.canViewProgramme === true,
+    "document.view": held.canViewDocuments === true,
   };
   return items.filter((i) => i.requires.every((code) => grant[code]));
 }
@@ -1462,7 +1478,12 @@ export function buildChangeGroups(
  */
 export function buildChangeFeed(
   sources: ChangeGroup[] | ChangeSourcePayloads,
-  held: { canViewFinance?: boolean; canViewCompliance?: boolean },
+  held: {
+    canViewFinance?: boolean;
+    canViewCompliance?: boolean;
+    canViewProgramme?: boolean;
+    canViewDocuments?: boolean;
+  },
   options: { now?: Date; limit?: number } = {},
 ): ChangeFeed {
   const now = options.now ?? new Date();

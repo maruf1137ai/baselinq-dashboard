@@ -96,8 +96,10 @@ const NOW = new Date("2026-06-15T09:00:00Z");
  * calls — not hand-written literals. A fixture that hard-codes what the hook
  * is expected to produce cannot catch a builder that starts leaking.
  */
-function homeData(gates: { canViewFinance: boolean; canViewCompliance: boolean }): HomeData {
-  const { canViewFinance, canViewCompliance } = gates;
+function homeData(
+  gates: { canViewFinance: boolean; canViewCompliance: boolean; canViewProgramme?: boolean },
+): HomeData {
+  const { canViewFinance, canViewCompliance, canViewProgramme = false } = gates;
 
   // The gate is a FETCH gate first: without finance.view the hook never
   // requests certificates or variations, so the lists are empty here too.
@@ -117,6 +119,7 @@ function homeData(gates: { canViewFinance: boolean; canViewCompliance: boolean }
   return {
     canViewFinance,
     canViewCompliance,
+    canViewProgramme,
     money,
     time,
     timeline: buildContractTimeline(time, NOW),
@@ -140,7 +143,7 @@ function homeData(gates: { canViewFinance: boolean; canViewCompliance: boolean }
         buildNoticeChanges(TIME_BARS, NOW),
         buildMilestoneChanges(MILESTONES, NOW),
       ],
-      { canViewFinance, canViewCompliance },
+      { canViewFinance, canViewCompliance, canViewProgramme },
       { now: NOW, limit: 6 },
     ),
     // NET of releases, exactly as the hook now builds it. No certificate in
@@ -187,7 +190,10 @@ function visible(data: HomeData) {
 // ── The contractor ────────────────────────────────────────────────────────
 
 describe("a contractor without finance.view", () => {
-  const text = () => draw(homeData({ canViewFinance: false, canViewCompliance: true }));
+  // Holds programme.view — a contractor executing the works needs the
+  // programme link, unlike finance.view. The Programme-link gate itself is
+  // tested in isolation below ("the Time/Programme zones' link to /programme").
+  const text = () => draw(homeData({ canViewFinance: false, canViewCompliance: true, canViewProgramme: true }));
 
   it("sees no rand figure anywhere on the band or the feed", () => {
     // `formatZAR` renders "R 8 200 000,00". Any "R" followed by a digit,
@@ -236,6 +242,46 @@ describe("a contractor without finance.view", () => {
     // The undated count survives the disclosure's trim; only the sentence
     // explaining it went. See `changeFeedDisclosure`.
     expect(t).toContain("undated");
+  });
+});
+
+// ── The Programme link, specifically ──────────────────────────────────────
+//
+// A text-match assertion ("contains 'Programme'") is exactly the weak style
+// that let the underlying bug ship unnoticed — the zone's NAME is always
+// "Programme" whether or not the viewer can open the page it points to.
+// These query the actual anchor.
+
+describe("the Time/Programme zones' link to /programme", () => {
+  function programmeAnchors(data: HomeData) {
+    const { container } = render(
+      <MemoryRouter>
+        <StatusBandBlock data={data} />
+      </MemoryRouter>,
+    );
+    return Array.from(container.querySelectorAll('a[href^="/programme"]'));
+  }
+
+  it("renders a real /programme link when the viewer holds programme.view", () => {
+    const data = homeData({ canViewFinance: false, canViewCompliance: true, canViewProgramme: true });
+    expect(programmeAnchors(data).length).toBeGreaterThan(0);
+  });
+
+  it("renders no /programme link without it, while the zone's name/value stay", () => {
+    const data = homeData({ canViewFinance: false, canViewCompliance: true, canViewProgramme: false });
+    expect(programmeAnchors(data)).toHaveLength(0);
+    const t = visible(data);
+    expect(t).toContain("Time");
+    expect(t).toMatch(/\d+ days/);
+  });
+
+  it("the finance-holding, no-compliance layout also drops the link without programme.view", () => {
+    // The "Programme zone" (2-zone layout for a viewer without finance.view)
+    // is covered above via canViewCompliance: true; this pins the OTHER
+    // 2-zone layout — a finance holder without compliance.view — still uses
+    // the Time zone's own /programme link and is gated the same way.
+    const data = homeData({ canViewFinance: true, canViewCompliance: false, canViewProgramme: false });
+    expect(programmeAnchors(data)).toHaveLength(0);
   });
 });
 

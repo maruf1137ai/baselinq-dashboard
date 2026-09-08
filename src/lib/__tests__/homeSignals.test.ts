@@ -708,6 +708,7 @@ describe("groupRiskSignals", () => {
     const withheld = visibleRiskSignals([financial], {
       canViewCompliance: true,
       canViewFinance: false,
+      canViewProgramme: true,
     });
     expect(groupRiskSignals(withheld)).toEqual([]);
   });
@@ -1032,7 +1033,10 @@ describe("resolveFinanceAccess", () => {
     // Risk moved out of the queue and into `groupRiskSignals`. The gate did not
     // move with it: `visibleRiskSignals` applies exactly what the removed rows
     // used to declare — compliance.view for every signal, plus finance.view for
-    // a financial one — so this is the same guarantee at its new call site.
+    // a financial one and programme.view for a delay one — so this is the same
+    // guarantee at its new call site. R-02 (delay) stays visible in both
+    // assertions below only because canViewProgramme: true is passed — it
+    // isolates the finance-hiding behaviour this test is actually about.
     const access = resolveFinanceAccess({
       canViewFinance: false,
       canApprovePayment: false,
@@ -1058,7 +1062,11 @@ describe("resolveFinanceAccess", () => {
       },
     ];
     const groups = groupRiskSignals(
-      visibleRiskSignals(signals, { canViewCompliance: true, canViewFinance: access.canViewFinance }),
+      visibleRiskSignals(signals, {
+        canViewCompliance: true,
+        canViewFinance: access.canViewFinance,
+        canViewProgramme: true,
+      }),
     );
     expect(groups.map((g) => g.code)).toEqual(["R-02"]);
     // And nothing at all while the permission map is still in flight.
@@ -1072,9 +1080,23 @@ describe("resolveFinanceAccess", () => {
         visibleRiskSignals(signals, {
           canViewCompliance: true,
           canViewFinance: loading.canViewFinance,
+          canViewProgramme: true,
         }),
       ).map((g) => g.code),
     ).toEqual(["R-02"]);
+  });
+
+  it("also withholds a delay risk signal from a viewer without programme.view", () => {
+    const signals = [
+      { category: "delay" as const, status: "open", severity: "red", code: "R-02" },
+      { category: "compliance" as const, status: "open", severity: "orange", code: "R-03" },
+    ];
+    const visible = visibleRiskSignals(signals, {
+      canViewCompliance: true,
+      canViewFinance: true,
+      canViewProgramme: false,
+    });
+    expect(visible.map((s) => s.code)).toEqual(["R-03"]);
   });
 });
 
@@ -1085,26 +1107,40 @@ describe("visibleRiskSignals", () => {
     { category: "compliance" as const, status: "open", severity: "green" },
     { category: "delay" as const, status: "resolved", severity: "red" },
   ];
+  const held = { canViewCompliance: true, canViewFinance: true, canViewProgramme: true };
 
   it("shows nothing without compliance.view, since /project-health is gated on it", () => {
     expect(
-      visibleRiskSignals(signals, { canViewCompliance: false, canViewFinance: true }),
+      visibleRiskSignals(signals, { ...held, canViewCompliance: false }),
     ).toEqual([]);
   });
 
   it("withholds financial signals from a contractor — their details carry amounts", () => {
-    const out = visibleRiskSignals(signals, { canViewCompliance: true, canViewFinance: false });
+    const out = visibleRiskSignals(signals, { ...held, canViewFinance: false });
     expect(out.map((s) => s.category)).toEqual(["delay", "compliance"]);
   });
 
-  it("shows every open category to a PM holding both", () => {
-    const out = visibleRiskSignals(signals, { canViewCompliance: true, canViewFinance: true });
+  it("withholds delay signals from a viewer without programme.view", () => {
+    const out = visibleRiskSignals(signals, { ...held, canViewProgramme: false });
+    expect(out.map((s) => s.category)).toEqual(["financial", "compliance"]);
+  });
+
+  it("shows every open category to a PM holding all three", () => {
+    const out = visibleRiskSignals(signals, held);
     expect(out.map((s) => s.category)).toEqual(["delay", "financial", "compliance"]);
   });
 
-  it("never includes signals that are no longer open", () => {
-    const out = visibleRiskSignals(signals, { canViewCompliance: true, canViewFinance: true });
-    expect(out.every((s) => s.status === "open")).toBe(true);
+  it("never includes a resolved (or muted) signal", () => {
+    const out = visibleRiskSignals(signals, held);
+    expect(out.every((s) => s.status === "open" || s.status === "acknowledged")).toBe(true);
+  });
+
+  it("includes an acknowledged signal — it's still active, matching /project-health", () => {
+    const out = visibleRiskSignals(
+      [...signals, { category: "compliance" as const, status: "acknowledged", severity: "orange" }],
+      held,
+    );
+    expect(out.filter((s) => s.status === "acknowledged")).toHaveLength(1);
   });
 });
 
