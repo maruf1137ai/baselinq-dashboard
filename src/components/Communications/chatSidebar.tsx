@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { Input } from "../ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import InviteMember from "../icons/InviteMember";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
@@ -27,15 +20,24 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelectTask }: ChatSidebarProps) {
   const [open, setOpen] = useState(true);
-  const [filter, setFilter] = useState<'All' | 'Unread'>('All');
-  const [typeFilter, setTypeFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Closed'>('All');
+  // Empty array = no filter applied (everything matches) for each group.
+  const [messageFilter, setMessageFilter] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const taskTypeOptions = DOC_TYPES.filter((t) => t !== 'All');
+  const typeCheckboxOptions = ['Private', ...taskTypeOptions];
+  const statusCheckboxOptions = ['Open', 'Closed'];
+  const messageCheckboxOptions = ['Unread'];
+
+  const toggleInList = (list: string[], setList: (v: string[]) => void, value: string) => {
+    setList(list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
+  };
+
   const refinementCount =
-    (typeFilter !== 'All' ? 1 : 0) +
-    (statusFilter !== 'All' ? 1 : 0) +
-    (filter !== 'All' ? 1 : 0);
+    (typeFilter.length > 0 ? 1 : 0) +
+    (statusFilter.length > 0 ? 1 : 0) +
+    (messageFilter.length > 0 ? 1 : 0);
 
   // Sort by most-recent activity (newest first). Backend returns
   // `last_message_at` (latest chat message) and `updated_at` (any
@@ -74,14 +76,19 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
 
       if (!matchesSearch) return false;
 
-      // Task-type filter
-      if (typeFilter !== 'All' && (task.taskType || "") !== typeFilter) return false;
+      // Task-type filter (multi-select; "Private" matches channels with no linked task)
+      if (typeFilter.length > 0) {
+        const matchesType =
+          (isPrivate && typeFilter.includes('Private')) ||
+          (!isPrivate && typeFilter.includes(task.taskType || ""));
+        if (!matchesType) return false;
+      }
 
       // Message filter
-      if (filter === 'Unread' && !((task.unread_count || 0) > 0)) return false;
+      if (messageFilter.includes('Unread') && !((task.unread_count || 0) > 0)) return false;
 
-      // Status filter (Open/Closed)
-      if (statusFilter !== 'All' && (task.status || "Open") !== statusFilter) return false;
+      // Status filter (Open/Closed) — multi-select
+      if (statusFilter.length > 0 && !statusFilter.includes(task.status || "Open")) return false;
 
       return true;
     })
@@ -124,46 +131,53 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                 <PopoverContent align="end" className="w-64 p-3 space-y-3">
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">Type</label>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card">
-                        <SelectItem value="All">All Types</SelectItem>
-                        {taskTypeOptions.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {DOC_TYPE_LABEL[t] || t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-1">
+                      {typeCheckboxOptions.map((t) => (
+                        <label key={t} className="flex items-center gap-2 text-xs text-foreground cursor-pointer px-1 py-1 rounded hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={typeFilter.includes(t)}
+                            onChange={() => toggleInList(typeFilter, setTypeFilter, t)}
+                          />
+                          {t === 'Private' ? 'Private Message' : (DOC_TYPE_LABEL[t] || t)}
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">Status</label>
-                    <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'All' | 'Open' | 'Closed')}>
-                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card">
-                        <SelectItem value="All">All statuses</SelectItem>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-1">
+                      {statusCheckboxOptions.map((s) => (
+                        <label key={s} className="flex items-center gap-2 text-xs text-foreground cursor-pointer px-1 py-1 rounded hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={statusFilter.includes(s)}
+                            onChange={() => toggleInList(statusFilter, setStatusFilter, s)}
+                          />
+                          {s}
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">Messages</label>
-                    <Select value={filter} onValueChange={(v) => setFilter(v as 'All' | 'Unread')}>
-                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
-                        <SelectValue placeholder="Messages" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card">
-                        <SelectItem value="All">All messages</SelectItem>
-                        <SelectItem value="Unread">Unread messages</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-1">
+                      {messageCheckboxOptions.map((m) => (
+                        <label key={m} className="flex items-center gap-2 text-xs text-foreground cursor-pointer px-1 py-1 rounded hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 rounded border-border accent-primary"
+                            checked={messageFilter.includes(m)}
+                            onChange={() => toggleInList(messageFilter, setMessageFilter, m)}
+                          />
+                          {m} only
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </PopoverContent>
               </Popover>
