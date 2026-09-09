@@ -307,6 +307,14 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   // .user_can_post_to_channel). can_post is omitted for non-task channels,
   // so default to true there.
   const canPost = channel?.can_post !== false;
+  // Only label the reason "you're CC'd" when the viewer is actually the CC
+  // (response_by) participant — not the To participant or anyone else who
+  // might be blocked for a different reason (e.g. a task that reopened but
+  // whose kanban status hasn't caught up yet).
+  const currentUserRole = Array.isArray(channel?.members)
+    ? channel.members.find((m: any) => String(m.user_id) === String(currentUser?.id))?.role
+    : undefined;
+  const isCurrentUserCC = currentUserRole === 'cc';
 
   // Presigned links live for AWS_S3_PRESIGNED_EXPIRY (1h by default). Re-take
   // the fresh URL well before that so a long-open channel never renders a
@@ -1036,7 +1044,11 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
               </div>
               <div>
                 <p className="text-xs font-normal text-primary leading-none">View Only</p>
-                <p className="text-xs text-primary/70 mt-0.5">You're CC'd on this task — you can view messages but can't reply.</p>
+                <p className="text-xs text-primary/70 mt-0.5">
+                  {isCurrentUserCC
+                    ? "You're CC'd on this task — you can view messages but can't reply."
+                    : "You don't have permission to reply in this channel."}
+                </p>
               </div>
             </div>
           )}
@@ -1529,7 +1541,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                   isTaskCompleted
                     ? "This task is closed — no new messages can be sent."
                     : !canPost
-                    ? "You're CC'd on this task — view only, replies are disabled."
+                    ? (isCurrentUserCC
+                        ? "You're CC'd on this task — view only, replies are disabled."
+                        : "You don't have permission to reply here.")
                     : isRecording
                     ? "Add a caption (optional)…"
                     : "Type a message… (use @ to mention)"
