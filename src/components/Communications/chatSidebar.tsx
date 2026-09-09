@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, SearchX, MessagesSquare, Plus } from "lucide-react";
+import { Search, SearchX, MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { SidebarFooter } from "@/components/ui/sidebar";
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import InviteMember from "../icons/InviteMember";
 import { AwesomeLoader } from "../commons/AwesomeLoader";
 import { DOC_TYPES, DOC_TYPE_LABEL } from "@/components/task/TaskFilterBar";
@@ -28,8 +29,13 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
   const [open, setOpen] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Unread'>('All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Closed'>('All');
   const [searchQuery, setSearchQuery] = useState("");
   const taskTypeOptions = DOC_TYPES.filter((t) => t !== 'All');
+  const refinementCount =
+    (typeFilter !== 'All' ? 1 : 0) +
+    (statusFilter !== 'All' ? 1 : 0) +
+    (filter !== 'All' ? 1 : 0);
 
   // Sort by most-recent activity (newest first). Backend returns
   // `last_message_at` (latest chat message) and `updated_at` (any
@@ -74,6 +80,9 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
       // Message filter
       if (filter === 'Unread' && !((task.unread_count || 0) > 0)) return false;
 
+      // Status filter (Open/Closed)
+      if (statusFilter !== 'All' && (task.status || "Open") !== statusFilter) return false;
+
       return true;
     })
     .sort((a, b) => channelActivityTs(b) - channelActivityTs(a));
@@ -87,38 +96,77 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
             <button className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
               <Plus className="h-4 w-4" />New Message
             </button>
-            <div className="flex items-center gap-2 mb-3">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-9 text-xs bg-card border-border rounded-lg flex-1">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Types</SelectItem>
-                  {taskTypeOptions.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {DOC_TYPE_LABEL[t] || t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filter} onValueChange={(v) => setFilter(v as 'All' | 'Unread')}>
-                <SelectTrigger className="h-9 text-xs bg-card border-border rounded-lg flex-1">
-                  <SelectValue placeholder="Messages" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All messages</SelectItem>
-                  <SelectItem value="Unread">Unread messages</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search channels..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 bg-card placeholder:text-muted-foreground border-border rounded-lg text-sm"
-              />
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search channels..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10 bg-card placeholder:text-muted-foreground border-border rounded-lg text-sm"
+                />
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={`inline-flex items-center gap-1.5 px-3 h-10 rounded-lg text-xs border transition-colors shrink-0 ${refinementCount > 0
+                      ? 'bg-primary/10 text-primary border-primary'
+                      : 'bg-card text-foreground border-border hover:bg-muted/50'
+                      }`}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filters
+                    {refinementCount > 0 && (
+                      <span className="tabular-nums font-medium">{refinementCount}</span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-3 space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Type</label>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card">
+                        <SelectItem value="All">All Types</SelectItem>
+                        {taskTypeOptions.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {DOC_TYPE_LABEL[t] || t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Status</label>
+                    <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'All' | 'Open' | 'Closed')}>
+                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card">
+                        <SelectItem value="All">All statuses</SelectItem>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Messages</label>
+                    <Select value={filter} onValueChange={(v) => setFilter(v as 'All' | 'Unread')}>
+                      <SelectTrigger className="w-full h-8 text-xs border-border bg-card rounded-lg">
+                        <SelectValue placeholder="Messages" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card">
+                        <SelectItem value="All">All messages</SelectItem>
+                        <SelectItem value="Unread">Unread messages</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -162,7 +210,7 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
                       <span className="text-xs font-normal text-primary">
                         {displayId || "Private"}
                       </span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${['Done', 'Approved', 'Completed', 'Closed', 'Verified', 'EOT Awarded', 'Answered', 'Rejected'].includes(status) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ml-auto ${status === 'Open' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground'
                         }`}>
                         {status}
                       </span>
