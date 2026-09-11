@@ -467,8 +467,26 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     // cadence changes. WS (below) just triggers an earlier fetchMessages()
     // call; it never delivers message data itself, so a socket outage never
     // loses updates, it only slows them back down to the original 2.5s.
+    //
+    // ── Why the healthy cadence is 2 minutes and not zero ──────────────────
+    //
+    // With the socket up, the poll is a SAFETY NET, not the transport, so it
+    // was 20s and is now 120s — 3 requests a minute down to 0.5. It is not
+    // removed, and the reason is `CHANNEL_LAYERS` in settings.py: without
+    // REDIS_URL the layer is InMemoryChannelLayer, which is per-process. On
+    // more than one Daphne worker a message saved by worker A never reaches a
+    // client connected to worker B, the socket stays open and healthy the
+    // whole time, and NOTHING errors anywhere. Today that degrades to a poll
+    // and nobody notices. With no poll it is a chat window that silently
+    // stops updating.
+    //
+    // So the poll is insurance against a deployment fact this code cannot
+    // check at runtime. Drop it to zero only once REDIS_URL is confirmed set
+    // in production and monitored — `baselink_server/views.py` already
+    // reports the active backend, and `manage.py check` raises channel.W001
+    // when DEBUG=False and it is missing.
     const POLL_MS_DEFAULT = 2500;
-    const POLL_MS_WS_HEALTHY = 20000;
+    const POLL_MS_WS_HEALTHY = 120000;
     let intervalId: ReturnType<typeof setInterval> | null = null;
     const setPollInterval = (ms: number) => {
       if (intervalId) clearInterval(intervalId);
@@ -499,6 +517,16 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
       ws.onopen = () => {
         reconnectAttempt = 0;
+        // Catch up BEFORE slowing the poll down.
+        //
+        // This used to only change the cadence, which was survivable at 20s
+        // and is not at 120s: anything posted while the socket was down is
+        // invisible until the next tick, because a ping that fired during the
+        // outage was never delivered to anyone. A socket that has just
+        // connected has, by definition, missed whatever happened while it was
+        // not connected, so it fetches once on the way up. This is also what
+        // makes the reconnect path self-healing rather than merely quiet.
+        fetchMessages(false);
         setPollInterval(POLL_MS_WS_HEALTHY);
       };
       ws.onmessage = () => {
@@ -517,9 +545,39 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     };
     connectWs();
 
+    // ── Catch up when the tab comes back ────────────────────────────────────
+    //
+    // The case neither the socket nor the poll covers well: a laptop sleeps or
+    // the tab is backgrounded for an hour. The TCP connection is dead but no
+    // FIN ever arrives, so `onclose` does not fire until the browser gets
+    // round to noticing — which can be long after the user is looking at the
+    // screen again. Meanwhile timers in a background tab are throttled hard by
+    // every modern browser, so the 120s poll is not really running either.
+    //
+    // The reader is then staring at a stale conversation that looks current.
+    // Refetching the moment the tab becomes visible costs one request on an
+    // action a user takes a handful of times an hour, and it is the only thing
+    // here that fixes the silently-dead-socket case.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || stopped) return;
+      fetchMessages(false);
+      // A socket that died while hidden reports CLOSED/CLOSING here, and its
+      // own reconnect backoff may be up to 30s away. Reconnect now rather than
+      // leaving the user on the fallback poll for another half minute.
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectAttempt = 0;
+        connectWs();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
     // Cleanup: Clear interval/socket when component unmounts or channel changes
     return () => {
       stopped = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
       if (intervalId) clearInterval(intervalId);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
@@ -1481,6 +1539,21 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
               multiple
             />
 
+            {/*
+              Attach and voice are one control group, so they sit flush.
+
+              They used to be direct children of the row, which is `gap-4`, so
+              the same 16px that separates the controls from the message field
+              also pushed the two icons apart — they read as two unrelated
+              buttons rather than one pair. Grouping them takes the row gap out
+              from between them while leaving it where it is doing useful work,
+              before the textarea.
+
+              The 32px hit areas are deliberately kept. Only the space between
+              them goes; shrinking the buttons to close the gap further would
+              put the tap target below the accessible floor.
+            */}
+            <div className="flex items-center shrink-0">
             {/* Attachment Icon */}
             <button
               type="button"
@@ -1518,6 +1591,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                 <Mic className="h-4 w-4" />
               )}
             </button>
+            </div>
 
             {/* Input + optional recording status */}
             <div className="flex-grow flex flex-col gap-1 min-w-0">
