@@ -116,7 +116,26 @@ const Communications = () => {
       queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
       setShowNewChannel(false);
       resetModal();
-      if (result) setSelectedChannel(result);
+      // Select it the same way clicking it in the sidebar does, rather than
+      // holding the POST body as the live channel.
+      //
+      // The create response is ChannelCreateSerializer, which answers with what
+      // was SENT plus the id — no `members`, no `can_post`, no `status`. Those
+      // decide whether the composer is enabled and what role the reader is
+      // shown as, so a channel selected straight from the POST body was a
+      // channel the chat window had to guess about. `handleSelectChannel`
+      // fetches the detail payload, which carries all three.
+      //
+      // The id guard is the belt to that brace: the response carried no `id`
+      // at all until channel/serializers.py was fixed, and every send went to
+      // `channels/undefined/messages/` and 404'd. If that ever regresses, this
+      // refuses to select rather than presenting a channel nothing can be
+      // posted to.
+      if (result?.id) {
+        await handleSelectChannel(result);
+      } else if (result) {
+        console.error("Channel create returned no id; not selecting it.", result);
+      }
       toast.success("Channel created");
     } catch {
       toast.error("Failed to create channel. Please try again.");
