@@ -393,6 +393,19 @@ const TeamMembersTable: React.FC<TeamMembersTableProps> = ({
   const { data: projectUsersData, isLoading, refetch } = useFetch<ProjectUsersResponse>(
     `projects/${projectId}/team-members/`
   );
+  // Deliberately NOT `my_org=true`, unlike CreateProject and EditProject.
+  //
+  // The scope is enforced server-side (user/user_views.py::get_queryset): the
+  // caller's own company PLUS anyone they already share a project with. That
+  // second half is the point — construction teams are cross-company, so a
+  // project manager adding the architect they are already working with must
+  // find them here rather than having to re-invite them as an external.
+  //
+  // This read used to return every user row in the database, because
+  // UserViewSet was `User.objects.all()` with IsAuthenticated and the org
+  // filter was opt-in. Adding `my_org=true` here would narrow the dropdown to
+  // one company again and break the cross-company case; it is not what closed
+  // the leak, and it is not needed to keep it closed.
   const { data: allUsersData, isLoading: isLoadingUsers, error: usersError } = useFetch<UsersResponse>("auth/users/?page_size=500");
   const { data: rolesData, refetch: refetchRoles } = useFetch<Role[]>("auth/roles/");
 
