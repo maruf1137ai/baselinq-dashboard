@@ -24,7 +24,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AIAnalysisModal } from "@/components/AIAnalysisModal";
+import { isQueuedJobResponse, useAIJob } from "@/hooks/useAIJob";
+
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -411,9 +412,15 @@ export default function TaskDetails() {
   const [aiResponse, setAiResponse] = useState<string>("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [isReplySubmitLoading, setIsReplySubmitLoading] = useState(false);
-  const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
+  // Part 7: the structured analysis runs as a background job (Part 6); the chat shows its progress.
+  const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisStage, setAnalysisStage] = useState<string | null>(null);
+  const analysisRetries = useRef(0);
+  const aiChatOpenRef = useRef(false);
+  const { data: analysisJob } = useAIJob(analysisJobId);
   const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
 
@@ -532,11 +539,29 @@ export default function TaskDetails() {
         && String(r.target_id) === String(entityId)),
     );
 
-  const handleAnalyzeWithAi = async () => {
-    setIsAnalyzeModalOpen(true);
-    setIsAnalyzeLoading(true);
-    setAnalysisData(null);
+  useEffect(() => {
+    aiChatOpenRef.current = showAiChat;
+  }, [showAiChat]);
 
+  useEffect(() => {
+    if (!analysisJob) return;
+    if (analysisJob.status === "succeeded") {
+      setAnalysisData(analysisJob.result);
+      setAnalysisJobId(null);
+      setIsAnalyzeLoading(false);
+    } else if (analysisJob.status === "failed") {
+      setAnalysisError(analysisJob.message || "The analysis couldn't be completed. Please try again.");
+      setAnalysisJobId(null);
+      setIsAnalyzeLoading(false);
+    } else {
+      setAnalysisStage(analysisJob.stage || analysisJob.status);
+    }
+  }, [analysisJob?.status, analysisJob?.stage]);
+
+  // The checked, structured analysis (Part 7), shown inside the Linq chat. 200: shown at once.
+  // 202: a background job, polled. 409 document_processing: the contract is being indexed — retried
+  // automatically for as long as the chat stays open.
+  const handleAnalyzeWithAi = async (force = false, retry = false) => {
     const endpointMap: Record<string, string> = {
       VO: "ai_analysis/vo/",
       RFI: "ai_analysis/rfi/",
@@ -544,10 +569,16 @@ export default function TaskDetails() {
       SI: "ai_analysis/si/",
       DC: "ai_analysis/dc/",
     };
+    if (!retry) analysisRetries.current = 0;
+    setShowAiChat(true);
+    aiChatOpenRef.current = true;
+    setIsAnalyzeLoading(true);
+    setAnalysisError(null);
+    if (!retry) setAnalysisStage(null);
 
     const endpoint = endpointMap[displayTask?.type];
     if (!endpoint) {
-      toast.error(`AI analysis not available for type: ${displayTask?.type}`);
+      setAnalysisError(`AI analysis isn't available for ${displayTask?.type || "this"} tasks.`);
       setIsAnalyzeLoading(false);
       return;
     }
@@ -555,14 +586,28 @@ export default function TaskDetails() {
     try {
       const response = await postData({
         url: endpoint,
-        data: { task_id: taskId },
+        data: { task_id: taskId, ...(force ? { force_refresh: true } : {}) },
       });
+      if (isQueuedJobResponse(response)) {
+        setAnalysisStage(response.job?.stage || "queued");
+        setAnalysisJobId(response.job_id);
+        return;
+      }
       setAnalysisData(response);
-    } catch (error) {
-      console.error("Error fetching AI analysis:", error);
-      toast.error("Failed to analyze. Please try again.");
-      setIsAnalyzeModalOpen(false);
-    } finally {
+      setIsAnalyzeLoading(false);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const body = error?.response?.data || {};
+      if (status === 409 && body.code === "document_processing" && analysisRetries.current < 10) {
+        analysisRetries.current += 1;
+        setAnalysisStage("The contract is being prepared for AI — the analysis starts automatically when it's ready");
+        setTimeout(() => {
+          if (aiChatOpenRef.current) handleAnalyzeWithAi(force, true);
+        }, 20000);
+        return;
+      }
+      setAnalysisError(body.message || (typeof body.error === "string" ? body.error : null)
+        || "The analysis couldn't be completed. Please try again.");
       setIsAnalyzeLoading(false);
     }
   };
@@ -1013,10 +1058,6 @@ export default function TaskDetails() {
     setCurrentTask(taskDetailsResponse);
   }, [taskId, taskDetailsResponse, isLoading]);
 
-
-  // useEffect(() => {
-  //   console.log(isAnalyzeModalOpen, isAnalyzeLoading)
-  // }, [isAnalyzeModalOpen, isAnalyzeLoading]);
 
   // console.log("data", currentTask);
 
@@ -3216,17 +3257,26 @@ export default function TaskDetails() {
                         ring as everything else. The icon dropped `animate-pulse`
                         too: a pulsing mark on a resting control reads as a
                         stalled spinner. */}
+                    {/* One button for every task type: it opens the Linq chat and runs the checked,
+                        structured analysis inside it, so the verdict and the conversation about it
+                        stay together. (It used to open a modal, with a second button for the chat.) */}
                     <Button
                       variant={showAiChat ? "default" : "outline"}
-                      onClick={() => setShowAiChat(!showAiChat)}
-                      disabled={isAnalyzeLoading}
+                      onClick={() => {
+                        if (showAiChat) {
+                          setShowAiChat(false);
+                          return;
+                        }
+                        setShowAiChat(true);
+                        if (!analysisData && !isAnalyzeLoading) handleAnalyzeWithAi();
+                      }}
                       className={cn(
                         !showAiChat &&
                           "bg-primary/5 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
                       )}
                     >
                       <AiMark />
-                      {showAiChat ? "Close AI Analysis" : "Analyze with AI"}
+                      {showAiChat ? "Close Linq AI" : "Analyze with AI"}
                     </Button>
 
                     {/* Werner spec rev H — additive task actions:
@@ -3343,6 +3393,16 @@ export default function TaskDetails() {
                     <AIChatInterface
                       taskType={displayTask.type}
                       data={displayTask}
+                      analysis={{
+                        show: true,
+                        isLoading: isAnalyzeLoading,
+                        analysisData,
+                        taskType: displayTask.type,
+                        taskId,
+                        stage: analysisStage,
+                        error: analysisError,
+                        onRerun: () => handleAnalyzeWithAi(true),
+                      }}
                     />
                   </motion.div>
                 )}
@@ -3773,16 +3833,6 @@ export default function TaskDetails() {
           </div>
         </div>
       </div>
-
-      {/* Analyze with AI Modal */}
-      <AIAnalysisModal
-        isOpen={isAnalyzeModalOpen}
-        onOpenChange={setIsAnalyzeModalOpen}
-        isLoading={isAnalyzeLoading}
-        analysisData={analysisData}
-        taskType={displayTask.type}
-        taskId={taskId}
-      />
 
       {/* Assign User Modal */}
       <Dialog open={showAssignModal} onOpenChange={(open) => {

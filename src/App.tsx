@@ -1,9 +1,14 @@
 import { Toaster as Sonner, Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import AiWorkSpace from "./pages/AiWorkSpace";
+// Part 15: Linq (and its markdown renderer) loads only when someone opens it.
+const AiWorkSpace = lazy(() => import("./pages/AiWorkSpace"));
+const LinqLoading = () => (
+  <div role="status" className="p-6 text-sm text-muted-foreground">Loading Linq…</div>
+);
 import Communications from "./pages/Communications";
 import Finance from "./pages/finance";
 import Login from "./pages/login";
@@ -91,7 +96,7 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ProjectProtectedRoute>
-                  <AiWorkSpace />
+                  <Suspense fallback={<LinqLoading />}><AiWorkSpace /></Suspense>
                 </ProjectProtectedRoute>
               </ProtectedRoute>
             }
@@ -101,7 +106,7 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ProjectProtectedRoute>
-                  <AiWorkSpace />
+                  <Suspense fallback={<LinqLoading />}><AiWorkSpace /></Suspense>
                 </ProjectProtectedRoute>
               </ProtectedRoute>
             }
@@ -113,7 +118,7 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ProjectProtectedRoute>
-                  <AiWorkSpace />
+                  <Suspense fallback={<LinqLoading />}><AiWorkSpace /></Suspense>
                 </ProjectProtectedRoute>
               </ProtectedRoute>
             }

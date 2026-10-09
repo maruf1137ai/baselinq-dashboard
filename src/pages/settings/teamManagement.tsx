@@ -4,7 +4,6 @@ import { HelpCircle } from "lucide-react";
 import TeamMembersTable from "@/components/settings/teamMembersTable";
 import RolePermissions from "@/components/settings/Role&Permissions";
 import ApprovalChains from "@/components/settings/ApprovalChains";
-import AiRouting from "@/components/settings/AiRouting";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RolesTab } from "./permissions";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
@@ -23,7 +22,7 @@ const TeamManagement = () => {
     { id: "Role Permissions", show: canViewRolesPermissions },
     { id: "Custom Roles",     show: canEditRolesPermissions },
     { id: "Approval Chains",  show: true },
-    { id: "AI Routing",       show: true },
+    // "AI Routing" was an "upcoming feature" placeholder tab with nothing behind it (removed, Part 15).
   ];
   const visibleTabs = allTabs.filter((t) => t.show).map((t) => t.id);
 
@@ -67,7 +66,6 @@ const TeamManagement = () => {
         {resolvedTab === "Role Permissions" && <RolePermissions readOnly={!canEditRolesPermissions} />}
         {resolvedTab === "Custom Roles" && <RolesTab />}
         {resolvedTab === "Approval Chains" && <ApprovalChains />}
-        {resolvedTab === "AI Routing" && <AiRouting />}
       </div>
     </PageBody>
   );

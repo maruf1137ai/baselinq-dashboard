@@ -90,14 +90,17 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ onNewChat, open, onToggle }: ChatSidebarProps) {
-  const { taskId: currentTaskId, sessionId: currentSessionId } = useParams<{ taskId: string; sessionId: string }>();
+  const { taskId: currentTaskId, sessionId: currentSessionId, projectId: routeProjectId } =
+    useParams<{ taskId: string; sessionId: string; projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [sessionToDelete, setSessionToDelete] = useState<ChatSession | null>(null);
 
-  // Scope chat history to the selected project so a user working across
-  // multiple projects doesn't see Project A's chats while in Project B.
-  const projectId = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
+  // Scope chat history to the project being viewed so a user working across
+  // multiple projects doesn't see Project A's chats while in Project B. The
+  // project in the URL wins (Part 15); the last selected project otherwise.
+  const projectId = routeProjectId
+    || (typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null);
   const chatSessionsQueryKey = `ai_analysis/chat-sessions/?project_id=${projectId}`;
   const { data: sessionsData, isLoading } = useFetch<{ sessions: ChatSession[] }>(
     projectId ? chatSessionsQueryKey : 'ai_analysis/chat-sessions/',

@@ -1,40 +1,65 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { Fragment, useState, useRef, useEffect } from "react";
 import { Send, User, MessageSquare, Info, Shield, Clock, ChevronRight, AlertCircle, MoreHorizontal, FileText } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { fetchData, postData } from "@/lib/Api";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { AIMarkdown } from "./AIMarkdown";
+import { AnswerFeedback } from "./AnswerFeedback";
+import { PriceBreakdown } from "./PriceBreakdown";
+import { LegacyPriceNotice } from "./LegacyPriceNotice";
+import { RFIAnalysisSummary } from "./RFIAnalysisSummary";
+import { CitationPill } from "./CitationPill";
+import { type AnalysisReportProps } from "./AnalysisReport";
+import { analysisSummary } from "./analysisMarkdown";
+import { shownSources, type ChatSource } from "@/types/citation";
 
-interface ChatSource {
-  clause_number: string;
-  clause_title: string;
-  page_number: string | number;
-  similarity: number;
-  excerpt: string;
-  document_name?: string;
+
+/** fetchData errors carry the backend `error` (often a code such as "task_not_found"): show text, not codes. */
+function readableChatError(err: unknown): string {
+  const msg = (err as Error)?.message || "";
+  return msg.includes(" ") ? msg : "This chat isn't available — you may not have access to this task.";
 }
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /** The saved message's id on the server (an answer can be rated once it has one). */
+  serverId?: number;
   sources?: ChatSource[];
+  price_breakdown?: unknown;
+  price_check_legacy?: boolean;
 }
 
 interface AIChatInterfaceProps {
   taskType: string;
   data: any;
+  /**
+   * The structured analysis, run by "Analyze with AI" on the task page and shown here under the
+   * welcome message. The task page owns the request and the job polling, so the chat only renders
+   * what it is given. Absent means the analysis was never started for this task.
+   */
+  analysis?: AnalysisReportProps & { show?: boolean };
 }
 
-export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
+export function AIChatInterface({ taskType, data, analysis }: AIChatInterfaceProps) {
+  // The checked verdict is appended to Linq's opening message rather than arriving as a second
+  // one: the welcome already reads the task against the contract, and this is the few lines it
+  // cannot say on its own — what a checked analysis concluded, and what needs acting on.
+  const analysisNote = analysis?.show
+    ? (analysis.error
+      || analysisSummary(analysis.analysisData, String(analysis.taskType || taskType).toUpperCase()))
+    : "";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  // Part 8c: a chat that couldn't start says why (no invented "I've analysed the documentation" greeting).
+  const [initError, setInitError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const taskTypeId = taskType === "CRITICALPATHITEM" ? "CPI" : taskType;
@@ -49,10 +74,13 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
         // Backend returns { messages: [...] }
         if (response?.messages && response.messages.length > 0) {
           const formattedMessages: Message[] = response.messages.map((msg: any) => ({
+            serverId: typeof msg.id === 'number' ? msg.id : undefined,
             role: msg.role === 'user' ? 'user' : 'assistant',
             content: msg.content || "",
             timestamp: new Date(msg.created_at),
             sources: msg.sources || [],
+            price_breakdown: msg.price_breakdown || null,
+            price_check_legacy: Boolean(msg.price_check_legacy),
           }));
           setMessages(formattedMessages);
           setHistoryLoaded(true);
@@ -67,22 +95,20 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
             });
             if (initResponse?.messages && initResponse.messages.length > 0) {
               const loaded: Message[] = initResponse.messages.map((m: any) => ({
+                serverId: typeof m.id === 'number' ? m.id : undefined,
                 role: m.role === 'user' ? 'user' : 'assistant',
                 content: m.content || "",
                 timestamp: new Date(m.created_at),
                 sources: m.sources || [],
+                price_breakdown: m.price_breakdown || null,
+                price_check_legacy: Boolean(m.price_check_legacy),
               }));
               setMessages(loaded);
             }
-          } catch {
-            // Welcome generation failed — show default greeting
-            setMessages([
-              {
-                role: 'assistant',
-                content: `Hello! I've analyzed the ${taskType} documentation. How can I help you with the contractual compliance or site implications today?`,
-                timestamp: new Date(),
-              }
-            ]);
+          } catch (err: any) {
+            const body = err?.response?.data || {};
+            setInitError(body.message || (typeof body.error === "string" ? body.error : null)
+              || "Linq couldn't start this chat. Please try again.");
           } finally {
             setIsInitializing(false);
           }
@@ -90,18 +116,13 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       } catch (err) {
         console.error("Failed to load chat history:", err);
         setHistoryLoaded(true);
-        setMessages([
-          {
-            role: 'assistant',
-            content: `Hello! I've analyzed the ${taskType} documentation. How can I help you with the contractual compliance or site implications today?`,
-            timestamp: new Date(),
-          }
-        ]);
+        setInitError(readableChatError(err));
       }
     };
 
     loadChatHistory();
   }, [chatUrl, data.id, taskType, historyLoaded]);
+
 
   const suggestions = [
     `What are the critical risks in this ${taskType}?`,
@@ -139,6 +160,7 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       });
 
       const assistantMessage: Message = {
+        serverId: typeof response.messageId === 'number' ? response.messageId : undefined,
         role: 'assistant',
         content: response.reply || response.content || "I'm sorry, I couldn't process that request.",
         timestamp: new Date(),
@@ -157,6 +179,86 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const renderMessage = (msg: Message, i: number) => {
+    // The verdict rides on Linq's opening message, under a rule, so the chat shows one message.
+    const content = i === 0 && msg.role === 'assistant' && analysisNote
+      ? `${msg.content}\n\n---\n\n${analysisNote}`
+      : msg.content;
+    return (
+    <div
+      key={i}
+      className={cn(
+        "flex animate-in fade-in slide-in-from-bottom-3 duration-500",
+        msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+      )}
+    >
+      {/* Avatar */}
+      <div className={cn("shrink-0 mt-1", msg.role === 'user' ? "ml-3" : "mr-3")}>
+        <div className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium shadow-sm",
+          msg.role === 'assistant'
+            ? "bg-card border border-border text-[#6c5ce7]"
+            : "bg-gradient-to-tr from-[#6c5ce7] to-[#a29bfe] text-white"
+        )}>
+          {msg.role === 'assistant' ? <AiMark size={16} /> : <User className="h-4 w-4" />}
+        </div>
+      </div>
+
+      <div className={cn("flex flex-col max-w-[82%]", msg.role === 'user' ? "items-end" : "items-start")}>
+        {/* Bubble */}
+        <div className={cn(
+          "px-5 py-4 rounded-xl shadow-sm text-sm leading-[1.7]",
+          msg.role === 'assistant'
+            ? "bg-card border border-border text-[#2d3748] rounded-tl-none font-medium"
+            : "bg-[#6c5ce7] text-white rounded-tr-none font-medium"
+        )}>
+          {msg.role === 'assistant' ? (
+            <AIMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-3 last:mb-0 font-normal">{children}</p>,
+                strong: ({ children }) => <strong className="font-medium text-[#1a1a2e]">{children}</strong>,
+                ul: ({ children }) => <ul className="list-disc list-inside space-y-2 my-3 p-3 bg-muted/50 rounded-xl font-normal">{children}</ul>,
+                li: ({ children }) => <li className="pl-1 font-normal">{children}</li>,
+                h1: ({ children }) => <h1 className="text-base font-medium mb-3 text-[#1a1a2e] border-b pb-1">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-sm font-medium mb-2 text-[#1a1a2e]">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-medium mb-1.5 text-[#4a5568] uppercase tracking-wide">{children}</h3>,
+              }}
+            >
+              {content}
+            </AIMarkdown>
+          ) : (
+            <span className="whitespace-pre-wrap">{content}</span>
+          )}
+        </div>
+
+        {/* VO: labelled AI price estimates; RFI: inline analysis summary; older VO gets a notice. */}
+        {msg.role === 'assistant' && (
+          <div className="w-full">
+            <PriceBreakdown priceData={msg.price_breakdown} />
+            <RFIAnalysisSummary data={msg.price_breakdown} />
+            {msg.price_check_legacy && <LegacyPriceNotice />}
+          </div>
+        )}
+
+        {/* Citations: one chip per source with its verification status (Part 5) */}
+        {shownSources(msg.sources).length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {shownSources(msg.sources).map((source, si) => (
+              <CitationPill key={si} source={source} />
+            ))}
+          </div>
+        )}
+        {msg.role === 'assistant' && <AnswerFeedback className="mt-1" surface="task_chat" targetId={msg.serverId} />}
+
+        {/* Timestamp */}
+        <span className="text-xs font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
+          {formatTime(msg.timestamp)}
+        </span>
+      </div>
+    </div>
+    );
   };
 
   return (
@@ -181,7 +283,8 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth scrollbar-thin scrollbar-thumb-gray-200">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth scrollbar-thin scrollbar-thumb-gray-200"
+        aria-live="polite" aria-relevant="additions">
         {isInitializing && messages.length === 0 && (
           // <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-20">
           //   <div className="relative">
@@ -205,92 +308,21 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex animate-in fade-in slide-in-from-bottom-3 duration-500",
-              msg.role === 'user' ? "flex-row-reverse" : "flex-row"
-            )}
-          >
-            {/* Avatar */}
-            <div className={cn(
-              "shrink-0 mt-1",
-              msg.role === 'user' ? "ml-3" : "mr-3"
-            )}>
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium shadow-sm",
-                msg.role === 'assistant'
-                  ? "bg-card border border-border text-[#6c5ce7]"
-                  : "bg-gradient-to-tr from-[#6c5ce7] to-[#a29bfe] text-white"
-              )}>
-                {msg.role === 'assistant' ? <AiMark size={16} /> : <User className="h-4 w-4" />}
-              </div>
-            </div>
-
-            <div className={cn(
-              "flex flex-col max-w-[82%]",
-              msg.role === 'user' ? "items-end" : "items-start"
-            )}>
-              {/* Bubble */}
-              <div className={cn(
-                "px-5 py-4 rounded-xl shadow-sm text-sm leading-[1.7]",
-                msg.role === 'assistant'
-                  ? "bg-card border border-border text-[#2d3748] rounded-tl-none font-medium"
-                  : "bg-[#6c5ce7] text-white rounded-tr-none font-medium"
-              )}>
-                {msg.role === 'assistant' ? (
-                  <ReactMarkdown
-                    components={{
-                      p: ({ children }) => <p className="mb-3 last:mb-0 font-normal">{children}</p>,
-                      strong: ({ children }) => <strong className="font-medium text-[#1a1a2e]">{children}</strong>,
-                      ul: ({ children }) => <ul className="list-disc list-inside space-y-2 my-3 p-3 bg-muted/50 rounded-xl font-normal">{children}</ul>,
-                      li: ({ children }) => <li className="pl-1 font-normal">{children}</li>,
-                      h1: ({ children }) => <h1 className="text-base font-medium mb-3 text-[#1a1a2e] border-b pb-1">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-sm font-medium mb-2 text-[#1a1a2e]">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-sm font-medium mb-1.5 text-[#4a5568] uppercase tracking-wide">{children}</h3>,
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
-                )}
-              </div>
-
-              {/* Citations (inline pills with hover popover) */}
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {msg.sources.map((source, si) => (
-                    <div key={si} className="relative group">
-                      <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground font-medium">Clause {source.clause_number}</span>
-                      </button>
-                      <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-                        {source.document_name && (
-                          <p className="text-xs font-medium text-primary/70 mb-1 truncate">{source.document_name}</p>
-                        )}
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
-                          <p className="text-xs font-normal text-foreground truncate">{source.clause_title}, Page {source.page_number}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{source.excerpt}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Timestamp */}
-              <span className="text-xs font-medium text-[#cbd5e0] uppercase tracking-tighter mt-2 hover:text-[#94a3b8] transition-colors">
-                {formatTime(msg.timestamp)}
-              </span>
-            </div>
+        {initError && (
+          <div role="alert" data-testid="chat-init-error" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 space-y-2">
+            <p>{initError}</p>
+            <button className="underline text-sm" onClick={() => { setInitError(null); setMessages([]); setHistoryLoaded(false); }}>
+              Try again
+            </button>
           </div>
-        ))}
+        )}
+        {messages.map(renderMessage)}
 
-        {isTyping && (
+        {/* A chat that could not start must not hide a verdict that was reached. */}
+        {messages.length === 0 && analysisNote && renderMessage(
+          { role: 'assistant', content: analysisNote, timestamp: new Date() }, -1)}
+
+        {(isTyping || analysis?.isLoading) && (
           <div className="flex gap-4 max-w-[90%] mr-auto animate-in fade-in duration-300">
             <div className="h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center shrink-0 shadow-sm text-[#6c5ce7]">
               <AiMark size={16} />
@@ -330,6 +362,16 @@ export function AIChatInterface({ taskType, data }: AIChatInterfaceProps) {
                   {suggest}
                 </button>
               ))}
+              {/* The analysis is a message now, so its re-run lives with the other prompts. */}
+              {analysis?.onRerun && (
+                <button
+                  onClick={() => analysis.onRerun?.()}
+                  disabled={analysis.isLoading}
+                  className="whitespace-nowrap text-xs font-medium text-primary bg-primary/5 hover:bg-primary hover:text-white px-4 py-2 rounded-full border border-primary/30 hover:border-primary transition-all duration-300 shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  Re-run analysis
+                </button>
+              )}
             </div>
           )}
 

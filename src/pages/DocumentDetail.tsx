@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,8 +20,7 @@ import {
   Calendar,
   CheckCircle2,
   MoreHorizontal,
-  ExternalLink,
-} from 'lucide-react';
+  ExternalLink, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -64,6 +63,9 @@ import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
 const DocumentDetail = () => {
   const { docId } = useParams();
   const navigate = useNavigate();
+  // Part 15: a Linq citation chip links here with ?page=N — the preview opens at that page.
+  const [searchParams] = useSearchParams();
+  const startPage = Number(searchParams.get('page')) || undefined;
   const [isAskOpen, setIsAskOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
@@ -213,6 +215,11 @@ const DocumentDetail = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document', docId] });
       queryClient.invalidateQueries({ queryKey: ['findings', docId] });
+    },
+    // Part 8a: a refused re-run (e.g. the AI limit, not a PDF) says why instead of doing nothing.
+    onError: (err: any) => {
+      const body = err?.response?.data || {};
+      toast.error(body.message || (typeof body.error === 'string' ? body.error : null) || "The analysis couldn't be started. Please try again.");
     },
   });
 
@@ -587,6 +594,7 @@ const DocumentDetail = () => {
                       downloadUrl: selectedVersion?.downloadUrl ?? doc.downloadUrl,
                     }}
                     onPreview={(file) => setPreviewFile(file)}
+                    startPage={startPage}
                   />
                 </div>
 
@@ -755,12 +763,16 @@ const DocumentDetail = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-foreground tabular-nums">
-                      {findings.length === 0 && doc.aiStatus !== 'running' ? 'No findings' : findings.length}
+                      {doc.aiStatus === 'failed' ? 'Analysis failed'
+                        : doc.aiStatus === 'no_text' ? 'No readable text'
+                        : findings.length === 0 && doc.aiStatus !== 'running' ? 'No findings' : findings.length}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {findings.length > 0
                         ? `${findings.filter((f: any) => f.severity === 'high').length} high · ${findings.filter((f: any) => f.severity === 'medium').length} med · ${findings.filter((f: any) => f.severity === 'low').length} low`
-                        : doc.aiStatus === 'running' ? 'AI is analysing…' : 'Run AI to surface issues'
+                        : doc.aiStatus === 'running' ? 'AI is analysing…'
+                        : (doc.aiStatus === 'failed' || doc.aiStatus === 'no_text') ? (doc.aiStatusReason || 'See the AI findings below')
+                        : 'Run AI to surface issues'
                       }
                     </p>
                   </div>
@@ -832,11 +844,32 @@ const DocumentDetail = () => {
                 </div>
               )}
 
+              {/* Part 8a: an AI failure or a scan without text is shown as such — not as "no findings yet" */}
+              {doc.aiStatus === 'failed' && (
+                <div role="alert" data-testid="ai-status-failed" className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm font-medium">The AI analysis didn't complete.</p>
+                    {doc.aiStatusReason && <p className="text-sm">{doc.aiStatusReason}</p>}
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => runAnalysis()}
+                      disabled={isAnalysisRunning}>
+                      <AiMark size={16} /><span className="ml-1.5">Run AI analysis again</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {doc.aiStatus === 'no_text' && (
+                <div role="note" data-testid="ai-status-no-text" className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p className="text-sm">{doc.aiStatusReason || "No readable text — the file looks scanned or image-only."} Upload a text-based PDF for AI analysis.</p>
+                </div>
+              )}
+
               {findingsLoading && doc.aiStatus !== 'running' && (
                 <AwesomeLoader message="Loading findings" />
               )}
 
-              {!findingsLoading && findings.length === 0 && doc.aiStatus !== 'running' && (
+              {!findingsLoading && findings.length === 0 && !['running', 'failed', 'no_text'].includes(doc.aiStatus) && (
                 <EmptyState
                   size="sm"
                   icon={AiMark as unknown as LucideIcon}
@@ -885,6 +918,14 @@ const DocumentDetail = () => {
                             </span>
                             {finding.clauseReference && (
                               <span className="text-xs text-muted-foreground font-normal">{finding.clauseReference}</span>
+                            )}
+                            {finding.clauseReference && finding.clauseReferenceVerified === false && (
+                              <span
+                                className="text-xs font-normal text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                                title="This clause could not be found in the document — check it before relying on the finding"
+                              >
+                                clause unverified
+                              </span>
                             )}
                           </div>
                           <p className={cn(

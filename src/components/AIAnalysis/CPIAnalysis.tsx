@@ -1,6 +1,6 @@
 import { FileText, TrendingUp, Shield, Clock, AlertTriangle } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
-import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner, ClauseStatusBadge } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -64,7 +64,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                   </div>
                   <p className="text-sm text-muted-foreground font-medium mb-1">{value.finding}</p>
                   {value.clause_reference && (
-                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference} (Page {value.page_number})</p>
+                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference} (Page {value.page_number}) <ClauseStatusBadge status={value?.citation_status} /></p>
                   )}
                   {value.completion_date && (
                     <p className="text-xs text-destructive font-medium mt-1 uppercase">Target: {value.completion_date}</p>
@@ -92,7 +92,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                   {data.extension_of_time_analysis.eot_entitlement.entitled.toUpperCase()}
                 </Badge>
                 {data.extension_of_time_analysis.eot_entitlement.clause_reference && (
-                  <p className="text-xs text-primary mt-1">Ref: {data.extension_of_time_analysis.eot_entitlement.clause_reference}</p>
+                  <p className="text-xs text-primary mt-1">Ref: {data.extension_of_time_analysis.eot_entitlement.clause_reference} <ClauseStatusBadge status={data.extension_of_time_analysis.eot_entitlement?.citation_status} /></p>
                 )}
                 <p className="text-xs text-primary mt-2 font-medium">{data.extension_of_time_analysis.eot_entitlement.grounds}</p>
                 <p className="text-xs text-gray-500 mt-1 italic">{data.extension_of_time_analysis.eot_entitlement.finding}</p>
@@ -101,7 +101,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 <p className="text-xs font-medium text-primary normal-case mb-2">Notice Requirements</p>
                 <p className="text-sm font-medium text-destructive">{data.extension_of_time_analysis.notice_requirements.notice_deadline}</p>
                 {data.extension_of_time_analysis.notice_requirements.clause_reference && (
-                  <p className="text-xs text-primary">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference}</p>
+                  <p className="text-xs text-primary">Ref: Clause {data.extension_of_time_analysis.notice_requirements.clause_reference} <ClauseStatusBadge status={data.extension_of_time_analysis.notice_requirements?.citation_status} /></p>
                 )}
                 <p className="text-xs text-primary mt-1">{data.extension_of_time_analysis.notice_requirements.procedure}</p>
                 <p className="text-xs text-gray-500 mt-1">{data.extension_of_time_analysis.notice_requirements.finding}</p>
@@ -122,7 +122,7 @@ export const CPIAnalysis = ({ data, visibleSections }: { data: any, visibleSecti
                 <p className="text-xs font-medium text-red-700 normal-case mb-2">LD Exposure</p>
                 <Badge className="bg-red-600 text-white mb-2">{data.potential_implications.liquidated_damages.exposure ? 'YES' : 'NO'}</Badge>
                 {data.potential_implications.liquidated_damages.clause_reference && (
-                  <p className="text-xs text-red-500">Ref: Clause {data.potential_implications.liquidated_damages.clause_reference}</p>
+                  <p className="text-xs text-red-500">Ref: Clause {data.potential_implications.liquidated_damages.clause_reference} <ClauseStatusBadge status={data.potential_implications.liquidated_damages?.citation_status} /></p>
                 )}
                 <p className="text-xs text-red-600">{data.potential_implications.liquidated_damages.assessment}</p>
               </div>

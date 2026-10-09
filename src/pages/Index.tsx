@@ -394,7 +394,7 @@ const Index = () => {
               common height padded whichever was shorter with dead space.
             */}
             <div className="grid gap-4 md:grid-cols-2 items-start">
-              <MyActionsBlock data={data} />
+              <MyActionsBlock data={data} projectId={projectId} />
               <RecentActivityBlock data={data} />
             </div>
 

@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   Send,
-  Paperclip,
   Link2,
   ChevronRight,
   FileText,
@@ -23,18 +22,20 @@ import {
   Loader2,
   Copy,
   Check,
-  ThumbsUp,
-  ThumbsDown,
   RefreshCw,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { AiMark } from "@/components/icons/AiMark";
 import { formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchData, postData } from '@/lib/Api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+import { citationStyle } from "@/components/AIAnalysis/CitationPill";
+import { AnswerFeedback } from "@/components/AIAnalysis/AnswerFeedback";
+import { citationHref, type CitationVerification } from "@/types/citation";
 
 interface AskRegulationsDrawerProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ interface AskRegulationsDrawerProps {
 
 interface Message {
   id: string;
+  /** The saved message's id on the server (an answer can be rated once it has one). */
+  serverId?: number;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
@@ -54,9 +57,27 @@ interface Message {
     clauseTitle?: string;
     page: string;
     snippet?: string;
+    verification?: CitationVerification;
+    documentId?: number | null;
+    isReference?: boolean;
   }>;
   followUps?: string[];
   hasActions?: boolean;
+}
+
+/** A source from the document chat API as a drawer citation. */
+function toCitation(s: any) {
+  return {
+    docName: s.document_name || s.documentName || '',
+    version: '',
+    clause: s.clause_number || s.clause || '',
+    clauseTitle: s.clause_title || '',
+    page: s.page_number?.toString() || s.page || '',
+    snippet: s.excerpt || s.snippet || '',
+    verification: s.verification,
+    documentId: s.document_id ?? null,
+    isReference: Boolean(s.is_reference),
+  };
 }
 
 const initialSuggestedQuestions = [
@@ -76,10 +97,9 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [dislikedIds, setDislikedIds] = useState<Set<string>>(new Set());
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const projectId = localStorage.getItem('selectedProjectId');
   const isProjectLevel = !documentId;
@@ -104,20 +124,14 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
   useEffect(() => {
     if (historyData?.messages && messages.length === 0) {
       const mapped = historyData.messages.map((msg: any, i: number) => ({
-        id: msg._id || `hist-${i}`,
+        id: msg.id?.toString() || msg._id || `hist-${i}`,
+        serverId: typeof msg.id === 'number' ? msg.id : undefined,
         role: msg.role || (msg.isUser ? 'user' : 'assistant'),
         content: msg.content || msg.message || '',
         timestamp: msg.createdAt
           ? formatTime(msg.createdAt)
           : '',
-        citations: msg.sources?.map((s: any) => ({
-          docName: s.document_name || s.documentName || '',
-          version: '',
-          clause: s.clause_number || s.clause || '',
-          clauseTitle: s.clause_title || '',
-          page: s.page_number?.toString() || s.page || '',
-          snippet: s.excerpt || s.snippet || '',
-        })),
+        citations: msg.sources?.map(toCitation),
         followUps: msg.followUps,
         hasActions: msg.role === 'assistant',
       }));
@@ -139,41 +153,56 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
     }
   }, [messages]);
 
+  const scope = (): Record<string, unknown> =>
+    isProjectLevel ? { projectId } : { documentId };
+
+  const toAssistant = (response: any): Message => ({
+    id: response.messageId ? String(response.messageId) : (Date.now() + 1).toString(),
+    serverId: typeof response.messageId === 'number' ? response.messageId : undefined,
+    role: 'assistant',
+    content: response.reply || response.content || '',
+    timestamp: formatTime(new Date()),
+    citations: response.sources?.map(toCitation),
+    followUps: response.followUps,
+    hasActions: true,
+  });
+
+  // The saved history is refetched next time instead of the stale copy (Part 15).
+  const refreshHistory = () => queryClient.invalidateQueries({ queryKey: ['document-chat', documentId || projectId] });
+
   // Send message mutation
   const { mutate: sendMessage, isPending: isSending } = useMutation({
-    mutationFn: (message: string) => {
-      const data: any = { message };
-      if (isProjectLevel) {
-        data.projectId = projectId;
-      } else {
-        data.documentId = documentId;
-      }
-      return postData({ url: sendUrl, data });
-    },
+    mutationFn: (message: string) => postData({ url: sendUrl, data: { message, ...scope() } }),
     onSuccess: (response) => {
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.reply || response.content || '',
-        timestamp: formatTime(new Date()),
-        citations: response.sources?.map((s: any) => ({
-          docName: s.document_name || s.documentName || '',
-          version: '',
-          clause: s.clause_number || s.clause || '',
-          clauseTitle: s.clause_title || '',
-          page: s.page_number?.toString() || s.page || '',
-          snippet: s.excerpt || s.snippet || '',
-        })),
-        followUps: response.followUps,
-        hasActions: true,
-      };
-      setMessages(prev => [...prev, assistantMsg]);
+      setMessages(prev => [...prev, toAssistant(response)]);
+      refreshHistory();
     },
     onError: (err: any) => {
       const backendMessage = err?.response?.data?.message;
       toast.error(backendMessage || 'Failed to get AI response.');
     },
   });
+
+  // Part 15: "Regenerate" answers the latest question again and REPLACES that answer — it used to send the
+  // question once more, adding a duplicate question and a second answer.
+  const { mutate: regenerate, isPending: isRegenerating } = useMutation({
+    mutationFn: () => postData({ url: sendUrl, data: { regenerate: true, ...scope() } }),
+    onSuccess: (response) => {
+      setMessages(prev => {
+        const lastAssistant = [...prev].reverse().findIndex(m => m.role === 'assistant');
+        if (lastAssistant === -1) return [...prev, toAssistant(response)];
+        const index = prev.length - 1 - lastAssistant;
+        return [...prev.slice(0, index), toAssistant(response), ...prev.slice(index + 1)];
+      });
+      refreshHistory();
+    },
+    onError: (err: any) => {
+      const data = err?.response?.data || {};
+      toast.error(data.message || data.error || "Couldn't regenerate the answer.");
+    },
+    onSettled: () => setRegeneratingId(null),
+  });
+  const lastAssistantId = [...messages].reverse().find(m => m.role === 'assistant')?.id;
 
 
   const handleSend = (text: string = inputValue) => {
@@ -230,7 +259,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-10 max-w-3xl mx-auto">
+            <div className="space-y-10 max-w-3xl mx-auto" aria-live="polite" aria-relevant="additions">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -311,38 +340,22 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                             ? <Check className="h-4 w-4 text-green-500" />
                             : <Copy className="h-4 w-4 text-gray-400" />}
                         </button>
-                        <button
-                          title="Helpful"
-                          className="p-1.5 rounded-md hover:bg-muted transition-all"
-                          onClick={() => {
-                            setLikedIds(prev => { const s = new Set(prev); s.has(msg.id) ? s.delete(msg.id) : s.add(msg.id); return s; });
-                            setDislikedIds(prev => { const s = new Set(prev); s.delete(msg.id); return s; });
-                          }}
-                        >
-                          <ThumbsUp className={`h-3.5 w-3.5 ${likedIds.has(msg.id) ? 'text-green-500 fill-green-500' : 'text-gray-400'}`} />
-                        </button>
-                        <button
-                          title="Not helpful"
-                          className="p-1.5 rounded-md hover:bg-muted transition-all"
-                          onClick={() => {
-                            setDislikedIds(prev => { const s = new Set(prev); s.has(msg.id) ? s.delete(msg.id) : s.add(msg.id); return s; });
-                            setLikedIds(prev => { const s = new Set(prev); s.delete(msg.id); return s; });
-                          }}
-                        >
-                          <ThumbsDown className={`h-3.5 w-3.5 ${dislikedIds.has(msg.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
-                        </button>
-                        <button
-                          title="Regenerate"
-                          className="p-1.5 rounded-md hover:bg-muted transition-all"
-                          onClick={() => {
-                            setRegeneratingId(msg.id);
-                            const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-                            if (lastUserMsg) handleSend(lastUserMsg.content);
-                            setTimeout(() => setRegeneratingId(null), 1000);
-                          }}
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 text-gray-400 ${regeneratingId === msg.id ? 'animate-spin' : ''}`} />
-                        </button>
+                        {/* Part 15: the vote is saved on the server (it used to live in this drawer only) */}
+                        <AnswerFeedback surface="document_chat" targetId={msg.serverId} />
+                        {msg.id === lastAssistantId && (
+                          <button
+                            title="Regenerate"
+                            aria-label="Regenerate this answer"
+                            className="p-1.5 rounded-md hover:bg-muted transition-all disabled:opacity-50"
+                            disabled={isRegenerating || isSending}
+                            onClick={() => {
+                              setRegeneratingId(msg.id);
+                              regenerate();
+                            }}
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 text-gray-400 ${regeneratingId === msg.id ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -353,21 +366,49 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
                         {msg.citations.map((cite, ci) => (
                           <Tooltip key={ci}>
                             <TooltipTrigger asChild>
-                              <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground font-medium">Clause {cite.clause}</span>
-                              </button>
+                              {(() => {
+                                const style = citationStyle(cite.verification);
+                                const Icon = style.icon;
+                                // Part 15: a clause in the user's own document opens it at the clause's page
+                                const href = citationHref({ document_id: cite.documentId, verification: cite.verification,
+                                  page_number: cite.page, clause_number: cite.clause, is_reference: cite.isReference });
+                                const body = (
+                                  <>
+                                    <Icon className={cn("h-4 w-4", style.iconClass)} />
+                                    <span className={cn("text-xs font-medium", style.text)}>{style.label(cite.clause)}</span>
+                                  </>
+                                );
+                                const chip = cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full border hover:bg-accent transition-colors",
+                                  href ? "cursor-pointer" : "cursor-default", style.pill);
+                                return href ? (
+                                  <Link to={href} onClick={onClose} data-verification={cite.verification || "none"}
+                                    data-testid="citation-link" className={chip}>
+                                    {body}
+                                  </Link>
+                                ) : (
+                                  <button type="button" data-verification={cite.verification || "none"} className={chip}>
+                                    {body}
+                                  </button>
+                                );
+                              })()}
                             </TooltipTrigger>
                             <TooltipContent side="top" className="w-80 p-3 overflow-visible">
-                              {cite.docName && (
-                                <p className="text-xs font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
+                              {citationStyle(cite.verification).note && (
+                                <p className="text-xs font-medium mb-1">{citationStyle(cite.verification).note}</p>
                               )}
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <FileText className="h-4 w-4 text-primary shrink-0" />
-                                <p className="text-xs font-normal truncate">{cite.clauseTitle ?? `Clause ${cite.clause}`}, Page {cite.page}</p>
-                              </div>
-                              {cite.snippet && (
-                                <p className="text-xs text-muted-foreground leading-relaxed whitespace-normal">{cite.snippet}</p>
+                              {cite.verification !== "not_found" && (
+                                <>
+                                  {cite.docName && (
+                                    <p className="text-xs font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
+                                  )}
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                                    <p className="text-xs font-normal truncate">{cite.clauseTitle || `Clause ${cite.clause}`}, Page {cite.page}</p>
+                                  </div>
+                                  {cite.snippet && (
+                                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-normal">{cite.snippet}</p>
+                                  )}
+                                </>
                               )}
                             </TooltipContent>
                           </Tooltip>
@@ -412,10 +453,7 @@ export const AskRegulationsDrawer: React.FC<AskRegulationsDrawerProps> = ({
         {/* Input Footer */}
         <div className="p-5 border-t bg-card shrink-0">
           <div className="relative flex items-center bg-muted/50 border border-border rounded-3xl px-4 py-2 focus-within:bg-card focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 transition-all">
-            <button
-              aria-label="Attach a file" className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-muted transition-colors">
-              <Paperclip className="h-4 w-4" />
-            </button>
+            {/* Part 15: the paperclip did nothing (document chat takes no attachments) and is gone */}
             <textarea
               rows={1}
               placeholder="Ask about regulations, clauses, or obligations..."

@@ -14,6 +14,8 @@ interface DocumentPreviewCardProps {
   };
   /** Click "Open" / preview — host opens the FilePreviewModal. */
   onPreview: (file: { name: string; url: string; streamUrl?: string }) => void;
+  /** Open a PDF at this page (a Linq citation links here with ?page=N, Part 15). */
+  startPage?: number;
 }
 
 function formatBytes(bytes: number | undefined): string | null {
@@ -40,7 +42,7 @@ const XLSX_EXTS = new Set(['xlsx', 'xls']);
  * actual document was hidden behind a Download click. Falls back gracefully
  * when the URL isn't available yet.
  */
-export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, onPreview }) => {
+export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, onPreview, startPage }) => {
   const fileName =
     (doc.fileName as string) || (doc.file_name as string) || (doc.name as string) || 'document';
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
@@ -226,7 +228,9 @@ export const DocumentPreviewCard: React.FC<DocumentPreviewCardProps> = ({ doc, o
         )}
         {url && isPdf && pdfBlobUrl && (
           <iframe
-            src={pdfBlobUrl}
+            key={startPage || 0}
+            src={startPage ? `${pdfBlobUrl}#page=${startPage}` : pdfBlobUrl}
+            data-testid="pdf-preview"
             title={fileName}
             className="w-full border-0"
             style={{ height: '640px' }}

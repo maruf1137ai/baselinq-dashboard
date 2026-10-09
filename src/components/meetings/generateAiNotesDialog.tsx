@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { usePost } from "@/hooks/usePost";
 import { toast } from "sonner";
 import { AiMark } from "@/components/icons/AiMark";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { isQueuedJobResponse, useAIJob } from "@/hooks/useAIJob";
 
 interface ConflictActionItem {
   id: number;
@@ -45,7 +46,31 @@ interface Props {
 export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess }: Props) {
   const [transcript, setTranscript] = useState("");
   const [conflict, setConflict] = useState<Conflict | null>(null);
-  const { mutateAsync: postRequest, isPending } = usePost();
+  const { mutateAsync: postRequest, isPending: isPosting } = usePost();
+  // Writing the notes takes 1-2 minutes: the server answers 202 with a background job, polled here.
+  const [jobId, setJobId] = useState<string | null>(null);
+  const { data: job } = useAIJob(jobId);
+  const isPending = isPosting || !!jobId;
+
+  const finishSuccess = () => {
+    toast.success("AI notes generated successfully.");
+    setTranscript("");
+    setConflict(null);
+    onOpenChange(false);
+    onSuccess();
+  };
+
+  useEffect(() => {
+    if (!job) return;
+    if (job.status === "succeeded") {
+      setJobId(null);
+      finishSuccess();
+    } else if (job.status === "failed") {
+      setJobId(null);
+      toast.error(job.message || "Failed to generate AI notes.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.status]);
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -56,15 +81,15 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
 
   const submit = async (force: boolean) => {
     try {
-      await postRequest({
+      const body = await postRequest({
         url: `meetings/${meetingId}/generate-ai-notes/`,
         data: { transcript: transcript.trim(), ...(force ? { force: true } : {}) },
       });
-      toast.success("AI notes generated successfully.");
-      setTranscript("");
-      setConflict(null);
-      onOpenChange(false);
-      onSuccess();
+      if (isQueuedJobResponse(body)) {
+        setJobId(body.job_id);
+        return;
+      }
+      finishSuccess();
     } catch (err: any) {
       if (err?.response?.status === 409) {
         const data = err.response.data;
@@ -181,7 +206,7 @@ export function GenerateAiNotesDialog({ meetingId, open, onOpenChange, onSuccess
                 {isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Generating...
+                    {jobId ? "Writing the notes… this takes a minute or two" : "Generating..."}
                   </>
                 ) : (
                   <>

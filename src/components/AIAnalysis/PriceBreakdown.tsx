@@ -1,79 +1,91 @@
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { isPriceBreakdownV2, type PriceBreakdownItem, type PricePosition } from "@/types/priceEstimate";
 
-export const PriceBreakdown = ({ priceData, visibleSections, startSelector }: { priceData: any, visibleSections: number, startSelector: number }) => {
-  if (!priceData) return null;
+const POSITION_TEXT: Record<PricePosition, string> = {
+  above_range: "Above AI range",
+  within_range: "Within AI range",
+  below_range: "Below AI range",
+  unit_unclear: "Units may differ — QS to check",
+};
 
-  const currency = priceData.currency || 'ZAR';
-  const items = priceData.items_analysis || [];
-  const summary = priceData.summary || {};
-  const notes = priceData.overall_assessment?.verification_notes || [];
+const POSITION_CLASS: Record<PricePosition, string> = {
+  above_range: "text-amber-800",
+  within_range: "text-muted-foreground",
+  below_range: "text-amber-800",
+  unit_unclear: "text-amber-800",
+};
 
-  // Build markdown text from price data (ChatGPT-style flowing text)
-  const buildMarkdown = () => {
-    const lines: string[] = [];
+function money(value: number, currency: string): string {
+  const amount = Number(value).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currency === "ZAR" ? `R ${amount}` : `${currency} ${amount}`;
+}
 
-    lines.push('### Market Verification Analysis\n');
+function EstimateCell({ item, currency }: { item: PriceBreakdownItem; currency: string }) {
+  if (!item.estimate) {
+    return <span className="text-muted-foreground">Not verified — manual QS review</span>;
+  }
+  const { low, high, typical, unit, basis } = item.estimate;
+  return (
+    <div>
+      <p className="text-foreground">
+        {money(low, currency)} – {money(high, currency)} per {unit}
+      </p>
+      <p className="text-xs text-muted-foreground">typical {money(typical, currency)}</p>
+      {basis && <p className="text-xs text-muted-foreground mt-0.5">{basis}</p>}
+    </div>
+  );
+}
 
-    items.forEach((item: any) => {
-      const mv = item.market_verification || {};
-      const mrr = mv.market_rate_range || {};
-
-      lines.push(`**${item.item_number}. ${item.description}**`);
-      lines.push(`${item.quantity} ${item.unit || 'units'} @ R ${Number(item.unit_rate || item.unit_price).toLocaleString()} = **R ${Number(item.total).toLocaleString()}**\n`);
-
-      if (mrr.average) {
-        lines.push(`- **Market Average:** R ${Number(mrr.average).toLocaleString()} (Range: R ${Number(mrr.low).toLocaleString()} – R ${Number(mrr.high).toLocaleString()})`);
-      }
-      if (mv.assessment) {
-        lines.push(`- ${mv.assessment}`);
-      }
-      lines.push('');
-    });
-
-    // Financial summary
-    if (summary.total_claimed) {
-      lines.push('---\n');
-      lines.push('**Financial Summary**\n');
-      lines.push(`| | Amount |`);
-      lines.push(`|---|---|`);
-      lines.push(`| Total Claimed | R ${Number(summary.total_claimed).toLocaleString()} |`);
-      lines.push(`| Estimated Fair Value | R ${Number(summary.estimated_fair_value).toLocaleString()} |`);
-      lines.push(`| **Potential Savings** | **R ${Number(summary.potential_savings).toLocaleString()}** (${summary.variance_percentage}%) |`);
-      lines.push('');
-    }
-
-    // Verification notes
-    if (notes.length > 0) {
-      lines.push('**Key Findings**\n');
-      notes.forEach((note: string) => {
-        lines.push(`- ${note}`);
-      });
-    }
-
-    return lines.join('\n');
-  };
+/** Labelled AI price estimates for VO line items. Renders nothing for older or empty price data. */
+export const PriceBreakdown = ({ priceData }: { priceData: unknown }) => {
+  if (!isPriceBreakdownV2(priceData) || priceData.items.length === 0) return null;
+  const { currency, items, label, disclaimer, reason, total_claimed } = priceData;
 
   return (
-    <div className="mt-3 prose prose-sm max-w-none">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground mb-2 last:mb-0">{children}</p>,
-          strong: ({ children }) => <strong className="font-normal">{children}</strong>,
-          ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2 text-sm text-foreground">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2 text-sm text-foreground">{children}</ol>,
-          li: ({ children }) => <li className="leading-relaxed text-sm">{children}</li>,
-          h3: ({ children }) => <h3 className="text-sm font-normal mb-2 text-foreground">{children}</h3>,
-          hr: () => <hr className="my-3 border-border" />,
-          table: ({ children }) => <table className="text-sm w-full my-2">{children}</table>,
-          thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,
-          th: ({ children }) => <th className="text-left text-xs font-medium text-muted-foreground py-1 pr-4">{children}</th>,
-          td: ({ children }) => <td className="text-sm py-1 pr-4 text-foreground">{children}</td>,
-        }}
-      >
-        {buildMarkdown()}
-      </ReactMarkdown>
-    </div>
+    <section aria-label="AI price estimates" className="mt-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 className="text-sm font-medium text-foreground">AI price estimates</h4>
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{label}</span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{disclaimer}</p>
+      {reason && <p className="mt-1 text-xs text-amber-800">{reason}</p>}
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-3">Item</th>
+              <th className="text-right text-xs font-medium text-muted-foreground pb-2 px-3">Claimed rate</th>
+              <th className="text-left text-xs font-medium text-muted-foreground pb-2 px-3">AI estimate (not verified)</th>
+              <th className="text-left text-xs font-medium text-muted-foreground pb-2 pl-3">Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.index} className="border-b border-border/50 last:border-0 align-top">
+                <td className="py-2 pr-3">
+                  <p className="text-foreground">
+                    {item.index}. {item.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground">quantity {item.quantity}</p>
+                </td>
+                <td className="py-2 px-3 text-right font-mono text-foreground whitespace-nowrap">{money(item.claimed_unit_rate, currency)}</td>
+                <td className="py-2 px-3">
+                  <EstimateCell item={item} currency={currency} />
+                </td>
+                <td className="py-2 pl-3 text-xs">
+                  {item.position ? (
+                    <span className={POSITION_CLASS[item.position]}>{POSITION_TEXT[item.position]}</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-2 text-xs text-muted-foreground">Total claimed: {money(total_claimed, currency)}</p>
+    </section>
   );
 };

@@ -70,6 +70,35 @@ export const StatusHeader = ({
 );
 
 /**
+ * The verification status the backend wrote next to a citation (Part 5 `citation_status`): whether the clause
+ * really is in this project's contract. Old analyses carry no status and show nothing.
+ */
+const CLAUSE_STATUS: Record<string, { label: string; className: string; title: string }> = {
+  verified: { label: "Verified", className: "border-green-200 bg-green-50 text-green-700",
+    title: "Found in your contract" },
+  number_only: { label: "Quote not matched", className: "border-amber-200 bg-amber-50 text-amber-700",
+    title: "The clause is in your contract, but the quoted text does not match it" },
+  reference_only: { label: "Standard form only", className: "border-gray-200 bg-gray-50 text-gray-600",
+    title: "Found only in the standard-form reference, not in your contract" },
+  unverified: { label: "Not in your contract", className: "border-amber-300 bg-amber-50 text-amber-800",
+    title: "This clause could not be found in your contract — check it before relying on it" },
+};
+
+export const ClauseStatusBadge = ({ status }: { status?: string | null }) => {
+  const s = status ? CLAUSE_STATUS[status] : undefined;
+  if (!s) return null;
+  return (
+    <span
+      data-citation-status={status}
+      title={s.title}
+      className={cn("ml-1.5 inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-medium align-middle", s.className)}
+    >
+      {s.label}
+    </span>
+  );
+};
+
+/**
  * Surfaces the backend's own hallucination check (rag_engine/analysis_engine.py
  * CitationValidator) — it already computes and persists this for every
  * analysis, but until now nothing in the UI read it, so an analysis the
@@ -87,6 +116,7 @@ export const CitationValidationBanner = ({
     total_citations?: number;
     invalid_citations?: string[];
     error?: string;
+    counts?: Record<string, number>;
   } | null;
   visibleSections: number;
   index?: number;
@@ -95,6 +125,39 @@ export const CitationValidationBanner = ({
 
   const invalidCitations = Array.isArray(validation.invalid_citations) ? validation.invalid_citations : [];
   const totalCitations = validation.total_citations;
+
+  // Part 5 shape: per-status counts. Never call a citation "verified" unless it was found in the contract.
+  const counts = validation.counts;
+  if (counts && typeof counts === "object") {
+    const verified = counts.verified || 0;
+    const missing = counts.unverified || 0;
+    const quote = counts.number_only || 0;
+    const standard = counts.reference_only || 0;
+    const checked = verified + missing + quote + standard;
+    if (checked === 0) return null;
+    const tone = missing > 0 ? "border-amber-300 bg-amber-50 text-amber-800" :
+      (quote > 0 || standard > 0) ? "border-amber-200 bg-amber-50 text-amber-700" : "border-green-200 bg-green-50 text-green-700";
+    const Icon = missing > 0 || quote > 0 || standard > 0 ? ShieldAlert : ShieldCheck;
+    const parts = [
+      `${verified} of ${checked} clause citation${checked === 1 ? "" : "s"} verified in your contract`,
+      missing ? `${missing} not found in your contract` : "",
+      quote ? `${quote} with a quote that doesn't match` : "",
+      standard ? `${standard} only in the standard form` : "",
+    ].filter(Boolean);
+    return (
+      <div className={sectionClass(visibleSections, index)}>
+        <div data-testid="citation-banner" className={cn("p-3 rounded-xl border text-xs space-y-1", tone)}>
+          <div className="flex items-center gap-2 font-medium">
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            <span>{parts.join(" · ")}.</span>
+          </div>
+          {missing > 0 && invalidCitations.length > 0 && (
+            <p className="pl-6">Not found: {invalidCitations.join(", ")} — check before relying on them.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (invalidCitations.length > 0) {
     return (
@@ -197,6 +260,9 @@ export const CommonSections = ({ data, visibleSections, startSelector }: { data:
                     )}
                   </div>
                   <p className="text-sm text-gray-600">{flag.description}</p>
+                  {flag.clause_reference && (
+                    <p className="text-xs text-gray-500 mt-1">Ref: Clause {flag.clause_reference} <ClauseStatusBadge status={flag?.citation_status} /></p>
+                  )}
                   {flag.recommended_action && (
                     <div className="mt-2 text-xs text-primary font-medium">
                       Action: {flag.recommended_action}
