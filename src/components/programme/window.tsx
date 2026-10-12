@@ -205,7 +205,18 @@ function SignalRow({ severity, detail }: { severity: Severity; detail: string })
 
 // Risk Forecast — the differentiator
 function RiskForecast({ projectId }: { projectId: string | null }) {
-  const { data, isLoading } = useRiskForecast(projectId);
+  const { data, isLoading, isError, error, refetch } = useRiskForecast(projectId);
+
+  // Part 8c: a failed load (or the AI limit) must never read as a healthy project.
+  if (isError) {
+    return (
+      <div role="alert" data-testid="risk-forecast-error" className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 space-y-2">
+        <p className="text-sm font-medium">The risk forecast couldn't load, so nothing below can be shown as "all clear".</p>
+        <p className="text-sm">{(error as Error)?.message || "Please try again."}</p>
+        <button className="text-sm underline" onClick={() => refetch()}>Try again</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -228,6 +239,12 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
           </div>
         ) : data?.ai_summary ? (
           <p className="text-sm text-muted-foreground leading-relaxed">{data.ai_summary}</p>
+        ) : data?.ai_summary_status === "unavailable" || data?.ai_summary_status === "not_configured" ? (
+          <p data-testid="ai-summary-unavailable" className="text-sm text-amber-700 leading-relaxed">
+            {data.ai_summary_status === "not_configured"
+              ? "AI summary isn't configured on this server. The signals below are still current."
+              : "AI summary unavailable right now — the signals below are still current. Try again later."}
+          </p>
         ) : (
           <p className="text-sm text-muted-foreground leading-relaxed">
             Add programme phases and tasks to generate an AI analysis of this project.
@@ -265,6 +282,10 @@ function RiskForecast({ projectId }: { projectId: string | null }) {
         </h2>
         {isLoading ? (
           <div className="space-y-2"><Skeleton className="h-12 w-full" /></div>
+        ) : data?.finance_visible === false ? (
+          <div data-testid="finance-hidden" className="text-sm text-muted-foreground py-4 text-center">
+            Financial data hidden — you don't have finance permission on this project.
+          </div>
         ) : data?.financial_impacts?.length ? (
           <div className="space-y-2">
             {data.financial_impacts.map((f, i) => (

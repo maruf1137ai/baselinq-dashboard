@@ -1,6 +1,6 @@
 import { FileText, Shield, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
-import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner, ClauseStatusBadge } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -43,7 +43,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </div>
                   <p className="text-sm text-muted-foreground font-medium mb-1">{value.finding}</p>
                   {value.clause_reference && (
-                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference}</p>
+                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference} <ClauseStatusBadge status={value?.citation_status} /></p>
                   )}
                 </div>
               ))}
@@ -72,7 +72,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">VO Triggers</p>
                   <p className="text-sm font-medium">{data.scope_assessment.vo_implications.triggers_variation ? 'VARIATION REQUIRED' : 'NO VARIATION'}</p>
                   {data.scope_assessment.vo_implications.clause_reference && (
-                    <p className="text-xs text-primary mb-1">Ref: {data.scope_assessment.vo_implications.clause_reference}</p>
+                    <p className="text-xs text-primary mb-1">Ref: {data.scope_assessment.vo_implications.clause_reference} <ClauseStatusBadge status={data.scope_assessment.vo_implications?.citation_status} /></p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">{data.scope_assessment.vo_implications.assessment}</p>
                 </div>
@@ -80,7 +80,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-1">Estimated Cost Impact</p>
                   <p className="text-sm font-medium text-warning">{data.scope_assessment.cost_impact_assessment.estimated_impact}</p>
                   {data.scope_assessment.cost_impact_assessment.clause_reference && (
-                    <p className="text-xs text-warning mb-1">Ref: {data.scope_assessment.cost_impact_assessment.clause_reference}</p>
+                    <p className="text-xs text-warning mb-1">Ref: {data.scope_assessment.cost_impact_assessment.clause_reference} <ClauseStatusBadge status={data.scope_assessment.cost_impact_assessment?.citation_status} /></p>
                   )}
                   <p className="text-xs text-gray-500 mt-1 italic">"{data.scope_assessment.cost_impact_assessment.assessment}"</p>
                 </div>
@@ -100,7 +100,7 @@ export const SIAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
               <div className="p-4 bg-card rounded-lg">
                 <p className="text-xs font-medium text-green-700 normal-case mb-2">Requirements</p>
                 <p className="text-sm text-green-900 font-medium">{data.safety_and_quality.quality_requirements.assessment}</p>
-                <p className="text-xs text-green-600 mt-1 italic">Ref: {data.safety_and_quality.quality_requirements.clause_reference}</p>
+                <p className="text-xs text-green-600 mt-1 italic">Ref: {data.safety_and_quality.quality_requirements.clause_reference} <ClauseStatusBadge status={data.safety_and_quality.quality_requirements?.citation_status} /></p>
                 <p className="text-xs text-gray-500 mt-1">{data.safety_and_quality.quality_requirements.finding}</p>
               </div>
               <div className="p-4 bg-card rounded-lg">

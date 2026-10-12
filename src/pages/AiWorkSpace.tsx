@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowUp, FileText, Globe, X, Paperclip } from 'lucide-react';
+import { ArrowUp, FileText, X, Paperclip } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,27 +11,32 @@ import { ChatSidebar } from '@/components/WorkSpace/ChatSidebar';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import Clip from '@/components/icons/Clip';
 import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '@/lib/Api';
-import ReactMarkdown from 'react-markdown';
+import { AIMarkdown } from '@/components/AIAnalysis/AIMarkdown';
+import { AnswerFeedback } from '@/components/AIAnalysis/AnswerFeedback';
 import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
+import { LegacyPriceNotice } from '@/components/AIAnalysis/LegacyPriceNotice';
+import { CitationPill } from '@/components/AIAnalysis/CitationPill';
+import { shownSources, type ChatSource } from '@/types/citation';
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { AiMark } from "@/components/icons/AiMark";
 import { PageHeader } from "@/components/ui/page-header";
 
-interface ChatSource {
-  clause_number: string;
-  clause_title: string;
-  page_number: string | number;
-  similarity: number;
-  excerpt: string;
-  document_name?: string;
+
+/** fetchData errors carry the backend `error` (often a code such as "task_not_found"): show text, not codes. */
+function readableChatError(err: unknown): string {
+  const msg = (err as Error)?.message || "";
+  return msg.includes(" ") ? msg : "This chat isn't available — you may not have access to this task.";
 }
 
 interface Message {
   id: string;
+  /** The saved message's id on the server (an answer can be rated once it has one). */
+  serverId?: number;
   role: 'user' | 'assistant';
   content: string;
   sources?: ChatSource[];
-  price_breakdown?: any;
+  price_breakdown?: unknown;
+  price_check_legacy?: boolean;
   attachment?: { file_name: string; file_type: string };
 }
 
@@ -58,6 +63,9 @@ const AiWorkSpace = () => {
   const [pendingAttachment, setPendingAttachment] = useState<{ file_name: string; attachment_id: number } | null>(null);
   const [attachmentLoading, setAttachmentLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  // Part 8c: a task chat that couldn't start says why, with a retry (no invented greeting).
+  const [initError, setInitError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,19 +97,27 @@ const AiWorkSpace = () => {
     const formatMsgs = (raw: any[]): Message[] =>
       raw.map((msg: any, i: number) => ({
         id: msg.id?.toString() || `hist-${i}`,
+        serverId: typeof msg.id === 'number' ? msg.id : undefined,
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content || '',
         sources: msg.sources || [],
         price_breakdown: msg.price_breakdown || null,
+        price_check_legacy: Boolean(msg.price_check_legacy),
       }));
 
+    // Part 15: a reply for a chat the user has already left (a quick switch, or React's double run in
+    // development) is ignored — it used to overwrite the chat now on screen.
+    let cancelled = false;
+
     const load = async () => {
+      setInitError(null);
       setIsLoading(true);
       try {
         if (isProjectMode) {
           if (sessionId) {
             // Existing project session — fetch its history.
             const r = await fetchData(`${chatUrl}?session_id=${sessionId}`);
+            if (cancelled) return;
             setMessages(formatMsgs(r?.messages || []));
           } else {
             // Fresh "+ New Chat" — no session yet, no welcome message.
@@ -114,6 +130,7 @@ const AiWorkSpace = () => {
 
         // Task mode — original behaviour.
         const response = await fetchData(chatUrl);
+        if (cancelled) return;
         if (response?.sessionId) setActiveSessionId(response.sessionId);
         if (response?.messages && response.messages.length > 0) {
           setMessages(formatMsgs(response.messages));
@@ -123,38 +140,34 @@ const AiWorkSpace = () => {
               url: chatUrl,
               data: { action: 'init' },
             });
+            if (cancelled) return;
             if (initResponse?.sessionId) setActiveSessionId(initResponse.sessionId);
             if (initResponse?.messages && initResponse.messages.length > 0) {
               setMessages(formatMsgs(initResponse.messages));
             }
-          } catch {
-            setMessages([
-              {
-                id: 'welcome',
-                role: 'assistant',
-                content: `Hello! I've analyzed the ${taskTypeSlug?.toUpperCase()} documentation. How can I help you today?`,
-              },
-            ]);
+          } catch (err: any) {
+            if (cancelled) return;
+            const body = err?.response?.data || {};
+            setInitError(body.message || (typeof body.error === 'string' ? body.error : null)
+              || "Linq couldn't start this chat. Please try again.");
           }
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to load chat history:', err);
         if (isTaskMode) {
-          setMessages([
-            {
-              id: 'welcome',
-              role: 'assistant',
-              content: `Hello! I've analyzed the ${taskTypeSlug?.toUpperCase()} documentation. How can I help you today?`,
-            },
-          ]);
+          setInitError(readableChatError(err));
         }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     load();
-  }, [chatUrl, sessionId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [chatUrl, sessionId, reloadKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -162,6 +175,11 @@ const AiWorkSpace = () => {
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
+    if (!chatUrl) {
+      // No project or task to answer from (Part 15: this used to fake a reply after a second).
+      toast.info('Select a project first — Linq answers from your project and its documents.');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -190,7 +208,8 @@ const AiWorkSpace = () => {
         });
         if (response?.sessionId && isTaskMode) setActiveSessionId(response.sessionId);
         const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: response.messageId ? String(response.messageId) : (Date.now() + 1).toString(),
+          serverId: typeof response.messageId === 'number' ? response.messageId : undefined,
           role: 'assistant',
           content: response.reply || response.content || "I'm sorry, I couldn't process that request.",
           sources: response.sources || [],
@@ -207,12 +226,10 @@ const AiWorkSpace = () => {
             setActiveSessionId(null);
           }
           if (response?.title) {
-            const sel = typeof window !== 'undefined' ? localStorage.getItem('selectedProjectId') : null;
-            if (sel) {
-              queryClient.invalidateQueries({
-                queryKey: [`ai_analysis/chat-sessions/?project_id=${sel}`],
-              });
-            }
+            // The project in the URL, not whatever project was last selected elsewhere (Part 15).
+            queryClient.invalidateQueries({
+              queryKey: [`ai_analysis/chat-sessions/?project_id=${projectId}`],
+            });
           }
         }
       } catch (err: any) {
@@ -222,17 +239,6 @@ const AiWorkSpace = () => {
       } finally {
         setIsTyping(false);
       }
-    } else {
-      // No task context — simulated response
-      setTimeout(() => {
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: 'Please open a specific task to start an AI-assisted conversation with full contract context.',
-        };
-        setMessages(prev => [...prev, aiMessage]);
-        setIsTyping(false);
-      }, 1000);
     }
   };
 
@@ -288,11 +294,16 @@ const AiWorkSpace = () => {
   };
 
   const handleNewChat = () => {
+    // Part 15: a new chat is a new session — the next question must not continue the old one.
     setMessages([]);
     setInput('');
+    setActiveSessionId(null);
+    setPendingAttachment(null);
+    setInitError(null);
   };
 
-  const hasMessages = messages.length > 0 || isLoading;
+  // The error card lives in the chat area, so a failed load (no messages, no longer loading) must still show it.
+  const hasMessages = messages.length > 0 || isLoading || !!initError;
 
   const clipButton = (
     <Button
@@ -302,6 +313,7 @@ const AiWorkSpace = () => {
       onClick={() => fileInputRef.current?.click()}
       disabled={attachmentLoading}
       title="Attach file"
+      aria-label="Attach a file"
     >
       {attachmentLoading ? (
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
@@ -342,10 +354,19 @@ const AiWorkSpace = () => {
             <div className="flex flex-1 flex-col min-w-0">
               {/* Main Chat Area */}
               <ScrollArea className="flex-1">
-                <div className="mx-auto max-w-4xl px-3 sm:px-6 pt-4 pb-2">
+                <div className="mx-auto max-w-4xl px-3 sm:px-6 pt-4 pb-2" aria-live="polite" aria-relevant="additions">
+                  {/* Part 15: screen readers hear each new answer */}
                   {isLoading && messages.length === 0 && (
                     <div className="flex items-center justify-center py-20">
                       <AwesomeLoader message="Analyzing context" />
+                    </div>
+                  )}
+                  {initError && (
+                    <div role="alert" data-testid="chat-init-error" className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 space-y-2">
+                      <p>{initError}</p>
+                      <button className="underline text-sm" onClick={() => { setInitError(null); setReloadKey((k) => k + 1); }}>
+                        Try again
+                      </button>
                     </div>
                   )}
                   {messages.map(message => (
@@ -374,7 +395,7 @@ const AiWorkSpace = () => {
                           </div>
                           <div className="flex-1">
                             <div className="prose prose-sm max-w-none text-justify">
-                              <ReactMarkdown
+                              <AIMarkdown
                                 components={{
                                   p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground mb-2 last:mb-0 text-justify">{children}</p>,
                                   strong: ({ children }) => <strong className="font-normal">{children}</strong>,
@@ -387,91 +408,21 @@ const AiWorkSpace = () => {
                                 }}
                               >
                                 {message.content}
-                              </ReactMarkdown>
+                              </AIMarkdown>
                             </div>
-                            {/* Price Breakdown (VO only) */}
-                            {message.price_breakdown?.items_analysis?.length > 0 && (
-                              <div className="mt-4">
-                                <PriceBreakdown
-                                  priceData={message.price_breakdown}
-                                  visibleSections={999}
-                                  startSelector={0}
-                                />
+                            {/* VO: labelled AI price estimates; older messages get a notice instead */}
+                            <PriceBreakdown priceData={message.price_breakdown} />
+                            {message.price_check_legacy && <LegacyPriceNotice />}
+                            {/* Citations: one chip per source with its verification status (Part 5) */}
+                            {shownSources(message.sources).length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {shownSources(message.sources).map((source, ci) => (
+                                  <CitationPill key={ci} source={source} />
+                                ))}
                               </div>
                             )}
-                            {/* Citations (ChatGPT style) */}
-                            {(() => {
-                              const hasClauseSources = message.sources && message.sources.length > 0;
-                              const hasPriceSources = message.price_breakdown?.items_analysis?.some(
-                                (item: any) => item.market_verification?.web_search_result || item.market_verification?.sources?.length
-                              );
-                              if (!hasClauseSources && !hasPriceSources) return null;
-
-                              // Build combined citation list
-                              const citations: { type: 'clause' | 'market'; label: string; detail: string; subtext: string; docName?: string }[] = [];
-
-                              // Contract clause citations
-                              message.sources?.forEach((source) => {
-                                citations.push({
-                                  type: 'clause',
-                                  label: `Clause ${source.clause_number}`,
-                                  detail: `${source.clause_title}, Page ${source.page_number}`,
-                                  subtext: source.excerpt,
-                                  docName: source.document_name,
-                                });
-                              });
-
-                              // Market price citations from price_breakdown
-                              message.price_breakdown?.items_analysis?.forEach((item: any) => {
-                                const mv = item.market_verification;
-                                if (mv?.sources?.length) {
-                                  mv.sources.forEach((src: string) => {
-                                    if (src && src !== 'Internal estimation model - web search recommended') {
-                                      citations.push({
-                                        type: 'market',
-                                        label: item.description?.slice(0, 25) + (item.description?.length > 25 ? '...' : ''),
-                                        detail: `${src}, ${item.description}`,
-                                        subtext: mv.assessment || '',
-                                      });
-                                    }
-                                  });
-                                }
-                              });
-
-                              if (citations.length === 0) return null;
-
-                              return (
-                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                  {citations.map((cite, ci) => (
-                                    <div key={ci} className="relative group">
-                                      <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-muted hover:bg-accent transition-colors cursor-default">
-                                        {cite.type === 'clause' ? (
-                                          <FileText className="h-4 w-4 text-muted-foreground" />
-                                        ) : (
-                                          <Globe className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                        <span className="text-xs text-muted-foreground font-medium">{cite.label}</span>
-                                      </button>
-                                      {/* Hover popover */}
-                                      <div className="absolute bottom-full left-0 mb-1.5 w-80 p-3 rounded-lg bg-popover border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-                                        {cite.type === 'clause' && cite.docName && (
-                                          <p className="text-xs font-medium text-primary/70 mb-1 truncate">{cite.docName}</p>
-                                        )}
-                                        <div className="flex items-center gap-1.5 mb-1">
-                                          {cite.type === 'clause' ? (
-                                            <FileText className="h-4 w-4 text-primary shrink-0" />
-                                          ) : (
-                                            <Globe className="h-4 w-4 text-primary shrink-0" />
-                                          )}
-                                          <p className="text-xs font-normal text-foreground truncate">{cite.detail}</p>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground leading-relaxed">{cite.subtext}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            })()}
+                            <AnswerFeedback className="mt-2" surface={isTaskMode ? 'task_chat' : 'linq_chat'}
+                              targetId={message.serverId} />
                           </div>
                         </div>
                       )}
@@ -506,6 +457,7 @@ const AiWorkSpace = () => {
                     <Button
                       onClick={handleSend}
                       size="icon"
+                      aria-label="Send message"
                       className="h-8 w-8 disabled:bg-muted shrink-0 rounded-full"
                       disabled={!input.trim() || isTyping}
                     >
@@ -561,6 +513,7 @@ const AiWorkSpace = () => {
                         <Button
                           onClick={handleSend}
                           size="icon"
+                          aria-label="Send message"
                           className="h-8 w-8 disabled:bg-muted shrink-0 rounded-full"
                           disabled={!input.trim() || isTyping}
                         >
@@ -574,7 +527,7 @@ const AiWorkSpace = () => {
                   <div className="mt-6 flex flex-wrap gap-2 justify-center">
                     {[
                       "What are my overdue obligations this week?",
-                      "Summarise the key risks in CONT-001",
+                      "Summarise the key risks in our contract",
                       "Which VOs are pending approval and what's the combined value?",
                       "What does the contract say about delay penalties?",
                       "Flag any payment certificates missing supporting docs",
@@ -599,7 +552,7 @@ const AiWorkSpace = () => {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,.doc,image/*"
+        accept=".pdf,.docx,image/*"
         className="hidden"
         onChange={handleFileSelect}
       />

@@ -1,12 +1,11 @@
 import { FileText, Shield, Scale, Clock, AlertTriangle, Package, Cloud } from "lucide-react";
-import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner, ClauseStatusBadge } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
   const deadlineStatus = data.deadline_status;
   const isOverdue = deadlineStatus?.is_overdue === true;
   const requiredItems: any[] = Array.isArray(data.required_items_analysis) ? data.required_items_analysis : [];
-  const statssaRef: string | null = data.statssa_reference ?? null;
   const weather = data.weather_context as {
     today?: { description?: string; temp?: number; humidity?: number; wind_speed?: number };
     ai_summary?: string;
@@ -46,11 +45,6 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
             <FileText className="h-4 w-4 text-primary" />Summary
           </h4>
           <p className="text-sm text-muted-foreground leading-relaxed">{data.summary}</p>
-          {statssaRef && (
-            <p className="text-xs text-gray-400 mt-3 border-t border-border pt-2">
-              Market prices sourced from Stats SA {statssaRef}
-            </p>
-          )}
 
           {/* Weather card — shows current conditions if available */}
           {weather?.today && (
@@ -75,21 +69,19 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
         </div>
       </div>
 
-      {/* Required items analysis — materials/labour needed to execute the VO */}
+      {/* Required items — a scope check of the materials/labour needed (no prices) */}
       {requiredItems.length > 0 && (
         <div className={sectionClass(visibleSections, 2)}>
           <div className="p-6 bg-card border border-border rounded-xl">
             <h4 className="text-base text-foreground mb-5 flex items-center gap-2">
-              <Package className="h-4 w-4 text-primary" />Required Items &amp; SA Market Costs
+              <Package className="h-4 w-4 text-primary" />Required items (scope check)
             </h4>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left text-xs font-medium text-muted-foreground pb-2 pr-4 normal-case">Item / Material</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground pb-2 px-4 normal-case">Est. Unit Rate (ZAR)</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 px-4 normal-case">Unit</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pl-4 normal-case">Source</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground pb-2 pl-4 normal-case">Unit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -99,17 +91,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                         <p className="font-medium text-foreground">{item.item}</p>
                         {item.notes && <p className="text-xs text-muted-foreground mt-0.5">{item.notes}</p>}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-foreground">
-                        {item.estimated_unit_rate_zar != null
-                          ? `R ${Number(item.estimated_unit_rate_zar).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : "—"}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{item.unit || "—"}</td>
-                      <td className="py-3 pl-4">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.source?.includes("Stats SA") ? "bg-green-50 text-green-700" : "bg-muted text-gray-600"}`}>
-                          {item.source || "—"}
-                        </span>
-                      </td>
+                      <td className="py-3 pl-4 text-muted-foreground">{item.unit || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -138,7 +120,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </div>
                   <p className="text-sm text-muted-foreground font-medium mb-1">{value.finding}</p>
                   {value.clause_reference && (
-                    <p className="text-xs text-gray-500">Ref: {value.clause_reference} {value.page_number ? `(Page ${value.page_number})` : ""}</p>
+                    <p className="text-xs text-gray-500">Ref: {value.clause_reference} {value.page_number ? `(Page ${value.page_number})` : ""} <ClauseStatusBadge status={value?.citation_status} /></p>
                   )}
                   {value.deadline_date && (
                     <p className="text-xs text-destructive mt-1 font-medium">Deadline: {value.deadline_date}</p>
@@ -162,7 +144,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs font-medium text-muted-foreground normal-case mb-2">Applicable Method</p>
                   <p className="text-sm font-medium">{data.valuation_assessment.applicable_method?.method}</p>
                   {data.valuation_assessment.applicable_method?.clause_reference && (
-                    <p className="text-xs text-primary mb-1">Ref: {data.valuation_assessment.applicable_method.clause_reference}</p>
+                    <p className="text-xs text-primary mb-1">Ref: {data.valuation_assessment.applicable_method.clause_reference} <ClauseStatusBadge status={data.valuation_assessment.applicable_method?.citation_status} /></p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">{data.valuation_assessment.applicable_method?.finding}</p>
                 </div>
@@ -181,7 +163,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                     <p className="text-xs font-medium text-primary normal-case mb-2">New Rates Permitted</p>
                     <p className="text-sm font-medium">{data.valuation_assessment.new_rates_permitted.permitted ? "YES" : "NO"}</p>
                     {data.valuation_assessment.new_rates_permitted.clause_reference && (
-                      <p className="text-xs text-primary">Ref: {data.valuation_assessment.new_rates_permitted.clause_reference}</p>
+                      <p className="text-xs text-primary">Ref: {data.valuation_assessment.new_rates_permitted.clause_reference} <ClauseStatusBadge status={data.valuation_assessment.new_rates_permitted?.citation_status} /></p>
                     )}
                     <p className="text-xs text-primary mt-1 italic">{data.valuation_assessment.new_rates_permitted.conditions}</p>
                   </div>
@@ -232,7 +214,7 @@ export const VOAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <p className="text-xs font-medium text-blue-700 normal-case mb-2">EOT Entitlement</p>
                 <p className="text-sm font-medium italic">"{data.time_impact.eot_entitlement.clause_text || data.time_impact.eot_entitlement}"</p>
                 {data.time_impact.eot_entitlement.clause_reference && (
-                  <p className="text-xs text-blue-500 mt-2">Ref: {data.time_impact.eot_entitlement.clause_reference}</p>
+                  <p className="text-xs text-blue-500 mt-2">Ref: {data.time_impact.eot_entitlement.clause_reference} <ClauseStatusBadge status={data.time_impact.eot_entitlement?.citation_status} /></p>
                 )}
               </div>
             )}

@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/dateUtils';
 import { useFolders } from '@/hooks/useFolders';
 import type { Folder, FolderTab } from '@/types/folder';
 import type { ApiDocument } from '@/components/documents/DocumentTable';
+import { AIStatusBadge } from '@/components/documents/AIStatusBadge';
 import { Button } from '@/components/ui/button';
 import { AwesomeLoader } from '@/components/commons/AwesomeLoader';
 import {
@@ -118,6 +119,7 @@ function DocumentRow({
             {doc.reference}
           </span>
         )}
+        <AIStatusBadge status={doc.aiStatus} reason={doc.aiStatusReason} />
         <UnreadBadge notifications={unreadNotifications} />
         <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
       </div>
@@ -169,6 +171,7 @@ function UnfiledRow({
             {doc.reference}
           </span>
         )}
+        <AIStatusBadge status={doc.aiStatus} reason={doc.aiStatusReason} />
         <UnreadBadge notifications={unreadNotifications} />
       </div>
     </DocItemContextMenu>

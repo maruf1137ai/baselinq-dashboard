@@ -42,6 +42,10 @@ export interface ComplianceGate {
 export interface RiskForecast {
   overall_severity: Severity;
   ai_summary: string;
+  /** Part 8c: "ok" | "unavailable" (the AI failed) | "not_configured" | "disabled" (fast path, ?ai=false). */
+  ai_summary_status?: "ok" | "unavailable" | "not_configured" | "disabled";
+  /** false when the viewer has no finance permission: the financial panel is hidden, not "all clear". */
+  finance_visible?: boolean;
   delay_risks: DelayRisk[];
   financial_impacts: FinancialImpact[];
   compliance_gates: ComplianceGate[];

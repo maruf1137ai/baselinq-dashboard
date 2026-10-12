@@ -20,7 +20,7 @@ import {
   Link2,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
-import { sectionClass, CitationValidationBanner } from "./SharedComponents";
+import { sectionClass, CitationValidationBanner, ClauseStatusBadge } from "./SharedComponents";
 
 // ─── Status helpers ───
 const statusColor = (status: string) => {
@@ -89,7 +89,7 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
         </span>
 
         {item.clause_reference && (
-          <span className="text-xs text-[#9CA3AF] ml-1">Cl. {item.clause_reference}</span>
+          <span className="text-xs text-[#9CA3AF] ml-1">Cl. {item.clause_reference} <ClauseStatusBadge status={item?.citation_status} /></span>
         )}
 
         {open ? (
@@ -108,7 +108,7 @@ function ComplianceItem({ label, item, defaultOpen }: { label: string; item: any
           {item.clause_reference && (
             <p className="text-xs text-[#9CA3AF]">
               Ref: Clause {item.clause_reference} {item.page_number ? `(Page ${item.page_number})` : ""}
-            </p>
+             <ClauseStatusBadge status={item?.citation_status} /></p>
           )}
           {item.response_deadline && (
             <p className="text-xs font-medium text-[#d63031]">
@@ -146,6 +146,11 @@ function ImpactIndicator({ label, item, icon: Icon, defaultOpen }: { label: stri
       {item.severity && (
         <span className="text-xs mt-1 border rounded-full px-2 py-0.5 border-border text-[#6B7280]">
           {item.severity} SEVERITY
+        </span>
+      )}
+      {item.clause_reference && (
+        <span className="text-xs mt-1 text-[#9CA3AF]">
+          Cl. {item.clause_reference} <ClauseStatusBadge status={item?.citation_status} />
         </span>
       )}
       {open && (item.assessment || item.consequences) && (
@@ -458,6 +463,7 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                     <span className="text-xs text-[#1a1a1a] font-medium">
                       Clause {cite.clause_number}, {cite.clause_title}
                     </span>
+                    <ClauseStatusBadge status={cite?.citation_status} />
                     <span className="text-xs text-[#9CA3AF]">Page {cite.page_number}</span>
                   </div>
                 ))}
@@ -487,6 +493,9 @@ export const RFIAnalysis = ({ data, visibleSections }: { data: any; visibleSecti
                       )}
                     </div>
                     {flag.description && <p className="text-xs text-[#6B7280]">{flag.description}</p>}
+                    {flag.clause_reference && (
+                      <p className="text-xs text-[#9CA3AF]">Ref: Clause {flag.clause_reference} <ClauseStatusBadge status={flag?.citation_status} /></p>
+                    )}
                     {flag.recommended_action && (
                       <p className="text-xs text-[#6c5ce7] font-medium mt-1">Action: {flag.recommended_action}</p>
                     )}

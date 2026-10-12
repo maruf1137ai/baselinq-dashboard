@@ -1,5 +1,5 @@
 import { Clock, Search, TrendingUp, DollarSign, Shield } from "lucide-react";
-import { StatusHeader, sectionClass, CitationValidationBanner } from "./SharedComponents";
+import { StatusHeader, sectionClass, CitationValidationBanner, ClauseStatusBadge } from "./SharedComponents";
 import { Badge } from "@/components/ui/badge";
 
 export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSections: number }) => {
@@ -44,7 +44,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </div>
                   <p className="text-sm text-muted-foreground font-medium mb-1">{value.finding || value.assessment}</p>
                   {value.clause_reference && (
-                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference} (Page {value.page_number})</p>
+                    <p className="text-xs text-gray-500">Ref: Clause {value.clause_reference} (Page {value.page_number}) <ClauseStatusBadge status={value?.citation_status} /></p>
                   )}
                 </div>
               ))}
@@ -70,7 +70,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   <p className="text-xs text-blue-600 font-medium">{data.extension_of_time.eot_entitlement.requested_days} Days Requested</p>
                   <p className="text-xs text-gray-500 italic">"{data.extension_of_time.eot_entitlement.grounds}"</p>
                   {data.extension_of_time.eot_entitlement.clause_reference && (
-                    <p className="text-xs text-blue-500 mt-1">Ref: {data.extension_of_time.eot_entitlement.clause_reference}</p>
+                    <p className="text-xs text-blue-500 mt-1">Ref: {data.extension_of_time.eot_entitlement.clause_reference} <ClauseStatusBadge status={data.extension_of_time.eot_entitlement?.citation_status} /></p>
                   )}
                 </div>
               </div>
@@ -82,7 +82,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <p className="text-xs text-blue-600 mt-2 font-medium">Deadline: {data.extension_of_time.notice_requirements.notice_deadline}</p>
                 <p className="text-xs text-gray-500 mt-1">{data.extension_of_time.notice_requirements.finding}</p>
                 {data.extension_of_time.notice_requirements.clause_reference && (
-                  <p className="text-xs text-blue-500 mt-1">Ref: Clause {data.extension_of_time.notice_requirements.clause_reference}</p>
+                  <p className="text-xs text-blue-500 mt-1">Ref: Clause {data.extension_of_time.notice_requirements.clause_reference} <ClauseStatusBadge status={data.extension_of_time.notice_requirements?.citation_status} /></p>
                 )}
               </div>
             </div>
@@ -116,7 +116,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <p className="text-xs text-gray-500 mt-1">{data.cost_impact_assessment.cost_entitlement.estimated_cost_impact || "R 0.00"}</p>
                 <p className="text-xs text-gray-400 mt-1 leading-tight">{data.cost_impact_assessment.cost_entitlement.assessment}</p>
                 {data.cost_impact_assessment.cost_entitlement.clause_reference && (
-                  <p className="text-xs text-primary mt-1">Ref: {data.cost_impact_assessment.cost_entitlement.clause_reference}</p>
+                  <p className="text-xs text-primary mt-1">Ref: {data.cost_impact_assessment.cost_entitlement.clause_reference} <ClauseStatusBadge status={data.cost_impact_assessment.cost_entitlement?.citation_status} /></p>
                 )}
               </div>
               <div className="p-4 bg-muted/50 rounded-lg border-l-2 border-destructive">
@@ -125,7 +125,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 <p className="text-xs text-gray-500 mt-1">{data.cost_impact_assessment.liquidated_damages_exposure.assessment}</p>
                 <p className="text-xs text-gray-400 mt-1 italic">{data.cost_impact_assessment.liquidated_damages_exposure.finding}</p>
                 {data.cost_impact_assessment.liquidated_damages_exposure.clause_reference && (
-                  <p className="text-xs text-destructive mt-1">Ref: Clause {data.cost_impact_assessment.liquidated_damages_exposure.clause_reference}</p>
+                  <p className="text-xs text-destructive mt-1">Ref: Clause {data.cost_impact_assessment.liquidated_damages_exposure.clause_reference} <ClauseStatusBadge status={data.cost_impact_assessment.liquidated_damages_exposure?.citation_status} /></p>
                 )}
               </div>
               <div className="p-4 bg-muted/50 rounded-lg">
@@ -135,7 +135,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                 </Badge>
                 <p className="text-xs text-gray-500 mt-1">{data.cost_impact_assessment.prolongation_costs.finding}</p>
                 {data.cost_impact_assessment.prolongation_costs.clause_reference && (
-                  <p className="text-xs text-gray-400 mt-1">Ref: {data.cost_impact_assessment.prolongation_costs.clause_reference}</p>
+                  <p className="text-xs text-gray-400 mt-1">Ref: {data.cost_impact_assessment.prolongation_costs.clause_reference} <ClauseStatusBadge status={data.cost_impact_assessment.prolongation_costs?.citation_status} /></p>
                 )}
               </div>
             </div>
@@ -158,7 +158,7 @@ export const DCAnalysis = ({ data, visibleSections }: { data: any, visibleSectio
                   </Badge>
                   <p className="text-xs text-gray-600 mt-2">{value.finding}</p>
                   {value.clause_reference && (
-                    <p className="text-xs text-gray-400 mt-1">Ref: {value.clause_reference}</p>
+                    <p className="text-xs text-gray-400 mt-1">Ref: {value.clause_reference} <ClauseStatusBadge status={value?.citation_status} /></p>
                   )}
                 </div>
               ))}

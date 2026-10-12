@@ -3,6 +3,7 @@ import { ChevronRight, FileText, SearchX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/dateUtils';
 import type { ApiDocument } from '@/components/documents/DocumentTable';
+import { AIStatusBadge } from '@/components/documents/AIStatusBadge';
 import {
   getCategoryForDoc,
   CATEGORY_COLORS,
@@ -119,6 +120,7 @@ export function DocumentSearchResults({
                 {doc.reference}
               </span>
             )}
+            <AIStatusBadge status={doc.aiStatus} reason={doc.aiStatusReason} />
             <UnreadNotificationBadge notifications={unreadByDocId?.[doc._id]} />
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover/doc:text-primary shrink-0 transition-colors" />
           </div>

@@ -37,14 +37,15 @@
  *     (attendees field on the update serializer), meetings/views.py
  *     (rsvp action — self-scoped only)
  *   - Bot / transcription pipeline    → meetings/recall.py (schedule_bot,
- *     verify_signature), meetings/gladia.py (actual speech-to-text),
- *     meetings/views.py (recall_webhook, generate_ai_notes)
- *   - AI notes generation              → meetings/notetaker/ (OpenAI
- *     gpt-4o pipeline), meetings/views.py (generate_ai_notes — requires
- *     OPENAI_API_KEY)
+ *     verify_webhook_request — Svix-signed, fails closed), meetings/gladia.py
+ *     (speech-to-text), meetings/views.py (recall_webhook → a bot_done AIJob)
+ *   - AI notes generation              → meetings/notetaker/ (OpenAI gpt-4o;
+ *     the saved transcript is the source text, the model only names the
+ *     speakers), run as a background AIJob from generate-ai-notes /
+ *     retry-notes in meetings/views.py (requires OPENAI_API_KEY)
  *   - Action item approval (the one real role check) → meetings/views.py
- *     (_can_approve_action_item), project/role_permissions.py
- *     (FULL_CONTROL_ROLES = CLIENT, CPM, PM)
+ *     (_can_approve_action_item: project membership AND the item's owner /
+ *     the meeting's creator / the meeting.action_item.approve permission)
  *
  * Update this page whenever those rules change.
  */
@@ -132,29 +133,29 @@ const SECTIONS: MeetingSection[] = [
         who: "The meeting's creator or any attendee — whoever clicks Join Meeting.",
         when: "When the meeting has a video link and hasn't already been recorded.",
         note:
-          "Joining triggers a recording bot. Once the call ends, the recording is transcribed and summarized automatically — no manual step needed. This can take a few minutes; the page polls for progress and updates itself once notes are ready.",
+          "Joining triggers a recording bot. Once the call ends, the recording is transcribed and summarized automatically — no manual step needed. This can take a few minutes; the page polls for progress and updates itself once notes are ready. If transcription or the notes fail, the page says why and offers Retry.",
       },
       {
         action: "Paste a transcript manually to generate notes",
         who: "The meeting's creator or any attendee.",
-        when: "Once the meeting is in the past and no notes exist yet from the automatic path.",
+        when: "Once the meeting is in the past. When notes already exist, use \"Paste a new transcript\" next to them.",
         note:
-          "This is the fallback for a meeting that didn't use the built-in recording bot (e.g. held on a tool the bot can't join). It requires a non-empty transcript pasted in, and the server needs an AI key configured — if that's missing, generating notes will fail with an error rather than silently doing nothing.",
+          "This is the fallback for a meeting that didn't use the built-in recording bot (e.g. held on a tool the bot can't join). It requires a non-empty transcript pasted in. The notes are written in the background (the dialog shows progress), and the server needs an AI key configured — if that's missing or writing fails, you get the reason rather than silence.",
       },
       {
         action: "View the transcript (raw or AI-cleaned)",
         who: "The meeting's creator or any attendee.",
         when: "Once a transcript exists.",
         note:
-          "Two read-only views: a speaker-resolved \"AI Transcript\" and a verbatim \"Raw Transcript.\" Neither can be edited from the app.",
+          "Two read-only views: \"Transcript by speaker\" (the words exactly as recorded, split by speaker, with the speakers' names filled in by AI) and the unedited \"Raw Transcript.\" Neither can be edited from the app.",
       },
       {
         action: "Approve or decline an AI-suggested action item",
         who:
-          "The person the item is assigned to, OR the meeting's creator, OR a project team member who is Client/Owner, Client Project Manager, or Project Manager.",
+          "The person the item is assigned to, OR the meeting's creator, OR anyone whose project role has the \"approve meeting action items\" permission — and in every case only while they are still on the project.",
         when: "Once AI notes have generated action items from the transcript.",
         note:
-          "This is the one action on this whole page that's genuinely role-checked by the server, not just hidden in the UI — everything else above is enforced only by \"you created it or you're on it.\"",
+          "This is the one action on this whole page that's genuinely role-checked by the server, not just hidden in the UI — everything else above is enforced only by \"you created it or you're on it.\" The AI's suggested owner is used only when it names exactly one current project member; otherwise you pick the owner. The task's CC list is the attendees still on the project.",
       },
     ],
   },
@@ -163,7 +164,7 @@ const SECTIONS: MeetingSection[] = [
 const GLOBAL_NOTES = [
   "Unlike Tasks, Finance, and Programme, most of the role restrictions on this page are enforced only by the interface, not by the server. For scheduling, updating, cancelling, and attendee changes, the real rule the backend applies is: you created the meeting, or you're one of its attendees — your project role doesn't change what you're allowed to do beyond that. The one exception is approving AI action items, which does check your actual role.",
   "A meeting's status is one of: Scheduled, Live, Completed, Cancelled, or No Show. There's no \"Held\" status — if you see that term used elsewhere, it doesn't match what the system actually tracks.",
-  "AI processing progress (none → processing → transcribed → notes ready) is tracked separately from the meeting's own status, so a meeting can show as \"Completed\" while its notes are still being generated in the background.",
+  "AI processing progress (none → processing → transcribed → notes ready, or failed with the reason and a Retry) is tracked separately from the meeting's own status, so a meeting can show as \"Completed\" while its notes are still being generated in the background.",
   "The role lists for Scheduling and Updating/Cancelling are organisation-wide defaults, not guarantees. A project admin can grant or revoke either one for a specific role on a specific project via Settings → Permissions, and an organisation admin always sees both buttons regardless of their role on the project.",
 ];
 

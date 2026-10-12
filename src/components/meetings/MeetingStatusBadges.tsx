@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 
 export type LifecycleStatus = "scheduled" | "starting_soon" | "live" | "completed" | "cancelled" | "no_show";
-export type ArtefactStatus = "none" | "processing" | "transcribed" | "notes_ready";
+export type ArtefactStatus = "none" | "processing" | "transcribed" | "notes_ready" | "failed";
 
 export function LifecycleBadge({ status }: { status: LifecycleStatus }) {
   if (status === "starting_soon") {
@@ -38,6 +38,9 @@ export function ArtefactBadge({ artefactStatus }: { artefactStatus: ArtefactStat
   }
   if (artefactStatus === "transcribed") {
     return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 rounded-full">Transcribed</Badge>;
+  }
+  if (artefactStatus === "failed") {
+    return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs px-2 py-0.5 rounded-full">Notes failed</Badge>;
   }
   if (artefactStatus === "processing") {
     return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-2 py-0.5 rounded-full">Processing</Badge>;

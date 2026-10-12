@@ -47,6 +47,7 @@ export interface ApiDocument {
   aiFlags: number;
   aiSeverity: string;
   aiStatus: string;
+  aiStatusReason?: string;
   isNew: boolean;
   isGated: boolean;
   uploadedBy: { userId: string; name: string };
@@ -208,7 +209,17 @@ function DocumentRow({
 
       {/* AI Flags */}
       <span className="w-24 shrink-0">
-        {doc.aiFlags > 0 ? (
+        {doc.aiStatus === 'failed' ? (
+          <span data-testid="ai-failed-badge" title={(doc as any).aiStatusReason || 'AI analysis failed'}
+            className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs font-normal leading-5">
+            AI failed
+          </span>
+        ) : doc.aiStatus === 'no_text' ? (
+          <span title="No readable text — the file looks scanned"
+            className="inline-flex items-center gap-1 bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-normal leading-5">
+            No text
+          </span>
+        ) : doc.aiFlags > 0 ? (
           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-xs font-normal leading-5">
             <AiMark size={12} />
             {doc.aiFlags}

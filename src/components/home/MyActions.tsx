@@ -84,6 +84,7 @@ import type { HomeData } from "@/hooks/useHomeData";
 import { useScrollPagination } from "@/hooks/useScrollPagination";
 
 import { Panel } from "./blocks";
+import { AiAttentionDocs } from "./AiAttentionDocs";
 
 /** Rows are revealed 5 at a time; scrolling to the bottom of the panel loads the next 5. */
 const PAGE_SIZE = 5;
@@ -350,8 +351,11 @@ function lead(rows: MyActionRow[], overdue: number, soon: number): string {
 export function MyActionsBlock({
   data,
   title = "My actions",
+  projectId,
 }: {
   data: HomeData;
+  /** For the "documents the AI couldn't read" list (Part 15). */
+  projectId?: string | null;
   title?: string;
 }) {
   const rows = data.myActions as MyActionRow[];
@@ -386,6 +390,7 @@ export function MyActionsBlock({
     const failed = data.loadIssue.level === "partial";
     return (
       <Panel title={title} emphasis="primary">
+        <AiAttentionDocs projectId={projectId} />
         <div className="p-4">
           <EmptyState
             variant="plain"
@@ -420,6 +425,7 @@ export function MyActionsBlock({
         cancel out on desktop, leaving the container unclipped and the
         scroll-triggered pagination below with no scroll to trigger on.
       */}
+      <AiAttentionDocs projectId={projectId} />
       <div
         ref={containerRef}
         className="max-h-[420px] space-y-2 overflow-y-auto p-3"
