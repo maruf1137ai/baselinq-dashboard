@@ -80,7 +80,7 @@ import { fetchData, postData } from "@/lib/Api";
 import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
-import { usePermission } from "@/hooks/usePermission";
+import { usePermission, useIsPlatformStaff } from "@/hooks/usePermission";
 
 // ── Shapes, as the server sends them ──────────────────────────────────────
 // Mirrors billing/invoicing.py::serialize_invoice. Amounts arrive as STRINGS
@@ -231,6 +231,12 @@ export default function PlatformInvoices() {
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const numericProjectId = projectId ? Number(projectId) : undefined;
   const canView = usePermission("finance.approve_payment", numericProjectId);
+  /*
+    The server gates build / issue / settle / cancel on `is_staff or
+    is_superuser`, deliberately outside the permission matrix. Reading is a
+    customer's right; acting on Baselinq's own invoice is not.
+  */
+  const isStaff = useIsPlatformStaff(numericProjectId);
   const qc = useQueryClient();
 
   const [open, setOpen] = useState<Invoice | null>(null);
@@ -337,8 +343,16 @@ export default function PlatformInvoices() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Earned, not yet invoiced</p>
+          {/*
+            The FEE, not `uninvoicedTotal`. That figure is fee + VAT, and VAT
+            is collected for SARS rather than earned — leading with it
+            overstated the business's own revenue line by 15% on the one
+            number this screen says the business acts on. The VAT-inclusive
+            figure is what will actually be invoiced, so it is kept, below and
+            subordinate, and labelled as such.
+          */}
           <p className="text-2xl font-normal tracking-tight text-foreground tabular-nums">
-            {money(uninvoiced?.uninvoicedTotal)}
+            {money(uninvoiced?.uninvoicedFee)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {uninvoiced?.uninvoicedChargeCount ?? 0} charge
@@ -346,12 +360,17 @@ export default function PlatformInvoices() {
             {uninvoiced?.earliestUninvoicedOn
               ? ` · oldest ${formatDate(uninvoiced.earliestUninvoicedOn, "long")}`
               : ""}
+            {uninvoiced?.uninvoicedTotal
+              ? ` · ${money(uninvoiced.uninvoicedTotal)} to invoice with VAT`
+              : ""}
           </p>
         </div>
-        <Button size="sm" onClick={() => setBuildOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Build draft invoice
-        </Button>
+        {isStaff && (
+          <Button size="sm" onClick={() => setBuildOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Build draft invoice
+          </Button>
+        )}
       </div>
 
       {invoices.length === 0 ? (
@@ -509,7 +528,7 @@ export default function PlatformInvoices() {
               )}
 
               <DialogFooter>
-                {open.status === "draft" && (
+                {isStaff && open.status === "draft" && (
                   <>
                     <Button
                       variant="outline"
@@ -542,7 +561,7 @@ export default function PlatformInvoices() {
                     </Button>
                   </>
                 )}
-                {open.status === "issued" && (
+                {isStaff && open.status === "issued" && (
                   <Button size="sm" disabled={busy} onClick={() => setSettleFor(open)}>
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     Record settlement
