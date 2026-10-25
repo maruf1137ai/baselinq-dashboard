@@ -37,9 +37,22 @@
  *
  * ── Who can do what ──────────────────────────────────────────────────────
  *
- * Reading is gated on the project's finance view, matching the server, which
- * allows `finance.view` OR `finance.edit` OR staff — so the project manager
- * who has to answer "why did we get this bill" can see it.
+ * Reading is gated on `finance.approve_payment`, which is NOT what the server
+ * checks. `billing/views.py::_can_read` allows `finance.view` OR
+ * `finance.edit` OR staff, so this client is STRICTER than the server: a
+ * project manager holding `finance.view` is hidden a tab the server would
+ * serve them.
+ *
+ * It is deliberate for now, and only because that code is the established
+ * borrowed gate for the adjacent Platform Fees tab — migration
+ * `0062_relabel_finance_approve_payment_platform_fees` relabels it "View the
+ * Platform Fees tab", and `finance.tsx` gates both tabs on it together. Two
+ * sibling tabs disagreeing about who may read the same project's billing
+ * would be worse than one being conservative.
+ *
+ * The right fix is a dedicated `finance.platform_fee.view` code enforced on
+ * both sides, which `finance.tsx` already records as owed. Until then this
+ * comment says what the code does rather than what it ought to.
  *
  * Build / issue / settle / cancel are Baselinq STAFF actions: the server gates
  * them on `is_staff or is_superuser`, deliberately outside the permission
@@ -92,6 +105,15 @@ interface InvoiceLine {
   id: number;
   feeChargeId: number | null;
   isCredit: boolean;
+  /**
+   * False once the invoice carrying this line is cancelled: the charge is
+   * released back into the unbilled pool and will appear on a later invoice.
+   * Shown, because a cancelled invoice is a record and hiding its lines would
+   * make it unreconcilable — but marked, because those rands are simultaneously
+   * counted in "Earned, not yet invoiced" at the top of this screen, and two
+   * numbers on one page that silently double-count is how a reader loses trust
+   * in both.
+   */
   isLive: boolean;
   description: string;
   sourceRef: string;
@@ -166,15 +188,6 @@ function money(raw: string | null | undefined, opts: { signed?: boolean } = {}):
   const n = Number(raw);
   if (!Number.isFinite(n)) return "—";
   return formatZAR(opts.signed ? -Math.abs(n) : n);
-}
-
-/** Sum a column of server-sent money strings, respecting credit direction. */
-function sumLines(lines: InvoiceLine[], field: "feeAmount" | "vatAmount" | "totalAmount" | "baseAmount"): number {
-  return lines.reduce((acc, l) => {
-    const n = Number(l[field]);
-    if (!Number.isFinite(n)) return acc;
-    return acc + (l.isCredit ? -Math.abs(n) : n);
-  }, 0);
 }
 
 /**
@@ -486,6 +499,7 @@ export default function PlatformInvoices() {
                         <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
                           {money(l.baseAmount)} × {l.feeRatePct}%
                           {l.isCredit ? " · credit" : ""}
+                          {!l.isLive ? " · released, will be re-billed" : ""}
                         </p>
                       </div>
                       <span
