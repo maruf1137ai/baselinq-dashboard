@@ -184,7 +184,7 @@ export default function PlatformInvoices() {
   const [settledOn, setSettledOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
 
-  const key = projectId && canView ? `projects/${projectId}/invoices/` : "";
+  const key = projectId && canView ? `billing/projects/${projectId}/invoices/` : "";
   const { data, isLoading, isError } = useFetch<InvoiceListResponse>(key, {
     enabled: !!projectId && canView,
   });
@@ -203,7 +203,7 @@ export default function PlatformInvoices() {
   const act = async (invoice: Invoice, action: string, body: Record<string, unknown> = {}) => {
     setBusy(true);
     try {
-      await postData({ url: `invoices/${invoice.id}/${action}/`, data: body });
+      await postData({ url: `billing/invoices/${invoice.id}/${action}/`, data: body });
       toast.success(
         action === "issue"
           ? "Invoice issued"
@@ -232,7 +232,7 @@ export default function PlatformInvoices() {
     setBusy(true);
     try {
       await postData({
-        url: `projects/${projectId}/invoices/`,
+        url: `billing/projects/${projectId}/invoices/`,
         data: { periodStart: period.start, periodEnd: period.end },
       });
       toast.success("Draft invoice built");
@@ -249,7 +249,7 @@ export default function PlatformInvoices() {
   const openInvoice = async (row: Invoice) => {
     setOpen(row);
     try {
-      const full = await fetchData(`invoices/${row.id}/`);
+      const full = await fetchData(`billing/invoices/${row.id}/`);
       setOpen(full as Invoice);
     } catch {
       // The row we already have is a true summary; it just has no lines.
