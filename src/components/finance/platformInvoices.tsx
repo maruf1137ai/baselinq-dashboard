@@ -37,11 +37,18 @@
  *
  * ── Who can do what ──────────────────────────────────────────────────────
  *
- * Reading is gated on the project's finance view. Build / issue / settle /
- * cancel are Baselinq staff actions and the server enforces that — a project
- * user cannot issue or settle their own invoice. The UI hides those controls
- * when the server says the user is not staff, but the gate that matters is
- * the server's.
+ * Reading is gated on the project's finance view, matching the server, which
+ * allows `finance.view` OR `finance.edit` OR staff — so the project manager
+ * who has to answer "why did we get this bill" can see it.
+ *
+ * Build / issue / settle / cancel are Baselinq STAFF actions: the server gates
+ * them on `is_staff or is_superuser`, deliberately outside the permission
+ * matrix. An earlier revision of this file gated them on a project permission
+ * and claimed in this very comment to hide them from non-staff. It did not —
+ * nothing in the client could see the staff flag at all, so a customer was
+ * shown an irreversible "Issue invoice" button against their own bill and got
+ * a 403. The flag is now carried on the effective-permissions payload and read
+ * through `useIsPlatformStaff`. The gate that matters is still the server's.
  */
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,6 +77,7 @@ import {
 } from "@/components/ui/dialog";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { fetchData, postData } from "@/lib/Api";
+import { formatZAR } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
 import { usePermission } from "@/hooks/usePermission";
@@ -137,15 +145,52 @@ interface InvoiceListResponse {
   uninvoiced: Uninvoiced;
 }
 
-/** Rand, grouped, from a string the server already rounded. */
-function money(raw: string | null | undefined): string {
+/**
+ * Rand, through the app's single formatter.
+ *
+ * An earlier revision hand-rolled this on `toLocaleString("en-ZA")`, which
+ * makes the output ICU-dependent — two users on different browsers could see
+ * different grouping and decimal characters for the same invoice — and dropped
+ * the non-breaking space `formatZAR` uses deliberately so that
+ * "R 108 500 000,00" cannot wrap into "R 108 500", a syntactically complete,
+ * plausible, WRONG number.
+ *
+ * `signed` renders a credit with an explicit minus. The server carries
+ * direction as a FLAG (`isCredit`), not a sign — `totalAmount` is always
+ * positive — while the invoice total is computed signed. Rendering the flag as
+ * a positive number meant a debit and its reversal both showed the same figure
+ * and the lines could not be made to sum to the total.
+ */
+function money(raw: string | null | undefined, opts: { signed?: boolean } = {}): string {
   if (raw === null || raw === undefined || raw === "") return "—";
   const n = Number(raw);
-  if (!Number.isFinite(n)) return raw;
-  return `R ${n.toLocaleString("en-ZA", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  if (!Number.isFinite(n)) return "—";
+  return formatZAR(opts.signed ? -Math.abs(n) : n);
+}
+
+/** Sum a column of server-sent money strings, respecting credit direction. */
+function sumLines(lines: InvoiceLine[], field: "feeAmount" | "vatAmount" | "totalAmount" | "baseAmount"): number {
+  return lines.reduce((acc, l) => {
+    const n = Number(l[field]);
+    if (!Number.isFinite(n)) return acc;
+    return acc + (l.isCredit ? -Math.abs(n) : n);
+  }, 0);
+}
+
+/**
+ * The server's refusal reason.
+ *
+ * `billing/views.py` returns `{"error", "code"}` on every refusal and only
+ * sets `detail` on one path. An earlier revision read `detail` alone, so every
+ * 403/400/409 surfaced as axios's "Request failed with status code 409" — and
+ * the build path substituted a FABRICATED reason, "Nothing to invoice for that
+ * period", for failures that included `draft_already_exists`. That told an
+ * operator there was nothing to bill while a draft worth six figures sat in
+ * the list, and hid the action that would fix it.
+ */
+function serverReason(e: any, fallback: string): string {
+  const d = e?.response?.data;
+  return d?.error || d?.detail || d?.message || e?.message || fallback;
 }
 
 /**
@@ -162,12 +207,24 @@ const STATUS: Record<InvoiceStatus, { label: string; variant: "success" | "warni
   cancelled: { label: "Cancelled", variant: "danger" },
 };
 
-/** The first day of the current month, and today, as yyyy-mm-dd. */
+/**
+ * The first day of the current month, and today.
+ *
+ * `formatDate(d, "input")`, NOT `toISOString().slice(0,10)`. In SAST the local
+ * midnight of the 1st is 22:00Z on the LAST day of the previous month, so the
+ * ISO form yielded a period that silently started a day early and swept in the
+ * prior month's charges. `invoicing.py` fixed this exact class of bug
+ * server-side ("a charge raised after 22:00 SAST was reported as having been
+ * raised the previous day"); doing it again in the client would have put the
+ * period boundary — and a settlement date on an audited tax record — out by a
+ * day for every run before 02:00.
+ */
 function defaultPeriod(): { start: string; end: string } {
   const now = new Date();
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  return { start: iso(first), end: iso(now) };
+  return {
+    start: formatDate(new Date(now.getFullYear(), now.getMonth(), 1), "input"),
+    end: formatDate(now, "input"),
+  };
 }
 
 export default function PlatformInvoices() {
@@ -181,7 +238,7 @@ export default function PlatformInvoices() {
   const [period, setPeriod] = useState(defaultPeriod);
   const [settleFor, setSettleFor] = useState<Invoice | null>(null);
   const [reference, setReference] = useState("");
-  const [settledOn, setSettledOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [settledOn, setSettledOn] = useState(() => formatDate(new Date(), "input"));
   const [busy, setBusy] = useState(false);
 
   const key = projectId && canView ? `billing/projects/${projectId}/invoices/` : "";
@@ -218,7 +275,7 @@ export default function PlatformInvoices() {
     } catch (e: any) {
       // Never silent: the server refuses with a stable code and a reason, and
       // the person needs to see which, not a generic failure.
-      toast.error(e?.response?.data?.detail || e?.message || `Could not ${action} the invoice`);
+      toast.error(serverReason(e, `Could not ${action} the invoice`));
     } finally {
       setBusy(false);
     }
@@ -239,7 +296,7 @@ export default function PlatformInvoices() {
       refresh();
       setBuildOpen(false);
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail || "Nothing to invoice for that period");
+      toast.error(serverReason(e, "The invoice could not be built"));
     } finally {
       setBusy(false);
     }
