@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
+import PlatformInvoices from "@/components/finance/platformInvoices";
 import useFetchAllPages from "@/hooks/useFetchAllPages";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePermission } from "@/hooks/usePermission";
@@ -70,7 +71,9 @@ const Finance = () => {
       "Cost Ledger",
       "Payment Certificates",
       "Variation Orders",
-      ...(canViewPlatformFees ? ["Platform Fees"] : []),
+      // "Platform Fees" is what HAS accrued; "Invoices" is what has been
+      // asked for. Same gate — a person who may see one may see the other.
+      ...(canViewPlatformFees ? ["Platform Fees", "Invoices"] : []),
     ]
     : [];
 
@@ -303,6 +306,7 @@ const Finance = () => {
             <PaymentCertificate certificateParam={searchParams.get("pc")} />
           )}
           {activeTab === "Platform Fees" && canViewPlatformFees && <PlatformFees />}
+          {activeTab === "Invoices" && canViewPlatformFees && <PlatformInvoices />}
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
       </div>
