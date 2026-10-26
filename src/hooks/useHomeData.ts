@@ -29,6 +29,7 @@ import {
   buildPaymentOverdueQueue,
   homeVerdict,
   buildObligationQueue,
+  buildUncertifiedVariationQueue,
   buildRejectedCertificateQueue,
   groupRiskSignals,
   buildRsvpQueue,
@@ -77,6 +78,7 @@ import {
 import { summariseProjectSetup } from "@/lib/homeSetup";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { isMeetingPast } from "@/lib/dateUtils";
+import { sumCertifiedByVo } from "@/lib/pcHistory";
 
 interface RiskSignal {
   id: number;
@@ -518,6 +520,19 @@ export function useHomeData(projectId: string | undefined) {
       ...buildRsvpQueue(meetingList),
       ...buildMeetingActionQueue(meetingsWithActions),
       ...buildTaskQueue(taskList),
+      /*
+        Variations signed and never certified.
+
+        The certificate drawer now defaults every uncertified variation in, so
+        the common case is handled at the point of work. This catches the rest
+        — one signed between certificates, or unticked once and forgotten —
+        because until now nothing anywhere said "VO-014 was signed six weeks
+        ago and the contractor has not been paid for it".
+      */
+      ...buildUncertifiedVariationQueue(
+        variationList,
+        sumCertifiedByVo(certificateList as any),
+      ),
     ];
     // ── Gating, now down to the ACT and not just the module ──────────────
     //

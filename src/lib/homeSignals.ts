@@ -1965,6 +1965,84 @@ export interface VariationLike {
    * disagrees with the Cost Ledger showing the same project.
    */
   signedAt?: string | null;
+  /** `VariationOrder.vo_number` — the reference a QS knows it by. */
+  voNumber?: string | null;
+  /** Row id, so the queue row can link to the variation itself. */
+  id?: number | string | null;
+}
+
+/**
+ * Variations approved and signed, and never certified.
+ *
+ * ── Why this is a queue row and not a report ────────────────────────────
+ *
+ * A variation becomes money the contractor can be paid only when somebody
+ * ticks it into a payment certificate. Until this, that was a thing a person
+ * had to REMEMBER: the drawer opened every approved variation excluded and at
+ * zero, nothing anywhere said "VO-014 was signed six weeks ago and has never
+ * appeared on a certificate", and the work simply sat unpaid.
+ *
+ * The certificate drawer now defaults every uncertified variation in, which
+ * fixes the common case. This catches the rest — a variation signed between
+ * certificates, or unticked once and then forgotten.
+ *
+ * `money`, not `forfeiture`: nothing is lost by delay, the contractor is
+ * simply not being paid for work already instructed and signed for. That
+ * ranks it below a notice deadline and above ordinary paperwork, which is
+ * where it belongs.
+ *
+ * Deliberately NOT a JBCC clock. No contract period is being counted here and
+ * none is claimed — `daysWaiting` since signature is a management fact, not a
+ * contractual one, so the row carries no `clock` and no `countdownLabel`.
+ */
+export function buildUncertifiedVariationQueue(
+  variations: VariationLike[],
+  certifiedByVo: Record<string, number>,
+  now: Date = new Date(),
+): QueueItem[] {
+  return variations
+    .filter((v) => {
+      // Signed, not merely status-flipped — the same gate billing and the
+      // cost ledger both apply before they will count a variation at all.
+      if (!v.signedAt) return false;
+      const status = String(v.status || "").toLowerCase();
+      if (!["approved", "closed"].includes(status)) return false;
+      const ref = v.voNumber || "";
+      if (!ref) return false;
+      const value = variationValue(v);
+      if (value <= 0) return false;
+      return (certifiedByVo[ref] ?? 0) < value;
+    })
+    .map((v) => {
+      const ref = v.voNumber as string;
+      const value = variationValue(v);
+      const certified = certifiedByVo[ref] ?? 0;
+      const outstanding = value - certified;
+      const waited = daysWaiting(v.signedAt, now);
+      return {
+        key: `vo-uncertified:${ref}`,
+        kind: "variation" as const,
+        headline:
+          certified > 0
+            ? `${ref} is part-certified — ${formatZAR(outstanding)} still to certify`
+            : `${ref} was signed and has never been certified`,
+        detail:
+          waited !== null
+            ? `Signed ${waited} day${waited === 1 ? "" : "s"} ago · ${formatZAR(value)} approved`
+            : `${formatZAR(value)} approved`,
+        consequence: "money" as const,
+        pressure: "none" as const,
+        daysRemaining: null,
+        clock: null,
+        date: null,
+        overdue: false,
+        href: v.id ? ROUTE.variation(v.id) : ROUTE.variations,
+        action: "Certify it",
+        waitingSince: v.signedAt ?? null,
+        amount: outstanding,
+        requires: ["finance.view"],
+      };
+    });
 }
 
 const APPROVED_VO = new Set(["done", "approved", "completed"]);
