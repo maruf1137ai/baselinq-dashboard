@@ -35,6 +35,7 @@ import {
 } from "../ui/alert-dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
+import { Checkbox } from "../ui/checkbox";
 import { AlertTriangle, Ban, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, ReceiptText, SearchX, Send, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatZAR } from '@/lib/formatCurrency';
@@ -481,6 +482,145 @@ const DeleteConfirmDialog = ({
     </AlertDialogContent>
   </AlertDialog>
 );
+
+/**
+ * Approve is the most consequential click in Finance: it certifies AND posts
+ * the certificate in one step (tasks/pc_workflow.py), mints the shareable
+ * certificate, starts the payment clock and accrues the platform fee. It was a
+ * single click with nothing in between (QA BUG-07). This puts the figures
+ * being certified in front of the person, and asks them to confirm they hold
+ * the authority, before anything is sent.
+ */
+export const ApproveConfirmDialog = ({
+  entry,
+  open,
+  onOpenChange,
+  isSubmitting,
+  onConfirm,
+}: {
+  entry: PCEntry;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isSubmitting: boolean;
+  onConfirm: () => void;
+}) => {
+  const [authorised, setAuthorised] = useState(false);
+  useEffect(() => {
+    if (!open) setAuthorised(false);
+  }, [open]);
+
+  const { data: feeConfig } = useFetch<{
+    configured: boolean;
+    enabled: boolean;
+    feeBase?: string;
+    feeRatePct: number;
+    vatRatePct: number;
+  }>(open && entry.projectId ? `billing/projects/${entry.projectId}/fee-config/` : "", {
+    enabled: open && !!entry.projectId,
+  });
+
+  const vat = serverNumber(entry, "vatAmount", "vat_amount");
+  const payable = serverNumber(entry, "totalPayable", "total_payable") ?? entry.netAmount;
+  const vos = (entry.voItems ?? []).filter((v: any) => v?.included !== false && Number(v?.thisPeriod));
+  const warnings = warningsOf(entry);
+  const feeAccrues =
+    !!feeConfig?.configured && !!feeConfig.enabled && Number(feeConfig.feeRatePct) > 0 &&
+    feeConfig.feeBase !== "vo_only";
+
+  const line = (label: string, value: React.ReactNode, strong = false) => (
+    <div className={`flex justify-between gap-4 ${strong ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+      <span>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Approve {entry.pcNumber}?</DialogTitle>
+          <DialogDescription>
+            Approving certifies and posts this certificate in one step. It is final — a correction
+            needs a new certificate.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 text-sm">
+          <div className="space-y-1">
+            {line("Period", entry.period || "—")}
+            {line("Claim", money(entry.claimAmount))}
+            {line("Retention", money(entry.retentionAmount))}
+            {line("VAT", money(vat))}
+            {line("Total payable", money(payable), true)}
+          </div>
+
+          {vos.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-foreground">Variations certified this period</p>
+              <ul className="mt-1 space-y-0.5">
+                {vos.map((v: any, i: number) => (
+                  <li key={`${v.voNumber}-${i}`} className="flex justify-between gap-4 text-muted-foreground">
+                    <span className="truncate">{v.voNumber}</span>
+                    <span className="tabular-nums">{money(Number(v.thisPeriod))}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {warnings.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              {warnings.map((w, i) => (
+                <p key={i} className="text-xs text-amber-900 flex gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  {w}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {feeAccrues && (
+            <p className="text-xs text-muted-foreground">
+              Approving accrues Baselinq's platform fee of {Number(feeConfig!.feeRatePct)}% (plus VAT) on this
+              certificate's value excluding VAT.
+            </p>
+          )}
+
+          <div className="flex items-start gap-3 pt-1">
+            <Checkbox
+              id={`pc-approve-authority-${entry.id}`}
+              checked={authorised}
+              onCheckedChange={(v) => setAuthorised(!!v)}
+              className="mt-0.5 border-muted-foreground/30 data-[state=checked]:bg-primary flex-shrink-0"
+            />
+            <label
+              htmlFor={`pc-approve-authority-${entry.id}`}
+              className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none"
+            >
+              I confirm I have the authority to certify this payment and that the figures above are correct.
+            </label>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
+              Cancel
+            </button>
+          </DialogClose>
+          <button
+            onClick={onConfirm}
+            disabled={!authorised || isSubmitting}
+            className="h-10 px-4 rounded-lg text-sm text-primary-foreground bg-primary hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Approve and post
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 /**
  * One primary button — whichever of Submit/Approve applies, the "forward"
@@ -1086,6 +1226,7 @@ const PCRow = ({
   const [reasonText, setReasonText] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetched lazily, only once the Approvals badge is opened — "who is this
@@ -1123,6 +1264,7 @@ const PCRow = ({
       invalidatePcQueries();
       setReasonTransition(null);
       setReasonText("");
+      setShowApproveDialog(false);
     } catch (err: any) {
       const message =
         err?.response?.data?.error || err?.message || "Action failed.";
@@ -1138,6 +1280,10 @@ const PCRow = ({
     if (requiresReason(transition)) {
       setReasonText("");
       setReasonTransition(transition);
+    } else if (transition === "approve") {
+      // Never a single click — see ApproveConfirmDialog. The row button and
+      // the details dialog both come through here.
+      setShowApproveDialog(true);
     } else {
       runTransition(transition);
     }
@@ -1260,6 +1406,13 @@ const PCRow = ({
           onOpenChange={setShowDeleteDialog}
           isDeleting={isDeleting}
           onConfirm={handleDelete}
+        />
+        <ApproveConfirmDialog
+          entry={entry}
+          open={showApproveDialog}
+          onOpenChange={setShowApproveDialog}
+          isSubmitting={actingOn === "approve"}
+          onConfirm={() => runTransition("approve")}
         />
       </td>
     </tr>

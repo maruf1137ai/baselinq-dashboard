@@ -243,13 +243,16 @@ function defaultPeriod(): { start: string; end: string } {
 export default function PlatformInvoices() {
   const projectId = localStorage.getItem("selectedProjectId") || "";
   const numericProjectId = projectId ? Number(projectId) : undefined;
-  const canView = usePermission("finance.approve_payment", numericProjectId);
   /*
     The server gates build / issue / settle / cancel on `is_staff or
     is_superuser`, deliberately outside the permission matrix. Reading is a
     customer's right; acting on Baselinq's own invoice is not.
   */
   const isStaff = useIsPlatformStaff(numericProjectId);
+  // Staff read it too, on projects they are not members of — the server
+  // already serves them (billing/views._project_or_none); the screen sent
+  // them away (QA BUG-06).
+  const canView = usePermission("finance.approve_payment", numericProjectId) || isStaff;
   const qc = useQueryClient();
 
   const [open, setOpen] = useState<Invoice | null>(null);
@@ -497,7 +500,7 @@ export default function PlatformInvoices() {
                           {l.description || l.sourceRef || "Platform fee"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-                          {money(l.baseAmount)} × {l.feeRatePct}%
+                          {money(l.baseAmount, { signed: l.isCredit })} × {l.feeRatePct}%
                           {l.isCredit ? " · credit" : ""}
                           {!l.isLive ? " · released, will be re-billed" : ""}
                         </p>
@@ -507,7 +510,9 @@ export default function PlatformInvoices() {
                           l.isCredit ? "text-muted-foreground" : "text-foreground"
                         }`}
                       >
-                        {money(l.totalAmount)}
+                        {/* A credit reduces the invoice, so it reads as one —
+                            the total below is already signed (QA BUG-21). */}
+                        {money(l.totalAmount, { signed: l.isCredit })}
                       </span>
                     </div>
                   ))

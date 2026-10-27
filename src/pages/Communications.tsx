@@ -160,22 +160,10 @@ const Communications = () => {
       console.error("Failed to fetch full channel details", err);
     }
 
-    // No `unread_count > 0` guard: that field comes from the cached channel
-    // LIST payload, which is polled on an interval and is routinely stale by
-    // the time the row is clicked. When it read 0 against a channel that had
-    // since received messages, the mark-read was skipped entirely and the
-    // badge stayed up. Marking an already-read channel read is a no-op on the
-    // server, so the guard only ever cost correctness.
-    try {
-      await postData({
-        url: `channels/${channel.id}/mark_read/`,
-        data: {}
-      });
-      queryClient.invalidateQueries({ queryKey: [projectId ? `channels/?projectId=${projectId}` : ""] });
-      window.dispatchEvent(new Event("notifications-marked-read"));
-    } catch (err) {
-      console.error("Failed to mark channel as read", err);
-    }
+    // Marking it read is ChatWindow's job alone — it does so the moment the
+    // open conversation renders, and again as messages arrive. This handler
+    // used to POST mark_read as well, so opening a channel fired two or three
+    // concurrent requests (QA BUG-23).
   };
 
   // Auto-select channel from URL param (?channel=5) — used by notification deep links

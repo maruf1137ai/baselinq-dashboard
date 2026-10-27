@@ -1954,7 +1954,14 @@ export interface VariationLike {
    * are read so this function does not depend on which route supplied the row.
    */
   grandTotal?: number | null;
-  task?: { grandTotal?: number } | null;
+  task?: { grandTotal?: number; certifiableValue?: number | null; subTotal?: number | null } | null;
+  /**
+   * What a payment certificate may certify — the value EXCLUDING VAT
+   * (`VariationOrder.approved_value_excluding_vat`). A certificate adds VAT
+   * itself, so "still to certify" is measured against this, not grandTotal.
+   */
+  certifiableValue?: number | null;
+  subTotal?: number | null;
   /**
    * `VariationOrder.signed_at` — set only by sign-and-issue
    * (`tasks/views_signing.py`), never by a generic status PATCH. A VO whose
@@ -2009,13 +2016,13 @@ export function buildUncertifiedVariationQueue(
       if (!["approved", "closed"].includes(status)) return false;
       const ref = v.voNumber || "";
       if (!ref) return false;
-      const value = variationValue(v);
+      const value = certifiableValue(v);
       if (value <= 0) return false;
       return (certifiedByVo[ref] ?? 0) < value;
     })
     .map((v) => {
       const ref = v.voNumber as string;
-      const value = variationValue(v);
+      const value = certifiableValue(v);
       const certified = certifiedByVo[ref] ?? 0;
       const outstanding = value - certified;
       const waited = daysWaiting(v.signedAt, now);
@@ -2036,7 +2043,9 @@ export function buildUncertifiedVariationQueue(
         clock: null,
         date: null,
         overdue: false,
-        href: v.id ? ROUTE.variation(v.id) : ROUTE.variations,
+        // By reference: the Variation Orders tab matches `?vo=` against the VO
+        // number or the task id, and a row's `id` may be either record's pk.
+        href: ROUTE.variation(ref),
         action: "Certify it",
         waitingSince: v.signedAt ?? null,
         amount: outstanding,
@@ -2050,6 +2059,21 @@ const APPROVED_VO = new Set(["done", "approved", "completed"]);
 /** The value on a variation, whichever route it arrived by. */
 export function variationValue(v: VariationLike): number {
   return v.task?.grandTotal ?? v.grandTotal ?? 0;
+}
+
+/**
+ * What may still be certified against a variation: its value EXCLUDING VAT,
+ * as the server computes it. Falls back to the ex-VAT subtotal, then to the
+ * gross figure for a payload from before the server sent either.
+ */
+export function certifiableValue(v: VariationLike): number {
+  return (
+    v.certifiableValue ??
+    v.task?.certifiableValue ??
+    v.subTotal ??
+    v.task?.subTotal ??
+    variationValue(v)
+  );
 }
 
 /**

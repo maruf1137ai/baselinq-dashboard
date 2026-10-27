@@ -72,12 +72,20 @@ const handleError = (error) => {
   const backendMessage = [data?.error, data?.detail, data?.message].find(
     (m) => typeof m === "string" && m.trim().length > 0,
   );
-  throw new Error(
+  const err: Error & { status?: number; code?: string } = new Error(
     backendMessage ||
       (error.response
         ? `HTTP error! status: ${error.response.status}`
         : error.message),
   );
+  // Additive: the HTTP status (and the server's stable `code`) ride along so
+  // a caller can tell "no access" from "server down" — a 403 used to be
+  // indistinguishable from an outage by the time it reached a query.
+  if (error.response) {
+    err.status = error.response.status;
+    if (typeof data?.code === "string") err.code = data.code;
+  }
+  throw err;
 };
 
 export const fetchData = async (url) => {
@@ -937,6 +945,23 @@ const refreshAccessToken = (): Promise<string> => {
   return refreshPromise;
 };
 
+/**
+ * Whether a failed request is an expired session worth one token refresh and
+ * replay. Only a 401 qualifies, and not every 401: a business refusal carries
+ * `{error: "..."}` (SimpleJWT/DRF auth failures carry `detail`/`code`
+ * instead), and a caller can opt out with `skipAuthRefresh`. Replaying a
+ * business refusal repeats the failed attempt — a wrong signing PIN was
+ * tried twice per click, and the refresh rotated the session underneath.
+ */
+export const shouldRefreshOn401 = (error: any): boolean => {
+  const config = error?.config || {};
+  const url: string = config.url || '';
+  if (error?.response?.status !== 401) return false;
+  if (config._retry || config.skipAuthRefresh) return false;
+  if (url.includes('/user/login/') || url.includes('auth/login/')) return false;
+  return typeof error?.response?.data?.error !== 'string';
+};
+
 api.interceptors.response.use(
   res => res,
   async error => {
@@ -951,7 +976,7 @@ api.interceptors.response.use(
 
     // Handle expired access → try refresh ONCE
     // Skip for login endpoint - 401 there means wrong credentials, not expired token
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/user/login/')) {
+    if (shouldRefreshOn401(error)) {
       originalRequest._retry = true;
 
       try {

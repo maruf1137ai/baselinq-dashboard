@@ -83,7 +83,9 @@ import {
   ExternalLink,
   Copy as CopyIcon,
   HelpCircle,
+  SearchX,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -101,6 +103,8 @@ import { TaskSidebar } from "@/components/TaskComponents/TaskSidebar";
 import { TaskAttachments } from "@/components/TaskComponents/TaskAttachments";
 import { WernerTaskActions } from "@/components/TaskComponents/WernerTaskActions";
 import { isTaskLocked as computeIsTaskLocked } from "@/lib/taskLock";
+import { isVoRecommender, voRecommendedByName } from "@/lib/voApprovalRules";
+import { getActionLabel } from "@/lib/auditActionLabel";
 import { markNotificationsRead } from "@/lib/markNotificationsRead";
 import {
   getIntentionAtDisplay,
@@ -129,11 +133,6 @@ const approvalPermissions: Record<string, string[]> = {
 };
 
 const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
-
-const displayStatus = (status: string): string => {
-  if (!status) return '';
-  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-};
 
 const getRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -177,7 +176,11 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   if (a === 'request_info') return { icon: <FileText className="h-3 w-3 text-[#9333ea]" />, bg: '#FDF4FF' };
   if (a === 'response_added') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
-    const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
+    // String(): audit values are JSON — a status string, but also numbers or
+    // objects (contract amendments). Calling .toLowerCase() on those crashed
+    // the whole task page once the API started sending them (QA BUG-19).
+    const raw = String([log.newValue, log.new_value, log.to, log.value, log.description]
+      .find((v) => v !== null && v !== undefined && v !== '') ?? '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
       return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
@@ -203,91 +206,6 @@ const getStatusBadgeColor = (status: string) => {
     return 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]';
   // Default (Draft, Todo, Delay Identified, etc.) - gray
   return 'bg-muted text-muted-foreground border border-border';
-};
-
-const ENTITY_LABELS: Record<string, string> = {
-  variationorder: 'Variation Order',
-  requestforinformation: 'Request for Information',
-  siteinstruction: 'Site Instruction',
-  delaycertificate: 'Delay Certificate',
-  criticalpathitem: 'Critical Path Item',
-  generalinstruction: 'General Instruction',
-};
-
-const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean; chips?: string[] } => {
-  const action = (log.action || '').toLowerCase();
-  const desc = (log.description || '') as string;
-
-  if (action === 'status_updated') {
-    // Parse cause if present: "Status changed from X to Y; cause: Z"
-    const causeIdx = desc.indexOf('; cause: ');
-    const cleanDesc = causeIdx !== -1 ? desc.slice(0, causeIdx) : desc;
-    const cause = causeIdx !== -1 ? desc.slice(causeIdx + 9).trim() : '';
-    const detail = cause ? `Action: ${cause}` : undefined;
-
-    const descLower = cleanDesc.toLowerCase();
-    const fromIdx = descLower.indexOf('from ');
-    const toIdx = descLower.lastIndexOf(' to ');
-    if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 4) {
-      const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
-      const newStatus = cleanDesc.slice(toIdx + 4).trim();
-      if (oldStatus && newStatus) {
-        return { text: 'Status changed from', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
-      }
-    }
-    const raw = log.newValue || log.new_value || log.to || log.value || '';
-    const oldRaw = log.oldValue || log.old_value || log.from || '';
-    if (raw || oldRaw) {
-      return { text: 'Status changed from', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
-    }
-    return { text: 'Status updated', detail, hideUserName: true };
-  }
-
-  const taskRef = taskCode ? ` ${taskCode}` : '';
-
-  if (action === 'task_created') return { text: `created this task${taskRef}` };
-  if (action === 'created') return { text: `created this task${taskRef}` };
-
-  if (action === 'vo_created') return { text: `created a Variation Order${taskRef}` };
-  if (action === 'si_created') return { text: `created a Site Instruction${taskRef}` };
-  if (action === 'rfi_created') return { text: `created a Request for Information${taskRef}` };
-  if (action === 'dc_created') return { text: `created a Delay Certificate${taskRef}` };
-  if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
-
-  if (action === 'task_assigned') {
-    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : desc;
-    const chips = names ? names.split(',').map(n => n.trim()).filter(Boolean) : [];
-    return { text: 'assigned this task to', chips: chips.length > 0 ? chips : undefined };
-  }
-
-  if (action === 'request_info') {
-    return { text: 'requested additional information', detail: desc || undefined };
-  }
-
-  if (action === 'response_added') {
-    // desc = "Maruf submitted a response on VARIATIONORDER — Approved"
-    // Strip the leading user name from description to avoid duplication
-    const namePrefix = (log.createdByName || '').trim();
-    let detail = desc;
-    if (namePrefix && detail.toLowerCase().startsWith(namePrefix.toLowerCase())) {
-      detail = detail.slice(namePrefix.length).trim();
-    }
-    // Humanise entity type in the detail
-    const lower = detail.toLowerCase();
-    Object.entries(ENTITY_LABELS).forEach(([key, label]) => {
-      detail = detail.replace(new RegExp(key, 'gi'), label);
-    });
-    return { text: 'submitted a response', detail: detail || undefined };
-  }
-
-  if (action === 'comment_added') return { text: 'added a comment' };
-  if (action === 'assigned') return { text: 'was assigned to this task' };
-  if (action === 'approved') return { text: 'approved this task' };
-  if (action === 'rejected') return { text: 'rejected this task' };
-
-  // Generic fallback — humanise snake_case
-  const humanized = action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-  return { text: humanized, detail: desc || undefined };
 };
 
 export default function TaskDetails() {
@@ -1251,6 +1169,9 @@ export default function TaskDetails() {
             riskMax: 100,
           },
           isWithinMandate: task.isWithinMandate,
+          // Who put it forward for approval — the two-person rule
+          // (lib/voApprovalRules) keeps that person from also signing it.
+          recommendedBy: task.recommendedBy ?? null,
         };
       }
 
@@ -1640,6 +1561,8 @@ export default function TaskDetails() {
       // _recommend_transition_guard, tasks/views.py).
       const canApproveVo = effectivePerms?.permissions?.["task.vo.approve"] === true;
       const canRecommendVo = effectivePerms?.permissions?.["task.vo.recommend"] === true;
+      // Two-person rule: the recommender is not offered Approve & Sign.
+      if (isVoRecommender(displayTask, user?.id)) return false;
       return isApproveMode ? canApproveVo : canRecommendVo;
     }
 
@@ -1676,6 +1599,11 @@ export default function TaskDetails() {
     editorProps: {
       attributes: {
         class: "prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4",
+        // The placeholder is drawn by CSS, so a screen reader announced an
+        // unnamed editable region (QA BUG-24).
+        role: "textbox",
+        "aria-label": "Formal response",
+        "aria-multiline": "true",
       },
     },
   });
@@ -1733,9 +1661,23 @@ export default function TaskDetails() {
   }
 
   if (!displayTask) {
+    // Reached within a second now: a 404 is no longer retried for ~8 s
+    // (lib/queryRetry, QA BUG-22). The server returns 404 for a task the
+    // viewer may not see as well as for one that does not exist, so this
+    // says both rather than guessing which.
     return (
       <DashboardLayout>
-        <div className="p-6 text-center text-muted-foreground">Task not found</div>
+        <EmptyState
+          icon={SearchX}
+          title="Task not found"
+          description="It doesn't exist, or you don't have access to it."
+          action={
+            <Button size="sm" variant="outline" onClick={() => navigate("/tasks")}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to tasks
+            </Button>
+          }
+        />
       </DashboardLayout>
     );
   }
@@ -1757,8 +1699,10 @@ export default function TaskDetails() {
             description: displayTask.formFields?.description,
             discipline: displayTask.formFields?.discipline,
             submittedBy: displayTask.creator?.name || "Unknown",
-            recommendedBy: (auditLogs || []).find((l: any) =>
-              (l.description || "").toLowerCase().includes("recommended"))?.createdBy?.name,
+            // From the VO record. This used to search the audit log for
+            // "recommended" and read `createdBy.name`, a key the audit API
+            // never sends (it sends createdByName) — so it never rendered.
+            recommendedBy: voRecommendedByName(displayTask) ?? undefined,
             // Werner spec — when a VO reply submits new pricing (line
             // items + VAT) we want the Approve & Sign dialog to reflect
             // it. The VO entity's own sub_total/tax_amount/grand_total
@@ -1824,7 +1768,9 @@ export default function TaskDetails() {
             if (auth && "pin" in auth) payload.pin = auth.pin;
 
             try {
-              await postData({ url: "tasks/sign-and-issue/", data: payload });
+              // skipAuthRefresh: a refused signature (wrong PIN, lock-out)
+              // is not an expired session — never refresh and replay it.
+              await postData({ url: "tasks/sign-and-issue/", data: payload, config: { skipAuthRefresh: true } });
               toast.success("Variation Order approved and signed.");
               await refetchTask();
               await refetchAuditLogs?.();
@@ -2994,16 +2940,25 @@ export default function TaskDetails() {
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 mb-4 pb-4 border-b border-border">
                   <button
+                    type="button"
+                    aria-label="Bold"
+                    aria-pressed={!!editor?.isActive("bold")}
                     onClick={() => editor?.chain().focus().toggleBold().run()}
                     className={`p-2 hover:bg-muted rounded ${editor?.isActive("bold") ? "bg-muted" : ""}`}>
                     <Bold className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <button
+                    type="button"
+                    aria-label="Italic"
+                    aria-pressed={!!editor?.isActive("italic")}
                     onClick={() => editor?.chain().focus().toggleItalic().run()}
                     className={`p-2 hover:bg-muted rounded ${editor?.isActive("italic") ? "bg-muted" : ""}`}>
                     <Italic className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <button
+                    type="button"
+                    aria-label="Underline"
+                    aria-pressed={!!editor?.isActive("underline")}
                     onClick={() =>
                       editor?.chain().focus().toggleUnderline().run()
                     }
@@ -3011,6 +2966,9 @@ export default function TaskDetails() {
                     <Underline className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <button
+                    type="button"
+                    aria-label="Link"
+                    aria-pressed={!!editor?.isActive("link")}
                     onClick={setLink}
                     className={`p-2 hover:bg-muted rounded ${editor?.isActive("link") ? "bg-muted" : ""}`}>
                     <Link2 className="h-4 w-4 text-muted-foreground" />
@@ -3217,12 +3175,19 @@ export default function TaskDetails() {
                   </div> */}
                   <div className="flex items-center gap-3">
                     {displayTask.type === "VO" ? (
-                      canApprove && displayTask.status !== "Approved" && (
-                        <Button className="font-normal" onClick={handleVOApproveClick}>
-                          {(displayTask.isWithinMandate || displayTask.status === "Recommended")
-                            ? "Approve & Sign"
-                            : "Recommend for Approval"}
-                        </Button>
+                      isVoRecommender(displayTask, user?.id) ? (
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          You recommended this VO — awaiting approval by another authorised person.
+                        </span>
+                      ) : (
+                        canApprove && displayTask.status !== "Approved" && (
+                          <Button className="font-normal" onClick={handleVOApproveClick}>
+                            {(displayTask.isWithinMandate || displayTask.status === "Recommended")
+                              ? "Approve & Sign"
+                              : "Recommend for Approval"}
+                          </Button>
+                        )
                       )
                     ) : (
                       // Werner spec rev H — legacy 'Close' button hidden by

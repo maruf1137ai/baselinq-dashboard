@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildUncertifiedVariationQueue } from "@/lib/homeSignals";
+import { toVariationRecord } from "@/lib/homeIndicators";
 
 const NOW = new Date("2026-10-26T09:00:00Z");
 const SIGNED = "2026-09-14T09:00:00Z"; // 42 days before NOW
@@ -101,5 +102,69 @@ describe("buildUncertifiedVariationQueue", () => {
   it("is gated on finance.view", () => {
     const [row] = buildUncertifiedVariationQueue([vo()], {}, NOW);
     expect(row.requires).toContain("finance.view");
+  });
+
+  it("measures what is left EXCLUDING VAT", () => {
+    /*
+      QA BUG-04: a certificate adds VAT itself, so a VO is certified at its
+      ex-VAT value. A VO of 100,000 + VAT certified at 100,000 is done — it is
+      not "15,000 still to certify".
+    */
+    const v = vo({ grandTotal: 115000, certifiableValue: 100000 });
+    expect(buildUncertifiedVariationQueue([v], { "VO-014": 100000 }, NOW)).toEqual([]);
+    const [row] = buildUncertifiedVariationQueue([v], {}, NOW);
+    expect(row.amount).toBe(100000);
+  });
+
+  it("links to the variation by its reference", () => {
+    const [row] = buildUncertifiedVariationQueue([vo()], {}, NOW);
+    expect(row.href).toContain("vo=VO-014");
+  });
+});
+
+describe("the real API shape, through toVariationRecord (QA BUG-14)", () => {
+  /*
+    The alert never fired. Home fed it the `tasks/tasks/?taskType=VO` rows,
+    which nest the variation under `.task` — so `voNumber` and `signedAt` were
+    never at the top level the builder reads, and every row was filtered out.
+    Home now passes the merged variation records; this pins that adapter.
+  */
+  const wrapper = {
+    taskId: 345,
+    status: "done", // the KANBAN status
+    task: {
+      _id: "88",
+      voNumber: "VO-073",
+      status: "Approved",
+      signedAt: SIGNED,
+      grandTotal: 57500,
+      subTotal: 50000,
+      certifiableValue: 50000,
+    },
+  };
+
+  it("raises the row for a signed, uncertified VO from the wrapper shape", () => {
+    const rec = toVariationRecord(wrapper);
+    const rows = buildUncertifiedVariationQueue(
+      [
+        {
+          id: rec.id,
+          voNumber: rec.ref,
+          status: rec.status ?? undefined,
+          signedAt: rec.signedAt,
+          grandTotal: rec.value,
+          certifiableValue: rec.certifiable,
+        },
+      ],
+      {},
+      NOW,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].headline).toMatch(/VO-073 was signed and has never been certified/);
+    expect(rows[0].amount).toBe(50000);
+  });
+
+  it("the raw wrapper on its own is NOT enough — which is why Home adapts it", () => {
+    expect(buildUncertifiedVariationQueue([wrapper as any], {}, NOW)).toEqual([]);
   });
 });

@@ -30,6 +30,8 @@ vi.mock("@/hooks/usePermissions", () => ({
 }));
 vi.mock("@/hooks/usePermission", () => ({
   usePermission: (code: string) => mockUsePermission(code),
+  // Baselinq staff are covered in financeStaff.test.tsx.
+  useIsPlatformStaff: () => false,
 }));
 vi.mock("@/hooks/useFetch", () => ({
   default: (...args: unknown[]) => mockUseFetch(...args),

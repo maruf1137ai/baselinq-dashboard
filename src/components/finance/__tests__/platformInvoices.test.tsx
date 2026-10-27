@@ -13,7 +13,7 @@
  * screen and recomputing it by hand.
  */
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -141,6 +141,27 @@ describe("platform invoices", () => {
   it("renders the invoice with its number and total", async () => {
     draw();
     expect(await screen.findByText("BLQ-00045-0001")).toBeInTheDocument();
+  });
+
+  it("shows a credit line with its minus sign, so the lines sum to the total (QA BUG-21)", async () => {
+    // Opening an invoice fetches it WITH its lines — the list omits them.
+    const { fetchData } = await import("@/lib/Api");
+    (fetchData as any).mockResolvedValueOnce(INVOICE_WITH_CREDIT);
+    draw();
+    fireEvent.click(await screen.findByText("BLQ-00045-0001"));
+    await screen.findByText("Reversal of platform fee on payment certificate PC-007");
+
+    const lineText = (description: string) => {
+      const row = screen.getByText(description).closest(".justify-between");
+      return (row?.textContent ?? "").replace(/ /g, " ");
+    };
+    const credit = lineText("Reversal of platform fee on payment certificate PC-007");
+    const debit = lineText("Platform fee at 1.000% on payment certificate PC-007");
+
+    expect(credit).toContain("R -1 150,00");
+    expect(credit).toContain("R -100 000,00 × 1.000%");
+    expect(debit).toContain("R 1 150,00");
+    expect(debit).not.toContain("R -");
   });
 
   it("does not present an outage as an empty list", () => {

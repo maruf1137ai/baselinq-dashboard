@@ -466,18 +466,28 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * anywhere noticing. The operator was shown a zero and told it came from
    * history, which is worse than showing nothing.
    *
-   * It then summed *every* prior certificate regardless of status, so a draft
-   * that was never issued, or one that was rejected, ate the remainder and the
-   * clamp below forced the entry to zero. `sumCertifiedByVo` counts only the
-   * certificates that took effect — see `@/lib/pcHistory`.
+   * It then summed *every* prior certificate regardless of status, so one that
+   * was rejected ate the remainder and the clamp below forced the entry to
+   * zero. `sumCertifiedByVo` counts the certificates the server counts —
+   * drafts included, rejected and cancelled not — see `@/lib/pcHistory`.
+   *
+   * The certificate being edited is left out, as the server leaves it out
+   * (`vo_certified_elsewhere(exclude_pc_id=…)`): its own lines are what is
+   * being changed, not something certified elsewhere.
    */
   const { data: priorPCResponse } = useFetch<{ results: any[] }>(
     isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
     { enabled: !!(isOpen && projectId) }
   );
+  const editingId = editEntry?.id;
   const certifiedByVo = useMemo<Record<string, number>>(
-    () => sumCertifiedByVo(priorPCResponse?.results),
-    [priorPCResponse]
+    () =>
+      sumCertifiedByVo(
+        (priorPCResponse?.results || []).filter(
+          (pc: any) => editingId == null || String(pc?.id) !== String(editingId)
+        )
+      ),
+    [priorPCResponse, editingId]
   );
 
   const approvedVOs = useMemo<VOLineItem[]>(() => {
@@ -497,7 +507,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       .map((item: any) => {
         const voNumber =
           item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`;
-        const approvedValue = Number(item.task?.grandTotal) || 0;
+        // EXCLUDING VAT. This certificate adds VAT itself (line 13.0), so the
+        // VO's grandTotal — which already carries its own VAT — taxed the same
+        // rand twice and over-certified by the VAT (QA BUG-04). The server
+        // computes the figure (VariationOrder.approved_value_excluding_vat)
+        // and checks against the same one; subTotal is the fallback for an
+        // older API.
+        const approvedValue =
+          Number(item.task?.certifiableValue ?? item.task?.subTotal) || 0;
         const previouslyCertified = certifiedByVo[voNumber] || 0;
         return {
           voNumber,
@@ -614,6 +631,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   const { data: feeConfig } = useFetch<{
     configured: boolean;
     enabled: boolean;
+    feeBase?: "pc_only" | "vo_only" | "both";
     feeRatePct: number;
     vatRatePct: number;
     billingContactName: string;
@@ -766,25 +784,32 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   /**
    * What this certificate will cost, on the same base the server uses.
    *
-   * `billing/fee_base.py` charges the certificate's value EXCLUDING VAT, less
-   * the value of variations that already attracted fee at approval — so a
-   * rand of variation work is charged once. This mirrors that: `calc.subtotal`
-   * is the ex-VAT figure, and the included VO amounts are deducted.
+   * `billing/fee_base.py::base_for_payment_certificate` charges the
+   * certificate's value EXCLUDING VAT, and what it deducts depends on the
+   * project's fee base:
+   *   - `vo_only`: certificates never accrue, so there is no fee here;
+   *   - `pc_only`: variations never accrued at approval, so nothing is
+   *     deducted — the VO work is charged here, once;
+   *   - `both`: variations were charged at approval, so the included VO
+   *     amounts are deducted and a rand of variation work is charged once.
+   * `calc.subtotal` is the ex-VAT figure.
    *
-   * It is an ESTIMATE and the screen does not pretend otherwise: the server
-   * caps the deduction at what each variation was actually charged on, which
-   * this cannot know without asking. It is right in the ordinary case and
-   * never understates, which is the direction that matters for disclosure.
+   * It is an ESTIMATE and the screen does not pretend otherwise: under `both`
+   * the server caps the deduction at what each variation was actually charged
+   * on, which this cannot know without asking — so the real fee can be HIGHER
+   * than shown when a variation was charged on less than is certified here.
    */
   const platformFee = useMemo(() => {
     const rate = Number(feeConfig?.feeRatePct ?? 0);
     const vatRate = Number(feeConfig?.vatRatePct ?? 0);
-    if (!feeConfig?.configured || !feeConfig.enabled || rate <= 0) {
+    const feeBase = feeConfig?.feeBase ?? "both";
+    if (!feeConfig?.configured || !feeConfig.enabled || rate <= 0 || feeBase === "vo_only") {
       return { base: 0, fee: 0, vat: 0, total: 0 };
     }
-    const voAlreadyCharged = voItems
-      .filter((v) => v.included)
-      .reduce((sum, v) => sum + v.thisPeriod, 0);
+    const voAlreadyCharged =
+      feeBase === "both"
+        ? voItems.filter((v) => v.included).reduce((sum, v) => sum + v.thisPeriod, 0)
+        : 0;
     const base = Math.max(calc.subtotal - voAlreadyCharged, 0);
     const fee = base * (rate / 100);
     const vat = fee * (vatRate / 100);
