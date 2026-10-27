@@ -1954,7 +1954,14 @@ export interface VariationLike {
    * are read so this function does not depend on which route supplied the row.
    */
   grandTotal?: number | null;
-  task?: { grandTotal?: number } | null;
+  task?: { grandTotal?: number; certifiableValue?: number | null; subTotal?: number | null } | null;
+  /**
+   * What a payment certificate may certify — the value EXCLUDING VAT
+   * (`VariationOrder.approved_value_excluding_vat`). A certificate adds VAT
+   * itself, so "still to certify" is measured against this, not grandTotal.
+   */
+  certifiableValue?: number | null;
+  subTotal?: number | null;
   /**
    * `VariationOrder.signed_at` — set only by sign-and-issue
    * (`tasks/views_signing.py`), never by a generic status PATCH. A VO whose
@@ -1965,6 +1972,86 @@ export interface VariationLike {
    * disagrees with the Cost Ledger showing the same project.
    */
   signedAt?: string | null;
+  /** `VariationOrder.vo_number` — the reference a QS knows it by. */
+  voNumber?: string | null;
+  /** Row id, so the queue row can link to the variation itself. */
+  id?: number | string | null;
+}
+
+/**
+ * Variations approved and signed, and never certified.
+ *
+ * ── Why this is a queue row and not a report ────────────────────────────
+ *
+ * A variation becomes money the contractor can be paid only when somebody
+ * ticks it into a payment certificate. Until this, that was a thing a person
+ * had to REMEMBER: the drawer opened every approved variation excluded and at
+ * zero, nothing anywhere said "VO-014 was signed six weeks ago and has never
+ * appeared on a certificate", and the work simply sat unpaid.
+ *
+ * The certificate drawer now defaults every uncertified variation in, which
+ * fixes the common case. This catches the rest — a variation signed between
+ * certificates, or unticked once and then forgotten.
+ *
+ * `money`, not `forfeiture`: nothing is lost by delay, the contractor is
+ * simply not being paid for work already instructed and signed for. That
+ * ranks it below a notice deadline and above ordinary paperwork, which is
+ * where it belongs.
+ *
+ * Deliberately NOT a JBCC clock. No contract period is being counted here and
+ * none is claimed — `daysWaiting` since signature is a management fact, not a
+ * contractual one, so the row carries no `clock` and no `countdownLabel`.
+ */
+export function buildUncertifiedVariationQueue(
+  variations: VariationLike[],
+  certifiedByVo: Record<string, number>,
+  now: Date = new Date(),
+): QueueItem[] {
+  return variations
+    .filter((v) => {
+      // Signed, not merely status-flipped — the same gate billing and the
+      // cost ledger both apply before they will count a variation at all.
+      if (!v.signedAt) return false;
+      const status = String(v.status || "").toLowerCase();
+      if (!["approved", "closed"].includes(status)) return false;
+      const ref = v.voNumber || "";
+      if (!ref) return false;
+      const value = certifiableValue(v);
+      if (value <= 0) return false;
+      return (certifiedByVo[ref] ?? 0) < value;
+    })
+    .map((v) => {
+      const ref = v.voNumber as string;
+      const value = certifiableValue(v);
+      const certified = certifiedByVo[ref] ?? 0;
+      const outstanding = value - certified;
+      const waited = daysWaiting(v.signedAt, now);
+      return {
+        key: `vo-uncertified:${ref}`,
+        kind: "variation" as const,
+        headline:
+          certified > 0
+            ? `${ref} is part-certified — ${formatZAR(outstanding)} still to certify`
+            : `${ref} was signed and has never been certified`,
+        detail:
+          waited !== null
+            ? `Signed ${waited} day${waited === 1 ? "" : "s"} ago · ${formatZAR(value)} approved`
+            : `${formatZAR(value)} approved`,
+        consequence: "money" as const,
+        pressure: "none" as const,
+        daysRemaining: null,
+        clock: null,
+        date: null,
+        overdue: false,
+        // By reference: the Variation Orders tab matches `?vo=` against the VO
+        // number or the task id, and a row's `id` may be either record's pk.
+        href: ROUTE.variation(ref),
+        action: "Certify it",
+        waitingSince: v.signedAt ?? null,
+        amount: outstanding,
+        requires: ["finance.view"],
+      };
+    });
 }
 
 const APPROVED_VO = new Set(["done", "approved", "completed"]);
@@ -1972,6 +2059,21 @@ const APPROVED_VO = new Set(["done", "approved", "completed"]);
 /** The value on a variation, whichever route it arrived by. */
 export function variationValue(v: VariationLike): number {
   return v.task?.grandTotal ?? v.grandTotal ?? 0;
+}
+
+/**
+ * What may still be certified against a variation: its value EXCLUDING VAT,
+ * as the server computes it. Falls back to the ex-VAT subtotal, then to the
+ * gross figure for a payload from before the server sent either.
+ */
+export function certifiableValue(v: VariationLike): number {
+  return (
+    v.certifiableValue ??
+    v.task?.certifiableValue ??
+    v.subTotal ??
+    v.task?.subTotal ??
+    variationValue(v)
+  );
 }
 
 /**

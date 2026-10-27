@@ -18,9 +18,18 @@ describe("certificateConsumesRemainder", () => {
     }
   });
 
-  it("does not let a draft or a rejected certificate eat the remainder", () => {
-    for (const s of ["draft", "Draft", "rejected", "REJECTED", "cancelled", "void"]) {
+  it("does not let a rejected or cancelled certificate eat the remainder", () => {
+    for (const s of ["rejected", "REJECTED", "cancelled", "void"]) {
       expect(certificateConsumesRemainder({ approvalStatus: s })).toBe(false);
+    }
+  });
+
+  it("counts a draft, as the server's over-certification check does", () => {
+    // tasks/pc_integrity.py::vo_certified_elsewhere excludes only rejected and
+    // cancelled certificates. Two drafts must not each claim the whole VO.
+    for (const s of ["draft", "Draft"]) {
+      expect(certificateConsumesRemainder({ approvalStatus: s })).toBe(true);
+      expect(certificateConsumesRemainder({ workflowState: s })).toBe(true);
     }
   });
 
@@ -40,15 +49,30 @@ describe("certificateConsumesRemainder", () => {
 });
 
 describe("sumCertifiedByVo", () => {
-  it("sums only the certificates that took effect", () => {
+  it("sums the certificates the server counts — drafts in, rejected out", () => {
     const totals = sumCertifiedByVo([
       cert("approved", [{ voNumber: "VO-001", thisPeriod: 100 }]),
       cert("pending", [{ voNumber: "VO-001", thisPeriod: 50 }]),
-      // Neither of these was ever issued.
       cert("draft", [{ voNumber: "VO-001", thisPeriod: 1000 }]),
+      // Rejected: never certified anything.
       cert("rejected", [{ voNumber: "VO-001", thisPeriod: 1000 }]),
     ]);
-    expect(totals["VO-001"]).toBe(150);
+    expect(totals["VO-001"]).toBe(1150);
+  });
+
+  it("skips a line that was unticked on its certificate", () => {
+    const totals = sumCertifiedByVo([
+      {
+        approvalStatus: "approved",
+        voItems: [
+          { voNumber: "VO-004", thisPeriod: 500, included: false },
+          { voNumber: "VO-004", thisPeriod: 70, included: true },
+          // Absent means included — older rows predate the checkbox.
+          { voNumber: "VO-004", thisPeriod: 30 },
+        ],
+      },
+    ]);
+    expect(totals["VO-004"]).toBe(100);
   });
 
   it("reads the snake_case shape as well as the camelCase one", () => {

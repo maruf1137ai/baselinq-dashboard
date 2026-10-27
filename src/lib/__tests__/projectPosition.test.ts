@@ -63,7 +63,12 @@ describe("financialOverview", () => {
     // taking it off again removes the same R410 000 twice.
     expect(row("balance").value).toBe("R\u00a03\u00a0180\u00a0000,00");
     expect(row("balance").label).toBe("Balance still to certify");
-    expect(row("balance").formula).toBe("revised sum − certified to date");
+    // The balance also takes off Cost Ledger debits not linked to a VO (none
+    // in this fixture, so the figure above is unchanged); the formula names
+    // that term.
+    expect(row("balance").formula).toBe(
+      "revised sum minus certified to date minus unlinked Cost Ledger debits",
+    );
   });
 
   it("is the SAME figure the shared derivation returns — no local rebuild", () => {

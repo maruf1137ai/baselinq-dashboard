@@ -41,6 +41,7 @@ import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 
 
@@ -93,6 +94,12 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
+  // Baselinq staff reach any project for its platform bill without being on
+  // the team (QA BUG-06; the server's billing/views._project_or_none), so a
+  // project missing from their own list is not a stale selection to clear.
+  const { data: effectivePerms, isLoading: effectivePermsLoading } =
+    useEffectivePermissions(selectedProjectId ? Number(selectedProjectId) : null);
+  const isPlatformStaff = !!effectivePerms?.isPlatformStaff;
   // All three sidebar badges come from ONE request, shared with the bell in
   // DashboardHeader (see useUnreadSummary). They were previously three
   // separate polls — channels/?projectId, and two notifications/unread-count
@@ -154,6 +161,10 @@ export function DashboardSidebar() {
     const isTrulyEmpty = !isLoading && user && projectsData && projects.length === 0;
     // console.log(!isLoading, user, projectsData, projects.length === 0)
 
+    // Decide only once we know whether this is Baselinq staff — clearing
+    // first would drop the project before the answer arrived.
+    if (selectedProjectId && (effectivePermsLoading || isPlatformStaff)) return;
+
     if (isTrulyEmpty) {
       if (selectedProjectId) {
         // Clear stale localStorage when no projects exist
@@ -171,7 +182,7 @@ export function DashboardSidebar() {
       setSelectedProjectId("");
       clearUserRole();
     }
-  }, [projects, isLoading, selectedProjectId, projectsData, user?.id]);
+  }, [projects, isLoading, selectedProjectId, projectsData, user?.id, effectivePermsLoading, isPlatformStaff]);
 
   // Fetch user role when project or user changes
   useEffect(() => {

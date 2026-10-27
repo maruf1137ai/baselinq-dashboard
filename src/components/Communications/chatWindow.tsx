@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2, AlertCircle, RotateCw, Eye } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
@@ -108,6 +109,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const userStr = localStorage.getItem("user");
   const currentUser = userStr ? JSON.parse(userStr) : null;
   const projectId = localStorage.getItem("selectedProjectId");
+  const queryClient = useQueryClient();
 
   // Fetch project members for @mention
   useEffect(() => {
@@ -364,6 +366,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     lastMarkedMessageIdRef.current = latestMessageId;
     try {
       await postData({ url: `channels/${channel.id}/mark_read/`, data: {} });
+      // The channel list's own unread counts — Communications.tsx used to do
+      // this after a duplicate mark_read of its own (QA BUG-23).
+      if (projectId) queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
       // Refreshes the bell and every sidebar badge off one cache entry —
       // see hooks/useUnreadSummary.ts.
       window.dispatchEvent(new Event("notifications-marked-read"));
@@ -585,7 +590,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
       // object URLs with them.
       Object.keys(tempObjectUrlsRef.current).forEach(revokeTempUrls);
     };
-  }, [channel]);
+    // Keyed on the channel's ID, not the object: the parent sets the list's
+    // row first and then the fetched detail for the SAME channel, and keying
+    // on the object restarted the poll, the socket and the mark-read for a
+    // conversation that never changed (QA BUG-23).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel?.id]);
 
   // Auto-scroll to bottom only when user is near the bottom
   const scrollToBottom = () => {

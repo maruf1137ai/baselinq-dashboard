@@ -141,6 +141,18 @@ const SECTIONS: { label: string; note: string; kinds: QueueKind[] }[] = [
     note: "Rows that reached you because you can perform the act — certifying, posting or paying a certificate, answering an invitation, approving a meeting action, or chasing a task that escalated to you.",
     kinds: ["certificate", "rejected", "rsvp", "meeting-action", "task-escalated"],
   },
+  {
+    /*
+      Work instructed, signed for, and never put on a certificate — so the
+      contractor has not been paid for it. Its own section rather than folded
+      into "Yours to act on", because it is not a document waiting on your
+      signature: it is money sitting still, and the act it asks for happens on
+      the next certificate rather than on the row itself.
+    */
+    label: "Signed, not yet certified",
+    note: "A variation becomes payable only when it is certified. These were approved and signed and have never appeared on a payment certificate.",
+    kinds: ["variation"],
+  },
   /*
     ── "Assigned to you" WAS HERE, AND IT IS NOW ITS OWN PANEL ─────────────
 

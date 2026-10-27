@@ -195,6 +195,8 @@ export function WernerTaskActions({
   // IC → Claim mitigation gate (Werner notes line 71). Contractor must
   // describe what they did to resolve the issue before escalating.
   const [mitigationOpen, setMitigationOpen] = useState(false);
+  // The escalation awaiting confirmation (its target type), or null.
+  const [escalateConfirm, setEscalateConfirm] = useState<string | null>(null);
   const [mitigationNotes, setMitigationNotes] = useState("");
   const [escalatingClaim, setEscalatingClaim] = useState(false);
 
@@ -347,14 +349,16 @@ export function WernerTaskActions({
   // ── Escalation handler ──────────────────────────────────────────────
   // IC → Claim goes through a mitigation-notes modal first (Werner spec
   // requires evidence of mitigation efforts before formal escalation).
-  // Other escalations (RFI → SI, SI → VO) fire immediately.
+  // Every other escalation (RFI → SI, SI → VO) asks for confirmation: it
+  // creates a new formal document and cannot be undone from here, and it
+  // used to fire on the first click of a menu item (QA BUG-18).
   const handleEscalate = async (toType: string) => {
     if (taskType === "IC" && toType === "claim") {
       setMitigationNotes("");
       setMitigationOpen(true);
       return;
     }
-    void runEscalate(toType, {});
+    setEscalateConfirm(toType);
   };
 
   const runEscalate = async (toType: string, payload: Record<string, any>) => {
@@ -371,6 +375,7 @@ export function WernerTaskActions({
       });
       toast.success(`Escalated to ${res?.display || toType.toUpperCase()}.`);
       setMitigationOpen(false);
+      setEscalateConfirm(null);
       await onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to escalate.");
@@ -439,6 +444,9 @@ export function WernerTaskActions({
           pin: signMethod === "pin" ? pin : undefined,
           confirmed: signMethod === "click-confirm" ? true : undefined,
         },
+        // A refused signature (wrong PIN, lock-out) is not an expired
+        // session — never refresh the token and replay it.
+        config: { skipAuthRefresh: true },
       });
       toast.success("Signed and issued.");
       setSignOpen(false);
@@ -780,6 +788,34 @@ export function WernerTaskActions({
               onClick={handleSubmitMitigation}
             >
               {escalatingClaim ? "Escalating…" : "Escalate to Claim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalation confirm (RFI → SI, SI → VO) — same Dialog shell. */}
+      <Dialog
+        open={escalateConfirm !== null}
+        onOpenChange={(o) => { if (!o && !escalatingClaim) setEscalateConfirm(null); }}
+      >
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Escalate to {escalation?.label ?? escalateConfirm?.toUpperCase()}?</DialogTitle>
+            <DialogDescription>
+              This raises a new {escalation?.label ?? escalateConfirm?.toUpperCase()} linked to this{" "}
+              {taskType}, and records the escalation on both. It cannot be undone from here.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEscalateConfirm(null)} disabled={escalatingClaim}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/40 disabled:cursor-not-allowed"
+              disabled={escalatingClaim}
+              onClick={() => { if (escalateConfirm) void runEscalate(escalateConfirm, {}); }}
+            >
+              {escalatingClaim ? "Escalating…" : `Escalate to ${escalation?.label ?? escalateConfirm?.toUpperCase()}`}
             </Button>
           </DialogFooter>
         </DialogContent>
