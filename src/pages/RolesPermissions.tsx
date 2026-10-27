@@ -437,10 +437,12 @@ export default function RolesPermissions() {
       );
     } catch (e: any) {
       // The server has guards this page cannot fully predict — the lockout
-      // rule, unknown codes. Show what it said rather than a generic failure.
+      // rule, unknown codes, granting to your own role. Show what it said
+      // rather than a generic failure. putData rethrows the server's message
+      // as a plain Error (no .response), so read .message too.
       toast.error("Could not save", {
         description:
-          e?.response?.data?.detail ?? "The server rejected the change. Nothing was saved.",
+          e?.response?.data?.detail ?? e?.message ?? "The server rejected the change. Nothing was saved.",
       });
     }
   };
@@ -456,7 +458,7 @@ export default function RolesPermissions() {
     } catch (e: any) {
       toast.error("Could not reset", {
         description:
-          e?.response?.data?.detail ?? "Nothing was changed. Try again in a moment.",
+          e?.response?.data?.detail ?? e?.message ?? "Nothing was changed. Try again in a moment.",
       });
     } finally {
       setConfirmReset(false);

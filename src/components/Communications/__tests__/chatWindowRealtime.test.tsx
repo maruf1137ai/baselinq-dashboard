@@ -24,6 +24,7 @@
  */
 import React from "react";
 import { render, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/Api", () => ({
@@ -76,7 +77,13 @@ const messageFetches = () =>
   ).length;
 
 function renderWindow() {
-  return render(<ChatWindow channel={{ id: 7, name: "site" }} />);
+  // ChatWindow refreshes the channel list's unread counts after marking the
+  // conversation read, so it needs a QueryClient (QA BUG-23).
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ChatWindow channel={{ id: 7, name: "site" }} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("chat window refetch moments", () => {
@@ -95,6 +102,31 @@ describe("chat window refetch moments", () => {
   it("fetches once when the channel opens", async () => {
     renderWindow();
     await waitFor(() => expect(messageFetches()).toBeGreaterThan(0));
+  });
+
+  it("does not restart for a new object describing the SAME channel (QA BUG-23)", async () => {
+    // Communications sets the list's row, then the fetched detail, for one
+    // click — two objects, one channel. Keying the effect on the object
+    // re-ran the fetch, the socket and the mark-read for nothing.
+    const client = new QueryClient();
+    const view = render(
+      <QueryClientProvider client={client}>
+        <ChatWindow channel={{ id: 7, name: "site" }} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(messageFetches()).toBeGreaterThan(0));
+    const fetchesBefore = messageFetches();
+    const socketBefore = FakeSocket.last;
+
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <ChatWindow channel={{ id: 7, name: "site", members: [{ id: 1 }] }} />
+      </QueryClientProvider>,
+    );
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(messageFetches()).toBe(fetchesBefore);
+    expect(FakeSocket.last).toBe(socketBefore);
   });
 
   it("opens a socket for the channel it is showing", async () => {

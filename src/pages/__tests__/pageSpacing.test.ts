@@ -91,3 +91,27 @@ describe("the app header height", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe("one toaster", () => {
+  it("renders a single sonner Toaster in the app shell (QA BUG-17)", () => {
+    // The same component was imported under two names and rendered twice,
+    // so every toast in the app appeared twice.
+    const app = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
+    const rendered = app.match(/<(Sonner|Toaster)\b/g) ?? [];
+    expect(rendered).toHaveLength(1);
+  });
+});
+
+describe("no page-wide horizontal overflow (QA BUG-25)", () => {
+  it("the Finance tab strip scrolls inside itself", () => {
+    const src = readFileSync(join(process.cwd(), "src/pages/finance.tsx"), "utf8");
+    expect(src).toMatch(/<header className="[^"]*overflow-x-auto[^"]*">/);
+    expect(src).toMatch(/className="[^"]*min-w-max[^"]*" role="tablist"/);
+  });
+
+  it("the Home project strip may wrap instead of refusing to shrink", () => {
+    const src = readFileSync(join(process.cwd(), "src/components/home/blocks.tsx"), "utf8");
+    expect(src).not.toMatch(/flex items-center gap-3 flex-wrap shrink-0/);
+    expect(src).toMatch(/flex items-center gap-3 flex-wrap min-w-0 max-w-full/);
+  });
+});
