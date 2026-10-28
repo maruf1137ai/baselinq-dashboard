@@ -48,7 +48,6 @@ const LoginPage = () => {
           const data = (err as any)?.response?.data;
           const errorMessage =
             data?.non_field_errors?.[0] ||
-            data?.error ||
             data?.detail ||
             data?.message ||
             "Unable to sign in. Please check your credentials and try again.";

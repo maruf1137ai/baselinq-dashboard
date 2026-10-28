@@ -1092,11 +1092,7 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
         </div>
       </div>
 
-      {/* min-w-0 / max-w-full, not shrink-0: with the budget strip fully
-          populated this group is wider than the card at desktop widths, and
-          shrink-0 pushed it past the edge instead of letting it wrap
-          (QA BUG-25). */}
-      <div className="flex items-center gap-3 flex-wrap min-w-0 max-w-full">
+      <div className="flex items-center gap-3 flex-wrap shrink-0">
         {days !== null && (
           // The old summary's own three-step scale, restored verbatim: past
           // the date is red, inside a month is orange, otherwise green. This

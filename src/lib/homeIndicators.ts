@@ -72,12 +72,6 @@ export interface VariationRecord {
    * variation as approved — see that file's `VariationLike.signedAt` for why.
    */
   signedAt?: string | null;
-  /**
-   * What a payment certificate may still certify against it — EXCLUDING VAT
-   * (`certifiableValue` from the API). `value` stays the gross figure the
-   * money strip has always summed.
-   */
-  certifiable?: number | null;
 }
 
 /**
@@ -166,28 +160,19 @@ export function summariseVariations(variations: VariationRecord[]): VariationPos
 
 /** Normalise either route's payload into a `VariationRecord`. */
 export function toVariationRecord(raw: any): VariationRecord {
-  // Two shapes, and `task` means something different in each:
-  //   - the VariationOrder route IS the variation (`voNumber` at the top
-  //     level) and ALSO carries its wrapping assignment Task under `task` —
-  //     whose `status` is the kanban todo / in review / done;
-  //   - the assignment task route is a Task, with the variation nested under
-  //     `task` and the TASK's status at the top level.
-  // So "the variation" is the top level when it carries a VO number, and
-  // `task` otherwise. Preferring `task.status` unconditionally read every
-  // VariationOrder-route record as "done" — never "Approved" — which is why the
-  // signed-but-uncertified alert never fired (QA BUG-14).
-  const isVariation = raw?.voNumber != null || raw?.vo_number != null;
-  const vo = isVariation ? raw : raw?.task ?? null;
+  // The VariationOrder route puts everything at the top level. The assignment
+  // task route nests the variation under `task` and puts the TASK's status at
+  // the top level, so the variation's own status is preferred where present.
+  const nested = raw?.task ?? null;
   return {
     id: raw?._id ?? raw?.id ?? raw?.taskId,
-    ref: vo?.voNumber ?? vo?.vo_number ?? null,
-    status: vo?.status ?? raw?.status ?? null,
-    value: (isVariation ? raw?.grandTotal : variationValue({ task: vo })) || null,
-    dateInstructed: vo?.dateInstructed ?? null,
-    approvedAt: vo?.approvedAt ?? null,
-    updatedAt: vo?.updatedAt ?? raw?.updatedAt ?? null,
-    signedAt: vo?.signedAt ?? null,
-    certifiable: vo?.certifiableValue ?? vo?.subTotal ?? null,
+    ref: raw?.voNumber ?? nested?.voNumber ?? nested?.vo_number ?? null,
+    status: nested?.status ?? raw?.status ?? null,
+    value: variationValue({ grandTotal: raw?.grandTotal, task: nested }) || null,
+    dateInstructed: raw?.dateInstructed ?? nested?.dateInstructed ?? null,
+    approvedAt: raw?.approvedAt ?? nested?.approvedAt ?? null,
+    updatedAt: raw?.updatedAt ?? nested?.updatedAt ?? null,
+    signedAt: raw?.signedAt ?? nested?.signedAt ?? null,
   };
 }
 

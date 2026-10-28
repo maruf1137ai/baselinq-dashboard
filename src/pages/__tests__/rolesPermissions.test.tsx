@@ -143,9 +143,7 @@ vi.mock("@/components/DashboardLayout", () => ({
 }));
 
 vi.mock("@/hooks/usePermissions", () => ({
-  // The page is gated on roles.edit (canEditRolesPermissions) now, not the
-  // general settings flag; without it every switch is read-only.
-  usePermissions: () => ({ canEditSettings: true, canEditRolesPermissions: true }),
+  usePermissions: () => ({ canEditSettings: true }),
 }));
 
 vi.mock("@/hooks/useSelectedProject", () => ({
@@ -256,30 +254,24 @@ describe("Roles & Permissions", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openArea(user, /Finance/);
-    await screen.findByRole("heading", { level: 3, name: "Cost Ledger" });
-
     const rail = await screen.findByRole("navigation", { name: /permission areas/i });
-    await user.click(within(rail).getByRole("button", { name: /Tasks/ }));
+    await user.click(within(rail).getByRole("button", { name: /Project/ }));
 
-    expect(await screen.findByRole("heading", { level: 3, name: "RFI" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Creating & Editing" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3, name: "Cost Ledger" })).toBeNull();
   });
 
-  it("does not offer a permission that is not project-scoped", async () => {
-    // project.create applies account-wide and can never be overridden for one
-    // project, so this page ("changes apply to this project only") leaves it
-    // out; it is edited on Settings > Permissions. A disabled row here read as
-    // broken rather than informative.
+  it("cannot toggle a permission that is not project-scoped", async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByRole("navigation", { name: /permission areas/i });
 
-    for (const area of [/Finance/, /Tasks/]) {
-      await openArea(user, area);
-      expect(screen.queryByRole("switch", { name: /Create a new project/i })).toBeNull();
-    }
-    expect(screen.queryByText("Create a new project")).toBeNull();
+    const rail = await screen.findByRole("navigation", { name: /permission areas/i });
+    await user.click(within(rail).getByRole("button", { name: /Project/ }));
+
+    const toggle = await screen.findByRole("switch", { name: /Create a new project/i });
+    expect(toggle).toBeDisabled();
   });
 });
 

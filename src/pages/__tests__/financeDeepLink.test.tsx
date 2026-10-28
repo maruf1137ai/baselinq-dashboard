@@ -30,15 +30,8 @@ vi.mock("@/hooks/usePermissions", () => ({
 }));
 vi.mock("@/hooks/usePermission", () => ({
   usePermission: (code: string) => mockUsePermission(code),
-  // Baselinq staff are covered in financeStaff.test.tsx.
-  useIsPlatformStaff: () => false,
 }));
 vi.mock("@/hooks/useFetch", () => ({
-  default: (...args: unknown[]) => mockUseFetch(...args),
-}));
-// The VO list now loads every page through useFetchAllPages — same return
-// shape as useFetch, so it reads the same double.
-vi.mock("@/hooks/useFetchAllPages", () => ({
   default: (...args: unknown[]) => mockUseFetch(...args),
 }));
 

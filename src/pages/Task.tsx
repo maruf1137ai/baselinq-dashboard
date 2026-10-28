@@ -718,12 +718,8 @@ export default function Task() {
     return () => window.removeEventListener("project-change", handleProjectChange);
   }, []);
 
-  // Build the three columns from the server's tasks. Also used to put a card
-  // back after a refused or failed drag: refetch() hands back the same data,
-  // so the effect below does not re-run and the card would stay where it was
-  // dropped.
-  const buildBoard = (resp: typeof taskResponse) => {
-    const serverTasks = resp?.tasks || [];
+  useEffect(() => {
+    const serverTasks = taskResponse?.tasks || [];
     if (serverTasks) {
       // Demo fallback data for realistic presentation
       const TASK_TYPES = ["CPI", "RFI", "SI", "VO", "DC", "RFI", "CPI", "SI", "VO", "RFI"];
@@ -794,19 +790,14 @@ export default function Task() {
       });
 
       // setTasks(transformedTasks)
-      return {
+      setTasks({
         todo: transformedTasks.filter((t: any) => !t.status || t.status === 'todo' || t.status === 'Todo' || t.status === 'Open' || t.status === 'Draft'),
 
         inReview: transformedTasks.filter((t: any) => t.status === 'in review' || t.status === 'In Review' || t.status === 'inReview' || t.status === 'Pending' || t.status === 'Answered' || t.status === 'IN_REVIEW' || t.status === 'Recommended'),
 
         done: transformedTasks.filter((t: any) => t.status === 'done' || t.status === 'Done' || t.status === 'Closed'),
-      };
+      });
     }
-    return { todo: [], inReview: [], done: [] };
-  };
-
-  useEffect(() => {
-    setTasks(buildBoard(taskResponse));
   }, [taskResponse]);
 
   const sensors = useSensors(
@@ -904,21 +895,6 @@ export default function Task() {
       const entityStatus = getEntityStatusForColumn(overContainer, activeTask?.type || "");
       const taskStatusMap: Record<string, string> = { 'todo': 'todo', 'in review': 'in review', 'done': 'done' };
 
-      // A VO's own status only moves through pricing, Recommend and Approve &
-      // Sign on its page. The board's generic stages are not VO statuses, and
-      // dragging to Done used to close an unsigned VO — so for a VO the drag
-      // moves the card only, and Done is refused.
-      const isVO = String(activeTask?.type || "").toUpperCase() === "VO";
-      if (isVO && overContainer === 'done') {
-        toast.error("A variation order is completed by Approve & Sign on its page.");
-        setTasks(buildBoard(taskResponse));
-        setActiveId(null);
-        setActiveStartContainer(null);
-        return;
-      }
-      const payload: Record<string, string> = { taskStatus: taskStatusMap[newStatus] || newStatus };
-      if (!isVO) payload.status = entityStatus;
-
       try {
         await Promise.all([
           // updateTask({
@@ -927,7 +903,7 @@ export default function Task() {
           // }),
           updateTask({
             url: `tasks/tasks/${active.id}/update-entity/`,
-            data: payload,
+            data: { status: entityStatus, taskStatus: taskStatusMap[newStatus] || newStatus },
           }),
         ]);
         toast.success(`Task moved to ${getStatusDisplayName(newStatus) || newStatus}`);
@@ -938,20 +914,13 @@ export default function Task() {
         postData({
           url: `channels/by-task/${active.id}/messages/`,
           data: {
-            content: `Status changed to ${isVO ? getStatusDisplayName(newStatus) || newStatus : entityStatus} by ${userName}`,
+            content: `Status changed to ${entityStatus} by ${userName}`,
             is_urgent: false,
             message_type: 'status_change',
           },
         }).catch(() => { }); // silent — endpoint may not exist yet
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to update status");
-        // Put the card back where the server says it is — and stop here, so
-        // the reorder below does not move it again.
-        const fresh = await refetch();
-        setTasks(buildBoard(fresh?.data ?? taskResponse));
-        setActiveId(null);
-        setActiveStartContainer(null);
-        return;
+      } catch (error) {
+        toast.error("Failed to update status");
       }
     }
 

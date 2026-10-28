@@ -76,11 +76,7 @@ function relativeAge(iso: string | null): string {
 export const PrimaryContractCard = ({ projectId }: { projectId: string | number }) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Uploading a primary contract also designates it, and designating or
-  // un-designating the document every AI analysis anchors on is a manage
-  // action (document.manage) — the server enforces both.
-  const { canUploadDocument, canManageFolders } = usePermissions();
-  const canSetPrimary = canUploadDocument && canManageFolders;
+  const { canUploadDocument } = usePermissions();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -170,7 +166,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               if (f) handleFileSelected(f);
             }}
           />
-          {canSetPrimary && (
+          {canUploadDocument && (
             <Button
               variant="outline"
               size="sm"
@@ -227,7 +223,7 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
           }}
         />
         <div className="flex items-center gap-1 shrink-0">
-          {canSetPrimary && (
+          {canUploadDocument && (
             <Button
               variant="ghost"
               size="sm"
@@ -248,19 +244,17 @@ export const PrimaryContractCard = ({ projectId }: { projectId: string | number 
               )}
             </Button>
           )}
-          {canManageFolders && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (!confirm("Remove primary contract designation? AI analyses will continue but won't anchor against any specific document.")) return;
-                markRoleMutation.mutate({ docId: filled.id, role: "other" });
-              }}
-              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
-            >
-              Unset
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (!confirm("Remove primary contract designation? AI analyses will continue but won't anchor against any specific document.")) return;
+              markRoleMutation.mutate({ docId: filled.id, role: "other" });
+            }}
+            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Unset
+          </Button>
         </div>
       </div>
     </div>

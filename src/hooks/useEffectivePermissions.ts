@@ -6,18 +6,6 @@ export interface EffectivePermissions {
   projectId: number | null;
   roleCode: string | null;
   permissions: Record<string, boolean>;
-  /**
-   * True when the signed-in user is Baselinq staff.
-   *
-   * Platform-fee invoice actions (build / issue / settle / cancel) are gated
-   * server-side on `is_staff or is_superuser`, deliberately outside the
-   * permission matrix — every code in that matrix is granted to customer roles
-   * on their own projects, and issuing Baselinq's own invoice is not a
-   * customer act. Without this flag the client had no way to know, so it gated
-   * those controls on a project permission and showed customers an
-   * irreversible "Issue invoice" button that the server then refused.
-   */
-  isPlatformStaff?: boolean;
 }
 
 /**

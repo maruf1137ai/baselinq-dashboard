@@ -46,17 +46,13 @@ vi.mock("@/components/Compliance/ObligationModal", () => ({ default: () => null 
 
 import Compliance from "@/pages/Compliance";
 
-// Forty days ahead of whenever the suite runs — "on track". A fixed date here
-// (it was 2026-09-30) turned every obligation overdue once that day passed.
-const IN_FORTY_DAYS = new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
 const obligation = (id: string, title: string): ComplianceObligation => ({
   _id: id,
   title,
   documentId: "doc-1",
   documentReference: "JBCC PBA",
   documentName: "Principal Building Agreement",
-  dueDate: IN_FORTY_DAYS,
+  dueDate: "2026-09-30",
   responsibleRole: "Contractor",
   status: "Pending",
   isOverdue: false,

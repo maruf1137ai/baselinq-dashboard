@@ -466,28 +466,18 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * anywhere noticing. The operator was shown a zero and told it came from
    * history, which is worse than showing nothing.
    *
-   * It then summed *every* prior certificate regardless of status, so one that
-   * was rejected ate the remainder and the clamp below forced the entry to
-   * zero. `sumCertifiedByVo` counts the certificates the server counts —
-   * drafts included, rejected and cancelled not — see `@/lib/pcHistory`.
-   *
-   * The certificate being edited is left out, as the server leaves it out
-   * (`vo_certified_elsewhere(exclude_pc_id=…)`): its own lines are what is
-   * being changed, not something certified elsewhere.
+   * It then summed *every* prior certificate regardless of status, so a draft
+   * that was never issued, or one that was rejected, ate the remainder and the
+   * clamp below forced the entry to zero. `sumCertifiedByVo` counts only the
+   * certificates that took effect — see `@/lib/pcHistory`.
    */
   const { data: priorPCResponse } = useFetch<{ results: any[] }>(
     isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
     { enabled: !!(isOpen && projectId) }
   );
-  const editingId = editEntry?.id;
   const certifiedByVo = useMemo<Record<string, number>>(
-    () =>
-      sumCertifiedByVo(
-        (priorPCResponse?.results || []).filter(
-          (pc: any) => editingId == null || String(pc?.id) !== String(editingId)
-        )
-      ),
-    [priorPCResponse, editingId]
+    () => sumCertifiedByVo(priorPCResponse?.results),
+    [priorPCResponse]
   );
 
   const approvedVOs = useMemo<VOLineItem[]>(() => {
@@ -507,40 +497,15 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       .map((item: any) => {
         const voNumber =
           item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`;
-        // EXCLUDING VAT. This certificate adds VAT itself (line 13.0), so the
-        // VO's grandTotal — which already carries its own VAT — taxed the same
-        // rand twice and over-certified by the VAT (QA BUG-04). The server
-        // computes the figure (VariationOrder.approved_value_excluding_vat)
-        // and checks against the same one; subTotal is the fallback for an
-        // older API.
-        const approvedValue =
-          Number(item.task?.certifiableValue ?? item.task?.subTotal) || 0;
+        const approvedValue = Number(item.task?.grandTotal) || 0;
         const previouslyCertified = certifiedByVo[voNumber] || 0;
         return {
           voNumber,
           description: item.task?.title || "",
           approvedValue,
           previouslyCertified,
-          /*
-            ── Everything owed is on the table by default ──────────────────
-
-            These two used to be `0` and `false`, so every approved variation
-            opened the drawer excluded, at zero. A variation only becomes money
-            the contractor can actually be paid when somebody REMEMBERS to tick
-            it into a certificate, and nothing anywhere said "VO-014 was
-            approved six weeks ago and has never been certified". The work was
-            done, the variation was signed, and the money simply sat.
-
-            The default is now the uncertified balance, included. A quantity
-            surveyor who does not want to certify a variation this period
-            unticks it — which is a decision they make and can be asked about,
-            rather than an omission nobody can see.
-
-            `remainingValue` is floored at zero below, so a fully-certified
-            variation defaults to excluded and contributes nothing.
-          */
-          thisPeriod: Math.max(approvedValue - previouslyCertified, 0),
-          included: Math.max(approvedValue - previouslyCertified, 0) > 0,
+          thisPeriod: 0,
+          included: false,
           // What is left to certify. Surfaced so an operator can see at a
           // glance that a fully-certified variation has nothing remaining,
           // rather than re-certifying it because the drawer showed zero.
@@ -620,24 +585,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // ─── Auto-calculations ──────────────────────────────────────────────────────
-
-  /*
-    ── The project's billing terms, read so the fee can be disclosed ───────
-
-    `configured: false` is a first-class answer, not an error — a project with
-    no config accrues nothing, and the disclosure block below must stay silent
-    rather than advertise a fee that will never be charged.
-  */
-  const { data: feeConfig } = useFetch<{
-    configured: boolean;
-    enabled: boolean;
-    feeBase?: "pc_only" | "vo_only" | "both";
-    feeRatePct: number;
-    vatRatePct: number;
-    billingContactName: string;
-  }>(projectId ? `billing/projects/${projectId}/fee-config/` : "", {
-    enabled: !!projectId,
-  });
 
   const calc = useMemo(() => {
     const grossWorkValue = workItems.reduce((s, i) => s + i.thisPeriod, 0);
@@ -780,41 +727,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   };
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
-
-  /**
-   * What this certificate will cost, on the same base the server uses.
-   *
-   * `billing/fee_base.py::base_for_payment_certificate` charges the
-   * certificate's value EXCLUDING VAT, and what it deducts depends on the
-   * project's fee base:
-   *   - `vo_only`: certificates never accrue, so there is no fee here;
-   *   - `pc_only`: variations never accrued at approval, so nothing is
-   *     deducted — the VO work is charged here, once;
-   *   - `both`: variations were charged at approval, so the included VO
-   *     amounts are deducted and a rand of variation work is charged once.
-   * `calc.subtotal` is the ex-VAT figure.
-   *
-   * It is an ESTIMATE and the screen does not pretend otherwise: under `both`
-   * the server caps the deduction at what each variation was actually charged
-   * on, which this cannot know without asking — so the real fee can be HIGHER
-   * than shown when a variation was charged on less than is certified here.
-   */
-  const platformFee = useMemo(() => {
-    const rate = Number(feeConfig?.feeRatePct ?? 0);
-    const vatRate = Number(feeConfig?.vatRatePct ?? 0);
-    const feeBase = feeConfig?.feeBase ?? "both";
-    if (!feeConfig?.configured || !feeConfig.enabled || rate <= 0 || feeBase === "vo_only") {
-      return { base: 0, fee: 0, vat: 0, total: 0 };
-    }
-    const voAlreadyCharged =
-      feeBase === "both"
-        ? voItems.filter((v) => v.included).reduce((sum, v) => sum + v.thisPeriod, 0)
-        : 0;
-    const base = Math.max(calc.subtotal - voAlreadyCharged, 0);
-    const fee = base * (rate / 100);
-    const vat = fee * (vatRate / 100);
-    return { base, fee, vat, total: fee + vat };
-  }, [feeConfig, calc.subtotal, voItems]);
 
   /**
    * Awaits the create and only closes once the certificate exists.
@@ -1922,49 +1834,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     {ratesReady ? fmt(calc.amountDue) : "—"}
                   </span>
                 </div>
-
-                {/*
-                  ── What Baselinq charges, said BEFORE anyone signs ────────
-
-                  Posting this certificate accrues Baselinq's platform fee
-                  automatically. Until now nothing on this screen said so: a
-                  quantity surveyor certified R4.2m and silently created a
-                  R48,300 charge against whoever pays on this project, and the
-                  first anyone heard of it was an invoice.
-
-                  That is how a dispute starts — and in South Africa a debit
-                  order can be reversed, no questions asked, for sixty days.
-                  Sticker shock is a function of surprise, not of size: a payer
-                  who watched the number accumulate certificate by certificate
-                  has already absorbed it by month end.
-
-                  Shown only when the project actually has billing configured
-                  and switched on. A project that accrues nothing says nothing,
-                  rather than advertising a fee it will never charge.
-                */}
-                {feeConfig?.configured && feeConfig.enabled && ratesReady && (
-                  <div className="border-t border-border mt-3 pt-3">
-                    <SummaryLine
-                      label={`Baselinq platform fee @ ${feeConfig.feeRatePct}%`}
-                      value={platformFee.fee}
-                      indent
-                    />
-                    <SummaryLine
-                      label={`Plus: VAT @ ${feeConfig.vatRatePct}%`}
-                      value={platformFee.vat}
-                      indent
-                      addition
-                    />
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      {fmt(platformFee.total)} will be charged
-                      {feeConfig.billingContactName
-                        ? ` to ${feeConfig.billingContactName}`
-                        : ""}{" "}
-                      when this certificate is posted. It is not deducted from
-                      the contractor.
-                    </p>
-                  </div>
-                )}
 
                 {!ratesReady && (
                   <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">

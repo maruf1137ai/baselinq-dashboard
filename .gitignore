@@ -41,5 +41,3 @@ test 1
 
 # Second dev server cache (see vite.measure.mts)
 .vite-cache-measure/
-
-.vite-cache/
