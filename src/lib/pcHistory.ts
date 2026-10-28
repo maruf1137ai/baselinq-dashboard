@@ -3,9 +3,10 @@
  *
  * The drawer sums this to work out what is left on a variation, and clamps the
  * operator's entry to it. That sum used to include *every* prior certificate
- * regardless of its status — so a certificate that was rejected ate into the
- * remainder as if it had been paid. The variation then showed nothing left to
- * certify and the clamp forced the entry to zero.
+ * regardless of its status — so a certificate that was rejected, or one still
+ * sitting in draft and never issued, ate into the remainder as if it had been
+ * paid. The variation then showed nothing left to certify and the clamp forced
+ * the entry to zero.
  *
  * Kept out of the component because it decides what a user is allowed to type.
  */
@@ -14,19 +15,14 @@ import { formatZAR } from "./formatCurrency";
 /**
  * Statuses that mean a certificate never took effect, so it consumes nothing.
  *
- * Everything else consumes — draft, pending, partial, approved, submitted,
- * posted and anything a future workflow adds. That default is the safe
- * direction: a certificate we fail to recognise still counts against the
- * remainder, so an unknown status can under-certify but can never let the same
- * variation be certified twice.
- *
- * DRAFTS CONSUME. The server's over-certification check
- * (`tasks/pc_integrity.py::vo_certified_elsewhere`) counts every certificate
- * except rejected and cancelled ones, drafts included — so two drafts cannot
- * each claim the whole variation. Leaving drafts out here offered a remainder
- * the server then refused on save.
+ * Everything else consumes — pending, partial, approved, submitted, posted and
+ * anything a future workflow adds. That default is the safe direction: a
+ * certificate we fail to recognise still counts against the remainder, so an
+ * unknown status can under-certify but can never let the same variation be
+ * certified twice.
  */
 const NON_CONSUMING = new Set([
+  "draft",
   "rejected",
   "cancelled",
   "canceled",
@@ -75,9 +71,6 @@ export function sumCertifiedByVo(
     if (!certificateConsumesRemainder(pc)) continue;
     const rows = (pc?.voItems ?? pc?.vo_items) as any[] | undefined;
     for (const row of Array.isArray(rows) ? rows : []) {
-      // An unticked row is not part of that certificate's valuation — same
-      // rule as the server (`included` absent counts as included).
-      if (row?.included === false) continue;
       const ref = String(row?.voNumber ?? row?.vo_number ?? "").trim();
       if (!ref) continue;
       const amount = Number(row?.thisPeriod ?? row?.this_period);

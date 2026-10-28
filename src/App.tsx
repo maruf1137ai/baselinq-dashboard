@@ -1,5 +1,4 @@
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { retryUnlessRefused } from "@/lib/queryRetry";
+import { Toaster as Sonner, Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -68,17 +67,12 @@ import SelectProject from "./pages/account/SelectProject";
 import AccountProfile from "./pages/account/AccountProfile";
 import AccountOrganization from "./pages/account/AccountOrganization";
 
-// A 4xx is an answer, not an outage — see lib/queryRetry (QA BUG-22).
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: retryUnlessRefused } },
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      {/* ONE toaster. A second, unconfigured instance of the same sonner
-          component sat beside this one, so every toast in the app was drawn
-          twice (QA BUG-17). */}
+      <Toaster />
       <Sonner
         closeButton
         visibleToasts={3}
@@ -143,7 +137,7 @@ const App = () => (
             path="/finance"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewFinance" allowPlatformStaff>
+                <RoleRoute permission="viewFinance">
                   <ProjectProtectedRoute>
                     <Finance />
                   </ProjectProtectedRoute>
@@ -410,7 +404,7 @@ const App = () => (
             } />
             <Route path="notifications" element={<Notifications />} />
             <Route path="billing" element={
-              <RoleRoute permission="viewBilling" allowPlatformStaff><Billing /></RoleRoute>
+              <RoleRoute permission="viewBilling"><Billing /></RoleRoute>
             } />
             <Route path="integrations" element={
               <RoleRoute permission="manageIntegrations"><Integrations /></RoleRoute>

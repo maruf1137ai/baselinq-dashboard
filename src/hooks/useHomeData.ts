@@ -29,7 +29,6 @@ import {
   buildPaymentOverdueQueue,
   homeVerdict,
   buildObligationQueue,
-  buildUncertifiedVariationQueue,
   buildRejectedCertificateQueue,
   groupRiskSignals,
   buildRsvpQueue,
@@ -78,7 +77,6 @@ import {
 import { summariseProjectSetup } from "@/lib/homeSetup";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { isMeetingPast } from "@/lib/dateUtils";
-import { sumCertifiedByVo } from "@/lib/pcHistory";
 
 interface RiskSignal {
   id: number;
@@ -497,14 +495,6 @@ export function useHomeData(projectId: string | undefined) {
     return merged;
   }, [variationRecords.records, variationList]);
 
-  // Whether each money source was read in FULL — see the note above `money`
-  // below for why a failed or truncated read must not be treated as empty.
-  const certificatesReadable = !certificates.isError && !certificates.truncated;
-  // EITHER variation source failing makes the approved-variation total short,
-  // and the revised contract sum is built on it.
-  const variationsReadable =
-    !variations.isError && !variations.truncated && !variationRecords.isError;
-
   // Every source contributes independently, so one failing endpoint costs its
   // own rows and not the queue. Order here is irrelevant — `rankQueue` is the
   // only thing that decides what a user sees first, and it is tested on its
@@ -528,36 +518,6 @@ export function useHomeData(projectId: string | undefined) {
       ...buildRsvpQueue(meetingList),
       ...buildMeetingActionQueue(meetingsWithActions),
       ...buildTaskQueue(taskList),
-      /*
-        Variations signed and never certified.
-
-        The certificate drawer now defaults every uncertified variation in, so
-        the common case is handled at the point of work. This catches the rest
-        — one signed between certificates, or unticked once and forgotten —
-        because until now nothing anywhere said "VO-014 was signed six weeks
-        ago and the contractor has not been paid for it".
-      */
-      //
-      // Fed the merged variation RECORDS, not `variationList`. That list is
-      // the assignment-task wrapper, which carries `voNumber` and `signedAt`
-      // under `.task` — so every row failed the builder's top-level checks and
-      // the alert never fired (QA BUG-14). It also only runs when both
-      // sources were read in full: a partial list would report a variation
-      // "never certified" because the certificate that certified it was not
-      // fetched.
-      ...(variationsReadable && certificatesReadable
-        ? buildUncertifiedVariationQueue(
-            variationRecordList.map((v) => ({
-              id: v.id,
-              voNumber: v.ref,
-              status: v.status ?? undefined,
-              signedAt: v.signedAt,
-              grandTotal: v.value,
-              certifiableValue: v.certifiable,
-            })),
-            sumCertifiedByVo(certificateList as any),
-          )
-        : []),
     ];
     // ── Gating, now down to the ACT and not just the module ──────────────
     //
@@ -593,9 +553,6 @@ export function useHomeData(projectId: string | undefined) {
     meetingList,
     meetingsWithActions,
     taskList,
-    variationRecordList,
-    variationsReadable,
-    certificatesReadable,
     canViewFinance,
     canViewCompliance,
     canEditFinance,
@@ -624,8 +581,11 @@ export function useHomeData(projectId: string | undefined) {
   // over the first five hundred of an unknown number of certificates is not a
   // total. It cannot happen at PAGE_LIMIT on any project this platform has,
   // and it is guarded anyway rather than trusted not to.
-  // (`certificatesReadable` / `variationsReadable` are declared above the
-  // queue, which uses them too.)
+  const certificatesReadable = !certificates.isError && !certificates.truncated;
+  // EITHER variation source failing makes the approved-variation total short,
+  // and the revised contract sum is built on it.
+  const variationsReadable =
+    !variations.isError && !variations.truncated && !variationRecords.isError;
 
   const money = useMemo(
     () =>

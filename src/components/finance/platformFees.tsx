@@ -28,7 +28,7 @@ import { ChevronLeft, ChevronRight, ChevronRight as DisclosureChevron, FileText,
 import { FinanceToolbar } from "./FinanceToolbar";
 
 import useFetch from "@/hooks/useFetch";
-import { useIsPlatformStaff, usePermission } from "@/hooks/usePermission";
+import { usePermission } from "@/hooks/usePermission";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -529,10 +529,7 @@ const PlatformFees: React.FC = () => {
   // Repeated here so the component is not safe only by virtue of where it is
   // mounted, but this remains a client-side gate over a server endpoint that
   // does not enforce it.
-  // Baselinq staff see it too: it is Baselinq's own bill, and the server
-  // serves it to them on projects they are not members of (QA BUG-06).
-  const isStaff = useIsPlatformStaff(numericProjectId);
-  const canView = usePermission("finance.approve_payment", numericProjectId) || isStaff;
+  const canView = usePermission("finance.approve_payment", numericProjectId);
 
   const [view, setView] = useState<"charges" | "statements">("charges");
   const [search, setSearch] = useState("");

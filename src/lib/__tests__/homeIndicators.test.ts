@@ -109,21 +109,7 @@ describe("toVariationRecord", () => {
       approvedAt: null,
       updatedAt: "2026-06-30T09:00:00Z",
       signedAt: null,
-      // What a certificate may still certify, ex VAT — absent from this
-      // payload, so unknown rather than guessed (QA BUG-04/BUG-14).
-      certifiable: null,
     });
-  });
-
-  it("carries the certifiable (ex-VAT) value when the API sends it", () => {
-    expect(
-      toVariationRecord({ _id: "119", voNumber: "VO-006", grandTotal: 115_000, certifiableValue: 100_000 })
-        .certifiable,
-    ).toBe(100_000);
-    expect(
-      toVariationRecord({ taskId: 7, task: { voNumber: "VO-007", grandTotal: 57_500, subTotal: 50_000 } })
-        .certifiable,
-    ).toBe(50_000);
   });
 
   it("carries signedAt from the VariationOrder route", () => {
@@ -159,26 +145,6 @@ describe("toVariationRecord", () => {
     expect(r.ref).toBe("VO-002");
     expect(r.status).toBe("Approved");
     expect(r.value).toBe(368_000);
-  });
-
-  it("reads the VariationOrder route's OWN status, not its wrapping task's kanban status (QA BUG-14)", () => {
-    // tasks/variation-orders/ rows carry the assignment Task under `task`, and
-    // that Task's status is the kanban "done". Reading it made every record
-    // look un-approved, so the signed-but-uncertified alert never fired.
-    const r = toVariationRecord({
-      _id: "108",
-      voNumber: "VO-201",
-      status: "Approved",
-      grandTotal: 115_000,
-      certifiableValue: 100_000,
-      signedAt: "2026-10-27T10:37:19Z",
-      task: { id: 343, status: "done", taskType: "VO" },
-    });
-    expect(r.status).toBe("Approved");
-    expect(r.ref).toBe("VO-201");
-    expect(r.value).toBe(115_000);
-    expect(r.certifiable).toBe(100_000);
-    expect(r.signedAt).toBe("2026-10-27T10:37:19Z");
   });
 
   it("falls back to the snake_case VO number the finance table also handles", () => {

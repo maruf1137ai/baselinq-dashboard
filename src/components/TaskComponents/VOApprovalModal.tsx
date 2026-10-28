@@ -185,20 +185,10 @@ export const VOApprovalModal: React.FC<VOApprovalModalProps> = ({
           {/* Warning banner */}
           <div className="flex gap-3 rounded-lg bg-amber-50/50 border border-amber-100 p-4 text-xs text-amber-900 leading-relaxed translate-y-2">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
-            {/* Recommending binds nothing — it puts the VO in front of the
-                Client. Saying it did (QA BUG-20) told a recommender they were
-                committing the employer. */}
-            {mode === "approve" ? (
-              <span>
-                Once approved, this Variation Order becomes a binding contractual instruction. It
-                cannot be amended without a further Variation Order.
-              </span>
-            ) : (
-              <span>
-                Recommending sends this Variation Order to the Client for Approve &amp; Sign. It
-                becomes binding only once it is signed — and someone other than you must sign it.
-              </span>
-            )}
+            <span>
+              Once {mode === "approve" ? "approved" : "recommended"}, this Variation Order becomes a
+              binding contractual instruction. It cannot be amended without a further Variation Order.
+            </span>
           </div>
 
           {/* Auth step — only on "approve" mode (final sign). For

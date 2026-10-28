@@ -8,10 +8,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import CostLadger from "@/components/finance/costLadger";
 import PaymentCertificate from "@/components/finance/paymentCertificate";
 import PlatformFees from "@/components/finance/platformFees";
-import PlatformInvoices from "@/components/finance/platformInvoices";
 import useFetchAllPages from "@/hooks/useFetchAllPages";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useIsPlatformStaff, usePermission } from "@/hooks/usePermission";
+import { usePermission } from "@/hooks/usePermission";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { findByDeepLinkId, resolveTabParam } from "@/lib/deepLink";
@@ -64,28 +63,16 @@ const Finance = () => {
   //      the same as "may see what Baselinq bills the employer". A dedicated
   //      `finance.platform_fee.view` code should be added to the permission
   //      matrix and enforced on both sides, and this gate switched to it.
-  //
-  // Baselinq staff see both platform tabs on any project: the bill is ours to
-  // raise, and staff are not members of the customer's team, so they hold no
-  // project permission there (QA BUG-06). A staff member who is NOT on the
-  // project gets ONLY those two tabs — staff status is not a licence to read
-  // the customer's ledger or certificates.
-  const isStaff = useIsPlatformStaff(selectedProjectId);
-  const canViewPlatformFees =
-    usePermission("finance.approve_payment", selectedProjectId) || isStaff;
+  const canViewPlatformFees = usePermission("finance.approve_payment", selectedProjectId);
 
   const visibleTabs = canViewFinance
     ? [
       "Cost Ledger",
       "Payment Certificates",
       "Variation Orders",
-      // "Platform Fees" is what HAS accrued; "Invoices" is what has been
-      // asked for. Same gate — a person who may see one may see the other.
-      ...(canViewPlatformFees ? ["Platform Fees", "Invoices"] : []),
+      ...(canViewPlatformFees ? ["Platform Fees"] : []),
     ]
-    : isStaff
-      ? ["Platform Fees", "Invoices"]
-      : [];
+    : [];
 
   const navigate = useNavigate();
 
@@ -238,10 +225,7 @@ const Finance = () => {
           }
         />
         <div>
-          {/* The strip SCROLLS, as Project Health's does: five tabs at px-6
-              are wider than `main` on a phone, and without an overflow
-              container the surplus widened the page itself (QA BUG-25). */}
-          <header className="border-b border-border overflow-x-auto">
+          <header className="border-b border-border">
             {/* role="tablist" + aria-selected so the tab strip is navigable and
                 announced as tabs rather than a row of unrelated buttons.
 
@@ -249,7 +233,7 @@ const Finance = () => {
                 <button>s, not the Button primitive. Without it the browser
                 draws its own default outline — a blue box that belongs to no
                 part of this design system and does not match the brand. */}
-            <div className="flex items-center gap-2 min-w-max" role="tablist">
+            <div className="flex items-center gap-2" role="tablist">
               {visibleTabs.map((tab) => (
                 <button
                   key={tab}
@@ -319,7 +303,6 @@ const Finance = () => {
             <PaymentCertificate certificateParam={searchParams.get("pc")} />
           )}
           {activeTab === "Platform Fees" && canViewPlatformFees && <PlatformFees />}
-          {activeTab === "Invoices" && canViewPlatformFees && <PlatformInvoices />}
           {/* {activeTab === "Forecast" && <Forecast />} */}
         </div>
       </div>
