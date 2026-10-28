@@ -36,11 +36,6 @@ vi.mock("@/hooks/usePermission", () => ({
 vi.mock("@/hooks/useFetch", () => ({
   default: (...args: unknown[]) => mockUseFetch(...args),
 }));
-// The VO list now loads every page through useFetchAllPages — same return
-// shape as useFetch, so it reads the same double.
-vi.mock("@/hooks/useFetchAllPages", () => ({
-  default: (...args: unknown[]) => mockUseFetch(...args),
-}));
 
 // The page's chrome and its three sibling tabs are stubbed: this suite is
 // about which tab the URL selects and what it hands down, not about what the

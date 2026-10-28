@@ -30,7 +30,7 @@
  * is not something a regex should do quietly.
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -56,10 +56,8 @@ const SRC = join(process.cwd(), "src");
 */
 const CATEGORICAL = new Set(["components/documents/DocumentTable.tsx"]);
 
-// Forward slashes on every OS: on Windows `join` yields backslashes, so the
-// CATEGORICAL exemption never matched and DocumentTable was reported.
 const files = walk(SRC)
-  .map((f) => ({ name: relative(SRC, f).split(sep).join("/"), src: readFileSync(f, "utf8") }))
+  .map((f) => ({ name: f.replace(SRC + "/", ""), src: readFileSync(f, "utf8") }))
   .filter((f) => !CATEGORICAL.has(f.name));
 
 /** Retired hue -> the hue that already carries that meaning. */
