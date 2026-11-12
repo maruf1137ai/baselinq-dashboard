@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { LinkDocumentModal } from './LinkDocumentModal';
+import { LinkDocumentModal, type LinkItem } from './LinkDocumentModal';
 
 interface ManageLinksModalProps {
   isOpen: boolean;
@@ -59,9 +59,9 @@ export const ManageLinksModal: React.FC<ManageLinksModalProps> = ({
     );
   };
 
-  const handleAddLinks = (selectedIds: string[]) => {
+  const handleAddLinks = (items: LinkItem[]) => {
     // In a real app we'd fetch these from the API or add the mock objects
-    toast.success(`${selectedIds.length} items added to staging.`);
+    toast.success(`${items.length} items added to staging.`);
   };
 
   const handleSave = () => {

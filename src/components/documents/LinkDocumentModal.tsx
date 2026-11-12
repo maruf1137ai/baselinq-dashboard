@@ -25,7 +25,16 @@ interface LinkDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLink: (items: LinkItem[]) => void;
+  /** Display references ("VO-065") already linked. */
   alreadyLinkedIds?: string[];
+  /**
+   * Links already on the document as the API returns them — the item type and
+   * its task id. The document page passes these; they were silently ignored,
+   * so an already-linked task could be selected and linked again.
+   */
+  alreadyLinked?: { type: string; itemId: number | string }[];
+  /** A link request is in flight: the button waits rather than sending twice. */
+  isLinking?: boolean;
 }
 
 const DONE_STATUSES = ['done', 'Done', 'DONE', 'Closed', 'closed', 'CLOSED', 'Approved', 'approved'];
@@ -46,6 +55,8 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
   onClose,
   onLink,
   alreadyLinkedIds = [],
+  alreadyLinked = [],
+  isLinking = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
@@ -82,8 +93,13 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
     });
   }, [tasks, searchTerm, activeFilter]);
 
+  const isLinked = (task: { id: string; type: string; taskId: number | string }) =>
+    alreadyLinkedIds.includes(task.id) ||
+    alreadyLinked.some((l) => l.type === task.type && String(l.itemId) === String(task.taskId));
+
   const toggleSelect = (id: string) => {
-    if (alreadyLinkedIds.includes(id)) return;
+    const task = tasks.find((t) => t.id === id);
+    if (!task || isLinked(task)) return;
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -175,7 +191,7 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
               </div>
             ) : (
               filtered.map((task) => {
-                const isAlreadyLinked = alreadyLinkedIds.includes(task.id);
+                const isAlreadyLinked = isLinked(task);
                 const isSelected = selectedIds.includes(task.id);
 
                 return (
@@ -255,10 +271,10 @@ export const LinkDocumentModal: React.FC<LinkDocumentModalProps> = ({
             </Button>
             <Button
               onClick={handleLink}
-              disabled={selectedIds.length === 0}
+              disabled={selectedIds.length === 0 || isLinking}
               className="font-normal h-11 px-8 shadow-lg shadow-primary/20 bg-[#3A6FF7] hover:bg-[#3A6FF7]/90"
             >
-              Link Selected
+              {isLinking ? "Linking…" : "Link Selected"}
             </Button>
           </div>
         </DialogFooter>

@@ -1,8 +1,10 @@
 name: CI
 
+# Pull requests into ANY branch, not only main, so stacked PRs and PRs into
+# arif-dev-frontend are checked too. GitHub reads this file from the PR's merge
+# commit, so a PR is only checked once its branches contain this version.
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -15,6 +17,9 @@ jobs:
     name: TypeScript
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Report-only until PR #81 merges. #81 makes the typecheck check real files;
+    # delete this line once it is in, so a type error fails the check.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # `npx tsc --noEmit` checked nothing: tsconfig.json has "files": [] and
+      # only references tsconfig.app.json / tsconfig.node.json, and `tsc -p`
+      # without `-b` does not follow references. The script checks both.
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
   # The repository had 112 tests across 7 files and no job running them, so a
   # failing test could never fail a build. They were not running locally
@@ -38,6 +46,10 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # Only for the sticky results comment on the PR.
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -49,8 +61,52 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Report-only: main has 21 failing tests in 6 files (checked on bd2fb4d),
+      # so this step's own result says nothing about the PR's change. The
+      # Ratchet step below decides pass/fail instead. Once main is green and
+      # scripts/ci/known-failures.txt is empty, the ratchet is equivalent to
+      # deleting this `continue-on-error`.
       - name: Test
-        run: npm test
+        continue-on-error: true
+        run: >-
+          npm test --
+          --reporter=default --reporter=github-actions
+          --reporter=json --outputFile.json=vitest-report.json
+
+      # The base branch's copy of the known-failures list, so the ratchet can
+      # reject lines a PR adds to it. Absent on a base that predates the file.
+      - name: Fetch the base branch's known failures
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git show FETCH_HEAD:scripts/ci/known-failures.txt > "$RUNNER_TEMP/base-known-failures.txt" \
+            || rm -f "$RUNNER_TEMP/base-known-failures.txt"
+
+      # Blocking: fails only for a failing test that is not in
+      # scripts/ci/known-failures.txt (or when that list grew). Tests that
+      # were fixed are listed, without failing, so their lines can be deleted.
+      - name: Ratchet
+        if: ${{ !cancelled() }}
+        run: >-
+          node scripts/ci/vitest-ratchet.mjs
+          --report vitest-report.json
+          --baseline scripts/ci/known-failures.txt
+          --previous-baseline "$RUNNER_TEMP/base-known-failures.txt"
+          --summary vitest-summary.md
+
+      # One comment per PR, edited in place on every push. Skipped for PRs from
+      # forks, whose token cannot write comments; the job summary still has it.
+      - name: Post the results on the PR
+        if: >-
+          ${{ !cancelled() && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && hashFiles('vitest-summary.md') != '' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: vitest
+          path: vitest-summary.md
 
   build:
     name: Build

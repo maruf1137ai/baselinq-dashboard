@@ -2,11 +2,31 @@
 import React, { useState, useRef, useEffect } from "react";
 import { formatDateTime } from "@/lib/dateUtils";
 
+interface ChatAttachment {
+  name: string;
+  type: string;
+  /** An object URL for a file attached in this session; sample attachments have none. */
+  url?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  author: string;
+  time: string;
+  text: string;
+  attachments: ChatAttachment[];
+}
+
+interface PendingFile {
+  file: File;
+  url: string;
+}
+
 /**
  * Initial messages (taken from the JSON above).
  * In a real app you'd fetch this from an API.
  */
-const INITIAL_MESSAGES = [
+const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "m1",
     author: "Unknown",
@@ -65,9 +85,9 @@ function FileIcon({ mime, name }) {
 }
 
 export default function Chats() {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [text, setText] = useState("");
-  const [files, setFiles] = useState([]); // { file, url }
+  const [files, setFiles] = useState<PendingFile[]>([]);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -83,8 +103,8 @@ export default function Chats() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function onSelectFiles(e) {
-    const chosen = Array.from(e.target.files || []);
+  function onSelectFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(e.target.files ?? []);
     const mapped = chosen.map((f) => ({
       file: f,
       url: URL.createObjectURL(f),
@@ -96,7 +116,7 @@ export default function Chats() {
 
   function handleSend() {
     if (!text.trim() && files.length === 0) return;
-    const newMessage = {
+    const newMessage: ChatMessage = {
       id: "m" + (messages.length + 1),
       author: "You",
       time: formatDateTime(new Date()),

@@ -30,7 +30,16 @@ import {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-const addNewTask = async (_payload: any) => { };
+interface CreateDocumentPayload {
+  title: string;
+  category: string;
+  linkedTask: string;
+  attachment: { name: string; url: string }[];
+}
+
+// Placeholder: this dialog is not rendered anywhere (DashboardHeader imports
+// it but never mounts it), and nothing here saves yet.
+const addNewTask = async (_payload: { newTask: CreateDocumentPayload }) => { };
 const uploadFile = async (_file: File, _id?: string): Promise<string> => "";
 
 // Order matches Werner's spec rev G: SI, VO, RFI, GI, Claim. CPI removed.
@@ -63,9 +72,13 @@ export function CreateDocumentDialog() {
 
   // Mutation to create a new task/document
   const { mutateAsync } = useMutation({
-    mutationFn: (newTask) => addNewTask({ newTask }),
+    mutationFn: (newTask: CreateDocumentPayload) => addNewTask({ newTask }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tasks"]);
+      // TanStack v5 takes filters, not a bare key; useFetch keys by URL, so
+      // match the task lists by URL rather than by a "tasks" key nothing uses.
+      queryClient.invalidateQueries({
+        predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].includes("tasks"),
+      });
       toast.success("Success! Task added successfully");
       resetForm();
       setOpen(false);
@@ -129,7 +142,7 @@ export function CreateDocumentDialog() {
 
     try {
       const files = await uploadAllFiles(); // upload files first
-      const payload = {
+      const payload: CreateDocumentPayload = {
         title,
         category,
         linkedTask,

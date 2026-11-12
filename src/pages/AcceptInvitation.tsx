@@ -7,6 +7,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchInvitation, acceptInvitation } from "@/lib/Api";
+import { isSignedInAs, loginUrlFor } from "@/lib/invitationSignIn";
 import { cn } from "@/lib/utils";
 
 const PROFESSIONAL_BODIES = ["SACAP", "ECSA", "ASAQS", "CIDB", "SACPCMP", "Other", "None"];
@@ -108,9 +109,12 @@ export default function AcceptInvitation() {
     mutationFn: (payload: Parameters<typeof acceptInvitation>[1]) =>
       acceptInvitation(token!, payload),
     onSuccess: (data) => {
-      const tokens = data.tokens;
-      localStorage.setItem("access", tokens.access);
-      localStorage.setItem("refresh", tokens.refresh);
+      // A new account is signed in by the accept itself. An existing account
+      // was already signed in, and keeps that session.
+      if (data.tokens) {
+        localStorage.setItem("access", data.tokens.access);
+        localStorage.setItem("refresh", data.tokens.refresh);
+      }
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/account");
     },
@@ -274,13 +278,27 @@ export default function AcceptInvitation() {
               </div>
             )}
 
-            <button
-              onClick={() => acceptMutation.mutate({ name: "", password: "", password_confirm: "" })}
-              disabled={acceptMutation.isPending}
-              className="w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {acceptMutation.isPending ? "Joining..." : "Accept & Join Project"}
-            </button>
+            {isSignedInAs(invite.email) ? (
+              <button
+                onClick={() => acceptMutation.mutate({ name: "", password: "", password_confirm: "" })}
+                disabled={acceptMutation.isPending}
+                className="w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {acceptMutation.isPending ? "Joining..." : "Accept & Join Project"}
+              </button>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Sign in as <span className="text-[#1A1A1A]">{invite.email}</span> to accept this invitation.
+                </p>
+                <button
+                  onClick={() => navigate(loginUrlFor(`/accept-invitation/${token}`))}
+                  className="w-full py-3 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all"
+                >
+                  Sign in to accept
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

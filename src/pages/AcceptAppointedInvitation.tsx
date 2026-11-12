@@ -5,8 +5,12 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Plus, X, Building2, User, Eye, EyeOff, Check, ChevronRight, ArrowRight, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
+import { acceptAppointedInvitation, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
+import { isSignedInAs, loginUrlFor } from "@/lib/invitationSignIn";
 
+// No session: a new invitee has none, and a stale one from someone else on
+// this browser must not be sent along. An existing account accepts through
+// the authenticated client instead (acceptAppointedInvitation).
 const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL });
 
 type AccountType = "organisation" | "individual";
@@ -67,6 +71,7 @@ export default function AcceptAppointedInvitation() {
     contact_email: string;
     invited_by: string;
     position?: string;
+    user_exists?: boolean;
   } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
@@ -109,6 +114,16 @@ export default function AcceptAppointedInvitation() {
   ]);
 
   const STEPS = accountType === "individual" ? IND_STEPS : ORG_STEPS;
+
+  // An existing account must accept signed in as itself, and has no account
+  // to set up, so it starts at step 2.
+  const isExistingAccount = info?.user_exists === true;
+  const signedInAsInvitee = !!info && isSignedInAs(info.contact_email);
+  const firstStep = isExistingAccount ? 2 : 1;
+
+  useEffect(() => {
+    if (isExistingAccount && signedInAsInvitee) setStep((s) => Math.max(s, 2));
+  }, [isExistingAccount, signedInAsInvitee]);
 
   useEffect(() => {
     if (!token) return;
@@ -158,7 +173,7 @@ export default function AcceptAppointedInvitation() {
         insurance_file_name = insuranceFile.name;
       }
 
-      const payload =
+      const payload: Record<string, unknown> =
         accountType === "individual"
           ? {
             name,
@@ -183,11 +198,20 @@ export default function AcceptAppointedInvitation() {
             personnel: personnel.filter(p => p.name.trim() || p.email.trim()),
           };
 
-      const res = await api.post(`/auth/accept-appointed-invitation/${token}/`, payload);
-      localStorage.setItem("access", res.data.tokens.access);
-      localStorage.setItem("refresh", res.data.tokens.refresh);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      toast.success("Account created and details submitted!");
+      if (isExistingAccount) {
+        // Signed in already; the account and its session stay as they are.
+        delete payload.name;
+        delete payload.password;
+        delete payload.password_confirm;
+        await acceptAppointedInvitation(token!, payload);
+        toast.success("Details submitted. You've joined the project.");
+      } else {
+        const res = await api.post(`/auth/accept-appointed-invitation/${token}/`, payload);
+        localStorage.setItem("access", res.data.tokens.access);
+        localStorage.setItem("refresh", res.data.tokens.refresh);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        toast.success("Account created and details submitted!");
+      }
       navigate("/account");
     } catch (err: any) {
       const msg = err?.response?.data?.error;
@@ -218,6 +242,26 @@ export default function AcceptAppointedInvitation() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-sm text-gray-400">Loading invitation…</p>
+      </div>
+    );
+  }
+
+  if (isExistingAccount && !signedInAsInvitee) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 px-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-8 max-w-md w-full text-center">
+          <p className="text-[#1A1A1A] mb-1">You already have a Baselinq account</p>
+          <p className="text-sm text-gray-500">
+            Sign in as <span className="text-[#1A1A1A]">{info.contact_email}</span> to join{" "}
+            {info.project_name || "this project"}.
+          </p>
+          <button
+            onClick={() => navigate(loginUrlFor(`/accept-appointed-invitation/${token}`))}
+            className="mt-6 w-full py-2.5 rounded-xl bg-[#6c5ce7] text-white text-sm hover:bg-[#6c6de9] transition-all"
+          >
+            Sign in to accept
+          </button>
+        </div>
       </div>
     );
   }
@@ -623,7 +667,7 @@ export default function AcceptAppointedInvitation() {
 
             {/* Actions */}
             <div className="flex gap-3 mt-6">
-              {step > 1 && (
+              {step > firstStep && (
                 <button
                   type="button"
                   onClick={() => { setStep(s => s - 1); setStepError(""); }}

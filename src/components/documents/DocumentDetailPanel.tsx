@@ -20,7 +20,7 @@ import {
 import { AiMark } from "@/components/icons/AiMark";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { LinkDocumentModal } from './LinkDocumentModal';
+import { LinkDocumentModal, type LinkItem } from './LinkDocumentModal';
 import { VersionHistoryModal } from './VersionHistoryModal';
 import { VersionUploadModal } from './VersionUploadModal';
 
@@ -46,8 +46,7 @@ export const DocumentDetailPanel: React.FC<DocumentDetailPanelProps> = ({
 
   if (!document) return null;
 
-  const handleLink = (selectedIds: string[]) => {
-    // console.log('Linking documents:', selectedIds);
+  const handleLink = (_items: LinkItem[]) => {
     // In a real app, this would trigger an API call
   };
 

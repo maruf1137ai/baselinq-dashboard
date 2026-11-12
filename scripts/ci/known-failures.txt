@@ -1,0 +1,32 @@
+# Vitest tests that already fail on main. The CI "Ratchet" step fails a PR
+# only for a failing test that is NOT listed here.
+#
+# This list may only shrink. When you fix a test, delete its line, or run
+#   npm test -- --reporter=json --outputFile.json=vitest-report.json
+#   node scripts/ci/vitest-ratchet.mjs --prune
+# Never add a line to turn a red PR green: fix the test instead. CI rejects
+# lines that are not on the base branch's copy of this file.
+#
+# One test per line, sorted: <file relative to the repo root> > <full test name>
+
+src/components/finance/__tests__/paymentCertificateDeepLink.test.tsx > ?pc= also accepts the PC number
+src/components/finance/__tests__/paymentCertificateDeepLink.test.tsx > ?pc= converges with the in-page click — one selection, either way
+src/components/finance/__tests__/paymentCertificateDeepLink.test.tsx > ?pc= selects and opens the certificate the link names
+src/components/finance/__tests__/paymentCertificateDeepLink.test.tsx > ?pc= shows the full table when the certificate is one this viewer's request did not return
+src/components/finance/__tests__/paymentCertificateDeepLink.test.tsx > ?pc= shows the full table, unselected, for a stale id
+src/components/home/__tests__/whatChanged.test.tsx > a contractor without finance.view is shown a shorter panel rather than a greyed-out one, and no hidden count
+src/lib/__tests__/projectPosition.test.ts > financialOverview derives the balance as revised − certified, and does NOT deduct retention
+src/pages/__tests__/complianceDeepLink.test.tsx > /compliance?obligation= lands on the plain page for a stale id — every obligation, true counts
+src/pages/__tests__/complianceDeepLink.test.tsx > /compliance?obligation= lands on the plain page when the obligation is one this viewer's list did not return
+src/pages/__tests__/financeDeepLink.test.tsx > /finance?tab= opens the tab the link names instead of the default first tab
+src/pages/__tests__/financeDeepLink.test.tsx > /finance?vo= also accepts the task id, which is what /tasks/:id resolves against
+src/pages/__tests__/financeDeepLink.test.tsx > /finance?vo= highlights the variation the link names
+src/pages/__tests__/financeDeepLink.test.tsx > /finance?vo= shows the whole list, unfiltered, when the id is stale
+src/pages/__tests__/financeDeepLink.test.tsx > /finance?vo= shows the whole list, unfiltered, when the variation is one this viewer's list did not return
+src/pages/__tests__/rolesPermissions.test.tsx > Roles & Permissions cannot toggle a permission that is not project-scoped
+src/pages/__tests__/rolesPermissions.test.tsx > Roles & Permissions switches area from the rail
+src/pages/__tests__/rolesPermissions.test.tsx > saving sends only what changed, scoped to the selected project
+src/pages/__tests__/rolesPermissions.test.tsx > saving stops counting a change once it is toggled back to where it started
+src/pages/__tests__/rolesPermissions.test.tsx > the create-everything control clears back to nothing unsaved when switched off again
+src/pages/__tests__/rolesPermissions.test.tsx > the create-everything control counts only the types it actually changed
+src/pages/__tests__/rolesPermissions.test.tsx > the create-everything control turns every create on in one click

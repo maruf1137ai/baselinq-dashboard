@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLogin } from "@/hooks/useLogin";
+import { safeNextPath } from "@/lib/invitationSignIn";
 import { cn } from "@/lib/utils";
 
 const INPUT_CLS =
@@ -24,6 +25,9 @@ const LoginPage = () => {
 
   const navigate = useNavigate();
   const loginMutation = useLogin();
+  // An invitation sends an existing user here to sign in, then back to it.
+  const [searchParams] = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +41,7 @@ const LoginPage = () => {
           localStorage.setItem("refresh", data.tokens.refresh);
           localStorage.setItem("user", JSON.stringify(data.user));
           const selectedProjectId = localStorage.getItem("selectedProjectId");
-          navigate("/account");
+          navigate(nextPath ?? "/account");
           // if (selectedProjectId) {
           //   navigate("/");
           // } else {
