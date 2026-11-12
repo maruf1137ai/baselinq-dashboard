@@ -66,7 +66,7 @@ const complianceTagColors = {
 
 // Helper component defined outside the main component to prevent re-creation on every render.
 const ChecklistItem: React.FC<{
-  item: ChecklistItemType;
+  item: ChecklistItem;
   onCheck: (id: number) => void;
 }> = ({ item, onCheck }) => {
   return (

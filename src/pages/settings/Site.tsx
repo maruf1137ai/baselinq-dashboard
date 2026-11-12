@@ -37,8 +37,13 @@ const Site = () => {
     setCurrentProject(project);
     if (project) {
       setSiteAddress(project.location || "");
-      if (project.coordinates?.lat && project.coordinates?.lng) {
-        setCoordinates(project.coordinates);
+      // The API stores latitude and longitude; there is no `coordinates` field,
+      // so reading one never found a saved pin and always re-geocoded the
+      // address instead.
+      const lat = project.latitude != null ? Number(project.latitude) : NaN;
+      const lng = project.longitude != null ? Number(project.longitude) : NaN;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setCoordinates({ lat, lng });
         setHasLocation(true);
       } else if (project.location) {
         setHasLocation(true);
@@ -91,11 +96,24 @@ const Site = () => {
       return;
     }
     updateProject(
-      { id: currentProject._id, name: currentProject.name, location: siteAddress, coordinates: coordinates ?? undefined },
+      {
+        id: currentProject._id,
+        name: currentProject.name,
+        location: siteAddress,
+        // Sent as `coordinates`, which the API does not have, so a pin moved
+        // here was never saved. Eight decimals, as the API stores them.
+        latitude: coordinates ? Number(coordinates.lat.toFixed(8)) : undefined,
+        longitude: coordinates ? Number(coordinates.lng.toFixed(8)) : undefined,
+      },
       {
         onSuccess: () => {
           toast.success("Site settings saved");
-          setCurrentProject((prev: any) => ({ ...prev, location: siteAddress, coordinates }));
+          setCurrentProject((prev: any) => ({
+            ...prev,
+            location: siteAddress,
+            latitude: coordinates?.lat ?? prev?.latitude,
+            longitude: coordinates?.lng ?? prev?.longitude,
+          }));
           setIsDirty(false);
         },
         onError: (error: any) => {

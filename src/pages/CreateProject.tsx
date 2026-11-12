@@ -2867,7 +2867,10 @@ export default function CreateProject() {
                       }]);
                       setSelectedMemberToAdd(null);
                       setSelectedMemberRole("");
-                      setMemberSearch("");
+                      // A setMemberSearch("") call stood here for a state that
+                      // was never declared, so this threw before the modal
+                      // could close. The search box (CommandInput) keeps its
+                      // own text and resets when the popover reopens.
                       setShowAddMemberModal(false);
                     }}
                     className="px-5 py-2 rounded-lg text-xs text-white font-normal flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"

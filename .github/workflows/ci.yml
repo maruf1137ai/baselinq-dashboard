@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # `npx tsc --noEmit` checked nothing: tsconfig.json has "files": [] and
+      # only references tsconfig.app.json / tsconfig.node.json, and `tsc -p`
+      # without `-b` does not follow references. The script checks both.
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
   # The repository had 112 tests across 7 files and no job running them, so a
   # failing test could never fail a build. They were not running locally

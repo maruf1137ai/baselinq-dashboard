@@ -25,8 +25,10 @@ export interface ProjectData {
   userId?: string;
   description?: string;
   location?: string;
-  latitude?: number | null;
-  longitude?: number | null;
+  // The API returns decimals; the create form sends them as fixed-decimal
+  // strings, which it also accepts.
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   start_date?: string;
   startDate?: string;
   end_date?: string;
@@ -696,7 +698,11 @@ export type TaskAttachmentSegment =
   | "requests-for-information"
   | "delay-claims"
   | "critical-path-items"
-  | "payment-certificates";
+  | "payment-certificates"
+  // GI and IC carry register_s3_attachment too (tasks/views_werner.py), and
+  // their forms already register uploads under these segments.
+  | "general-instructions"
+  | "intentions-to-claim";
 
 export interface TaskAttachmentResponse {
   id: string;
@@ -778,7 +784,7 @@ export const getPresignedUrl = async (
   }
 };
 
-/** Register an S3-uploaded file as a task entity attachment (VO, SI, RFI, DC, CPI). */
+/** Register an S3-uploaded file as a task entity attachment (VO, SI, RFI, DC, CPI, GI, IC). */
 export const registerS3TaskAttachment = async (
   segment: TaskAttachmentSegment,
   entityId: string | number,
