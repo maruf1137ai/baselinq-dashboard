@@ -18,15 +18,10 @@
  *   Don't describe button visibility as if it were the real rule; the
  *   "who" columns below describe the backend rule, which is what actually
  *   determines the outcome.
- * - Editing a team member's role fires TWO backend calls: the project-
- *   scoped role PATCH (properly gated) and a second PATCH to the user's
- *   GLOBAL account role (auth/users/{id}/) that has no permission check
- *   beyond being logged in — for MOST roles. UserSerializer.update()
- *   (user/serializers.py) does unconditionally reject assigning ADMIN/
- *   SUPER_USER/PROJECT_ADMIN/SPECIAL_USER through this path specifically
- *   (PRIVILEGED_ROLES guard, user/constants.py) — that one's blocked, not
- *   open. Don't undersell the gap for other roles, but don't overclaim it
- *   covers those four either.
+ * - Editing a team member's role is one backend call: the project-scoped
+ *   role PATCH. The account-wide role (auth/users/{id}/) is no longer
+ *   synced from it; the backend lets only the person or their own
+ *   company's administrator change that.
  * - The "PIN required" block shown for VO/Claim signing is UI-only.
  *   SignAndIssueView (backend/tasks/views_signing.py) applies identical
  *   logic to SI/VO/Claim alike; it never distinguishes entity type. Don't
@@ -196,7 +191,7 @@ const SECTIONS: SettingsSection[] = [
 
 const GLOBAL_NOTES = [
   "The buttons you see on the Users tab reflect only whether you can edit Settings in general — they don't reflect the real, narrower rule about who you're actually allowed to add, edit, or remove. Expect to see a button and then get turned away by the server for most people, unless your role is Client/Owner, Client Project Manager, or Project Manager.",
-  "Changing someone's project role also quietly changes their account-wide role through a second request that, for most roles, isn't restricted to anyone in particular — only assigning Administrator, Super User, Project Administrator, or Special User this way is blocked. Worth knowing if you're relying on role changes being tightly controlled.",
+  "Changing someone's project role changes their role on this project only. Their account-wide role belongs to them, and only they or their own company's administrator can change it.",
   "The signing PIN and the insurance broker contact are both entirely self-service — nobody needs anyone else's permission to set, change, or clear either one for their own account.",
   "Signing PINs are checked identically for Site Instructions, Variation Orders, and Delay Claims by the server — the interface is what makes Variation Orders and Delay Claims look stricter by refusing to offer the no-PIN fallback that Site Instructions still has.",
 ];

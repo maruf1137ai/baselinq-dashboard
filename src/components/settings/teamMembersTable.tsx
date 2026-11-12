@@ -211,15 +211,11 @@ const ActionsCell = ({
         },
       });
 
-      // Synchronize global role with project role to ensure data consistency
-      if (member.user?.id) {
-        await patchData({
-          url: `auth/users/${member.user.id}/`,
-          data: {
-            role: selectedRole.code
-          }
-        });
-      }
+      // The project role is the one that governs this project. The user's
+      // account role is theirs (or their own company administrator's) to
+      // change: the backend refuses anyone else, so this no longer also
+      // PATCHes auth/users/{id}/. Doing so rewrote the person's role on
+      // every project, and failed half-way for anyone outside their company.
 
       toast.success("Role updated successfully");
       setShowEditDialog(false);
