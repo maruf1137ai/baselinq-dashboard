@@ -397,9 +397,21 @@ export interface AcceptInvitationPayload {
   insurance_file_name?: string;
 }
 
+// `tokens` comes back only for a NEW account, which set its password in this
+// request. An existing account must already be signed in as the invitee (the
+// backend refuses with 403 `sign_in_required` / `wrong_account` otherwise) and
+// keeps the session it has.
 export const acceptInvitation = async (token: string, payload: AcceptInvitationPayload) => {
   const res = await api.post(`auth/invitations/${token}/accept/`, payload);
-  return res.data as { message: string; user: object; tokens: { access: string; refresh: string } };
+  return res.data as { message: string; user: object; tokens?: { access: string; refresh: string } };
+};
+
+// Accept an associated-company invitation as the signed-in invitee (an
+// existing account). New accounts post from the invitation page without a
+// session; see AcceptAppointedInvitation.
+export const acceptAppointedInvitation = async (token: string, payload: Record<string, unknown>) => {
+  const res = await api.post(`auth/accept-appointed-invitation/${token}/`, payload);
+  return res.data as { message: string; user: object; tokens?: { access: string; refresh: string } };
 };
 
 export const logoutUser = async () => {
