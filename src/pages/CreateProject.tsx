@@ -48,6 +48,7 @@ import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
+import { fetchCurrentWeather, isWeatherConfigured } from "@/lib/weather";
 import {
   Command,
   CommandEmpty,
@@ -164,9 +165,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
 };
 
-// ── Weather helper (reuses same OWM key as NavbarWeather) ─────────────────────
-
-const OWM_KEY = "8dda08a209080b44cdc3566edffcfbc4";
+// ── Weather display ─────────────────────────────────────────────────────────
 
 const WEATHER_ICON: Record<string, string> = {
   Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Drizzle: "🌦️",
@@ -178,19 +177,6 @@ const WEATHER_LABEL: Record<string, string> = {
   Clear: "Sunny", Clouds: "Cloudy", Rain: "Rainy", Drizzle: "Drizzle",
   Thunderstorm: "Stormy", Snow: "Snowy", Mist: "Misty", Fog: "Foggy",
   Haze: "Hazy", Dust: "Dusty", Sand: "Sandy", Ash: "Ash", Squall: "Squall", Tornado: "Tornado",
-};
-
-const fetchWeatherForLocation = async (lat: string, lng: string) => {
-  try {
-    const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${OWM_KEY}`
-    );
-    const data = await res.json();
-    if (!res.ok || (String(data.cod) !== "200" && data.cod !== 200)) return null;
-    return data;
-  } catch {
-    return null;
-  }
 };
 
 const DEFAULT_ADDRESS: AddressState = { street: "", city: "", province: "", postal_code: "" };
@@ -945,8 +931,8 @@ export default function CreateProject() {
         setLocationWeatherLoading(true);
         setLocationWeather(null);
         setShowLocationWarning(true);
-        if (form.latitude && form.longitude) {
-          fetchWeatherForLocation(form.latitude, form.longitude).then((data) => {
+        if (form.latitude && form.longitude && isWeatherConfigured()) {
+          fetchCurrentWeather(form.latitude, form.longitude).then((data) => {
             setLocationWeather(data);
             setLocationWeatherLoading(false);
           });

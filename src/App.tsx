@@ -1,5 +1,6 @@
 import { Toaster as Sonner, Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { StagingBanner } from "@/components/StagingBanner";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -79,6 +80,7 @@ const App = () => (
         duration={2000}
         position="bottom-right"
       />
+      <StagingBanner />
       <BrowserRouter>
         <Routes>
           <Route

@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AiMark } from "@/components/icons/AiMark";
 import { useProjects } from "@/hooks/useProjects";
 import WeatherAIAnalysisModal from "./WeatherAIAnalysisModal";
-
-const OWM_KEY = "8dda08a209080b44cdc3566edffcfbc4";
+import { fetchCurrentWeather, isWeatherConfigured } from "@/lib/weather";
 
 const CONDITION_LABEL: Record<string, string> = {
   Clear: "Sunny",
@@ -37,15 +36,6 @@ const CONDITION_ICON: Record<string, string> = {
   Ash: "🌋",
   Squall: "💨",
   Tornado: "🌪️",
-};
-
-const fetchWeatherByCoords = async (lat: number, lon: number) => {
-  const res = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${OWM_KEY}`
-  );
-  const data = await res.json();
-  if (!res.ok || (String(data.cod) !== "200" && data.cod !== 200)) return null;
-  return data;
 };
 
 const geocodeAddress = async (address: string): Promise<{ lat: number; lon: number } | null> => {
@@ -104,10 +94,12 @@ const NavbarWeather = () => {
   }, [open]);
 
   useEffect(() => {
-    if (projectsLoading) return;
+    // No key in this build: show nothing, and skip the geocoding too, since
+    // its only use here is to look up the weather.
+    if (projectsLoading || !isWeatherConfigured()) return;
     const run = async () => {
       if (currentProject?.coordinates?.lat && currentProject?.coordinates?.lng) {
-        const data = await fetchWeatherByCoords(
+        const data = await fetchCurrentWeather(
           currentProject.coordinates.lat,
           currentProject.coordinates.lng
         );
@@ -116,7 +108,7 @@ const NavbarWeather = () => {
       if (currentProject?.location) {
         const coords = await geocodeAddress(currentProject.location);
         if (coords) {
-          const data = await fetchWeatherByCoords(coords.lat, coords.lon);
+          const data = await fetchCurrentWeather(coords.lat, coords.lon);
           if (data) { setWeather(data); setFromProjectLocation(true); return; }
         }
       }
