@@ -325,7 +325,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
     defaultValues: {
       name: "", description: "", project_number: "",
       start_date: "", end_date: "",
-      fx_rate: 1, retention_rate: 5, vat_rate: 15,
+      fx_rate: 1, retention_rate: 0, vat_rate: 15,
       contract_type: "JBCC", total_budget: 0, location: "", attachments: [],
     },
   });
@@ -344,7 +344,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         start_date: getDate(project.startDate || project.start_date),
         end_date: getDate(project.endDate || project.end_date),
         fx_rate: project.fxRate ?? project.fx_rate ?? 1,
-        retention_rate: project.retentionRate ?? project.retention_rate ?? 5,
+        retention_rate: project.retentionRate ?? project.retention_rate ?? 0,
         vat_rate: project.vatRate ?? project.vat_rate ?? 15,
         contract_type: project.contractType || project.contract_type || "JBCC",
         total_budget: project.totalBudget ?? project.total_budget ?? 0,
@@ -393,7 +393,7 @@ export function OnboardingModal({ isOpen, onOpenChange, project }: OnboardingMod
         start_date: "",
         end_date: "",
         fx_rate: 1,
-        retention_rate: 5,
+        retention_rate: 0,
         vat_rate: 15,
         contract_type: "JBCC",
         total_budget: 0,

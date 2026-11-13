@@ -33,7 +33,7 @@ const ago = (days: number) => {
 
 // A project with real money on it. A contractor's screen staying clean because
 // there was nothing to leak would prove nothing.
-const feedFor = (held: { canViewFinance: boolean; canViewCompliance: boolean }) =>
+const feedFor = (held: { canViewFinance: boolean; canViewCompliance: boolean; canViewProgramme?: boolean }) =>
   buildChangeFeed(
     [
       buildCertificateChanges(
@@ -78,7 +78,7 @@ const feedFor = (held: { canViewFinance: boolean; canViewCompliance: boolean }) 
     { now: NOW, limit: 4 },
   );
 
-const draw = (held: { canViewFinance: boolean; canViewCompliance: boolean }) => {
+const draw = (held: { canViewFinance: boolean; canViewCompliance: boolean; canViewProgramme?: boolean }) => {
   const { container } = render(
     <MemoryRouter>
       <WhatChangedBlock feed={feedFor(held)} />
@@ -91,7 +91,9 @@ const draw = (held: { canViewFinance: boolean; canViewCompliance: boolean }) => 
 };
 
 describe("a contractor without finance.view", () => {
-  const CONTRACTOR = { canViewFinance: false, canViewCompliance: true };
+  // Milestone rows need programme.view, which a contractor holds; without it
+  // the panel's only non-commercial content would be filtered out too.
+  const CONTRACTOR = { canViewFinance: false, canViewCompliance: true, canViewProgramme: true };
 
   it("is shown no rand figure and none of the restricted words, anywhere in the DOM", () => {
     const t = draw(CONTRACTOR);

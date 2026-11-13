@@ -33,7 +33,7 @@ import { AlertTriangle, Banknote } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoney } from "@/lib/formatCurrency";
 import { cn } from "@/lib/utils";
 import { certificateAdjustments, financialOverview } from "@/lib/projectPosition";
 import type { ProjectCommercials } from "@/hooks/useProjectCommercials";
@@ -187,7 +187,7 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
         >
           <Row
             label="This period certified"
-            value={pc.claimAmount === undefined ? null : formatZAR(pc.claimAmount)}
+            value={pc.claimAmount === undefined ? null : formatMoney(pc.claimAmount)}
             caveat="claim_amount — the value of work certified this period, excluding VAT."
           />
 
@@ -207,9 +207,9 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
           {adjustments && (
             <Row
               label="Adjustments"
-              value={formatZAR(adjustments.total)}
+              value={formatMoney(adjustments.total)}
               note={adjustments.components
-                .map((c) => `${c.label} ${formatZAR(c.amount)}`)
+                .map((c) => `${c.label} ${formatMoney(c.amount)}`)
                 .join(" · ")}
               // Colour only when it reduces what the contractor is paid. A
               // positive adjustment — a retention release, an escalation — is
@@ -221,7 +221,7 @@ export default function CommercialTab({ data }: { data: ProjectCommercials }) {
 
           <Row
             label="Net amount payable"
-            value={pc.netAmount === undefined ? null : formatZAR(pc.netAmount)}
+            value={pc.netAmount === undefined ? null : formatMoney(pc.netAmount)}
             strong
             caveat="net_amount — the VAT-inclusive amount due."
           />

@@ -82,7 +82,7 @@ import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { summariseQueue } from "@/lib/homeQueueRank";
 import type { QueueItem, QueueKind } from "@/lib/homeQueueRank";
 import { ROUTE } from "@/lib/homeSignals";
-import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoney } from "@/lib/formatCurrency";
 import type { HomeData } from "@/hooks/useHomeData";
 import { useScrollPagination } from "@/hooks/useScrollPagination";
 
@@ -140,6 +140,18 @@ const SECTIONS: { label: string; note: string; kinds: QueueKind[] }[] = [
     label: "Yours to act on",
     note: "Rows that reached you because you can perform the act — certifying, posting or paying a certificate, answering an invitation, approving a meeting action, or chasing a task that escalated to you.",
     kinds: ["certificate", "rejected", "rsvp", "meeting-action", "task-escalated"],
+  },
+  {
+    /*
+      Work instructed, signed for, and never put on a certificate — so the
+      contractor has not been paid for it. Its own section rather than folded
+      into "Yours to act on", because it is not a document waiting on your
+      signature: it is money sitting still, and the act it asks for happens on
+      the next certificate rather than on the row itself.
+    */
+    label: "Signed, not yet certified",
+    note: "A variation becomes payable only when it is certified. These were approved and signed and have never appeared on a payment certificate.",
+    kinds: ["variation"],
   },
   /*
     ── "Assigned to you" WAS HERE, AND IT IS NOW ITS OWN PANEL ─────────────
@@ -215,7 +227,7 @@ export function foldPaymentChases(items: QueueItem[]): QueueItem[] {
     key: "payment-overdue-group",
     headline: [
       `${chases.length} certificates unpaid`,
-      total === null ? null : formatZAR(total),
+      total === null ? null : formatMoney(total),
       oldest === null ? null : `oldest ${oldest} days over`,
     ]
       .filter(Boolean)
@@ -239,8 +251,8 @@ export function foldPaymentChases(items: QueueItem[]): QueueItem[] {
     clock: null,
     countdownLabel: null,
     amount: total,
-    href: ROUTE.certificates,
-    action: "Open the certificate list",
+    href: ROUTE.payments,
+    action: "Open payments",
   };
 
   const first = items.findIndex((i) => i.key.startsWith(PAYMENT_CHASE_PREFIX));

@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { parseISO, differenceInDays, format, addMonths, startOfMonth } from "date-fns";
 import { useMilestonePhaseCosts, MilestoneWithCost } from "@/hooks/useMilestones";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatMoney } from "@/lib/formatCurrency";
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "#6B7280",
@@ -18,8 +19,12 @@ const STATUS_LABELS: Record<string, string> = {
   delayed: "Delayed",
 };
 
+/**
+ * Whole rands in Finance's format (R 13 605 500), not the browser locale's
+ * ("ZAR 13,605,500" on one machine, "ZAR 13.605.500" on another).
+ */
 export function formatCost(amount: number, currency: string) {
-  return `${currency} ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return formatMoney(Math.round(amount), currency || "ZAR").replace(/,00$/, "");
 }
 
 interface TimelineProps {
@@ -33,7 +38,12 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
   const { data, isLoading } = useMilestonePhaseCosts(projectId, discipline);
   const milestones = data?.milestones ?? [];
   const currency = data?.currency ?? "ZAR";
-  const totalLabel = discipline !== "construction" ? "Total planned fees" : "Total contract cost";
+  // Construction phases carry what was certified against them, not a cost:
+  // each posted certificate counted once, excl. VAT. "On certificates"
+  // because Finance's certified to date also counts manual Cost Ledger
+  // credits, which belong to no phase.
+  const construction = discipline === "construction";
+  const totalLabel = construction ? "Certified on certificates (excl. VAT)" : "Total planned fees";
 
   const { rangeStart, rangeEnd, months } = useMemo(() => {
     if (!milestones.length) {
@@ -63,6 +73,8 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
   }, [milestones]);
 
   const totalDays = differenceInDays(rangeEnd, rangeStart) || 1;
+  const todayOffset = differenceInDays(new Date(), rangeStart);
+  const todayPct = todayOffset >= 0 && todayOffset <= totalDays ? `${(todayOffset / totalDays) * 100}%` : null;
 
   function barStyle(m: MilestoneWithCost) {
     const start = parseISO(m.startDate);
@@ -108,13 +120,13 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
             variant="plain"
             icon={Calendar}
             title="No programme phases yet"
-            description="Add phases on the Milestones tab and they plot here against the contract dates."
+            description="Add phases below and they plot here against the contract dates."
           />
         ) : (
           <div style={{ minWidth: 600 }}>
             {/* Month headers */}
             <div className="flex border-b border-border pb-2 mb-3">
-              <div className="w-40 shrink-0" />
+              <div className="w-56 shrink-0" />
               <div className="flex-1 relative flex">
                 {months.map((m) => (
                   <div
@@ -135,27 +147,36 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
                 // every discipline including Construction — the backend
                 // (MilestonePhaseCostsView) now gates contractCost by the
                 // same feeVisible flag as every professional fee.
-                const costLabel = !m.feeVisible
-                  ? ""
-                  : m.contractCost != null
-                  ? formatCost(m.contractCost, currency)
-                  : "Not set";
+                const cost = !m.feeVisible
+                  ? []
+                  : construction
+                  ? [
+                      `${formatCost(m.contractCost ?? 0, currency)} certified`,
+                      m.plannedValue != null ? `${formatCost(m.plannedValue, currency)} planned` : null,
+                    ].filter((x): x is string => !!x)
+                  : [m.contractCost != null ? formatCost(m.contractCost, currency) : "Not set"];
                 return (
                   <div key={m._id} className="flex items-center gap-2">
-                    {/* Name column */}
-                    <div className="w-40 shrink-0 pr-2">
+                    {/* Name column: one figure per line, never split mid-amount. */}
+                    <div className="w-56 shrink-0 pr-2">
                       <p className="text-xs font-medium text-foreground truncate">{m.name}</p>
-                      <p className="text-xs text-muted-foreground">{costLabel}</p>
+                      {cost.map((line) => (
+                        <p key={line} className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                          {line}
+                        </p>
+                      ))}
                     </div>
 
                     {/* Bar track */}
                     <div className="flex-1 relative h-7 bg-muted/30 rounded">
                       <div
-                        className="absolute top-1 h-5 rounded flex items-center px-2 overflow-hidden"
+                        className="absolute top-1 h-5 rounded"
                         style={barStyle(m)}
-                        title={`${m.name} — ${costLabel}`}>
-                        <span className="text-xs text-white truncate font-medium">{m.name}</span>
-                      </div>
+                        title={`${m.name}${cost.length ? ` — ${cost.join(" · ")}` : ""}`}
+                      />
+                      {todayPct && (
+                        <div aria-hidden className="absolute inset-y-0 w-px bg-foreground/30" style={{ left: todayPct }} />
+                      )}
                     </div>
                   </div>
                 );
@@ -164,13 +185,23 @@ const Timeline = ({ projectId, discipline, canCreate = false, onAddMilestone }: 
 
             {/* Total */}
             {data && data.totalContractCost != null && data.totalContractCost > 0 && (
-              <div className="mt-4 pt-3 border-t border-border flex justify-end">
+              <div className="mt-4 pt-3 border-t border-border flex flex-col items-end gap-1">
                 <span className="text-xs text-muted-foreground">
                   {totalLabel}:{" "}
                   <span className="font-medium text-foreground">
                     {formatCost(data.totalContractCost, currency)}
                   </span>
                 </span>
+                {construction && (data.unallocatedCertified ?? 0) > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Includes {formatCost(data.unallocatedCertified ?? 0, currency)} certified outside every phase&apos;s dates.
+                  </span>
+                )}
+                {construction && (
+                  <span className="text-xs text-muted-foreground">
+                    Each certificate counted once: in the phases it is linked to, otherwise the earliest phase running on its date.
+                  </span>
+                )}
               </div>
             )}
           </div>

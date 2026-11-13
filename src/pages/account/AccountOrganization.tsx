@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Building2, Save, Loader2, Users, UserPlus, Trash2, X, Clock, Paperclip, ShieldCheck, Lock, CreditCard } from "lucide-react";
-import { hasPermission } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { PageHeader } from "@/components/ui/page-header";
 
 type Member = { id: number; name: string; email: string; role: string | null; role_code: string | null };
@@ -80,7 +80,9 @@ const AccountOrganization = () => {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   const isOrg = user?.account_type === "organisation";
-  const canEdit = isOrg || hasPermission(user?.role?.code, "manageSettings");
+  // organization.edit (Roles & Permissions, account-wide) — the server's rule.
+  const canEditOrganization = usePermissions().can("editOrganization");
+  const canEdit = isOrg || canEditOrganization;
 
   useEffect(() => {
     if (user) {

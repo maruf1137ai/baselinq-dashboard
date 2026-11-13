@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { Search, SearchX, MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,10 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelectTask }: ChatSidebarProps) {
+  // No new channels while an overdue Baselinq invoice has the project read-only.
+  const rawProjectId = localStorage.getItem("selectedProjectId");
+  const { data: effectivePerms } = useEffectivePermissions(rawProjectId ? Number(rawProjectId) : null);
+  const billingLocked = !!effectivePerms?.billingLocked;
   const [open, setOpen] = useState(true);
   // Empty array = no filter applied (everything matches) for each group.
   const [messageFilter, setMessageFilter] = useState<string[]>([]);
@@ -100,9 +105,11 @@ export function ChatSidebar({ onNewChat, tasks, isLoading, selectedTask, onSelec
       <div className="p-3">
         {open && (
           <>
-            <button className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
-              <Plus className="h-4 w-4" />New Message
-            </button>
+            {!billingLocked && (
+              <button className="w-full rounded-lg flex items-center justify-center h-10 bg-card border border-border text-foreground text-sm font-normal gap-2 hover:bg-muted mb-4" onClick={onNewChat}>
+                <Plus className="h-4 w-4" />New Message
+              </button>
+            )}
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

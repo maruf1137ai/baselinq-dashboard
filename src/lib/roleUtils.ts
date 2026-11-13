@@ -71,12 +71,17 @@ export const BACKBONE_DISPLAY_TO_CODE: Record<string, string> = {
   "Site Engineer": "SE",
   "Site Supervisor": "SS",
   "Foreman": "FOREMAN",
+  // Its own system role, not mapped to a backbone: read-only on the money,
+  // records payments with proof (user/migrations/0078_employer_read_only_role).
+  "Employer": "EMPLOYER",
 };
 
 /**
- * Feature permission definitions.
- * Each key maps to the backbone role codes that are allowed to access it.
- * VIEWER / LIMITED / FOREMAN are read-only — not listed in write/manage permissions.
+ * The vocabulary of feature flags (PermissionKey). NOT an access decision:
+ * every flag is answered from the live Roles & Permissions matrix by
+ * usePermissions().can() (FLAG_TO_CODE). The role lists below are legacy and
+ * no longer read anywhere — the role-list checker (hasPermission) was removed
+ * once its last callers moved to the matrix.
  */
 export const PERMISSIONS = {
   // Page-level access
@@ -99,7 +104,6 @@ export const PERMISSIONS = {
   editTeamRoles:      ["CLIENT", "CPM", "PM"],
   manageTeam:         ["CLIENT", "CPM", "PM"],
   manageSettings:     ["CLIENT", "CPM", "PM"],
-  viewBilling:        ["CLIENT", "CPM", "PM"],
   manageIntegrations: ["CLIENT", "CPM", "PM"],
   viewPermissions:    ["CLIENT", "CPM", "PM", "CM", "CONTRACTS_MGR", "ARCH", "CQS", "CONS_PLANNER"],
   editPermissions:    ["CLIENT", "CPM", "PM"],
@@ -128,6 +132,12 @@ export const PERMISSIONS = {
   // for this feature, kept here only to satisfy the shared PermissionKey type.
   viewRolesPermissions: ["CLIENT", "CPM", "PM"],
   editRolesPermissions: ["CLIENT", "CPM", "PM"],
+  // Platform billing views (user/migrations/0072_finance_billing_view_codes.py).
+  // Matrix-only: deliberately empty so this legacy table never grants them.
+  viewPlatformFees: [],
+  viewInvoices:     [],
+  viewBillingTerms: [],
+  editOrganization: [],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -158,16 +168,6 @@ export function resolvePermissionCode(role: string): string {
 
   // Unknown / backbone codes pass through uppercased (e.g. "CPM" → "CPM")
   return upper;
-}
-
-/**
- * Check if a role has permission for a specific feature.
- * Automatically resolves new/display roles to backbone codes.
- */
-export function hasPermission(role: string | undefined | null, permission: PermissionKey): boolean {
-  if (!role) return false;
-  const backbone = resolvePermissionCode(role);
-  return (PERMISSIONS[permission] as readonly string[]).includes(backbone);
 }
 
 // ── Company Types & Role Filtering ───────────────────────────────────────────

@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { ProjectStatusCard } from '../ProjectStatusCard';
-import CashIcon from '../icons/CashIcon';
 
 import CostLedgerTable from './costLadgerTable';
 import { FinanceToolbar } from './FinanceToolbar';
@@ -16,9 +14,10 @@ import {
 } from '../ui/dropdown-menu';
 import { CostLedgerDrawer } from './costLedgerDrawer';
 import useFetchAllPages from '@/hooks/useFetchAllPages';
-import { PlusIcon, Receipt } from 'lucide-react';
+import { AlertTriangle, PlusIcon, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { AwesomeLoader } from '../commons/AwesomeLoader';
+import { FinanceLoadError } from './FinanceLoadError';
 import { usePermission } from '@/hooks/usePermission';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useProjectCommercials } from '@/hooks/useProjectCommercials';
@@ -108,7 +107,7 @@ const CostLadger = () => {
     ? `cost-ledger/?project_id=${projectId}`
     : '';
 
-  const { data: listData, isLoading } = useFetchAllPages<LedgerApiEntry>(listUrl);
+  const { data: listData, isLoading, isError, refetch } = useFetchAllPages<LedgerApiEntry>(listUrl);
 
   // Same derivation Project Health's Commercial position tab uses, so this
   // tab's "Financial overview" cannot drift from that one — see
@@ -195,21 +194,57 @@ const CostLadger = () => {
       {(commercials.variationsTruncated || commercials.variationsFailed) && (
         <p className="text-xs text-muted-foreground">Variations may be short</p>
       )}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {overviewRows.map((r) => (
-          <ProjectStatusCard
-            key={r.key}
-            icon={<CashIcon />}
-            title={r.label}
-            value={r.value ?? '—'}
-            subtitle={r.formula}
-            badgeText=""
-            badgeVariant="default"
-            actionText=""
-            valueClassName={r.derived ? 'font-medium' : undefined}
-          />
+      {/* The Financial Position's figure strip, so the same six figures read the
+          same way on both tabs: one card, a basis header, rows of three. */}
+      <section className="overflow-hidden rounded-xl border border-border bg-card" aria-label="Financial overview">
+        <p className="border-b border-border bg-muted/30 px-5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Financial overview · excl. VAT
+        </p>
+        {[overviewRows.slice(0, 3), overviewRows.slice(3)].filter((row) => row.length > 0).map((row, i) => (
+          <div
+            key={i}
+            className={`grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0 ${i > 0 ? 'border-t border-border' : ''}`}
+          >
+            {row.map((r) => {
+              // A negative figure (over-certified balance) is the one to notice.
+              const alarm = /-\s*\d/.test(r.value ?? '');
+              return (
+                // Every cell the same shape — label, figure, a two-line note slot —
+                // so a long note never makes one box taller than its neighbours.
+                <div key={r.key} className="flex min-w-0 flex-col px-5 py-4" title={r.caveat}>
+                  <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{r.label}</p>
+                  <p className={`mt-1 flex items-center gap-1.5 whitespace-nowrap text-xl font-semibold tabular-nums ${alarm ? 'text-destructive' : 'text-foreground'}`}>
+                    {r.value ?? '—'}
+                    {/* A marker only; the warning itself is in the strip below the grid. */}
+                    {r.warning && (
+                      <AlertTriangle aria-label="See the note below" className="h-4 w-4 shrink-0 text-amber-600" />
+                    )}
+                  </p>
+                  <p
+                    className="mt-1 line-clamp-2 min-h-[2rem] text-xs leading-4 text-muted-foreground"
+                    title={r.note ?? r.formula}
+                  >
+                    {r.note ?? r.formula ?? ''}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         ))}
-      </div>
+        {/* Warnings span the card, under the grid: visible in full (a figure may
+            be wrong), and they never make one box taller than its row. */}
+        {overviewRows.filter((r) => r.warning).map((r) => (
+          <p
+            key={`warn-${r.key}`}
+            className="flex items-start gap-2 border-t border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-900"
+          >
+            <AlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+            <span>
+              <span className="font-medium">{r.label}:</span> {r.warning}
+            </span>
+          </p>
+        ))}
+      </section>
 
       {/* One toolbar row: search grows on the left, filter and actions sit
           right-aligned on the same line. */}
@@ -299,6 +334,8 @@ const CostLadger = () => {
           <div className="flex items-center justify-center py-20">
             <AwesomeLoader message="Processing ledger data" />
           </div>
+        ) : isError && !listData ? (
+          <FinanceLoadError what="The cost ledger" onRetry={() => refetch()} />
         ) : ledgerData.length === 0 ? (
           <EmptyState
             icon={Receipt}

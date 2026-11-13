@@ -29,11 +29,11 @@ interface CostLedgerTableProps {
 
 const PAGE_SIZE = 10;
 
-import { formatZAR } from '@/lib/formatCurrency';
+import { formatMoney } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 
-const formatCurrency = formatZAR;
+const formatCurrency = formatMoney;
 
 const ActionsCell = ({
   entry,

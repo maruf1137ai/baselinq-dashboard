@@ -14,10 +14,11 @@ export interface DelayRisk {
 }
 
 export interface FinancialImpact {
-  type: "budget_spend" | "pending_vos";
-  spent_pct?: number;
-  total_spent?: number;
-  total_budget?: number;
+  /** Read from Finance's definitions (backend tasks/financial_position.py). */
+  type: "certified" | "approved_unsigned" | "pending_vos";
+  certified_pct?: number;
+  certified?: number;
+  revised_contract_sum?: number;
   count?: number;
   total_value?: number;
   currency: string;
@@ -29,6 +30,8 @@ export interface ComplianceGate {
   type: "milestone_due_soon" | "pc_pending_approval";
   name?: string;
   pc_number?: string;
+  /** Certificates: "submitted" (awaiting approval) or "approved" (awaiting posting). */
+  state?: string;
   end_date?: string;
   certificate_date?: string;
   days_until_due?: number;

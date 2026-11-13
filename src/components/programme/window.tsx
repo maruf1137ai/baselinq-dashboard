@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const tabs = ["Schedule", "Milestones", "Risk Forecast"];
+// Schedule and Milestones were two tabs over the same phases — a chart and a
+// list. They are one view now: the chart, then the phases to edit beneath it.
+const tabs = ["Schedule", "Risk Forecast"];
 
 // Discipline axis — independent of the Schedule/Milestones/Risk Forecast tabs
 // above. It picks which discipline's phases/fees the active tab shows.
@@ -36,22 +38,22 @@ const Window = () => {
   // page already has, and switching tabs writes back, so the URL stays
   // shareable and survives a reload.
   //
-  // A named milestone lives on the Milestones tab, so the parameter opens
-  // that tab. It cannot open a tab that does not exist, and it fetches
+  // A named milestone lives in the phase list on the Schedule, so the
+  // parameter opens the Schedule. It fetches
   // nothing by id — the milestone is only ever highlighted if it is already
   // in the list this viewer's own request returned. An id that is stale, or
-  // that belongs to a project this user is not on, opens the Milestones tab
-  // with the full, unfiltered list and nothing highlighted: the same page the
+  // that belongs to a project this user is not on, opens the Schedule with
+  // the full, unfiltered list and nothing highlighted: the same page the
   // user would see having clicked the tab themselves, never an error and
   // never an empty list implying the phase was deleted.
   const [searchParams, setSearchParams] = useSearchParams();
   const milestoneParam = searchParams.get("milestone");
   const [tabChoice, setTabChoice] = useState<string | null>(null);
-  const activeTab = tabChoice ?? (milestoneParam ? "Milestones" : "Schedule");
+  const activeTab = tabChoice ?? "Schedule";
 
   const chooseTab = (next: string) => {
     setTabChoice(next);
-    if (next !== "Milestones" && milestoneParam) {
+    if (next !== "Schedule" && milestoneParam) {
       // Leaving the tab the selection lives on: drop it rather than leave a
       // parameter pointing at a row that is no longer rendered.
       const params = new URLSearchParams(searchParams);
@@ -151,25 +153,22 @@ const Window = () => {
       {/* Tab Content — Full Width */}
       <div className="pt-6">
         {activeTab === "Schedule" && (
-          <Timeline
-            projectId={projectId}
-            discipline={discipline}
-            canCreate={canCreate}
-            onAddMilestone={() => setAddDialogOpen(true)}
-          />
-        )}
-        {activeTab === "Milestones" && (
-          <div className="space-y-3">
-            <div className="flex justify-end">
-              <AcceptBaselineDialog projectId={projectId} />
-            </div>
-            <Milestone
-              projectId={projectId}
-              discipline={discipline}
-              canManage={canCreate}
-              onAddMilestone={() => setAddDialogOpen(true)}
-              selectedMilestoneId={milestoneParam}
-            />
+          <div className="space-y-6">
+            {/* Adding a phase is offered once, on the list it adds to. */}
+            <Timeline projectId={projectId} discipline={discipline} canCreate={false} />
+            <section className="space-y-3" aria-label="Phases">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium text-foreground">Phases</h2>
+                <AcceptBaselineDialog projectId={projectId} />
+              </div>
+              <Milestone
+                projectId={projectId}
+                discipline={discipline}
+                canManage={canCreate}
+                onAddMilestone={() => setAddDialogOpen(true)}
+                selectedMilestoneId={milestoneParam}
+              />
+            </section>
           </div>
         )}
         {activeTab === "Risk Forecast" && <RiskForecast projectId={projectId} />}

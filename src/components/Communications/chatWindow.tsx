@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Send, Mic, X, Pause, MessageSquare, ChevronRight, ChevronDown, ChevronUp, Info, Calendar, DollarSign, Clock, CheckCircle2, Users, Loader2, AlertCircle, RotateCw, Eye } from "lucide-react";
 import { AiMark } from "@/components/icons/AiMark";
@@ -108,6 +110,11 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   const userStr = localStorage.getItem("user");
   const currentUser = userStr ? JSON.parse(userStr) : null;
   const projectId = localStorage.getItem("selectedProjectId");
+  const queryClient = useQueryClient();
+  // An overdue Baselinq invoice makes the project read-only; the server
+  // refuses posts (billing/lockout.ensure_project_writable), so say so here.
+  const { data: effectivePerms } = useEffectivePermissions(projectId ? Number(projectId) : null);
+  const billingLocked = !!effectivePerms?.billingLocked;
 
   // Fetch project members for @mention
   useEffect(() => {
@@ -306,7 +313,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
   // message but the backend rejects any post/reply (see channel.permissions
   // .user_can_post_to_channel). can_post is omitted for non-task channels,
   // so default to true there.
-  const canPost = channel?.can_post !== false;
+  const canPost = channel?.can_post !== false && !billingLocked;
   // Only label the reason "you're CC'd" when the viewer is actually the CC
   // (response_by) participant — not the To participant or anyone else who
   // might be blocked for a different reason (e.g. a task that reopened but
@@ -364,6 +371,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
     lastMarkedMessageIdRef.current = latestMessageId;
     try {
       await postData({ url: `channels/${channel.id}/mark_read/`, data: {} });
+      // The channel list's own unread counts — Communications.tsx used to do
+      // this after a duplicate mark_read of its own (QA BUG-23).
+      if (projectId) queryClient.invalidateQueries({ queryKey: [`channels/?projectId=${projectId}`] });
       // Refreshes the bell and every sidebar badge off one cache entry —
       // see hooks/useUnreadSummary.ts.
       window.dispatchEvent(new Event("notifications-marked-read"));
@@ -585,7 +595,12 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
       // object URLs with them.
       Object.keys(tempObjectUrlsRef.current).forEach(revokeTempUrls);
     };
-  }, [channel]);
+    // Keyed on the channel's ID, not the object: the parent sets the list's
+    // row first and then the fetched detail for the SAME channel, and keying
+    // on the object restarted the poll, the socket and the mark-read for a
+    // conversation that never changed (QA BUG-23).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel?.id]);
 
   // Auto-scroll to bottom only when user is near the bottom
   const scrollToBottom = () => {
@@ -1103,7 +1118,9 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
               <div>
                 <p className="text-xs font-normal text-primary leading-none">View Only</p>
                 <p className="text-xs text-primary/70 mt-0.5">
-                  {isCurrentUserCC
+                  {billingLocked
+                    ? "This project is read-only until the overdue Baselinq invoice is paid."
+                    : isCurrentUserCC
                     ? "You're CC'd on this task — you can view messages but can't reply."
                     : "You don't have permission to reply in this channel."}
                 </p>
@@ -1614,6 +1631,8 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
                 placeholder={
                   isTaskCompleted
                     ? "This task is closed — no new messages can be sent."
+                    : billingLocked
+                    ? "This project is read-only — messages are blocked until the overdue invoice is paid."
                     : !canPost
                     ? (isCurrentUserCC
                         ? "You're CC'd on this task — view only, replies are disabled."

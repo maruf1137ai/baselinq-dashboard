@@ -145,7 +145,7 @@ export function tierOf(signal: SignalLike): RiskTier {
  *
  * A group headline has to name the CONDITION, and the backend only writes
  * per-instance titles ("Milestone overdue — Ground floor slab"). These are the
- * plural forms of the eight rules in `risk/rules/`, and they are the only
+ * plural forms of the rules in `risk/rules/`, and they are the only
  * strings in this module that are not read off the payload — so a rule that is
  * not in this map falls back to the code itself rather than to a guess, and a
  * condition with exactly ONE instance never uses this map at all: it keeps the
@@ -162,6 +162,15 @@ const CONDITION_LABEL: Record<string, string> = {
   TIME_BAR_APPROACHING: "Notice periods closing",
   CLAIM_NOTIFIED: "Claims notified",
   IC_RISK_HIGH: "Intentions to claim assessed high risk",
+  CERTIFICATE_LATE: "Certificates past their date for issue",
+  VALUATION_COMING: "Certificates due for issue, not drafted",
+  VARIATION_UNSIGNED: "Approved variations waiting to be signed",
+  VARIATION_UNCERTIFIED: "Signed variations not yet certified",
+  TAX_INVOICE_MISSING: "Certificates without a tax invoice",
+  PAYMENT_DUE: "Certificates falling due",
+  FINANCE_SETUP_INCOMPLETE: "Contract & payment settings incomplete",
+  PAYMENT_UNCONFIRMED: "Payments awaiting the contractor's confirmation",
+  PAIRED_NOTICE_UNSERVED: "Notices served for time or money but not both",
 };
 
 /** `MILESTONE_OVERDUE` → `Milestone overdue`. Only ever a fallback. */

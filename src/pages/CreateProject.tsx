@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { PROJECT_CURRENCIES } from "@/lib/projectCurrencies";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -45,6 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { COMPANY_TYPES } from "@/lib/roleUtils";
 import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
+import { parseRetentionRate } from "@/lib/retention";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import useFetch from "@/hooks/useFetch";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
@@ -157,7 +159,7 @@ const STEPS_BASE = [
 ];
 
 const CONTRACT_TYPES = ["JBCC", "NEC", "FIDIC", "GCC"];
-const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"];
+const CURRENCIES = PROJECT_CURRENCIES;
 const CURRENCY_SYMBOLS: Record<string, string> = {
   ZAR: "R",
   USD: "$",
@@ -247,7 +249,7 @@ function formatWithCommas(n: number): string {
 }
 
 function formatCurrency(amount: number, currency = "ZAR"): string {
-  const sym = CURRENCY_SYMBOLS[currency] || "R";
+  const sym = CURRENCY_SYMBOLS[currency] || currency;
   return `${sym} ${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -775,7 +777,8 @@ export default function CreateProject() {
   // ── Derived values ─────────────────────────────────────────────────────────
 
   const budget = parseBudget(form.total_budget);
-  const vatRate = parseFloat(form.vat_rate) || 0;
+  // Fixed, platform-wide VAT — not user-editable (see Project.vat_rate).
+  const vatRate = 15;
   const vatAmount = budget * (vatRate / 100);
   const totalWithVat = budget + vatAmount;
 
@@ -966,8 +969,11 @@ export default function CreateProject() {
 
     const b = parseBudget(form.total_budget);
     const fx = parseFloat(form.fx_rate) || 1;
-    const ret = parseFloat(form.retention_rate) || 5;
-    const vat = parseFloat(form.vat_rate) || 15;
+    // Blank or 0 means no retention — never a hidden 5%.
+    const ret = parseRetentionRate(form.retention_rate);
+    // Fixed, platform-wide VAT — the backend ignores this field on write
+    // anyway (Project.vat_rate is read-only), sent for display consistency.
+    const vat = 15;
     // Currency/contract type now start blank on the form (no default shown
     // to the user) — fall back the same way fx/ret/vat already do, so
     // leaving them untouched still submits a valid project.
@@ -2283,7 +2289,7 @@ export default function CreateProject() {
                             </label>
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-normal text-[#6b7280] pointer-events-none select-none">
-                                {CURRENCY_SYMBOLS[form.currency] || "R"}
+                                {CURRENCY_SYMBOLS[form.currency] || form.currency}
                               </span>
                               <input
                                 className={cn(
@@ -2332,19 +2338,14 @@ export default function CreateProject() {
                             </SelectField>
                           </div>
 
-                          {/* VAT Rate */}
+                          {/* VAT Rate — fixed, platform-wide, not editable. */}
                           <div>
                             <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               VAT Rate (%)
                             </label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              max={25}
-                              className={inputCls()}
-                              value={form.vat_rate}
-                              onChange={(e) => setField("vat_rate", e.target.value)}
-                            />
+                            <div className={`${inputCls()} bg-gray-50 text-gray-500 flex items-center`}>
+                              15%
+                            </div>
                           </div>
                         </div>
 
@@ -2361,10 +2362,14 @@ export default function CreateProject() {
                               step="0.1"
                               min={0}
                               max={100}
+                              placeholder="0"
                               className={inputCls()}
                               value={form.retention_rate}
                               onChange={(e) => setField("retention_rate", e.target.value)}
                             />
+                            <p className="text-[11px] text-[#9ca3af] mt-1">
+                              Leave blank or 0 for no retention
+                            </p>
                           </div>
 
                           <div>

@@ -15,6 +15,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteData, fetchData, patchData, postData, putData } from "@/lib/Api";
+import { invalidatePermissionQueries } from "./usePermissions";
 
 /* ── Shapes the API returns ─────────────────────────────────────────────── */
 
@@ -30,6 +31,15 @@ export interface ApiPermission {
   is_system: boolean;
   /** False means account-wide: it cannot be overridden for one project. */
   is_project_scoped: boolean;
+  /**
+   * Code of the permission this one depends on, or "" if it stands alone.
+   *
+   * The server denies a permission whose parent is denied, whatever its own
+   * grant says (permissions.core._apply_requirements). Read this rather than
+   * hardcoding the hierarchy — that is how the retired settings/permissions.tsx
+   * came to disagree with the server about what was in force.
+   */
+  requires_code?: string;
 }
 
 export interface ApiRole {
@@ -177,20 +187,11 @@ export function useSaveRoleMatrix() {
         url: `permissions/roles/${roleId}/matrix/`,
         data: { project_id: Number(projectId), permissions: changes },
       }),
-    onSuccess: (_data, { roleId, projectId }) => {
-      qc.invalidateQueries({ queryKey: ["role-matrix", roleId, projectId] });
-      // What this user may do can change as a result of what they just saved.
-      qc.invalidateQueries({ queryKey: ["effective-perms"] });
-      // A surface just hidden or revealed changes how many unreads the
-      // bell/sidebar should be counting — see unread_summary's permission
-      // filter on the backend.
-      qc.invalidateQueries({ queryKey: ["unread-summary"] });
-      // Per-document userPermissions (canEdit/canDelete/canUploadVersion)
-      // are embedded in the document list/detail responses — an open
-      // Documents page needs a refetch too, or its Edit/Delete controls
-      // keep reflecting the permission that was just changed here.
-      qc.invalidateQueries({ queryKey: ["document"] });
-      qc.invalidateQueries({ queryKey: ["documents"] });
+    onSuccess: () => {
+      // The saved matrix, this user's own access, the Help pages' "who can
+      // do this" rows, unread counts and per-document controls — one list,
+      // shared with the live push (usePermissions.ts).
+      invalidatePermissionQueries(qc);
     },
   });
 }
@@ -210,10 +211,7 @@ export function useResetProjectOverrides() {
         url: `permissions/project/${projectId}/reset/?role=${roleId}`,
         data: {},
       }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["role-matrix"] });
-      qc.invalidateQueries({ queryKey: ["effective-perms"] });
-    },
+    onSuccess: () => invalidatePermissionQueries(qc),
   });
 }
 
@@ -320,7 +318,7 @@ export function useDeleteRole() {
       qc.invalidateQueries({ queryKey: ["roles"] });
       // Reassigning changes who is on a project and under which role.
       qc.invalidateQueries({ queryKey: ["project-role-holders"] });
-      qc.invalidateQueries({ queryKey: ["effective-perms"] });
+      invalidatePermissionQueries(qc);
     },
   });
 }

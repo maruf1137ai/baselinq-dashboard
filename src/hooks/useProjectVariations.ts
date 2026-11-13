@@ -46,8 +46,18 @@ import { toVariationRecord, type VariationRecord } from "@/lib/homeIndicators";
 /** Twenty per page × 25 pages. Beyond that the walk stops and says so. */
 const PAGE_LIMIT = 25;
 
+/** Stable identity while loading, so memos keyed on `rows` do not re-run. */
+const EMPTY_ROWS: any[] = [];
+
 export interface ProjectVariations {
   records: VariationRecord[];
+  /**
+   * The variation rows as the API returned them. The Finance register and the
+   * certificate drawer need fields `VariationRecord` does not carry (title,
+   * wrapping task, creator); reading them from here shares this query's cache
+   * rather than walking the same pages again.
+   */
+  rows: any[];
   /** True when `PAGE_LIMIT` was reached, so the list may be short. */
   truncated: boolean;
 }
@@ -61,28 +71,35 @@ export function useProjectVariations(projectId: string | undefined, enabled: boo
     staleTime: 60_000,
     queryFn: async () => {
       const records: VariationRecord[] = [];
+      const rows: any[] = [];
       let truncated = false;
 
       for (let page = 1; page <= PAGE_LIMIT; page += 1) {
-        const payload = await fetchData(`tasks/variation-orders/?page=${page}`);
-        const rows: any[] = Array.isArray(payload) ? payload : (payload?.results ?? []);
+        // `project` narrows server-side (backend PR #76); an older backend
+        // ignores it, and the projectId check below still filters.
+        const payload = await fetchData(
+          `tasks/variation-orders/?project=${encodeURIComponent(String(projectId))}&page=${page}`,
+        );
+        const pageRows: any[] = Array.isArray(payload) ? payload : (payload?.results ?? []);
 
-        for (const row of rows) {
+        for (const row of pageRows) {
           if (String(row?.projectId ?? "") !== String(projectId)) continue;
+          rows.push(row);
           records.push(toVariationRecord(row));
         }
 
         // A bare array means the endpoint is not paginated at all.
-        if (Array.isArray(payload) || !payload?.next) return { records, truncated };
+        if (Array.isArray(payload) || !payload?.next) return { records, rows, truncated };
         if (page === PAGE_LIMIT) truncated = true;
       }
 
-      return { records, truncated };
+      return { records, rows, truncated };
     },
   });
 
   return {
     records: query.data?.records ?? [],
+    rows: query.data?.rows ?? EMPTY_ROWS,
     truncated: query.data?.truncated ?? false,
     isLoading: on && query.isLoading,
     isError: query.isError,

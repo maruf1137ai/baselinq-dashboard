@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { PROJECT_CURRENCIES } from "@/lib/projectCurrencies";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -63,6 +64,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { ChevronsUpDown } from "lucide-react";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
+import { parseRetentionRate } from "@/lib/retention";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -154,7 +156,7 @@ const STEPS = [
 ];
 
 const CONTRACT_TYPES = ["JBCC", "NEC", "FIDIC", "GCC"];
-const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"];
+const CURRENCIES = PROJECT_CURRENCIES;
 const CURRENCY_SYMBOLS: Record<string, string> = {
   ZAR: "R",
   USD: "$",
@@ -178,7 +180,7 @@ const DEFAULT_FORM: FormState = {
   total_budget: "",
   currency: "ZAR",
   fx_rate: "1",
-  retention_rate: "5",
+  retention_rate: "",
   vat_rate: "15",
   contract_type: "JBCC",
 };
@@ -279,7 +281,7 @@ function formatWithCommas(n: number): string {
 }
 
 function formatCurrency(amount: number, currency = "ZAR"): string {
-  const sym = CURRENCY_SYMBOLS[currency] || "R";
+  const sym = CURRENCY_SYMBOLS[currency] || currency;
   return `${sym} ${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -868,7 +870,7 @@ export default function EditProject() {
       total_budget: budgetStr,
       currency: p.currency || "ZAR",
       fx_rate: String(p.fx_rate ?? p.fxRate ?? 1),
-      retention_rate: String(p.retention_rate ?? p.retentionRate ?? 5),
+      retention_rate: String(p.retention_rate ?? p.retentionRate ?? ""),
       vat_rate: String(p.vat_rate ?? p.vatRate ?? 15),
       contract_type: p.contract_type || p.contractType || "JBCC",
     });
@@ -957,8 +959,9 @@ export default function EditProject() {
   // ── Derived values ─────────────────────────────────────────────────────────
 
   const budget = parseBudget(form.total_budget);
-  const vatRate = parseFloat(form.vat_rate) || 0;
-  const retentionRate = parseFloat(form.retention_rate) || 0;
+  // Fixed, platform-wide VAT — not user-editable (see Project.vat_rate).
+  const vatRate = 15;
+  const retentionRate = parseRetentionRate(form.retention_rate);
   const vatAmount = budget * (vatRate / 100);
   const totalWithVat = budget + vatAmount;
   const retentionAmount = budget * (retentionRate / 100);
@@ -1187,8 +1190,11 @@ export default function EditProject() {
 
     const b = parseBudget(form.total_budget);
     const fx = parseFloat(form.fx_rate) || 1;
-    const ret = parseFloat(form.retention_rate) || 5;
-    const vat = parseFloat(form.vat_rate) || 15;
+    // Blank or 0 means no retention — never a hidden 5%.
+    const ret = parseRetentionRate(form.retention_rate);
+    // Fixed, platform-wide VAT — the backend ignores this on write anyway
+    // (Project.vat_rate is read-only), sent for display consistency.
+    const vat = 15;
     const projectId = selectedProject?._id || selectedProject?.id;
 
     const data: any = {
@@ -2451,7 +2457,7 @@ export default function EditProject() {
                             </label>
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-normal text-[#6b7280] pointer-events-none select-none">
-                                {CURRENCY_SYMBOLS[form.currency] || "R"}
+                                {CURRENCY_SYMBOLS[form.currency] || form.currency}
                               </span>
                               <input
                                 className={cn(
@@ -2522,23 +2528,22 @@ export default function EditProject() {
                               type="number"
                               step="0.1"
                               max={10}
+                              placeholder="0"
                               className={inputCls()}
                               value={form.retention_rate}
                               onChange={(e) => setField("retention_rate", e.target.value)}
                             />
+                            <p className="text-[11px] text-[#9ca3af] mt-1">
+                              Leave blank or 0 for no retention
+                            </p>
                           </div>
                           <div>
                             <label className="block text-xs font-normal text-[#374151] mb-1.5">
                               VAT Rate (%)
                             </label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              max={25}
-                              className={inputCls()}
-                              value={form.vat_rate}
-                              onChange={(e) => setField("vat_rate", e.target.value)}
-                            />
+                            <div className={`${inputCls()} bg-gray-50 text-gray-500 flex items-center`}>
+                              15%
+                            </div>
                           </div>
                         </div>
 
@@ -2554,7 +2559,9 @@ export default function EditProject() {
                               { label: `Contract Value (excl. VAT)`, value: budget },
                               { label: `VAT (${vatRate}%)`, value: vatAmount },
                               { label: `Total (incl. VAT)`, value: totalWithVat, bold: true },
-                              { label: `Retention (${retentionRate}%)`, value: retentionAmount },
+                              ...(retentionRate > 0
+                                ? [{ label: `Retention (${retentionRate}%)`, value: retentionAmount }]
+                                : []),
                             ].map(({ label, value, bold }) => (
                               <div
                                 key={label}

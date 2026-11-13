@@ -79,7 +79,7 @@ describe("daysUntil / relativeDays", () => {
 
 describe("buildCertificateQueue", () => {
   const certs = [
-    { id: 1, pcNumber: "PC-003", workflowState: "submitted" },
+    { id: 1, pcNumber: "PC-003", availableTransitions: ["approve"], workflowState: "submitted" },
     { id: 2, pcNumber: "PC-002", workflowState: "approved" },
     { id: 3, pcNumber: "PC-001", workflowState: "posted" },
     { id: 4, pcNumber: "PC-004", workflowState: "draft" },
@@ -100,16 +100,51 @@ describe("buildCertificateQueue", () => {
     expect(q[0].headline).toContain("Certify PC-003");
   });
 
-  it("gates the row on the permission for the ACT it names", () => {
-    // It used to be `["finance.view"]` on every row, so "Certify PC-003"
-    // rendered identically for the principal agent, the contractor's QS and
-    // any finance viewer on the project — under a heading reading
-    // "Certificates awaiting you". The code below is the server's own
-    // `TRANSITION_PERMISSIONS` (tasks/pc_workflow.py) — granted to
-    // PRINCIPAL_PM alone.
-    expect(buildCertificateQueue(certs).map((i) => i.requires)).toEqual([
-      ["finance.view", "finance.approve_certificate"],
+  it("declares only the MODULE gate — the act is the server's answer", () => {
+    // This used to also declare `finance.approve_certificate` and have it
+    // resolved in the browser from the project-wide permission map. It no
+    // longer does: that flag cannot express creator-exclusion, and it
+    // disagreed with the server in both directions (see the three tests
+    // below). `finance.view` stays — the row links into Finance.
+    expect(buildCertificateQueue(certs).map((i) => i.requires)).toEqual([["finance.view"]]);
+  });
+
+  it("surfaces a submitted certificate this user may actually certify", () => {
+    const q = buildCertificateQueue([
+      {
+        id: 9,
+        pcNumber: "PC-033",
+        workflowState: "submitted",
+        availableTransitions: ["approve", "reject", "cancel"],
+      },
     ]);
+    expect(q.map((i) => i.headline)).toEqual(["Certify PC-033"]);
+  });
+
+  it("drops the row for the certificate's own CREATOR, who may not certify it", () => {
+    // `CREATOR_EXCLUDED_TRANSITIONS` (tasks/pc_workflow.py): the maker is
+    // never the checker, however much authority they hold — so the server
+    // omits "approve" and renders no Approve button. This list used to show
+    // them "Certify PC-034" anyway, because a project-wide permission flag
+    // said they were a certifier. Captured live in
+    // .playwright-mcp/page-2026-10-26T11-30-38-477Z.yml.
+    const q = buildCertificateQueue([
+      {
+        id: 9,
+        pcNumber: "PC-033",
+        workflowState: "submitted",
+        availableTransitions: ["cancel"],
+      },
+    ]);
+    expect(q).toEqual([]);
+  });
+
+  it("fails CLOSED when the payload carries no availableTransitions at all", () => {
+    // An older server or a trimmed payload must not reopen the row to every
+    // finance viewer. Same default `filterQueueByPermission` applies to an
+    // absent flag: an unknown authority is not an authority.
+    const q = buildCertificateQueue([{ id: 9, pcNumber: "PC-033", workflowState: "submitted" }]);
+    expect(q).toEqual([]);
   });
 
   it("carries no clock, because no certificate payload has a due date", () => {
@@ -156,7 +191,7 @@ describe("buildRejectedCertificateQueue", () => {
 
   it("leads the money class, because payment on it has stopped dead", () => {
     const rejected = buildRejectedCertificateQueue([{ id: 5, workflowState: "rejected" }]);
-    const submitted = buildCertificateQueue([{ id: 6, workflowState: "submitted" }]);
+    const submitted = buildCertificateQueue([{ id: 6, availableTransitions: ["approve"], workflowState: "submitted" }]);
     expect(rejected[0].subRank).toBeLessThan(submitted[0].subRank as number);
   });
 
@@ -464,8 +499,8 @@ describe("headlines identify their row when truncated", () => {
     const q = [
       ...buildCertificateQueue(
         [
-          { id: 1, pcNumber: "PC-006", workflowState: "submitted" },
-          { id: 2, pcNumber: "PC-007", workflowState: "submitted" },
+          { id: 1, pcNumber: "PC-006", availableTransitions: ["approve"], workflowState: "submitted" },
+          { id: 2, pcNumber: "PC-007", availableTransitions: ["approve"], workflowState: "submitted" },
         ],
         NOW,
       ),
@@ -498,7 +533,7 @@ describe("headlines identify their row when truncated", () => {
       ...buildTimeBarQueue([
         { id: 1, label: "Notice of delay", deadline_date: "2026-08-04", days_remaining: -4, unit: "working", status: "open" },
       ]),
-      ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", workflowState: "submitted", updatedAt: iso(-11) }], NOW),
+      ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", availableTransitions: ["approve"], workflowState: "submitted", updatedAt: iso(-11) }], NOW),
       ...buildRejectedCertificateQueue([{ id: 2, pcNumber: "PC-005", workflowState: "rejected", updatedAt: iso(-4) }], NOW),
       ...buildObligationQueue([{ _id: "o", title: "Submit the OHS file", isOverdue: true, daysOverdue: 9, dueDate: iso(-9) }], NOW),
       ...buildTaskQueue([{ id: "t", title: "Late", type: "VO", due_date: iso(-3), needsAction: true }], NOW),
@@ -1003,7 +1038,7 @@ describe("resolveFinanceAccess", () => {
     });
     const items = rankQueue([
       ...buildCertificateQueue([
-        { id: 1, pcNumber: "PC-001", workflowState: "submitted" },
+        { id: 1, pcNumber: "PC-001", availableTransitions: ["approve"], workflowState: "submitted" },
         { id: 2, pcNumber: "PC-002", workflowState: "approved" },
       ]),
       ...buildRejectedCertificateQueue([{ id: 3, pcNumber: "PC-003", workflowState: "rejected" }]),
@@ -1654,7 +1689,7 @@ describe("riskGroupHref", () => {
 describe("queue rows name their object", () => {
   it("a certificate row opens that certificate, not the finance page", () => {
     const [row] = buildCertificateQueue([
-      { id: 6, pcNumber: "PC-006", workflowState: "submitted" },
+      { id: 6, pcNumber: "PC-006", availableTransitions: ["approve"], workflowState: "submitted" },
     ]);
     expect(row.href).toBe(`${CERTIFICATES}&pc=6`);
   });
@@ -1723,7 +1758,7 @@ describe("buildPaymentOverdueQueue", () => {
 
   it("ranks a certificate past its due date above one merely waiting", () => {
     const overdue = buildPaymentOverdueQueue(summary)[0];
-    const waiting = buildCertificateQueue([{ id: 6, workflowState: "submitted" }], NOW)[0];
+    const waiting = buildCertificateQueue([{ id: 6, availableTransitions: ["approve"], workflowState: "submitted" }], NOW)[0];
     const ranked = rankQueue([waiting, overdue]);
     expect(ranked[0].key).toBe(overdue.key);
   });
@@ -1871,7 +1906,7 @@ describe("homeVerdict", () => {
   it("can only name what the reader is shown, because it reads the filtered queue", () => {
     const contractor = filterQueueByPermission(
       rankQueue([
-        ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", workflowState: "submitted" }], NOW),
+        ...buildCertificateQueue([{ id: 1, pcNumber: "PC-006", availableTransitions: ["approve"], workflowState: "submitted" }], NOW),
         ...buildTaskQueue([{ id: "t", title: "Reply", needsAction: true, due_date: iso(-9) }], NOW),
       ]),
       { canViewCompliance: true },

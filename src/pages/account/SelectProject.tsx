@@ -781,6 +781,8 @@ const SelectProject = () => {
     await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
   };
 
+  const unpaidInvoices: string[] = projectToDelete?.unpaidInvoices ?? [];
+
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
     setIsDeleting(true);
@@ -800,7 +802,7 @@ const SelectProject = () => {
       setProjectToDelete(null);
     } catch (err) {
       console.error("Delete error:", err);
-      toast.error("Failed to delete project");
+      toast.error((err as any)?.response?.data?.error ?? "Failed to delete project");
     } finally {
       setIsDeleting(false);
     }
@@ -981,23 +983,40 @@ const SelectProject = () => {
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Project</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteProject}
-                disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-                {isDeleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+            {unpaidInvoices.length > 0 ? (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>You can't delete this project</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    "{projectToDelete?.name}" has unpaid Baselinq {unpaidInvoices.length === 1 ? "invoice" : "invoices"}:{" "}
+                    {unpaidInvoices.join(", ")}. Pay {unpaidInvoices.length === 1 ? "it" : "them"} first, then you can delete the project.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setProjectToDelete(null)}>Close</AlertDialogCancel>
+                </AlertDialogFooter>
+              </>
+            ) : (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteProject}
+                    disabled={isDeleting}
+                    className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
           </AlertDialogContent>
         </AlertDialog>
       </div>

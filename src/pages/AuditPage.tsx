@@ -47,6 +47,15 @@ import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { TAB_LIST_RADIX, TAB_TRIGGER_RADIX } from "@/components/ui/tab-rail";
+import {
+  buildAuditTrail,
+  buildCompliance,
+  isTaskCompleted,
+  taskCodeOf,
+  taskIdOf,
+  taskTypeOf,
+  tasksFrom,
+} from "@/lib/auditCompliance";
 
 /**
  * The app's tab strip, expressed for shadcn's <Tabs>. Same geometry as the
@@ -57,30 +66,6 @@ import { TAB_LIST_RADIX, TAB_TRIGGER_RADIX } from "@/components/ui/tab-rail";
 // own copy of both strings.
 const TAB_LIST = TAB_LIST_RADIX;
 const TAB_TRIGGER = TAB_TRIGGER_RADIX;
-
-// JBCC contractual time limits per task type (in calendar days)
-const JBCC_DEADLINES: Record<string, { clause: string; days: number; label: string }[]> = {
-  VO: [
-    { clause: "JBCC 17.1", days: 14, label: "Pricing submission" },
-    { clause: "JBCC 17.2", days: 7, label: "Client approval" },
-  ],
-  RFI: [
-    { clause: "JBCC 5.5", days: 5, label: "Response required" },
-  ],
-  SI: [
-    { clause: "JBCC 18.1", days: 3, label: "Acknowledgment" },
-  ],
-  DC: [
-    { clause: "JBCC 29.1", days: 20, label: "Notice period" },
-    { clause: "JBCC 29.3", days: 28, label: "Assessment completion" },
-  ],
-  CPI: [
-    { clause: "JBCC 20.1", days: 30, label: "Programme schedule" },
-  ],
-  GI: [
-    { clause: "JBCC 5.1", days: 7, label: "Acknowledgment" },
-  ],
-};
 
 // Werner rev H — unified 5-stage Decision Timeline for every contractual
 // doc type. CPI keeps its own scheduling flow (separate spec).
@@ -106,34 +91,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 };
 
 
-const getDaysRemaining = (createdAt: string, deadlineDays: number): number => {
-  const created = new Date(createdAt);
-  const deadline = new Date(created.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
-  const now = new Date();
-  return Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-};
-
-const getDeadlineDate = (createdAt: string, deadlineDays: number): string => {
-  const created = new Date(createdAt);
-  const deadline = new Date(created.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
-  return formatDate(deadline);
-};
-
-const getDeadlineStatus = (daysRemaining: number): { label: string; color: string } => {
-  if (daysRemaining < 0) return { label: "Overdue", color: "bg-red-50 text-red-700 border-red-200" };
-  if (daysRemaining <= 3) return { label: "At Risk", color: "bg-amber-50 text-amber-700 border-amber-200" };
-  return { label: "On Track", color: "bg-green-50 text-green-700 border-green-200" };
-};
-
-const isTaskCompleted = (task: any): boolean => {
-  const status = (task.status || "").toLowerCase();
-  return ["done", "completed", "closed", "approved"].includes(status);
-};
-
-const getTaskType = (task: any): string => {
-  return (task.taskType || task.task_type || "").toUpperCase();
-};
-
 export default function AuditPage() {
   const projectId = localStorage.getItem("selectedProjectId");
   const pidNum = parseInt(projectId || "0") || null;
@@ -151,102 +108,17 @@ export default function AuditPage() {
   const [deadlineFilter, setDeadlineFilter] = useState("all");
 
   // Fetch all tasks for the project
-  const { data: taskResponse, isLoading } = useFetch<{ count: number; results: any[] }>(
+  const { data: taskResponse, isLoading } = useFetch<any>(
     projectId ? `projects/${projectId}/tasks/` : "",
     { enabled: !!projectId }
   );
 
-  const tasks = taskResponse?.results || [];
+  // `{ tasks }`, not `{ results }` — reading the wrong key computed every
+  // figure on this page over nothing (QA BUG-10). See lib/auditCompliance.
+  const tasks = useMemo(() => tasksFrom(taskResponse), [taskResponse]);
 
   // Compute compliance metrics
-  const complianceData = useMemo(() => {
-    if (!tasks.length) {
-      return {
-        score: 0,
-        totalTasks: 0,
-        compliantTasks: 0,
-        overdueItems: 0,
-        pendingDeadlines: 0,
-        riskLevel: "Low" as "High" | "Medium" | "Low",
-        byType: {} as Record<string, { total: number; compliant: number; overdue: number }>,
-        deadlines: [] as any[],
-      };
-    }
-
-    let compliantCount = 0;
-    let overdueCount = 0;
-    let pendingCount = 0;
-    const byType: Record<string, { total: number; compliant: number; overdue: number }> = {};
-    const deadlines: any[] = [];
-
-    tasks.forEach((task: any) => {
-      const type = getTaskType(task);
-      if (!type) return;
-
-      // Initialize type bucket
-      if (!byType[type]) {
-        byType[type] = { total: 0, compliant: 0, overdue: 0 };
-      }
-      byType[type].total++;
-
-      const completed = isTaskCompleted(task);
-      const createdAt = task.created_at || task.createdAt;
-
-      if (completed) {
-        compliantCount++;
-        byType[type].compliant++;
-      }
-
-      // Calculate deadlines for this task
-      const typeDeadlines = JBCC_DEADLINES[type] || [];
-      typeDeadlines.forEach((dl) => {
-        if (createdAt) {
-          const daysRemaining = getDaysRemaining(createdAt, dl.days);
-          const deadlineDate = getDeadlineDate(createdAt, dl.days);
-          const status = getDeadlineStatus(daysRemaining);
-
-          if (!completed && daysRemaining < 0) {
-            overdueCount++;
-            byType[type].overdue++;
-          }
-
-          if (!completed && daysRemaining >= 0 && daysRemaining <= 7) {
-            pendingCount++;
-          }
-
-          deadlines.push({
-            taskId: task.id || task._id,
-            taskNumber: task.number || task.taskNumber || `${type}-${(task.id || "").toString().slice(-3).padStart(3, "0")}`,
-            taskType: type,
-            clause: dl.clause,
-            label: dl.label,
-            deadline: deadlineDate,
-            daysRemaining,
-            status,
-            assignedTo: task.assignedTo?.[0]?.name || task.assigned_to?.[0]?.name || "Unassigned",
-            isCompleted: completed,
-          });
-        }
-      });
-    });
-
-    const score = tasks.length > 0 ? Math.round((compliantCount / tasks.length) * 100) : 0;
-    const riskLevel: "High" | "Medium" | "Low" = overdueCount > 5 ? "High" : overdueCount > 2 ? "Medium" : "Low";
-
-    // Sort deadlines: overdue first, then by days remaining
-    deadlines.sort((a, b) => a.daysRemaining - b.daysRemaining);
-
-    return {
-      score,
-      totalTasks: tasks.length,
-      compliantTasks: compliantCount,
-      overdueItems: overdueCount,
-      pendingDeadlines: pendingCount,
-      riskLevel,
-      byType,
-      deadlines,
-    };
-  }, [tasks]);
+  const complianceData = useMemo(() => buildCompliance(tasks), [tasks]);
 
   // Filter deadlines
   const filteredDeadlines = useMemo(() => {
@@ -270,46 +142,43 @@ export default function AuditPage() {
   const [auditTypeFilter, setAuditTypeFilter] = useState("all");
 
   // Fetch audit logs from all tasks
+  // `projects/<id>/audit-logs/` never existed (a 404 on every load). The
+  // project's trail is the task audits, scoped to what this viewer may see.
   const { data: allAuditLogs } = useFetch<any[]>(
-    projectId ? `projects/${projectId}/audit-logs/` : "",
+    projectId ? `tasks/audits/?projectId=${projectId}` : "",
     { enabled: !!projectId }
   );
 
   // Fallback: generate audit entries from task data
   const auditTrail = useMemo(() => {
     if (allAuditLogs && Array.isArray(allAuditLogs) && allAuditLogs.length > 0) {
-      let logs = [...allAuditLogs];
-      if (auditTypeFilter !== "all") {
-        logs = logs.filter((log: any) => (log.taskType || "").toUpperCase() === auditTypeFilter);
-      }
-      return logs.sort((a: any, b: any) =>
-        new Date(b.created_at || b.createdAt).getTime() - new Date(a.created_at || a.createdAt).getTime()
-      );
+      const logs = buildAuditTrail(allAuditLogs, tasks);
+      return auditTypeFilter === "all" ? logs : logs.filter((log) => log.taskType === auditTypeFilter);
     }
 
     // Fallback: derive audit entries from tasks
     const entries: any[] = [];
     tasks.forEach((task: any) => {
-      const type = getTaskType(task);
+      const type = taskTypeOf(task);
       const createdAt = task.created_at || task.createdAt;
       if (createdAt) {
         entries.push({
           action: `${type} Created`,
-          description: `${TASK_TYPE_LABELS[type] || type} "${task.title || task.number || ""}" was created`,
+          description: `${TASK_TYPE_LABELS[type] || type} "${task.task?.title || taskCodeOf(task)}" was created`,
           createdByName: task.createdByName || task.created_by_name || "System",
           created_at: createdAt,
           taskType: type,
-          taskId: task.id || task._id,
+          taskId: taskIdOf(task),
         });
       }
       if (isTaskCompleted(task)) {
         entries.push({
           action: `${type} Completed`,
-          description: `${TASK_TYPE_LABELS[type] || type} "${task.title || task.number || ""}" was completed`,
+          description: `${TASK_TYPE_LABELS[type] || type} "${task.task?.title || taskCodeOf(task)}" was completed`,
           createdByName: "System",
           created_at: task.updated_at || task.updatedAt || createdAt,
           taskType: type,
-          taskId: task.id || task._id,
+          taskId: taskIdOf(task),
         });
       }
     });
@@ -331,7 +200,7 @@ export default function AuditPage() {
       d.taskNumber,
       d.taskType,
       d.clause,
-      d.deadline,
+      formatDate(d.deadline),
       d.daysRemaining,
       d.isCompleted ? "Completed" : d.status.label,
       d.assignedTo,
@@ -711,7 +580,7 @@ export default function AuditPage() {
                           </TableCell>
                           <TableCell className="py-4 text-sm text-[#6B7280]">{d.clause}</TableCell>
                           <TableCell className="py-4 text-sm text-[#1A1A1A]">{d.label}</TableCell>
-                          <TableCell className="py-4 text-sm text-[#6B7280]">{d.deadline}</TableCell>
+                          <TableCell className="py-4 text-sm text-[#6B7280]">{formatDate(d.deadline)}</TableCell>
                           <TableCell className="py-4">
                             {d.isCompleted ? (
                               <span className="text-sm text-green-600">Completed</span>

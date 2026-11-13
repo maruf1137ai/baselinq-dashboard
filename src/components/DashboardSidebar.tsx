@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { LogOut, UserCircle, FolderOpen, User as UserIcon, Building2, ChevronDown, Check, Loader2, ArrowLeft, ArrowRight, ShieldCheck, LayoutDashboard, Users, CircleDollarSign, FolderKanban, Percent, ReceiptText, Settings2, BookOpen, History, Activity } from "lucide-react";
 import { useRolesSidebar } from "@/components/roles/RolesSidebarContext";
 import { RolesNav } from "@/components/roles/RolesNav";
 import Trending from "./icons/Trending";
@@ -41,17 +41,19 @@ import useFetch from "@/hooks/useFetch";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { useUnreadSummary } from "@/hooks/useUnreadSummary";
 
 
-const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
+// `permission` may be a list: the item shows if ANY of them is held.
+const navItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | PermissionKey[] | null }[] = [
   { title: "Home", url: "/", icon: <Trending />, permission: null },
   { title: "Tasks", url: "/tasks", icon: <Task />, permission: null },
   { title: "Programme", url: "/programme", icon: <Programme />, permission: "viewProgramme" },
   { title: "Meetings", url: "/meetings", icon: <Meetings />, permission: null },
   { title: "Communications", url: "/communications", icon: <Communication />, permission: null },
   { title: "Documents", url: "/documents", icon: <Document2 />, permission: "viewDocuments" },
-  { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: "viewFinance" },
+  { title: "Finance", url: "/finance", icon: <SaveMoney />, permission: ["viewFinance", "viewPlatformFees", "viewInvoices"] },
   { title: "Compliance", url: "/compliance", icon: <Shield />, permission: "viewCompliance" },
   // Not <Shield /> — Compliance already uses it, and two identical adjacent
   // nav rows can only be told apart by reading. See `Pulse`.
@@ -59,7 +61,7 @@ const navItems: { title: string; url: string; icon: React.ReactElement; permissi
   { title: "Linq", url: "/ai-workspace", icon: <AiWorkspace />, permission: null },
 ];
 
-const settingsItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | null }[] = [
+const settingsItems: { title: string; url: string; icon: React.ReactElement; permission: PermissionKey | PermissionKey[] | null }[] = [
   { title: "Settings", url: "/settings", icon: <Settings />, permission: "viewSettings" },
   // Help lands on the hub page (/help), which offers the Tasks and
   // Finance reference guides as two options — see src/pages/Help.tsx.
@@ -84,7 +86,38 @@ export function DashboardSidebar() {
   const showRolesNav = rolesSidebar?.navMode === "roles";
   const location = useLocation();
   const { data: user } = useCurrentUser(); // Django auth hook
-  const { can, canViewSettings } = usePermissions();
+  // On /account pages a superuser can flip the nav between the Account menu
+  // and the Admin Panel menu, the same way /roles-permissions flips to its
+  // roles list. It follows the route: entering /account/admin opens the
+  // admin menu, leaving it returns to the account menu.
+  const isAccountArea = location.pathname.startsWith("/account");
+  const isAdminRoute = location.pathname.startsWith("/account/admin");
+  const canFlipToAdmin = isAccountArea && !!user?.is_superuser;
+  const [adminNavMode, setAdminNavMode] = useState(isAdminRoute);
+  useEffect(() => setAdminNavMode(isAdminRoute), [isAdminRoute]);
+  const showAdminNav = canFlipToAdmin && adminNavMode;
+  // The one flip control beside the logo, for whichever screen offers one.
+  const navFlip = rolesSidebar
+    ? {
+        flipped: showRolesNav,
+        toggle: () => rolesSidebar.setNavMode(showRolesNav ? "main" : "roles"),
+        backLabel: "Back to main menu",
+        forwardLabel: "Back to roles list",
+      }
+    : canFlipToAdmin
+      ? {
+          flipped: showAdminNav,
+          toggle: () => setAdminNavMode((v) => !v),
+          backLabel: "Back to account menu",
+          forwardLabel: "Open admin panel menu",
+        }
+      : null;
+  const { can: canOne, canViewSettings } = usePermissions();
+  const can = (p: PermissionKey | PermissionKey[]) => (Array.isArray(p) ? p : [p]).some((x) => canOne(x));
+  // A role that may read the billing terms but not the rest of Settings still
+  // gets a Settings entry — straight to the one page it can open.
+  const canViewBillingOnly =
+    !canViewSettings && (canOne("viewBillingTerms") || canOne("viewPlatformFees") || canOne("viewInvoices"));
   const { data: projectsData, isLoading } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
   const projects = projectsData?.results || [];
   const { logout } = useLogout(); // Django logout hook
@@ -93,6 +126,12 @@ export function DashboardSidebar() {
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => localStorage.getItem("selectedProjectId") || "",
   );
+  // Baselinq staff reach any project for its platform bill without being on
+  // the team (QA BUG-06; the server's billing/views._project_or_none), so a
+  // project missing from their own list is not a stale selection to clear.
+  const { data: effectivePerms, isLoading: effectivePermsLoading } =
+    useEffectivePermissions(selectedProjectId ? Number(selectedProjectId) : null);
+  const isPlatformStaff = !!effectivePerms?.isPlatformStaff;
   // All three sidebar badges come from ONE request, shared with the bell in
   // DashboardHeader (see useUnreadSummary). They were previously three
   // separate polls — channels/?projectId, and two notifications/unread-count
@@ -154,6 +193,10 @@ export function DashboardSidebar() {
     const isTrulyEmpty = !isLoading && user && projectsData && projects.length === 0;
     // console.log(!isLoading, user, projectsData, projects.length === 0)
 
+    // Decide only once we know whether this is Baselinq staff — clearing
+    // first would drop the project before the answer arrived.
+    if (selectedProjectId && (effectivePermsLoading || isPlatformStaff)) return;
+
     if (isTrulyEmpty) {
       if (selectedProjectId) {
         // Clear stale localStorage when no projects exist
@@ -171,7 +214,7 @@ export function DashboardSidebar() {
       setSelectedProjectId("");
       clearUserRole();
     }
-  }, [projects, isLoading, selectedProjectId, projectsData, user?.id]);
+  }, [projects, isLoading, selectedProjectId, projectsData, user?.id, effectivePermsLoading, isPlatformStaff]);
 
   // Fetch user role when project or user changes
   useEffect(() => {
@@ -293,17 +336,18 @@ export function DashboardSidebar() {
             )}
 
             {/* On /roles-permissions the nav swaps between the roles list and
-                the main menu. One control, right of the project switcher, and
+                the main menu; on /account a superuser swaps between the
+                account and admin menus. One control, right of the logo, and
                 the arrow points wherever it is about to take you. */}
-            {rolesSidebar && open && (
+            {navFlip && open && (
               <button
                 type="button"
-                onClick={() => rolesSidebar.setNavMode(showRolesNav ? "main" : "roles")}
-                aria-label={showRolesNav ? "Back to main menu" : "Back to roles list"}
-                title={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                onClick={navFlip.toggle}
+                aria-label={navFlip.flipped ? navFlip.backLabel : navFlip.forwardLabel}
+                title={navFlip.flipped ? navFlip.backLabel : navFlip.forwardLabel}
                 className="ml-2 h-9 w-9 shrink-0 rounded-md border border-border bg-white/50 flex items-center justify-center hover:bg-card transition-colors group"
               >
-                {showRolesNav ? (
+                {navFlip.flipped ? (
                   <ArrowLeft className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-x-0.5" />
                 ) : (
                   <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -321,15 +365,15 @@ export function DashboardSidebar() {
           >
             {/* Collapsed rail: no room beside the logo, so the same control
                 lives at the top of the nav body instead. */}
-            {rolesSidebar && !open && (
+            {navFlip && !open && (
               <button
                 type="button"
-                onClick={() => rolesSidebar.setNavMode(showRolesNav ? "main" : "roles")}
-                aria-label={showRolesNav ? "Back to main menu" : "Back to roles list"}
-                title={showRolesNav ? "Back to main menu" : "Back to roles list"}
+                onClick={navFlip.toggle}
+                aria-label={navFlip.flipped ? navFlip.backLabel : navFlip.forwardLabel}
+                title={navFlip.flipped ? navFlip.backLabel : navFlip.forwardLabel}
                 className="mb-2 h-9 w-full rounded-md border border-border bg-white/50 flex items-center justify-center hover:bg-card transition-colors"
               >
-                {showRolesNav ? (
+                {navFlip.flipped ? (
                   <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -340,39 +384,78 @@ export function DashboardSidebar() {
             {showRolesNav ? (
               // ── Roles nav — replaces the main menu on /roles-permissions ──
               <RolesNav />
-            ) : location.pathname.startsWith("/account") ? (
-              // ── Account nav ──
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2 normal-case h-auto pb-1.5 pt-0">
-                  Account
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {[
-                      { title: "Projects", url: "/account", icon: <FolderOpen className="h-4 w-4" />, show: true },
-                      { title: "Profile", url: "/account/profile", icon: <UserIcon className="h-4 w-4" />, show: true },
-                      { title: "Organisation", url: "/account/organization", icon: <Building2 className="h-4 w-4" />, show: user?.account_type === "organisation" },
-                    ].filter(item => item.show).map((item) => {
-                      const isActive = location.pathname === item.url;
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={isActive}
-                            className={isActive
-                              ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
-                              : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
-                            <NavLink to={item.url} className="flex items-center gap-3">
-                              {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
-                              {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+            ) : isAccountArea ? (
+              // ── Account nav, or the Admin Panel nav when flipped ──
+              <>
+                {(showAdminNav
+                  ? [
+                      {
+                        label: "Admin Panel",
+                        items: [
+                          { title: "Dashboard", url: "/account/admin", icon: <LayoutDashboard className="h-4 w-4" />, show: true },
+                          { title: "Users", url: "/account/admin/users", icon: <Users className="h-4 w-4" />, show: true },
+                          { title: "Projects", url: "/account/admin/projects", icon: <FolderOpen className="h-4 w-4" />, show: true },
+                          { title: "Companies", url: "/account/admin/companies", icon: <Building2 className="h-4 w-4" />, show: true },
+                          { title: "Activity", url: "/account/admin/activity", icon: <History className="h-4 w-4" />, show: true, matchChildren: true },
+                          { title: "System health", url: "/account/admin/health", icon: <Activity className="h-4 w-4" />, show: true },
+                        ],
+                      },
+                      {
+                        label: "Billing",
+                        items: [
+                          { title: "Overview", url: "/account/admin/billing", icon: <CircleDollarSign className="h-4 w-4" />, show: true },
+                          // Also lit on one project's billing page beneath it.
+                          { title: "Project billing", url: "/account/admin/billing/projects", icon: <FolderKanban className="h-4 w-4" />, show: true, matchChildren: true },
+                          { title: "Fees", url: "/account/admin/billing/fees", icon: <Percent className="h-4 w-4" />, show: true },
+                          { title: "Invoices", url: "/account/admin/billing/invoices", icon: <ReceiptText className="h-4 w-4" />, show: true },
+                          { title: "Billing settings", url: "/account/admin/billing/settings", icon: <Settings2 className="h-4 w-4" />, show: true },
+                          { title: "Guide", url: "/account/admin/billing/guide", icon: <BookOpen className="h-4 w-4" />, show: true },
+                        ],
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Account",
+                        items: [
+                          { title: "Projects", url: "/account", icon: <FolderOpen className="h-4 w-4" />, show: true },
+                          { title: "Profile", url: "/account/profile", icon: <UserIcon className="h-4 w-4" />, show: true },
+                          { title: "Admin Panel", url: "/account/admin", icon: <ShieldCheck className="h-4 w-4" />, show: !!user?.is_superuser },
+                          { title: "Organisation", url: "/account/organization", icon: <Building2 className="h-4 w-4" />, show: user?.account_type === "organisation" },
+                        ],
+                      },
+                    ]
+                ).map((group) => (
+                  <SidebarGroup key={group.label}>
+                    <SidebarGroupLabel className="text-xs font-medium text-muted-foreground px-2 normal-case h-auto pb-1.5 pt-0">
+                      {group.label}
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {group.items.filter((item) => item.show).map((item) => {
+                          const isActive =
+                            location.pathname === item.url ||
+                            (!!("matchChildren" in item && item.matchChildren) && location.pathname.startsWith(item.url + "/"));
+                          return (
+                            <SidebarMenuItem key={item.title}>
+                              <SidebarMenuButton
+                                asChild
+                                isActive={isActive}
+                                className={isActive
+                                  ? "!bg-card px-3 py-2 border border-border/70 rounded-md shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+                                  : "px-3 py-2 border border-transparent rounded-md hover:bg-white/60 transition-colors"}>
+                                <NavLink to={item.url} className="flex items-center gap-3">
+                                  {React.cloneElement(item.icon, { className: `text-muted-foreground ${isActive ? "text-black" : ""}` })}
+                                  {open && <span className={`text-sm font-normal ${isActive ? "text-black" : "text-muted-foreground"}`}>{item.title}</span>}
+                                </NavLink>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          );
+                        })}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                ))}
+              </>
             ) : (
               // ── Normal nav (project selected) ──
               <>
@@ -427,9 +510,12 @@ export function DashboardSidebar() {
                     <SidebarMenu>
                       {settingsItems.filter((item) =>
                         !item.permission
-                          || (item.permission === "viewSettings" ? canViewSettings
+                          || (item.permission === "viewSettings" ? canViewSettings || canViewBillingOnly
                             : can(item.permission))
-                      ).map((item) => {
+                      ).map((entry) => {
+                        const item = entry.url === "/settings" && canViewBillingOnly
+                          ? { ...entry, url: "/settings/billing" }
+                          : entry;
                         const isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
                         const badge = badgeFor(item.title);
                         return (

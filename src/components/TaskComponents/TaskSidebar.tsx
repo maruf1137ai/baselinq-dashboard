@@ -19,6 +19,7 @@ import { TaskAttachments } from "./TaskAttachments";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/dateUtils";
 import { formatDate, formatDateOrNoDate } from "@/lib/dateUtils";
+import { getActionLabel } from "@/lib/auditActionLabel";
 
 interface TaskSidebarProps {
   taskType: string;
@@ -31,11 +32,6 @@ interface TaskSidebarProps {
   onRequestInfo?: () => void;
   onStageClick?: (stage: string) => void;
 }
-
-const displayStatus = (status: string): string => {
-  if (!status) return '';
-  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-};
 
 const getRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -79,7 +75,11 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
   if (a === 'request_info') return { icon: <FileText className="h-3 w-3 text-[#9333ea]" />, bg: '#FDF4FF' };
   if (a === 'response_added') return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
   if (a === 'status_updated') {
-    const raw = (log.newValue || log.new_value || log.to || log.value || log.description || '').toLowerCase();
+    // String(): audit values are JSON — a status string, but also numbers or
+    // objects (contract amendments). Calling .toLowerCase() on those crashed
+    // the whole task page once the API started sending them (QA BUG-19).
+    const raw = String([log.newValue, log.new_value, log.to, log.value, log.description]
+      .find((v) => v !== null && v !== undefined && v !== '') ?? '').toLowerCase();
     if (raw.includes('done') || raw.includes('approved') || raw.includes('completed'))
       return { icon: <CheckCircle2 className="h-3 w-3 text-[#16A34A]" />, bg: '#E9F7EC' };
     if (raw.includes('rejected') || raw.includes('declined'))
@@ -90,75 +90,6 @@ const getLogIconConfig = (log: any): { icon: React.ReactNode; bg: string } => {
 };
 
 const getStatusBadgeColor = getStatusBadgeClasses;
-
-const ENTITY_LABELS: Record<string, string> = {
-  variationorder: 'Variation Order',
-  requestforinformation: 'Request for Information',
-  siteinstruction: 'Site Instruction',
-  delaycertificate: 'Delay Certificate',
-  criticalpathitem: 'Critical Path Item',
-  generalinstruction: 'General Instruction',
-};
-
-const getActionLabel = (log: any, taskCode?: string): { text: string; oldStatus?: string; newStatus?: string; detail?: string; hideUserName?: boolean; chips?: string[] } => {
-  const action = (log.action || '').toLowerCase();
-  const desc = (log.description || '') as string;
-
-  if (action === 'status_updated') {
-    const causeIdx = desc.indexOf('; cause: ');
-    const cleanDesc = causeIdx !== -1 ? desc.slice(0, causeIdx) : desc;
-    const cause = causeIdx !== -1 ? desc.slice(causeIdx + 9).trim() : '';
-    const detail = cause ? `Action: ${cause}` : undefined;
-    const descLower = cleanDesc.toLowerCase();
-    const fromIdx = descLower.indexOf('from ');
-    const toIdx = descLower.lastIndexOf(' to ');
-    if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 4) {
-      const oldStatus = cleanDesc.slice(fromIdx + 5, toIdx).trim();
-      const newStatus = cleanDesc.slice(toIdx + 4).trim();
-      if (oldStatus && newStatus) {
-        return { text: 'Status Changed From', oldStatus: displayStatus(oldStatus), newStatus: displayStatus(newStatus), detail, hideUserName: true };
-      }
-    }
-    const raw = log.newValue || log.new_value || log.to || log.value || '';
-    const oldRaw = log.oldValue || log.old_value || log.from || '';
-    if (raw || oldRaw) {
-      return { text: 'Status Changed From', oldStatus: oldRaw ? displayStatus(oldRaw) : undefined, newStatus: raw ? displayStatus(raw) : undefined, detail, hideUserName: true };
-    }
-    return { text: 'Status Updated', detail, hideUserName: true };
-  }
-
-  const taskRef = taskCode ? ` ${taskCode}` : '';
-  if (action === 'task_created') return { text: `created this task${taskRef}` };
-  if (action === 'created') return { text: `created this task${taskRef}` };
-  if (action === 'vo_created') return { text: `created a Variation Order${taskRef}` };
-  if (action === 'si_created') return { text: `created a Site Instruction${taskRef}` };
-  if (action === 'rfi_created') return { text: `created a Request for Information${taskRef}` };
-  if (action === 'dc_created') return { text: `created a Delay Certificate${taskRef}` };
-  if (action === 'cpi_created') return { text: 'created a Critical Path Item' };
-  if (action === 'task_assigned') {
-    const names = desc.startsWith('Assigned to: ') ? desc.slice(13).trim() : desc;
-    const chips = names ? names.split(',').map((n: string) => n.trim()).filter(Boolean) : [];
-    return { text: 'assigned this task to', chips: chips.length > 0 ? chips : undefined };
-  }
-  if (action === 'request_info') return { text: 'requested additional information', detail: desc || undefined };
-  if (action === 'response_added') {
-    const namePrefix = (log.createdByName || '').trim();
-    let detail = desc;
-    if (namePrefix && detail.toLowerCase().startsWith(namePrefix.toLowerCase())) {
-      detail = detail.slice(namePrefix.length).trim();
-    }
-    Object.entries(ENTITY_LABELS).forEach(([key, label]) => {
-      detail = detail.replace(new RegExp(key, 'gi'), label);
-    });
-    return { text: 'submitted a response', detail: detail || undefined };
-  }
-  if (action === 'comment_added') return { text: 'added a comment' };
-  if (action === 'assigned') return { text: 'was assigned to this task' };
-  if (action === 'approved') return { text: 'approved this task' };
-  if (action === 'rejected') return { text: 'rejected this task' };
-  const humanized = action.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-  return { text: humanized, detail: desc || undefined };
-};
 
 const getStatusBadgeVariant = (status: string) => {
   switch (status.toLowerCase()) {

@@ -255,7 +255,13 @@ export type QueueKind =
   // yours, this means somebody else is late and chasing them is now yours. The
   // kind is presentation only — `rankQueue` never reads it — so this adds a
   // section heading, not a rule.
-  | "task-escalated";
+  | "task-escalated"
+  // A variation that was signed and never certified. Its own kind rather than
+  // a variant of "certificate", because it makes a different claim: a
+  // certificate row says "sign this", this says "somebody did work you
+  // instructed and has not been paid for it". Presentation only — `rankQueue`
+  // never reads `kind` — so this adds a section heading, not a rule.
+  | "variation";
 
 export interface QueueItem {
   key: string;

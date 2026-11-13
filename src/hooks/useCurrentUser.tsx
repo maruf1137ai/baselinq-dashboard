@@ -50,6 +50,8 @@ export interface User {
   banking_details: BankingDetails | null;
   is_email_verified: boolean;
   is_active: boolean;
+  /** Only on the caller's own profile; gates the Admin Panel link. */
+  is_superuser?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +72,7 @@ const getCurrentUser = async (): Promise<User | null> => {
     if (!localUser) {
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");
+      localStorage.removeItem("userRole");
       window.location.href = "/login";
     }
   }

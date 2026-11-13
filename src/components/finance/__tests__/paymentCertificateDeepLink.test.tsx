@@ -25,6 +25,11 @@ const mockUseFetch = vi.fn();
 vi.mock("@/hooks/useFetch", () => ({
   default: (...args: unknown[]) => mockUseFetch(...args),
 }));
+// The certificate list now loads every page through useFetchAllPages — same
+// return shape as useFetch, so it reads the same double.
+vi.mock("@/hooks/useFetchAllPages", () => ({
+  default: (...args: unknown[]) => mockUseFetch(...args),
+}));
 vi.mock("@/hooks/usePermission", () => ({ usePermission: () => false }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/components/finance/createPCDrawer", () => ({ CreatePCDrawer: () => null }));

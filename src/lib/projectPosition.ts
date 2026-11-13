@@ -42,10 +42,9 @@
  *     would mean inventing the limit it is at.
  */
 
-import { formatZAR } from "./formatCurrency";
+import { formatMoney } from "./formatCurrency";
 import {
   BALANCE_LABEL,
-  REVISED_SUM_DOUBLE_COUNT,
   certificateIsCertified,
   type CertificateLike,
   type MoneyPosition,
@@ -134,6 +133,8 @@ export interface OverviewRow {
   value: string | null;
   /** True for the two rows the client marks as auto-calculated. */
   derived: boolean;
+  /** A short line the reader sees under the figure, in plain words. */
+  note?: string;
   /**
    * How it was derived — shown against a derived row so the reader can check
    * it. Present ONLY where the stated working is actually true of the figure.
@@ -208,7 +209,7 @@ export function financialOverview(
   money: MoneyPosition,
   basis?: CertificateBasis,
 ): OverviewRow[] {
-  const zar = (n: number | null) => (n === null ? null : formatZAR(n));
+  const zar = (n: number | null) => (n === null ? null : formatMoney(n));
 
   const retentionNet = netRetentionHeld(money.retentionHeld, basis?.retentionReleased ?? null);
 
@@ -227,50 +228,34 @@ export function financialOverview(
       label: "Original contract sum",
       value: zar(money.contractSum),
       derived: false,
+      note: "As agreed. Fixed once work is certified.",
       caveat:
-        "Project.contract_value. A variation signed through the sign-and-issue " +
-        "flow is added to this field by the server, so on a project that uses " +
-        "that flow it is the sum as already amended.",
+        "Project.total_budget: the sum agreed when the contract was let. The " +
+        "server fixes it once a certificate is posted or a variation signed.",
     },
     {
       key: "variations",
-      label: "Approved variations to date",
+      label: "Signed variations to date",
       value: zar(money.variations),
       derived: false,
-      caveat:
-        money.variationCount > 0
-          ? `${money.variationCount} approved variation${money.variationCount === 1 ? "" : "s"}. Variations still awaiting a decision are not in this figure.`
+      note:
+        (money.awaitingSignatureCount ?? 0) > 0
+          ? `${zar(money.awaitingSignatureValue ?? 0)} incl. VAT approved, awaiting signature (${money.awaitingSignatureCount}). Not in the contract sum until signed.`
           : undefined,
+      caveat:
+        "Revised contract sum less the original: what signed variations have " +
+        "added to the contract. Variations still awaiting signature are not in it.",
     },
     {
       key: "revised",
       label: "Revised contract sum",
       value: zar(money.revisedContractSum),
       derived: true,
-      /*
-        NO `formula` HERE, DELIBERATELY.
-
-        It read "original + approved variations", which is what the figure is
-        computed as and is NOT reliably true of it.
-        `tasks/views_signing.py::_apply_vo_to_project` adds an approved
-        variation's amount into `project.contract_value` AND leaves the
-        variation's status APPROVED, in one transaction — so a variation signed
-        through that flow is inside both operands and the sum counts it twice.
-        Nothing on either payload distinguishes the signed population from the
-        rest, so it cannot be corrected client-side.
-
-        Stating working that does not hold is worse than stating none: it
-        invites the reader to check the arithmetic, find it consistent, and
-        stop looking. The overstatement is named in `warning` instead, where
-        the reader can see it without hovering.
-      */
-      // The one wording, shared with Home, which prints the same revised sum
-      // as its certified percentage and as the certified curve's ceiling and
-      // said nothing about it until now. Two screens, one caveat, one string.
-      warning: money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : undefined,
-      caveat:
-        "Original contract sum plus approved variations. See the warning: the " +
-        "two operands can overlap and the payload does not say when they do.",
+      // Stated only where it is exactly true: with the agreed original in the
+      // payload, revised is the server's amended value and the variations line
+      // is their difference. An older payload cannot show that.
+      formula: money.originalAgreed ? "original contract sum + signed variations" : undefined,
+      caveat: "Project.contract_value, which the server amends as each variation is signed.",
     },
     {
       key: "certified",
@@ -281,6 +266,12 @@ export function financialOverview(
       label: "Certified to date",
       value: zar(money.certified),
       derived: false,
+      // Said on the screen, not only in the caveat: the Financial Position
+      // shows the same split, so a reader can match the two figure for figure.
+      note:
+        (money.manualCredits ?? 0) > 0
+          ? `${zar(money.certifiedFromCertificates ?? 0)} from certificates plus ${zar(money.manualCredits ?? 0)} of Cost Ledger credits with no certificate.`
+          : undefined,
       warning: mixedBasis
         ? `${basis?.vatInclusiveRows} of ${basis?.certifiedRows} posted certificates carry no ex-VAT claim value, so their VAT-inclusive total is in this figure. It reads high against an ex-VAT contract sum.`
         : undefined,
@@ -312,6 +303,12 @@ export function financialOverview(
       value: zar(balanceToCertify),
       derived: true,
       formula: "revised sum minus certified to date minus unlinked Cost Ledger debits",
+      // The Financial Position flags the same over-certified balance; say it
+      // here too, where the entries that cause it are listed.
+      warning:
+        balanceToCertify !== null && balanceToCertify < 0
+          ? "More is certified than the revised contract sum. Check the credits below with no linked certificate."
+          : undefined,
       caveat:
         "What remains of the revised contract sum to be certified, less any " +
         "Cost Ledger debit entry not already linked to an approved Variation " +
@@ -432,13 +429,41 @@ export function certificateAdjustments(
 
 // ── Payment delay ─────────────────────────────────────────────────────────
 
-/** One certificate's payment position, as `tasks/payments.py` returns it. */
+/**
+ * One certificate's payment position, as `tasks/payments.py` returns it —
+ * `payment_position` in tasks/payment_terms.py:505.
+ *
+ * Every field is optional and every money field admits a string, because the
+ * server sends money as decimal STRINGS and a field this file does not read
+ * must not become a field a caller may assume. Nothing here is parsed into a
+ * number until it is being rendered or compared.
+ */
 export interface PaymentPositionLike {
   pcNumber?: string | null;
   paymentCertificateId?: number;
+  /** draft | submitted | approved | rejected | posted — the server's own value. */
+  workflowState?: string | null;
+  /** False until the certificate is posted; the summary only carries posted ones. */
+  isPayable?: boolean;
   isOverdue?: boolean;
   daysPastDue?: number;
+  certifiedAmount?: string | number | null;
+  receivedAmount?: string | number | null;
   outstandingAmount?: string | number | null;
+  /** Received above the certified amount. A credit on THIS certificate; never netted against another. */
+  overpaidAmount?: string | number | null;
+  /** On a negative certificate (JBCC 25.2), what the contractor owes the employer. */
+  owedByContractor?: string | number | null;
+  direction?: "employer_pays" | "contractor_pays";
+  /**
+   * "total_payable", or "net_amount_unverified" for a certificate saved before
+   * its total was stored — that figure may exclude VAT.
+   */
+  certifiedBasis?: string;
+  isFullySettled?: boolean;
+  isPartlyPaid?: boolean;
+  /** The server's sentence stating the calculation. Rendered verbatim, never paraphrased. */
+  statement?: string | null;
   due?: {
     dueDate?: string | null;
     computable?: boolean;
@@ -450,6 +475,18 @@ export interface PaymentPositionLike {
 }
 
 export interface ProjectPaymentSummaryLike {
+  projectId?: number;
+  /** The date every figure below is "as at" — the project's date, not the browser's. */
+  asAt?: string | null;
+  certificateCount?: number;
+  certifiedTotal?: string | number | null;
+  receivedTotal?: string | number | null;
+  outstandingTotal?: string | number | null;
+  /** Credits held on certificates paid above their amount, reported apart from what is owed. */
+  overpaidTotal?: string | number | null;
+  owedByContractorTotal?: string | number | null;
+  /** Certificates whose amount predates stored totals and may exclude VAT. */
+  unverifiedCount?: number;
   overdueCount?: number;
   overdueTotal?: string | number | null;
   certificates?: PaymentPositionLike[];
@@ -507,6 +544,82 @@ export function worstPaymentDelay(
     basisIsContractual: worst.due?.basisIsContractual ?? false,
     warning: worst.due?.warning ?? null,
   };
+}
+
+// ── The payment register, row by row ──────────────────────────────────────
+
+/**
+ * Where one posted certificate stands, as a single word.
+ *
+ * Read off the server's own booleans rather than recomputed from the amounts.
+ * `isFullySettled` is `outstanding <= 0` server-side, which is NOT the same
+ * test as `receivedAmount === certifiedAmount`: an over-payment settles the
+ * certificate, and a certificate certified at nil is settled with nothing
+ * received. Deriving it here from the two amounts would disagree with the
+ * figure printed beside it.
+ *
+ * "unknown" is its own answer and never collapses into "unpaid": a row whose
+ * position the server could not state must not be presented as an unpaid
+ * obligation.
+ */
+export type PaymentRowState =
+  | "contractor_owes"
+  | "overpaid"
+  | "settled"
+  | "overdue"
+  | "partly"
+  | "unpaid"
+  | "unknown";
+
+export function paymentRowState(row: PaymentPositionLike): PaymentRowState {
+  // A negative certificate runs the other way. "Paid in full" — what it used
+  // to read, because nothing is owed BY the employer — said the opposite of
+  // the truth.
+  if (row.direction === "contractor_pays") return "contractor_owes";
+  if (row.isFullySettled === true) return Number(row.overpaidAmount) > 0 ? "overpaid" : "settled";
+  // Overdue outranks partly paid: a part payment on a certificate that is past
+  // its due date is still a certificate past its due date, and that is the
+  // fact the reader is scanning for.
+  if (row.isOverdue === true) return "overdue";
+  if (row.isPartlyPaid === true) return "partly";
+  if (row.isFullySettled === false) return "unpaid";
+  return "unknown";
+}
+
+/**
+ * The register's reading order: what somebody has to act on, first.
+ *
+ * Overdue certificates lead, longest-overdue first, because the number of days
+ * is the only clock on this page that is running. Everything still owed
+ * follows, largest balance first. Settled rows go last — they are the record,
+ * not the work.
+ *
+ * Sorts a COPY. The array belongs to the query cache, and sorting it in place
+ * mutates what every other consumer of that cache entry reads.
+ */
+export function sortPaymentPositions<T extends PaymentPositionLike>(rows: readonly T[]): T[] {
+  const rank: Record<PaymentRowState, number> = {
+    overdue: 0,
+    partly: 1,
+    unpaid: 1,
+    contractor_owes: 1,
+    unknown: 2,
+    overpaid: 2,
+    settled: 3,
+  };
+  const outstanding = (r: PaymentPositionLike) => {
+    const n = Number(r.outstandingAmount);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return [...rows].sort((a, b) => {
+    const ra = rank[paymentRowState(a)];
+    const rb = rank[paymentRowState(b)];
+    if (ra !== rb) return ra - rb;
+    const da = a.daysPastDue ?? 0;
+    const db = b.daysPastDue ?? 0;
+    if (da !== db) return db - da;
+    return outstanding(b) - outstanding(a);
+  });
 }
 
 // ── Key Indicators ────────────────────────────────────────────────────────
@@ -622,7 +735,7 @@ export function buildKeyIndicators(input: IndicatorInputs): Indicator[] {
       tone: "neutral",
       detail:
         v.outstandingValue !== null
-          ? `${formatZAR(v.outstandingValue)} awaiting a decision`
+          ? `${formatMoney(v.outstandingValue)} awaiting a decision`
           : `of ${v.total} raised`,
       caveat:
         v.drafts > 0
@@ -639,7 +752,7 @@ export function buildKeyIndicators(input: IndicatorInputs): Indicator[] {
     out.push({
       key: "retention",
       label: "Retention held",
-      state: formatZAR(r.held as number),
+      state: formatMoney(r.held as number),
       tone: "neutral",
       detail: r.ratePct === null ? undefined : `withheld at ${r.ratePct}%`,
       caveat:

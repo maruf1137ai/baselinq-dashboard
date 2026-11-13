@@ -55,10 +55,26 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
+/**
+ * Endpoints that work signed-out. They must not carry a stored access token:
+ * the backend authenticates any Bearer header before the view runs, so a
+ * stale one fails sign-in with 401 token_not_valid and the user can never
+ * reach the email/password check — and login 401s are never refreshed.
+ */
+const PUBLIC_AUTH_PATHS = [
+  'auth/login/',
+  'auth/register/',
+  'auth/check-email/',
+  'auth/password/reset/',
+];
+
+export const isPublicAuthRequest = (url: string = ''): boolean =>
+  PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access");
-    if (token && !config.headers.Authorization) {
+    if (token && !config.headers.Authorization && !isPublicAuthRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
@@ -74,12 +90,20 @@ const handleError = (error) => {
   const backendMessage = [data?.error, data?.detail, data?.message].find(
     (m) => typeof m === "string" && m.trim().length > 0,
   );
-  throw new Error(
+  const err: Error & { status?: number; code?: string } = new Error(
     backendMessage ||
       (error.response
         ? `HTTP error! status: ${error.response.status}`
         : error.message),
   );
+  // Additive: the HTTP status (and the server's stable `code`) ride along so
+  // a caller can tell "no access" from "server down" — a 403 used to be
+  // indistinguishable from an outage by the time it reached a query.
+  if (error.response) {
+    err.status = error.response.status;
+    if (typeof data?.code === "string") err.code = data.code;
+  }
+  throw err;
 };
 
 export const fetchData = async (url) => {
@@ -142,6 +166,14 @@ export const putData = async ({ url, data }) => {
     handleError(error);
   }
 };
+
+/** PUT projects/<id>/payment-terms/ — null on a field returns it to the contract form's default. */
+export const updatePaymentTerms = (projectId: string | number, data: Record<string, unknown>) =>
+  putData({ url: `projects/${projectId}/payment-terms/`, data });
+
+/** PATCH projects/<id>/risk-policy/ — e.g. valuation_basis, pc_gate_mode. */
+export const updateRiskPolicy = (projectId: string | number, data: Record<string, unknown>) =>
+  patchData({ url: `projects/${projectId}/risk-policy/`, data });
 
 export const patchData = async ({ url, data }) => {
   if (!url) throw new Error("No patch URL provided");
@@ -270,6 +302,377 @@ export interface AppointedCompany {
   insurance_expiry: string | null;
   insurance_url: string | null;
 }
+
+export interface AdminOverview {
+  users: { total: number; active: number; superusers: number; newLast30Days: number };
+  organizations: { total: number };
+  projects: { total: number; byStatus: Record<string, number>; newLast30Days: number };
+  documents: { total: number };
+  tasks: { total: number };
+  meetings: { total: number };
+  recentUsers: {
+    id: number;
+    name: string;
+    email: string;
+    organization: string | null;
+    isActive: boolean;
+    isSuperuser: boolean;
+    dateJoined: string;
+    lastLogin: string | null;
+  }[];
+  recentProjects: {
+    id: number;
+    name: string;
+    status: string;
+    createdBy: string | null;
+    createdAt: string;
+  }[];
+}
+
+/** Platform-wide overview for the admin panel. Superusers only (403 otherwise). */
+export const getAdminOverview = async () => {
+  const res = await api.get("auth/admin-panel/overview/");
+  return res.data as AdminOverview;
+};
+
+export type AdminStatsRange = "7d" | "30d" | "90d" | "12m";
+
+/** A figure for the chosen range beside the same-length range before it. */
+export interface AdminKpi<T = number> {
+  total?: number | null;
+  current: T;
+  previous: T;
+}
+
+/** One chart bucket — a day, a week (Monday) or a month, starting `start`. Money is a string. */
+export interface AdminStatsBucket {
+  start: string;
+  newUsers: number;
+  activeUsers: number;
+  newProjects: number;
+  feesEarned: string;
+  feesPaid: string;
+  certificates: number;
+  variations: number;
+  tasks: number;
+  documents: number;
+  meetings: number;
+  aiCalls: number;
+  aiCostUsd: string;
+}
+
+export interface AdminAttentionItem {
+  key: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  detail: string;
+  count: number;
+  link: string | null;
+}
+
+export interface AdminStats {
+  range: AdminStatsRange;
+  bucket: "day" | "week" | "month";
+  start: string;
+  end: string;
+  kpis: {
+    users: AdminKpi;
+    activeUsers: AdminKpi;
+    projects: AdminKpi;
+    companies: AdminKpi;
+    feesEarned: AdminKpi<string>;
+    feesPaid: AdminKpi<string>;
+  };
+  series: AdminStatsBucket[];
+  attention: AdminAttentionItem[];
+  recentAdminActions: { id: number; actor: string | null; action: string; targetLabel: string; createdAt: string }[];
+}
+
+/** Dashboard charts, trends and what needs attention. Superusers only. */
+export const getAdminStats = async (range: AdminStatsRange) => {
+  const res = await api.get("auth/admin-panel/stats/", { params: { range } });
+  return res.data as AdminStats;
+};
+
+/** Admin list pages return the full match `count` and at most 200 `results`. */
+export interface AdminList<T> {
+  count: number;
+  results: T[];
+}
+
+/** A paged admin list: `count` matches across `pages` pages of `pageSize`. */
+export interface AdminPage<T> extends AdminList<T> {
+  page: number;
+  pageSize: number;
+  pages: number;
+}
+
+/** Filters, sort and page for an admin list — empty values are left out. */
+export type AdminListParams = Record<string, string | number | undefined>;
+
+const cleanParams = (params: AdminListParams) =>
+  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""));
+
+export interface AdminUserRow {
+  id: number;
+  name: string;
+  email: string;
+  organization: string | null;
+  organizationId: number | null;
+  role: string | null;
+  accountType: string;
+  projectCount: number;
+  isActive: boolean;
+  isStaff: boolean;
+  isSuperuser: boolean;
+  isLocked: boolean;
+  dateJoined: string;
+  lastLogin: string | null;
+  lastActiveOn: string | null;
+}
+
+export interface AdminHistoryEntry {
+  action: string;
+  actor: string | null;
+  detail: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AdminUserDetail extends AdminUserRow {
+  isEmailVerified: boolean;
+  failedLoginAttempts: number;
+  loginLockedUntil: string | null;
+  signingPinSet: boolean;
+  signingPinLockedUntil: string | null;
+  activeDaysLast30: number;
+  invitationsSent: number;
+  projects: { id: number; name: string; number: string; status: string; role: string; isActive: boolean; owner: boolean }[];
+  recentActivity: { action: string; description: string; project: string | null; createdAt: string }[];
+  adminHistory: AdminHistoryEntry[];
+}
+
+export type AdminUserAction =
+  | "deactivate" | "reactivate" | "unlock" | "clear_pin"
+  | "grant_staff" | "revoke_staff" | "grant_superuser" | "revoke_superuser";
+
+export interface AdminInvitationRow {
+  id: number;
+  email: string;
+  name: string;
+  position: string;
+  type: string;
+  status: "pending" | "expired" | "accepted";
+  invitedBy: string | null;
+  organization: string | null;
+  project: string | null;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+}
+
+export interface AdminProjectRow {
+  id: number;
+  name: string;
+  projectNumber: string;
+  status: string;
+  location: string | null;
+  company: string | null;
+  createdBy: string | null;
+  userCount: number;
+  billing: "on" | "off" | "not_configured";
+  lastActivity: string | null;
+  inactive: boolean;
+  createdAt: string;
+}
+
+export interface AdminProjectDetail extends AdminProjectRow {
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  contractValue: string | null;
+  currency: string | null;
+  statusChoices: string[];
+  team: { userId: number; name: string; email: string; role: string; company: string | null; isActive: boolean; joined: string }[];
+  associatedCompanies: { name: string; role: string; type: string; contact: string }[];
+  counts: {
+    tasks: number; openTasks: number; overdueTasks: number;
+    variations: number; approvedVariations: number;
+    certificates: number; postedCertificates: number; certifiedValue: string;
+    documents: number; meetings: number; openRiskSignals: number;
+  };
+  billingSummary: {
+    state: "on" | "off" | "not_configured";
+    feeRatePct: number | null;
+    billingContactEmail: string;
+    unbilledTotal: string;
+    outstandingTotal: string;
+  };
+  adminHistory: AdminHistoryEntry[];
+}
+
+export const getAdminUsers = async (params: AdminListParams = {}) => {
+  const res = await api.get("auth/admin-panel/users/", { params: cleanParams(params) });
+  return res.data as AdminPage<AdminUserRow>;
+};
+
+export const getAdminUser = async (id: number) => {
+  const res = await api.get(`auth/admin-panel/users/${id}/`);
+  return res.data as AdminUserDetail;
+};
+
+/** Returns the user as they are after the action. */
+export const postAdminUserAction = async (id: number, action: AdminUserAction, reason = "") => {
+  const res = await api.post(`auth/admin-panel/users/${id}/${action}/`, { reason });
+  return res.data as AdminUserDetail;
+};
+
+export const getAdminInvitations = async (params: AdminListParams = {}) => {
+  const res = await api.get("auth/admin-panel/invitations/", { params: cleanParams(params) });
+  return res.data as AdminPage<AdminInvitationRow>;
+};
+
+export const postAdminInvitationAction = async (id: number, action: "resend" | "cancel") => {
+  const res = await api.post(`auth/admin-panel/invitations/${id}/${action}/`, {});
+  return res.data as { resent?: boolean; emailSent?: boolean; cancelled?: boolean };
+};
+
+export const getAdminProjects = async (params: AdminListParams = {}) => {
+  const res = await api.get("auth/admin-panel/projects/", { params: cleanParams(params) });
+  return res.data as AdminPage<AdminProjectRow>;
+};
+
+export const getAdminProject = async (id: number) => {
+  const res = await api.get(`auth/admin-panel/projects/${id}/`);
+  return res.data as AdminProjectDetail;
+};
+
+export const postAdminProjectStatus = async (id: number, status: string, reason: string) => {
+  const res = await api.post(`auth/admin-panel/projects/${id}/status/`, { status, reason });
+  return res.data as AdminProjectDetail;
+};
+
+/**
+ * Download an admin CSV export with the current filters. Goes through the
+ * authenticated client (the export needs the bearer token), then hands the
+ * file to the browser.
+ */
+export const downloadAdminExport = async (path: "users" | "projects", params: AdminListParams = {}) => {
+  const res = await api.get(`auth/admin-panel/${path}/export/`, {
+    params: cleanParams({ ...params, page: undefined, pageSize: undefined }),
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `baselinq-${path}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+export interface AdminCompanyRow {
+  id: number;
+  name: string;
+  status: "active" | "inactive" | "suspended";
+  vatNumber: string | null;
+  registrationNumber: string | null;
+  companySize: string | null;
+  userCount: number;
+  projectCount: number;
+  createdAt: string;
+}
+
+export interface AdminCompanyDetail extends AdminCompanyRow {
+  description: string | null;
+  ckNumber: string | null;
+  users: { id: number; name: string; email: string; isActive: boolean; role: string | null; lastActiveOn: string | null }[];
+  projects: { id: number; name: string; number: string; status: string }[];
+  money: { certifiedValue: string; feesCharged: string; invoicedUnpaid: string; paid: string };
+  statusChoices: string[];
+  adminHistory: AdminHistoryEntry[];
+}
+
+export const getAdminCompanies = async (params: AdminListParams = {}) => {
+  const res = await api.get("auth/admin-panel/companies/", { params: cleanParams(params) });
+  return res.data as AdminPage<AdminCompanyRow>;
+};
+
+export const getAdminCompany = async (id: number) => {
+  const res = await api.get(`auth/admin-panel/companies/${id}/`);
+  return res.data as AdminCompanyDetail;
+};
+
+export const patchAdminCompany = async (id: number, data: Partial<Record<"name" | "description" | "vatNumber" | "registrationNumber" | "ckNumber" | "companySize", string>>) => {
+  const res = await api.patch(`auth/admin-panel/companies/${id}/`, data);
+  return res.data as AdminCompanyDetail;
+};
+
+/** Suspended companies' users cannot sign in (server-enforced). */
+export const postAdminCompanyStatus = async (id: number, status: string, reason: string) => {
+  const res = await api.post(`auth/admin-panel/companies/${id}/status/`, { status, reason });
+  return res.data as AdminCompanyDetail;
+};
+
+export const postAdminUserCompany = async (userId: number, organizationId: number | null, reason: string) => {
+  const res = await api.post(`auth/admin-panel/users/${userId}/company/`, { organizationId, reason });
+  return res.data as { id: number; organization: string | null; organizationId: number | null };
+};
+
+export interface AdminStaffMember {
+  id: number;
+  name: string;
+  email: string;
+  isSuperuser: boolean;
+  isActive: boolean;
+  lastLogin: string | null;
+  lastActiveOn: string | null;
+  actionsLast30Days: number;
+  lastActionAt: string | null;
+}
+
+export interface AdminAuditEntry {
+  id: number;
+  actor: string | null;
+  actorId: number | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetLabel: string;
+  detail: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const getAdminStaff = async () => {
+  const res = await api.get("auth/admin-panel/staff/");
+  return res.data as { results: AdminStaffMember[] };
+};
+
+export const getAdminAudit = async (params: AdminListParams = {}) => {
+  const res = await api.get("auth/admin-panel/audit/", { params: cleanParams(params) });
+  return res.data as AdminPage<AdminAuditEntry>;
+};
+
+export interface AdminHealthCheck {
+  key: string;
+  title: string;
+  state: "ok" | "warning" | "critical";
+  summary: string;
+  detail: string[];
+}
+
+export interface AdminHealth {
+  checkedAt: string;
+  checks: AdminHealthCheck[];
+  recentDeliveryFailures: { channel: string; target: string; error: string; at: string }[];
+  recentJobFailures: { kind: string; error: string; at: string }[];
+  aiByFeature: { feature: string; calls: number; errors: number; costUsd: string }[];
+  aiTopProjects: { projectId: number; project: string; calls: number; costUsd: string }[];
+  activeUsersToday: number;
+}
+
+export const getAdminHealth = async () => {
+  const res = await api.get("auth/admin-panel/health/");
+  return res.data as AdminHealth;
+};
 
 export const getAppointedCompanies = async (projectId: string | number) => {
   const res = await api.get(`projects/${projectId}/appointed-companies/`);
@@ -955,6 +1358,23 @@ const refreshAccessToken = (): Promise<string> => {
   return refreshPromise;
 };
 
+/**
+ * Whether a failed request is an expired session worth one token refresh and
+ * replay. Only a 401 qualifies, and not every 401: a business refusal carries
+ * `{error: "..."}` (SimpleJWT/DRF auth failures carry `detail`/`code`
+ * instead), and a caller can opt out with `skipAuthRefresh`. Replaying a
+ * business refusal repeats the failed attempt — a wrong signing PIN was
+ * tried twice per click, and the refresh rotated the session underneath.
+ */
+export const shouldRefreshOn401 = (error: any): boolean => {
+  const config = error?.config || {};
+  const url: string = config.url || '';
+  if (error?.response?.status !== 401) return false;
+  if (config._retry || config.skipAuthRefresh) return false;
+  if (url.includes('/user/login/') || url.includes('auth/login/')) return false;
+  return typeof error?.response?.data?.error !== 'string';
+};
+
 api.interceptors.response.use(
   res => res,
   async error => {
@@ -969,7 +1389,7 @@ api.interceptors.response.use(
 
     // Handle expired access → try refresh ONCE
     // Skip for login endpoint - 401 there means wrong credentials, not expired token
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/user/login/')) {
+    if (shouldRefreshOn401(error)) {
       originalRequest._retry = true;
 
       try {

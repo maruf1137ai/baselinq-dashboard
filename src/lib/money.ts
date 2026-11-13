@@ -19,7 +19,7 @@
  * Rendering stays with `formatZAR` — the app's single currency formatter — so
  * an amount reads the same in an input as it does in the table the input feeds.
  */
-import { formatZAR } from "./formatCurrency";
+import { currencySymbol, formatZAR, getActiveCurrency } from "./formatCurrency";
 
 /**
  * Characters that may legitimately appear around a typed amount, beyond digits:
@@ -33,13 +33,24 @@ import { formatZAR } from "./formatCurrency";
  */
 const ACCEPTED = /^[-+]?[\d\s\u00a0\u202f.,']*$/;
 
+/**
+ * The project's own currency prefix — its symbol or its code (`US$`/`USD`,
+ * `R`/`ZAR`) — and nothing else. A different currency's symbol is refused, not
+ * dropped: "$1,250" on a rand project may not be rands.
+ */
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function currencyPrefix(code: string): RegExp {
+  const options = [currencySymbol(code), code.toUpperCase()].map(escapeRe).join("|");
+  return new RegExp(`^(?:${options})\\s*`, "i");
+}
+
 /** Every character we treat as thousands grouping when it is not the decimal. */
 const GROUPING = /[\s\u00a0\u202f',]/g;
 
 /**
  * Read a typed or pasted money string.
  *
- * Accepts a leading `R`, a sign, thousands separators (space, non-breaking
+ * Accepts the project's currency symbol or code (`R`, `US$`, `KSh`…), a sign, thousands separators (space, non-breaking
  * space, comma or apostrophe) and either a full stop or a comma as the decimal
  * separator — so both the South African `1 250 000,00` and the spreadsheet
  * `1,250,000.00` read as 1250000.
@@ -51,11 +62,15 @@ const GROUPING = /[\s\u00a0\u202f',]/g;
  *
  * An empty string is 0: clearing a field means "nothing", not "unreadable".
  */
-export function parseMoneyInput(input: string): number | null {
+export function parseMoneyInput(input: string, currency: string = getActiveCurrency()): number | null {
   if (typeof input !== "string") return null;
+  const CURRENCY_PREFIX = currencyPrefix(currency || "ZAR");
 
-  // Drop the currency prefix the input already renders as an affix.
-  let s = input.trim().replace(/^R\s*/i, "").trim();
+  // Drop the project's currency prefix, which the input already renders as an
+  // affix. It stripped only "R": RecordPaymentDialog prefills the amount as
+  // formatMoney shows it, so on a US$ or KSh project it rejected its own
+  // default as unreadable and the payment could not be recorded.
+  let s = input.trim().replace(CURRENCY_PREFIX, "").trim();
   if (s === "") return 0;
 
   // A sign may sit either side of the prefix ("-R 500" and "R -500" both occur).
@@ -66,7 +81,7 @@ export function parseMoneyInput(input: string): number | null {
   } else if (s.startsWith("+")) {
     s = s.slice(1).trim();
   }
-  s = s.replace(/^R\s*/i, "").trim();
+  s = s.replace(CURRENCY_PREFIX, "").trim();
   if (s === "") return null; // a lone sign is not yet a number
 
   if (!ACCEPTED.test(s)) return null;

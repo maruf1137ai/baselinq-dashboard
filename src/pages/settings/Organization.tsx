@@ -26,7 +26,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { hasPermission } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
 
@@ -75,8 +75,10 @@ const OrganizationPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "team">("details");
   const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
-  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
-  const canEditOrg = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+  // organization.edit (Roles & Permissions, account-wide) — the server's rule.
+  const canEditOrganization = usePermissions().can("editOrganization");
+  const isAdmin = user?.account_type === 'organisation' || canEditOrganization;
+  const canEditOrg = user?.account_type === 'organisation' || canEditOrganization;
 
   const [formData, setFormData] = useState({
     name: "",

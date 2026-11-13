@@ -5,7 +5,8 @@
  * gates VO / SI / Claim Sign & Issue. Backend endpoints:
  *
  *   GET  /api/tasks/signing-pin/         → { has_pin: bool }
- *   POST /api/tasks/signing-pin/set/     → body { pin: "1234" } or { pin: "" }
+ *   POST /api/tasks/signing-pin/set/     → body { pin: "1234" } or { pin: "" },
+ *                                          plus current_pin once a PIN exists
  *   POST /api/tasks/signing-pin/verify/  → body { pin } (unused here)
  */
 import { useEffect, useState } from "react";
@@ -29,8 +30,12 @@ const Security = () => {
 
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
+  // Changing or clearing an existing PIN needs the current one — otherwise
+  // anyone holding a signed-in session could swap it or drop to click-confirm.
+  const [currentPin, setCurrentPin] = useState("");
 
   const hasPin = !!pinStatus?.has_pin;
+  const currentPinReady = !hasPin || currentPin.length === 4;
 
   // ── Insurance broker contact ─────────────────────────────────────────
   // Werner — professional's own indemnity broker. Read off the user
@@ -111,10 +116,15 @@ const Security = () => {
       return;
     }
     try {
-      await postRequest({ url: "tasks/signing-pin/set/", data: { pin } });
+      await postRequest({
+        url: "tasks/signing-pin/set/",
+        data: hasPin ? { pin, current_pin: currentPin } : { pin },
+        config: { skipAuthRefresh: true },
+      });
       toast.success(hasPin ? "Signing PIN updated." : "Signing PIN set.");
       setPin("");
       setConfirmPin("");
+      setCurrentPin("");
       queryClient.invalidateQueries({ queryKey: ["tasks/signing-pin/"] });
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Could not save PIN.");
@@ -123,11 +133,16 @@ const Security = () => {
 
   const handleClearPin = async () => {
     const ok = window.confirm(
-      "Clear your signing PIN? You'll fall back to click-confirm on every Sign & Issue.",
+      "Clear your signing PIN? Site Instructions and Claims will fall back to click-confirm, and you won't be able to Approve & Sign a Variation Order until you set a new one.",
     );
     if (!ok) return;
     try {
-      await postRequest({ url: "tasks/signing-pin/set/", data: { pin: "" } });
+      await postRequest({
+        url: "tasks/signing-pin/set/",
+        data: { pin: "", current_pin: currentPin },
+        config: { skipAuthRefresh: true },
+      });
+      setCurrentPin("");
       toast.success("Signing PIN cleared.");
       queryClient.invalidateQueries({ queryKey: ["tasks/signing-pin/"] });
     } catch (err: any) {
@@ -162,8 +177,9 @@ const Security = () => {
             <div>
               <h3 className="text-sm font-normal text-foreground">Signing PIN</h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-                A 4-digit PIN required when signing Site Instructions, Variation Orders,
-                and Claims. Without a PIN, Sign &amp; Issue falls back to click-confirm.
+                A 4-digit PIN for signing. Approve &amp; Sign on a Variation Order always
+                requires it; Site Instructions and Claims fall back to click-confirm when
+                no PIN is set.
               </p>
             </div>
           </div>
@@ -188,6 +204,29 @@ const Security = () => {
         </div>
 
         <div className="px-5 py-4 space-y-4">
+          {hasPin && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">
+                  Current PIN
+                </label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  maxLength={4}
+                  value={currentPin}
+                  onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="••••"
+                  aria-label="Current PIN"
+                  className="font-mono tracking-widest"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Needed to change or clear your PIN.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
             <div>
               <label className="block text-xs text-muted-foreground mb-1.5">
@@ -225,7 +264,7 @@ const Security = () => {
             <Button
               size="sm"
               onClick={handleSavePin}
-              disabled={saving || pin.length !== 4 || confirmPin.length !== 4}
+              disabled={saving || pin.length !== 4 || confirmPin.length !== 4 || !currentPinReady}
               className="h-8 text-xs rounded-lg"
             >
               {saving ? "Saving…" : hasPin ? "Update PIN" : "Set PIN"}
@@ -235,7 +274,7 @@ const Security = () => {
                 size="sm"
                 variant="outline"
                 onClick={handleClearPin}
-                disabled={saving}
+                disabled={saving || !currentPinReady}
                 className="h-8 text-xs rounded-lg"
               >
                 Clear PIN
