@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { formatMoneyInput, parseMoneyInput } from "../money";
+import { formatMoney } from "../formatCurrency";
 
 // Every case in the first block is a value the old currency input
 // (`value.replace(/[^0-9]/g, "")`) got wrong, with the wrong answer named. If
@@ -104,5 +105,36 @@ describe("formatMoneyInput", () => {
     for (const v of [0, 12.34, 250.75, 1250000, -1250000.5]) {
       expect(parseMoneyInput(formatMoneyInput(v))).toBe(v);
     }
+  });
+});
+
+describe("parseMoneyInput reads every currency formatMoney prints", () => {
+  // RecordPaymentDialog prefills formatMoney's output; on a non-rand project
+  // the parser used to reject it and the dialog could not be submitted.
+  it.each([
+    ["USD", 1234.5],
+    ["EUR", 1234.5],
+    ["GBP", 1234.5],
+    ["KES", 1234.5],
+    ["NAD", 1234.5],
+    ["BWP", 1234.5],
+    ["RWF", 1235],
+    ["ZAR", 1234.5],
+  ])("round-trips %s", (code, value) => {
+    expect(parseMoneyInput(formatMoney(value, code), code)).toBe(value);
+  });
+
+  it("reads a negative amount after a symbol", () => {
+    expect(parseMoneyInput(formatMoney(-500, "USD"), "USD")).toBe(-500);
+  });
+
+  it("refuses another currency's symbol rather than dropping it", () => {
+    expect(parseMoneyInput("US$ 1 250,00", "ZAR")).toBeNull();
+    expect(parseMoneyInput("R 1 250,00", "USD")).toBeNull();
+  });
+
+  it("still refuses text that is not a number", () => {
+    expect(parseMoneyInput("US$ abc", "USD")).toBeNull();
+    expect(parseMoneyInput("twelve")).toBeNull();
   });
 });

@@ -328,10 +328,12 @@ export default function CertificatePage() {
                           )
                         </span>
                       </DetailRow>
-                      <DetailRow label="Retention">
-                        {formatCertCurrency(cert.jbcc_form.totals.retention, cert.jbcc_form.currency)}
-                        <span className="text-muted-foreground"> ({cert.jbcc_form.retention_rate_pct}%)</span>
-                      </DetailRow>
+                      {Number(cert.jbcc_form.totals.retention || 0) !== 0 && (
+                        <DetailRow label="Retention">
+                          {formatCertCurrency(cert.jbcc_form.totals.retention, cert.jbcc_form.currency)}
+                          <span className="text-muted-foreground"> ({cert.jbcc_form.retention_rate_pct}%)</span>
+                        </DetailRow>
+                      )}
                       <DetailRow label="Tax (VAT)">
                         {formatCertCurrency(cert.jbcc_form.totals.tax, cert.jbcc_form.currency)}
                         <span className="text-muted-foreground"> ({cert.jbcc_form.tax_rate_pct}%)</span>

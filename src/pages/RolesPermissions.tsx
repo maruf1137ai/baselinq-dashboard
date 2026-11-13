@@ -377,6 +377,73 @@ export default function RolesPermissions() {
   const valueFor = (code: string, res: Resolution) =>
     code in edits ? edits[code] : res.effective;
 
+  // ── Dependencies ──────────────────────────────────────────────────────────
+  // `requires_code` on the permission row names the permission this one depends
+  // on. The server enforces it in permissions.core._apply_requirements, where a
+  // child resolves False whenever an ancestor is denied, whatever its own grant
+  // says. This page reads the SAME field rather than keeping its own copy of the
+  // hierarchy — the retired settings/permissions.tsx kept a hardcoded
+  // PERMISSION_PARENTS map and drifted out of step with the server.
+  //
+  // So the switches here are a view of a rule enforced elsewhere, not the rule.
+
+  /** child code -> parent code, for the whole catalogue. */
+  const parentOf = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const p of catalogue) {
+      if (p.requires_code) out[p.code] = p.requires_code;
+    }
+    return out;
+  }, [catalogue]);
+
+  /** parent code -> its direct children. */
+  const childrenOf = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const [child, parent] of Object.entries(parentOf)) {
+      (out[parent] ||= []).push(child);
+    }
+    return out;
+  }, [parentOf]);
+
+  /**
+   * Is every ancestor of `code` switched on?
+   *
+   * Walks with a visited set: a cycle from a bad migration must deny, not spin.
+   */
+  const parentsAreOn = useCallback(
+    (code: string): boolean => {
+      const seen = new Set<string>([code]);
+      let parent = parentOf[code];
+      while (parent) {
+        if (seen.has(parent)) return false;
+        seen.add(parent);
+        if (!valueFor(parent, resolveFromLayers(matrix, parent))) return false;
+        parent = parentOf[parent];
+      }
+      return true;
+    },
+    [parentOf, matrix, edits],
+  );
+
+  /** Every descendant of `code`, direct and indirect. */
+  const descendantsOf = useCallback(
+    (code: string): string[] => {
+      const out: string[] = [];
+      const seen = new Set<string>([code]);
+      const frontier = [code];
+      while (frontier.length) {
+        for (const child of childrenOf[frontier.pop()!] ?? []) {
+          if (seen.has(child)) continue;
+          seen.add(child);
+          out.push(child);
+          frontier.push(child);
+        }
+      }
+      return out;
+    },
+    [childrenOf],
+  );
+
   /**
    * The per-type create permissions of the open area, and whether all, none or
    * some of them are on. Only shown where there is more than one to aggregate.
@@ -437,10 +504,12 @@ export default function RolesPermissions() {
       );
     } catch (e: any) {
       // The server has guards this page cannot fully predict — the lockout
-      // rule, unknown codes. Show what it said rather than a generic failure.
+      // rule, unknown codes, granting to your own role. Show what it said
+      // rather than a generic failure. putData rethrows the server's message
+      // as a plain Error (no .response), so read .message too.
       toast.error("Could not save", {
         description:
-          e?.response?.data?.detail ?? "The server rejected the change. Nothing was saved.",
+          e?.response?.data?.detail ?? e?.message ?? "The server rejected the change. Nothing was saved.",
       });
     }
   };
@@ -456,7 +525,7 @@ export default function RolesPermissions() {
     } catch (e: any) {
       toast.error("Could not reset", {
         description:
-          e?.response?.data?.detail ?? "Nothing was changed. Try again in a moment.",
+          e?.response?.data?.detail ?? e?.message ?? "Nothing was changed. Try again in a moment.",
       });
     } finally {
       setConfirmReset(false);
@@ -582,8 +651,10 @@ export default function RolesPermissions() {
                       const resolved = perms.map((p) => resolveFromLayers(matrix, p.code));
                       const overrides = resolved.filter((r) => r.origin !== "global").length;
                       const conflicts = resolved.filter((r) => r.conflict).length;
-                      const grantedHere = perms.filter((p, i) =>
-                        valueFor(p.code, resolved[i]),
+                      // Counts what is actually in force, so the rail agrees with
+                      // the switches: a permission whose parent is off is off.
+                      const grantedHere = perms.filter(
+                        (p, i) => valueFor(p.code, resolved[i]) && parentsAreOn(p.code),
                       ).length;
                       const active = key === area;
                       const Icon = meta.icon;
@@ -690,8 +761,8 @@ export default function RolesPermissions() {
                           p,
                           res: resolveFromLayers(matrix, p.code),
                         }));
-                        const grantedInPart = rows.filter(({ p, res }) =>
-                          valueFor(p.code, res),
+                        const grantedInPart = rows.filter(
+                          ({ p, res }) => valueFor(p.code, res) && parentsAreOn(p.code),
                         ).length;
                         return (
                           <section key={part.title}>
@@ -718,6 +789,11 @@ export default function RolesPermissions() {
                                   {rows.map(({ p, res }) => {
                                     const on = valueFor(p.code, res);
                                     const isOpen = expanded === p.code;
+                                    // Locked while anything it depends on is off.
+                                    const gateOpen = parentsAreOn(p.code);
+                                    const gate = p.requires_code
+                                      ? catalogue.find((x) => x.code === p.requires_code)
+                                      : undefined;
                                     const changed = p.code in edits;
                                     return (
                                       <tr
@@ -770,6 +846,26 @@ export default function RolesPermissions() {
                                                 </TooltipContent>
                                               </Tooltip>
                                             )}
+                                            {!gateOpen && (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-[10px] font-normal text-muted-foreground"
+                                                  >
+                                                    needs {gate?.label ?? p.requires_code}
+                                                  </Badge>
+                                                </TooltipTrigger>
+                                                <TooltipContent
+                                                  side="top"
+                                                  className="max-w-sm whitespace-normal break-words"
+                                                >
+                                                  Switched off because “{gate?.label ?? p.requires_code}”
+                                                  is off. Turn that on first — the server denies this
+                                                  one either way while it is off.
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            )}
                                           </div>
                                           <p className="mt-1 max-w-prose text-xs leading-relaxed text-muted-foreground">
                                             {p.description}
@@ -785,18 +881,42 @@ export default function RolesPermissions() {
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                           <Switch
-                                            checked={on}
-                                            disabled={!canEditRolesPermissions || !p.is_project_scoped}
+                                            checked={on && gateOpen}
+                                            disabled={
+                                              !canEditRolesPermissions ||
+                                              !p.is_project_scoped ||
+                                              !gateOpen
+                                            }
                                             onCheckedChange={(next) =>
                                               setEdits((prev) => {
-                                                // Toggling back to the saved value
-                                                // is not a change — drop it, so the
-                                                // count and the diff stay honest.
-                                                if (next === res.effective) {
-                                                  const { [p.code]: _drop, ...rest } = prev;
-                                                  return rest;
+                                                const out = { ...prev };
+                                                const set = (code: string, value: boolean) => {
+                                                  // Toggling back to the saved value
+                                                  // is not a change — drop it, so the
+                                                  // count and the diff stay honest.
+                                                  if (value === resolveFromLayers(matrix, code).effective) {
+                                                    delete out[code];
+                                                  } else {
+                                                    out[code] = value;
+                                                  }
+                                                };
+                                                set(p.code, next);
+                                                // Switching a parent off switches its
+                                                // descendants off with it, because that
+                                                // is what the server will enforce — the
+                                                // matrix must not show a child on
+                                                // beneath a parent that is off. The PUT
+                                                // sends them too
+                                                // (permissions/views.py::_expand_dependency_offs),
+                                                // so a direct API call cannot leave that
+                                                // state behind either.
+                                                if (!next) {
+                                                  for (const child of descendantsOf(p.code)) {
+                                                    const cp = catalogue.find((x) => x.code === child);
+                                                    if (cp && cp.is_project_scoped) set(child, false);
+                                                  }
                                                 }
-                                                return { ...prev, [p.code]: next };
+                                                return out;
                                               })
                                             }
                                             aria-label={`${p.label} for ${role?.name ?? "this role"}`}

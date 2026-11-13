@@ -3,10 +3,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate as formatDateCanonical } from "@/lib/dateUtils";
 import useFetch from "@/hooks/useFetch";
+import { usePermission } from "@/hooks/usePermission";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import { invalidateHomeData } from "@/hooks/useHomeData";
 import { invalidateProjectCommercials } from "@/hooks/useProjectCommercials";
 import { postData, deleteData, registerS3TaskAttachment } from "@/lib/Api";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
+import PaymentPositionSection from "./PaymentPositionSection";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,14 +40,26 @@ import {
 } from "../ui/alert-dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Textarea } from "../ui/textarea";
+import { Checkbox } from "../ui/checkbox";
 import { AlertTriangle, Ban, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, ReceiptText, SearchX, Send, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatZAR } from '@/lib/formatCurrency';
+import { Button } from "@/components/ui/button";
+import { formatMoney } from '@/lib/formatCurrency';
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageContaining } from "@/lib/deepLink";
 import { UnreadNotificationBadge } from "@/components/commons/UnreadNotificationBadge";
+import { UnverifiedMark } from "./UnverifiedMark";
+import { CertificateDocumentSection } from "./CertificateDocumentSection";
+import { TaxInvoiceSection } from "./TaxInvoiceSection";
 import type { Notification } from "@/types/notification";
 import type { WorkLineItem, VOLineItem } from "./createPCDrawer";
+
+/**
+ * Did this certificate actually take retention? A negative amount (a
+ * correction) counts — only a true zero means "no retention here".
+ */
+const takesRetention = (entry: Pick<PCEntry, "retentionAmount">) =>
+  Number(entry.retentionAmount || 0) !== 0;
 
 export interface PCEntry {
   id: number;
@@ -75,6 +92,8 @@ export interface PCEntry {
    * render one button per entry here; nothing is derived from role client-side.
    */
   availableTransitions?: string[];
+  /** Drafted by Baselinq for the valuation (tasks/certificate_autodraft.py), not by a person. */
+  autoDrafted?: boolean;
   /** Hard-delete (Draft-only, creator-only) — see tasks/pc_workflow.may_delete_payment_certificate. */
   canDelete?: boolean;
   /** Edit this certificate's own fields (Draft-only, creator-only, same rule as canDelete) — see tasks/pc_workflow.may_delete_payment_certificate. */
@@ -101,6 +120,16 @@ export interface PCEntry {
   currency?: string;
   /** ISO date, e.g. "2026-08-31" — when the certificate itself is dated. */
   certificateDate?: string | null;
+  /** ISO date the contract says it is due to be issued; the payment clock runs from it. */
+  dateForIssue?: string | null;
+  /** The shareable certificate page, once posted. */
+  certificateUrl?: string | null;
+  certificateRevoked?: boolean;
+  /** When the link was emailed from Finance, and to whom. */
+  sharedAt?: string | null;
+  sharedWith?: string[];
+  /** The parties' billing emails, to pre-fill Send. */
+  shareRecipients?: string[];
   notes?: string;
   /** Programme Phase 3 — which milestones this certificate's claim is measured against. */
   milestoneLinks?: { linkId: number; milestoneId: string; milestoneName: string; claimedPct: number }[];
@@ -179,7 +208,7 @@ const isServerComputed = (entry: PCEntry): boolean | null => {
   return typeof v === "boolean" ? v : null;
 };
 
-const money = (v: number | null) => (v === null ? "—" : formatZAR(v));
+const money = (v: number | null) => (v === null ? "—" : formatMoney(v));
 
 // Human labels for the certification-chain transitions the backend exposes
 // (tasks/views_pc_workflow.py) — certification is a single Designated
@@ -191,11 +220,22 @@ const money = (v: number | null) => (v === null ? "—" : formatZAR(v));
 // certificate lifecycle. The backend never includes "post" in
 // availableTransitions or waitingOn (the route itself was removed), so there
 // is nothing for this map to render a button for.
+// "Withdraw", not "Cancel": beside a dialog's Close button, "Cancel" read as
+// dismissing the dialog when it actually withdraws the certificate.
 const TRANSITION_LABELS: Record<string, string> = {
   submit: "Submit for Certification",
   approve: "Approve",
   reject: "Reject",
-  cancel: "Cancel",
+  cancel: "Withdraw certificate",
+};
+
+/** What happened, for the toast. Approving certifies and posts in one step
+ *  (the approve dialog says so), so the toast says that, not "Approve done." */
+const TRANSITION_DONE: Record<string, string> = {
+  submit: "submitted for certification",
+  approve: "certified and posted",
+  reject: "rejected",
+  cancel: "withdrawn",
 };
 
 const TRANSITION_URL_PATH: Record<string, string> = {
@@ -211,7 +251,7 @@ const TRANSITION_BUTTON_LABELS: Record<string, string> = {
   submit: "Submit",
   approve: "Approve",
   reject: "Reject",
-  cancel: "Cancel",
+  cancel: "Withdraw",
 };
 
 const TRANSITION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -259,6 +299,10 @@ interface PaymentCertificateTableProps {
   orders: PCEntry[];
   /** Owned by the parent's FinanceToolbar — the table renders no chrome. */
   search: string;
+  /** A workflowState to show only, or "all". Owned by the toolbar too. */
+  status?: string;
+  /** A PC_SORTS key; "default" keeps the server's order. */
+  sort?: string;
   /** Id of the certificate whose details are open, or null for none.
    *
    *  Lifted out of the row so that clicking a PC number and following a
@@ -273,7 +317,7 @@ interface PaymentCertificateTableProps {
 
 const PAGE_SIZE = 10;
 
-const formatCurrency = formatZAR;
+const formatCurrency = formatMoney;
 
 const formatDate = (iso: string) => formatDateCanonical(iso, "short", "—");
 
@@ -295,6 +339,27 @@ const WORKFLOW_STATE_BADGE: Record<string, { variant: "success" | "warning" | "d
   posted: { variant: "success", label: "Posted" },
   rejected: { variant: "danger", label: "Rejected" },
   cancelled: { variant: "neutral", label: "Cancelled" },
+};
+
+/** Status filter options, in workflow order. */
+export const PC_STATUS_OPTIONS = ["draft", "submitted", "approved", "posted", "rejected", "cancelled"].map((s) => ({
+  value: s,
+  label: WORKFLOW_STATE_BADGE[s].label,
+}));
+
+const pcNo = (o: PCEntry) => Number(String(o.pcNumber ?? "").replace(/\D+/g, "")) || 0;
+const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const t = (iso?: string) => (iso ? Date.parse(iso) || 0 : 0);
+
+export const PC_SORTS: Record<string, { label: string; cmp: ((a: PCEntry, b: PCEntry) => number) | null }> = {
+  default: { label: "Recently updated", cmp: null },
+  pc_desc: { label: "Certificate: newest", cmp: (a, b) => pcNo(b) - pcNo(a) },
+  pc_asc: { label: "Certificate: oldest", cmp: (a, b) => pcNo(a) - pcNo(b) },
+  period_desc: { label: "Period: latest", cmp: (a, b) => (b.period || "").localeCompare(a.period || "") },
+  period_asc: { label: "Period: earliest", cmp: (a, b) => (a.period || "").localeCompare(b.period || "") },
+  payable_desc: { label: "Total payable: high → low", cmp: (a, b) => n(b.totalPayable) - n(a.totalPayable) },
+  claim_desc: { label: "Claim: high → low", cmp: (a, b) => n(b.claimAmount) - n(a.claimAmount) },
+  updated_asc: { label: "Updated: oldest", cmp: (a, b) => t(a.updatedAt) - t(b.updatedAt) },
 };
 
 const ApprovalBadge = ({ workflowState }: { workflowState?: string }) => {
@@ -483,6 +548,181 @@ const DeleteConfirmDialog = ({
 );
 
 /**
+ * Approve is the most consequential click in Finance: it certifies AND posts
+ * the certificate in one step (tasks/pc_workflow.py), mints the shareable
+ * certificate, starts the payment clock and accrues the platform fee. It was a
+ * single click with nothing in between (QA BUG-07). This puts the figures
+ * being certified in front of the person, and asks them to confirm they hold
+ * the authority, before anything is sent.
+ */
+export const ApproveConfirmDialog = ({
+  entry,
+  open,
+  onOpenChange,
+  isSubmitting,
+  onConfirm,
+}: {
+  entry: PCEntry;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isSubmitting: boolean;
+  onConfirm: () => void;
+}) => {
+  const [authorised, setAuthorised] = useState(false);
+  useEffect(() => {
+    if (!open) setAuthorised(false);
+  }, [open]);
+
+  // The same progress check the server runs when this is approved
+  // (tasks/pc_workflow.py), shown before the click rather than after a refusal.
+  const { data: gate } = useFetch<{ outcome: "pass" | "warn" | "block"; detail?: { summary?: string } }>(
+    open ? `payment-certificates/${entry.id}/gate-check/` : "",
+    { enabled: open },
+  );
+
+  const { data: feeConfig } = useFetch<{
+    configured: boolean;
+    enabled: boolean;
+    feeBase?: string;
+    feeRatePct: number;
+    vatRatePct: number;
+  }>(open && entry.projectId ? `billing/projects/${entry.projectId}/fee-config/` : "", {
+    enabled: open && !!entry.projectId,
+  });
+
+  const vat = serverNumber(entry, "vatAmount", "vat_amount");
+  const payable = serverNumber(entry, "totalPayable", "total_payable") ?? entry.netAmount;
+  const vos = (entry.voItems ?? []).filter((v: any) => v?.included !== false && Number(v?.thisPeriod));
+  const warnings = warningsOf(entry);
+  const feeAccrues =
+    !!feeConfig?.configured && !!feeConfig.enabled && Number(feeConfig.feeRatePct) > 0 &&
+    feeConfig.feeBase !== "vo_only";
+
+  const line = (label: string, value: React.ReactNode, strong = false) => (
+    <div className={`flex justify-between gap-4 ${strong ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+      <span>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Approve {entry.pcNumber}?</DialogTitle>
+          <DialogDescription>
+            Approving certifies and posts this certificate in one step. It is final — a correction
+            needs a new certificate.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 text-sm">
+          <div className="space-y-1">
+            {line("Period", entry.period || "—")}
+            {line("Claim", money(entry.claimAmount))}
+            {takesRetention(entry) && line("Retention", money(entry.retentionAmount))}
+            {/* The step between claim and total. With VAT unrecorded it is the
+                only way to see whether the total includes VAT (a 15% gap). */}
+            {takesRetention(entry) &&
+              line("Claim less retention", money(Number(entry.claimAmount) - Number(entry.retentionAmount)))}
+            {line("VAT", vat === null ? "Not recorded" : money(vat))}
+            {line("Total payable", money(payable), true)}
+          </div>
+          {vat === null && (
+            <p role="note" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              This certificate was saved before VAT and the total were stored, so the total above is
+              the recorded figure and may exclude VAT. Check it against the certificate before
+              approving.
+            </p>
+          )}
+
+          {vos.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-foreground">Variations certified this period</p>
+              <ul className="mt-1 space-y-0.5">
+                {vos.map((v: any, i: number) => (
+                  <li key={`${v.voNumber}-${i}`} className="flex justify-between gap-4 text-muted-foreground">
+                    <span className="truncate">{v.voNumber}</span>
+                    <span className="tabular-nums">{money(Number(v.thisPeriod))}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {warnings.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              {warnings.map((w, i) => (
+                <p key={i} className="text-xs text-amber-900 flex gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  {w}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {gate?.outcome === "block" && (
+            <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+              Approval is blocked by the progress check: {gate.detail?.summary ?? "the claim runs ahead of measured progress."}{" "}
+              Update the programme progress, or correct the claim.
+            </p>
+          )}
+          {gate?.outcome === "warn" && (
+            <p role="note" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Progress check: {gate.detail?.summary ?? "the claim and measured progress differ."} You can still
+              approve; this is recorded with the certificate.
+            </p>
+          )}
+
+          {feeAccrues && (
+            <p className="text-xs text-muted-foreground">
+              Approving accrues Baselinq's platform fee of {Number(feeConfig!.feeRatePct)}% (plus VAT) on this
+              certificate's value excluding VAT.
+            </p>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Once posted, the certificate is emailed to the employer and contractor at the addresses in
+            Settings → Contract & payment.
+          </p>
+
+          <div className="flex items-start gap-3 pt-1">
+            <Checkbox
+              id={`pc-approve-authority-${entry.id}`}
+              checked={authorised}
+              onCheckedChange={(v) => setAuthorised(!!v)}
+              className="mt-0.5 border-muted-foreground/30 data-[state=checked]:bg-primary flex-shrink-0"
+            />
+            <label
+              htmlFor={`pc-approve-authority-${entry.id}`}
+              className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none"
+            >
+              I confirm I have the authority to certify this payment and that the figures above are correct.
+            </label>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <button className="h-10 px-4 border border-border rounded-lg text-sm text-foreground bg-card hover:bg-muted/50 transition-colors">
+              Cancel
+            </button>
+          </DialogClose>
+          <button
+            onClick={onConfirm}
+            disabled={!authorised || isSubmitting || gate?.outcome === "block"}
+            className="h-10 px-4 rounded-lg text-sm text-primary-foreground bg-primary hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Approve and post
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
  * One primary button — whichever of Submit/Approve applies, the "forward"
  * action (see isPositiveTransition) — plus a "..." menu for everything else
  * this user may do (Reject/Cancel, Delete, and optionally View Details).
@@ -519,7 +759,10 @@ const ActionButtons = ({
           type="button"
           disabled={actingOn !== null}
           onClick={() => onTransitionClick(primary)}
-          className="h-8 px-2.5 rounded-md text-xs font-medium inline-flex items-center gap-1 bg-primary text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label={`${TRANSITION_BUTTON_LABELS[primary] || primary} ${entry.pcNumber}`}
+          // Outlined: "New Certificate" is the page's one primary action, and a
+          // filled button in every row competed with it.
+          className="h-8 px-2.5 rounded-md text-xs font-medium inline-flex items-center gap-1 border border-border bg-card text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {actingOn === primary ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -532,8 +775,8 @@ const ActionButtons = ({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            aria-label="More actions"
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted">
+            aria-label={`More actions for ${entry.pcNumber}`}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
@@ -749,13 +992,28 @@ export const PCDetailsDialog = ({
   /** Draft-only, creator-only — gated on entry.canEdit, same rule as onDeleteClick. */
   onEditClick?: () => void;
 }) => {
+  // Sending emails people outside the platform; the server allows it to
+  // finance.edit or finance.approve_certificate holders (…/share/).
+  const { canEditFinance } = usePermissions();
+  const canApproveCertificates = usePermission("finance.approve_certificate", entry.projectId);
+  // An overdue Baselinq invoice makes the project read-only; the server refuses these writes.
+  const { data: projectPerms } = useEffectivePermissions(entry.projectId ?? null);
+  const billingLocked = !!projectPerms?.billingLocked;
+  const canSendCertificate = (canEditFinance || canApproveCertificates) && !billingLocked;
+  // Whether payment is subject to the tax invoice under this contract (GCC).
+  const { data: paymentTerms, isError: paymentTermsFailed } = useFetch<{ invoiceRequiredForPayment?: boolean }>(
+    open && entry.workflowState === "posted" && entry.projectId ? `projects/${entry.projectId}/payment-terms/` : "",
+    { enabled: open && entry.workflowState === "posted" && !!entry.projectId },
+  );
   const queryClient = useQueryClient();
 
-  // The Contractor's invoice — attachable only once the certificate is
-  // Approved/Posted; a Draft/Submitted/Rejected/Cancelled certificate has no
-  // approved claim yet to invoice against, and creation-time attachment is
-  // already covered by createPCDrawer.tsx's own Attachments section.
-  const canAttachInvoice = entry.workflowState === "approved" || entry.workflowState === "posted";
+  // Supporting documents, once the certificate is Approved/Posted. NOT the
+  // tax invoice: this used to be labelled "Attach invoice", and a contractor
+  // who used it saw no error while the certificate kept saying "No tax invoice
+  // yet" — only the upload under "Contractor's tax invoice" counts. Creation-
+  // time attachment is covered by createPCDrawer.tsx's own Attachments section.
+  const canAttachDocuments =
+    (entry.workflowState === "approved" || entry.workflowState === "posted") && !billingLocked;
   // Scoped to this dialog instance only — mirrors createPCDrawer.tsx's
   // s3Upload state, simplified: there is no form submit here, so uploads are
   // registered against the certificate as soon as the operator confirms,
@@ -800,7 +1058,9 @@ export const PCDetailsDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        {/* minmax(0,1fr): the dialog is a grid, and an auto column grows to
+            the longest unbroken VO name instead of letting it truncate. */}
+        <DialogContent size="lg" className="max-h-[85vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
           <DialogHeader>
             <DialogTitle>Details for {entry.pcNumber}</DialogTitle>
             <DialogDescription>
@@ -831,6 +1091,28 @@ export const PCDetailsDialog = ({
             </p>
           </div>
 
+          {entry.workflowState === "posted" && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Certificate document
+              </p>
+              <CertificateDocumentSection entry={entry} canSend={canSendCertificate} />
+            </div>
+          )}
+
+          {entry.workflowState === "posted" && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Contractor's tax invoice
+              </p>
+              <TaxInvoiceSection
+                certificateId={entry.id}
+                invoiceRequiredForPayment={paymentTerms?.invoiceRequiredForPayment}
+                termsUnavailable={paymentTermsFailed}
+              />
+            </div>
+          )}
+
           {/* Link to Programme Phases — Programme Phase 3's milestones this
               certificate's claim was measured against, frozen at creation.
               Same relation createPCDrawer.tsx's own "Link to Programme
@@ -843,7 +1125,7 @@ export const PCDetailsDialog = ({
               <ul className="rounded-lg border border-border divide-y divide-border">
                 {(entry.milestoneLinks ?? []).map((m) => (
                   <li key={m.linkId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                    <span className="text-foreground truncate">{m.milestoneName}</span>
+                    <span className="text-foreground truncate min-w-0">{m.milestoneName}</span>
                     <span className="text-muted-foreground tabular-nums whitespace-nowrap">
                       {m.claimedPct}% claimed
                     </span>
@@ -868,7 +1150,7 @@ export const PCDetailsDialog = ({
                   .filter((v) => v.included)
                   .map((v) => (
                     <li key={v.voNumber} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                      <span className="text-foreground truncate">
+                      <span className="text-foreground truncate min-w-0">
                         {v.voNumber}
                         {v.description ? ` — ${v.description}` : ""}
                       </span>
@@ -895,17 +1177,35 @@ export const PCDetailsDialog = ({
                 const vat = serverNumber(entry, "vatAmount", "vat_amount");
                 const totalPayable = serverNumber(entry, "totalPayable", "total_payable");
                 const hasAdjustment = b.penalties > 0 || b.advanceRecovery > 0;
+                // `netAmount` is VAT-inclusive (it equals totalPayable), so it is
+                // not the ex-VAT subtotal. Advance recovery comes off below VAT.
+                const subtotalExVat =
+                  totalPayable !== null && vat !== null
+                    ? totalPayable - vat + b.advanceRecovery
+                    : entry.claimAmount - entry.retentionAmount + (entry.retentionRelease ?? 0);
+                // A certificate saved with a claim but no line items has no
+                // build-up to show. Printing "Gross Valuation R 0,00" above a
+                // R1 600 000 claim contradicted itself.
+                const hasBuildUp = b.grossValuation !== 0 || entry.claimAmount === 0;
                 return (
                   <>
-                    <SummaryLine label="Gross Work Value" value={b.grossWorkValue} />
-                    <SummaryLine
-                      label="Plus: Variation Orders (this period)"
-                      value={b.voThisPeriod}
-                      indent
-                      addition
-                    />
-                    <SummaryLine label="Plus: Materials on Site" value={b.materialsOnSite} indent addition />
-                    <SummaryLine label="Gross Valuation" value={b.grossValuation} bold border />
+                    {hasBuildUp ? (
+                      <>
+                        <SummaryLine label="Gross Work Value" value={b.grossWorkValue} />
+                        <SummaryLine
+                          label="Plus: Variation Orders (this period)"
+                          value={b.voThisPeriod}
+                          indent
+                          addition
+                        />
+                        <SummaryLine label="Plus: Materials on Site" value={b.materialsOnSite} indent addition />
+                        <SummaryLine label="Gross Valuation" value={b.grossValuation} bold border />
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground pb-2">
+                        No line-by-line valuation was recorded on this certificate.
+                      </p>
+                    )}
 
                     {b.penalties > 0 && (
                       <SummaryLine label="Less: Contractual Penalties" value={b.penalties} indent deduction />
@@ -926,23 +1226,25 @@ export const PCDetailsDialog = ({
                       border={hasAdjustment}
                     />
 
-                    <SummaryLine
-                      label={
-                        entry.retentionApplies === false
-                          ? "Less: Retention (not applied)"
-                          : entry.retentionRatePct
-                            ? `Less: Retention @ ${entry.retentionRatePct}%`
-                            : "Less: Retention"
-                      }
-                      value={entry.retentionAmount}
-                      deduction
-                      border
-                    />
+                    {takesRetention(entry) && (
+                      <SummaryLine
+                        label={
+                          entry.retentionApplies === false
+                            ? "Less: Retention (not applied)"
+                            : entry.retentionRatePct
+                              ? `Less: Retention @ ${entry.retentionRatePct}%`
+                              : "Less: Retention"
+                        }
+                        value={entry.retentionAmount}
+                        deduction
+                        border
+                      />
+                    )}
                     {(entry.retentionRelease ?? 0) > 0 && (
                       <SummaryLine label="Plus: Retention Release" value={entry.retentionRelease ?? 0} addition />
                     )}
 
-                    <SummaryLine label="Subtotal (ex VAT)" value={entry.netAmount} bold border />
+                    <SummaryLine label="Subtotal (ex VAT)" value={subtotalExVat} bold border />
                     <SummaryLine
                       label={entry.vatRatePct ? `Plus: VAT @ ${entry.vatRatePct}%` : "Plus: VAT"}
                       value={vat ?? 0}
@@ -953,8 +1255,8 @@ export const PCDetailsDialog = ({
 
                     <div className="border-t-2 border-foreground mt-3 pt-4 flex justify-between items-center">
                       <span className="text-sm text-foreground">Amount Due to Contractor</span>
-                      <span className="text-sm font-medium text-primary tabular-nums">
-                        {totalPayable === null ? "—" : formatCurrency(totalPayable)}
+                      <span className="text-sm font-medium text-primary tabular-nums text-right">
+                        <PayableCell entry={entry} />
                       </span>
                     </div>
                   </>
@@ -969,8 +1271,26 @@ export const PCDetailsDialog = ({
             )}
           </div>
 
+          {/* Payment — what the client still owes, and the control that records
+              it when they pay. Sits after the money and before the paperwork
+              because that is the order of the job: certify, then get paid,
+              then file. `lib/homeSignals.ts` sends people here with the words
+              "Open to record payment"; until this section existed, it sent
+              them to a screen that could not. */}
+          <div className="mt-4">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Payment
+            </p>
+            <PaymentPositionSection
+              certificateId={entry.id}
+              projectId={entry.projectId}
+              open={open}
+            />
+          </div>
+
           {/* Attachments — the formal certificate PDF attached at creation,
-              plus (once Approved/Posted) the Contractor's invoice. */}
+              plus (once Approved/Posted) supporting documents. The tax
+              invoice is supplied under "Contractor's tax invoice", never here. */}
           <div className="mt-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Attachments
@@ -1001,22 +1321,30 @@ export const PCDetailsDialog = ({
               <p className="text-sm text-muted-foreground">No attachments yet</p>
             )}
 
-            {canAttachInvoice && (
+            {canAttachDocuments && (
               <div className="mt-3">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {entry.workflowState === "posted"
+                    ? "A tax invoice attached here does not count. Upload it under Contractor's tax invoice above."
+                    : "The tax invoice is uploaded under Contractor's tax invoice once this certificate is posted. A tax invoice attached here does not count."}
+                </p>
                 <S3AttachmentSection
                   s3Upload={s3Upload}
-                  inputId={`pc-invoice-${entry.id}`}
-                  label="Attach invoice"
+                  inputId={`pc-document-${entry.id}`}
+                  label="Add a supporting document"
                 />
                 {s3Upload.entries.length > 0 && (
-                  <button
+                  /* Outline: the dialog's one blue button belongs to its main action. */
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleAttachUpload}
                     disabled={isAttaching || s3Upload.hasUploading}
-                    className="mt-2 h-9 px-4 text-sm text-primary-foreground bg-primary rounded-md hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-2"
                   >
                     {isAttaching ? "Attaching…" : "Attach to certificate"}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -1062,6 +1390,7 @@ const PCRow = ({
   rowRef,
   unreadNotifications,
   onEditRequest,
+  showRetentionColumn = true,
 }: {
   entry: PCEntry;
   isSelected: boolean;
@@ -1070,6 +1399,8 @@ const PCRow = ({
   unreadNotifications?: Notification[];
   /** Opens the shared create/edit drawer, prefilled from this entry — see PaymentCertificate. */
   onEditRequest?: (entry: PCEntry) => void;
+  /** False when no certificate in the table takes retention — see PaymentCertificateTable. */
+  showRetentionColumn?: boolean;
 }) => {
   const warnings = warningsOf(entry);
   // The details dialog is open exactly when this row is the selected one —
@@ -1086,6 +1417,7 @@ const PCRow = ({
   const [reasonText, setReasonText] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetched lazily, only once the Approvals badge is opened — "who is this
@@ -1110,6 +1442,12 @@ const PCRow = ({
     // never matched it — so posting/approving a certificate left those two
     // screens stale until a full reload. See invalidateProjectCommercials.
     invalidateProjectCommercials(queryClient, String(entry.projectId));
+    // Home's "What needs you" is keyed the same plain-string way and was
+    // missed for the same reason — so submitting a certificate sent the
+    // notification live while the queue kept serving the list from before the
+    // submit, and "Certify PC-x" did not appear until the cache went stale.
+    // See invalidateHomeData.
+    invalidateHomeData(queryClient, String(entry.projectId));
   };
 
   const runTransition = async (transition: string, reason?: string) => {
@@ -1119,10 +1457,11 @@ const PCRow = ({
         url: `tasks/payment-certificates/${entry.id}/${TRANSITION_URL_PATH[transition]}/`,
         data: reason !== undefined ? { reason } : {},
       });
-      toast.success(`${entry.pcNumber}: ${TRANSITION_LABELS[transition]} done.`);
+      toast.success(`${entry.pcNumber} ${TRANSITION_DONE[transition] ?? "updated"}`);
       invalidatePcQueries();
       setReasonTransition(null);
       setReasonText("");
+      setShowApproveDialog(false);
     } catch (err: any) {
       const message =
         err?.response?.data?.error || err?.message || "Action failed.";
@@ -1138,6 +1477,10 @@ const PCRow = ({
     if (requiresReason(transition)) {
       setReasonText("");
       setReasonTransition(transition);
+    } else if (transition === "approve") {
+      // Never a single click — see ApproveConfirmDialog. The row button and
+      // the details dialog both come through here.
+      setShowApproveDialog(true);
     } else {
       runTransition(transition);
     }
@@ -1170,7 +1513,7 @@ const PCRow = ({
           <button
             type="button"
             onClick={() => setShowViewDialog(true)}
-            className="text-primary hover:text-primary/80 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+            className="font-medium text-foreground hover:underline outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
             {entry.pcNumber}
           </button>
           <UnreadNotificationBadge notifications={unreadNotifications} />
@@ -1182,17 +1525,16 @@ const PCRow = ({
       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
         {formatCurrency(entry.claimAmount)}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground tabular-nums">
-        {formatCurrency(entry.retentionAmount)}
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
-        {formatCurrency(entry.netAmount)}
-      </td>
+      {showRetentionColumn && (
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground tabular-nums">
+          {formatCurrency(entry.retentionAmount)}
+        </td>
+      )}
       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-muted-foreground tabular-nums">
         {money(serverNumber(entry, "vatAmount", "vat_amount"))}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-foreground tabular-nums">
-        {money(serverNumber(entry, "totalPayable", "total_payable"))}
+        <PayableCell entry={entry} />
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-sm">
         <div className="flex items-center gap-1.5">
@@ -1200,7 +1542,7 @@ const PCRow = ({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                aria-label={`${entry.pcNumber} approval status — click to see who can act next`}
+                aria-label={`${entry.pcNumber}: ${(entry.workflowState && WORKFLOW_STATE_BADGE[entry.workflowState]?.label) || "Draft"}. Show who can act next`}
                 className="outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
                 <ApprovalBadge workflowState={entry.workflowState} />
               </button>
@@ -1209,6 +1551,11 @@ const PCRow = ({
               <WaitingOnContent waitingOn={workflow?.waitingOn} isLoading={waitingOnOpen && workflowLoading} />
             </PopoverContent>
           </Popover>
+          {entry.autoDrafted && (entry.workflowState ?? "draft") === "draft" && (
+            <Badge variant="neutral" title="Baselinq drafted this for the valuation. Value this period's work, then submit.">
+              Drafted by Baselinq
+            </Badge>
+          )}
           {warnings.length > 0 && (
             <Badge variant="warning" title={warnings.join("\n")}>
               <AlertTriangle className="h-3 w-3 mr-1" />
@@ -1261,10 +1608,34 @@ const PCRow = ({
           isDeleting={isDeleting}
           onConfirm={handleDelete}
         />
+        <ApproveConfirmDialog
+          entry={entry}
+          open={showApproveDialog}
+          onOpenChange={setShowApproveDialog}
+          isSubmitting={actingOn === "approve"}
+          onConfirm={() => runTransition("approve")}
+        />
       </td>
     </tr>
   );
 };
+
+/**
+ * The total payable, incl. VAT. A certificate written before the server stored
+ * its total shows the recorded net instead, marked unverified: that figure was
+ * VAT-inclusive on some older rows and VAT-exclusive on others, until
+ * `manage.py backfill_certificate_totals` proves which.
+ */
+function PayableCell({ entry }: { entry: PCEntry }) {
+  const total = serverNumber(entry, "totalPayable", "total_payable");
+  if (total !== null) return <>{formatCurrency(total)}</>;
+  return (
+    <>
+      {formatCurrency(entry.netAmount)}
+      <UnverifiedMark />
+    </>
+  );
+}
 
 /** Sentence case, numerics right-aligned — same shape as the other three
  *  finance tables. */
@@ -1273,9 +1644,14 @@ const HEADERS: { label: string; align?: "right" }[] = [
   { label: "Period" },
   { label: "Claim", align: "right" },
   { label: "Retention", align: "right" },
-  { label: "Net", align: "right" },
+  // No "Net" column: on every certificate the server computed, net equals the
+  // total payable, so it repeated the last column; on older rows it meant
+  // VAT-inclusive on some and VAT-exclusive on others. PayableCell shows the
+  // stored total, or the recorded net flagged as unverified.
   { label: "VAT", align: "right" },
-  { label: "Total Payable", align: "right" },
+  // Sentence case, as the comment above this list says and as the other nine
+  // labels are — this was the only Title Case heading on any finance table.
+  { label: "Total payable", align: "right" },
   { label: "Approvals" },
   { label: "Updated" },
   { label: "Actions" },
@@ -1284,6 +1660,8 @@ const HEADERS: { label: string; align?: "right" }[] = [
 export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = ({
   orders,
   search,
+  status = "all",
+  sort = "default",
   selectedId = null,
   onSelect,
   unreadByPcId,
@@ -1294,22 +1672,35 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, status, sort]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return orders;
-    return orders.filter(
+    const matched = orders.filter(
       (o) =>
-        o.pcNumber.toLowerCase().includes(q) ||
-        (o.period || "").toLowerCase().includes(q) ||
-        (o.approvalStatus || "").toLowerCase().includes(q)
+        (status === "all" || (o.workflowState || "draft") === status) &&
+        (!q ||
+          o.pcNumber.toLowerCase().includes(q) ||
+          (o.period || "").toLowerCase().includes(q) ||
+          // The status the badge shows, not the legacy approvalStatus written
+          // once at creation — searching "posted" found nothing.
+          ((o.workflowState && WORKFLOW_STATE_BADGE[o.workflowState]?.label) || o.approvalStatus || "")
+            .toLowerCase()
+            .includes(q))
     );
-  }, [orders, search]);
+    // "default" keeps the server's order. Array.sort is stable, so ties keep it too.
+    const cmp = PC_SORTS[sort]?.cmp;
+    return cmp ? [...matched].sort(cmp) : matched;
+  }, [orders, search, status, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // A no-retention project shows no Retention column. Decided over every
+  // certificate, not the page, so the columns do not jump while paging.
+  const showRetention = useMemo(() => orders.some(takesRetention), [orders]);
+  const headers = showRetention ? HEADERS : HEADERS.filter((h) => h.label !== "Retention");
 
   // Page to the selected certificate, then bring it into view. A selection
   // that is not in `filtered` — a stale id, or one hidden behind the current
@@ -1330,7 +1721,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/50">
             <tr>
-              {HEADERS.map((h) => (
+              {headers.map((h) => (
                 <th
                   key={h.label}
                   scope="col"
@@ -1345,7 +1736,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
           <tbody className="bg-card divide-y divide-border">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={HEADERS.length}>
+                <td colSpan={headers.length}>
                   {search ? (
                     <EmptyState
               icon={SearchX}
@@ -1375,6 +1766,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   rowRef={order.id === selectedId ? selectedRowRef : undefined}
                   unreadNotifications={unreadByPcId?.[String(order.id)]}
                   onEditRequest={onEditRequest}
+                  showRetentionColumn={showRetention}
                 />
               ))
             )}
@@ -1412,7 +1804,7 @@ export const PaymentCertificateTable: React.FC<PaymentCertificateTableProps> = (
                   key={p}
                   onClick={() => setPage(p as number)}
                   className={`min-w-[32px] h-8 px-2 rounded-md text-sm tabular-nums transition-colors ${
-                    safePage === p ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                    safePage === p ? "bg-muted font-medium text-foreground" : "text-foreground hover:bg-muted"
                   }`}>
                   {p}
                 </button>

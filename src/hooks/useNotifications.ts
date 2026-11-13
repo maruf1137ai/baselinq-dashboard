@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useWebPush } from "./useWebPush";
-import { useUserEventSocket } from "./useUserEventSocket";
+import { NOTIFICATIONS_CHANGED_EVENT } from "./useUserEventSocket";
 
 const getProjectId = () =>
   typeof window !== "undefined"
@@ -28,14 +28,16 @@ export function useNotifications() {
   // Initialize web push registration
   useWebPush();
 
-  // Session-wide push for unread changes. Mounted here because this hook has
-  // exactly one caller (DashboardHeader), so exactly one socket exists.
-  // The socket dispatches "notifications-changed" for the badges; this
-  // callback additionally refreshes the dropdown's own list so an open bell
+  // The session-wide push socket is mounted once at the app root
+  // (components/PermissionLiveSync.tsx) so pages outside the dashboard chrome
+  // hear it too. It dispatches "notifications-changed" for the badges; this
+  // listener additionally refreshes the dropdown's own list so an open bell
   // shows the new row without waiting for the next poll.
-  useUserEventSocket(() => {
-    useNotificationStore.getState().refresh(getProjectId());
-  });
+  useEffect(() => {
+    const handler = () => useNotificationStore.getState().refresh(getProjectId());
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, handler);
+  }, []);
 
   // Initial load of the dropdown's LIST, scoped to the current project.
   //

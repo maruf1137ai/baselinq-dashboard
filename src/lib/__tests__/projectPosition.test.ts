@@ -5,6 +5,8 @@ import {
   certificateAdjustments,
   financialOverview,
   netRetentionHeld,
+  paymentRowState,
+  sortPaymentPositions,
   summariseCertificateBasis,
   worstPaymentDelay,
 } from "../projectPosition";
@@ -63,7 +65,12 @@ describe("financialOverview", () => {
     // taking it off again removes the same R410 000 twice.
     expect(row("balance").value).toBe("R\u00a03\u00a0180\u00a0000,00");
     expect(row("balance").label).toBe("Balance still to certify");
-    expect(row("balance").formula).toBe("revised sum − certified to date");
+    // The balance also takes off Cost Ledger debits not linked to a VO (none
+    // in this fixture, so the figure above is unchanged); the formula names
+    // that term.
+    expect(row("balance").formula).toBe(
+      "revised sum minus certified to date minus unlinked Cost Ledger debits",
+    );
   });
 
   it("is the SAME figure the shared derivation returns — no local rebuild", () => {
@@ -80,12 +87,13 @@ describe("financialOverview", () => {
     expect(money.retentionHeld).toBe(410_000);
   });
 
-  it("does not claim a checkable derivation for the revised sum", () => {
-    // `original + approved variations` is how it is computed and is not
-    // reliably TRUE of it: _apply_vo_to_project puts a signed variation into
-    // both operands. Wrong working is worse than none.
+  it("does not claim a checkable derivation for the revised sum without the agreed original", () => {
+    // This payload carries no total_budget, so revised = original + variations
+    // cannot be shown to hold, and no working is stated. With the agreed
+    // original present it is exact (originalContractSum.test.ts). The old
+    // double-count warning is gone: the original is no longer the amended sum.
     expect(row("revised").formula).toBeUndefined();
-    expect(row("revised").warning).toMatch(/double-count/i);
+    expect(row("revised").warning).toBeUndefined();
   });
 
   it("does not call certified value a payment", () => {
@@ -374,5 +382,116 @@ describe("financialOverview — retention releases", () => {
     ]);
     const row = financialOverview(money, basis).find((r) => r.key === "certified")!;
     expect(row.warning).toMatch(/VAT-inclusive/i);
+  });
+});
+
+/*
+  The payment register's two derivations.
+
+  Everything else on the Payments tab is the server's own figure rendered as
+  it arrived. These two decide what a row SAYS it is and which row a reader
+  sees first, which is exactly the pair that cannot be checked by eye on a
+  screen with forty certificates on it.
+*/
+describe("paymentRowState", () => {
+  it("reads the server's booleans rather than comparing the amounts", () => {
+    /*
+      An OVER-payment. `isFullySettled` is `outstanding <= 0` server-side, so
+      this certificate is settled — while `receivedAmount === certifiedAmount`
+      is false. Deriving the state from the two amounts here would print
+      "Awaiting payment" beside a negative balance.
+    */
+    expect(
+      paymentRowState({
+        certifiedAmount: "1000.00",
+        receivedAmount: "1200.00",
+        outstandingAmount: "-200.00",
+        isFullySettled: true,
+      }),
+    ).toBe("settled");
+  });
+
+  it("names an overpayment rather than calling it settled, once the server reports the credit", () => {
+    expect(
+      paymentRowState({ outstandingAmount: "0.00", overpaidAmount: "200.00", isFullySettled: true }),
+    ).toBe("overpaid");
+  });
+
+  it("says a negative certificate is owed by the contractor, never paid in full", () => {
+    expect(
+      paymentRowState({
+        certifiedAmount: "-13500.00",
+        outstandingAmount: "0.00",
+        owedByContractor: "13500.00",
+        direction: "contractor_pays",
+        isFullySettled: true,
+      }),
+    ).toBe("contractor_owes");
+  });
+
+  it("calls a certificate certified at nil settled, with nothing received", () => {
+    expect(
+      paymentRowState({ certifiedAmount: "0.00", receivedAmount: "0.00", isFullySettled: true }),
+    ).toBe("settled");
+  });
+
+  it("puts overdue ahead of part paid — a part payment does not stop the clock", () => {
+    expect(
+      paymentRowState({ isFullySettled: false, isPartlyPaid: true, isOverdue: true }),
+    ).toBe("overdue");
+    expect(
+      paymentRowState({ isFullySettled: false, isPartlyPaid: true, isOverdue: false }),
+    ).toBe("partly");
+  });
+
+  it("never reports a position the server did not state as an unpaid one", () => {
+    // No `isFullySettled` at all: an older payload, or a row the server could
+    // not place. "unpaid" here would assert an obligation nobody asserted.
+    expect(paymentRowState({ pcNumber: "PC-012" })).toBe("unknown");
+  });
+});
+
+describe("sortPaymentPositions", () => {
+  const ROWS = [
+    { pcNumber: "PC-001", isFullySettled: true, outstandingAmount: "0.00" },
+    { pcNumber: "PC-002", isFullySettled: false, outstandingAmount: "250000.00" },
+    { pcNumber: "PC-003", isFullySettled: false, isOverdue: true, daysPastDue: 12, outstandingAmount: "80000.00" },
+    { pcNumber: "PC-004", isFullySettled: false, isOverdue: true, daysPastDue: 123, outstandingAmount: "10000.00" },
+    { pcNumber: "PC-005", isFullySettled: false, isPartlyPaid: true, outstandingAmount: "900000.00" },
+  ];
+
+  it("leads with the longest-overdue, then the largest balance still owed", () => {
+    expect(sortPaymentPositions(ROWS).map((r) => r.pcNumber)).toEqual([
+      // Overdue first, longest first — the only running clock on the page.
+      "PC-004",
+      "PC-003",
+      // Then what is owed, largest balance first. A part payment does not
+      // demote a row below a wholly unpaid smaller one.
+      "PC-005",
+      "PC-002",
+      // Settled last: it is the record, not the work.
+      "PC-001",
+    ]);
+  });
+
+  it("does not sort the caller's array in place", () => {
+    // The array belongs to the query cache. Sorting it there reorders what
+    // every other consumer of that cache entry reads.
+    const original = [...ROWS];
+    sortPaymentPositions(ROWS);
+    expect(ROWS).toEqual(original);
+  });
+});
+
+describe("financialOverview — Cost Ledger credits", () => {
+  it("names the certificates' share and the ledger's share of certified to date", () => {
+    const money = summariseMoney(PROJECT_45, CERTS_45, VOS_45, 400_000, 0);
+    const row = financialOverview(money).find((r) => r.key === "certified");
+    expect(row?.note).toMatch(/from certificates plus R\s400\s000,00 of Cost Ledger credits with no certificate/);
+  });
+
+  it("says nothing extra when there are no ledger credits", () => {
+    const row = financialOverview(summariseMoney(PROJECT_45, CERTS_45, VOS_45)).find((r) => r.key === "certified");
+    expect(row?.note).toBeUndefined();
   });
 });

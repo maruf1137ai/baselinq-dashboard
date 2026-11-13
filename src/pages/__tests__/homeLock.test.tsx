@@ -284,7 +284,7 @@ describe("homepage: principal agent, healthy project", () => {
     // Contract sum R10m + one signed, approved variation of R250k = R10.25m.
     // Certified counts posted certificates only (PC-001); PC-002 is still submitted.
     expect(text).toContain(
-      "Budget R 10 250 000,00 · Certified R 1 000 000,00 (10%) · Remaining R 9 250 000,00",
+      "Revised sum R 10 250 000,00 · Certified R 1 000 000,00 (10%) · Balance still to certify R 9 250 000,00",
     );
     expect(text).toContain("2 open actions");
     expect(pageText(container)).not.toContain("nothing certified yet");
@@ -343,7 +343,8 @@ describe("homepage: principal agent, healthy project", () => {
     renderHome(healthyRoutes(PA_PERMISSIONS));
     await loaded();
     const tabs = within(screen.getByRole("tablist", { name: "Contract watch" })).getAllByRole("tab");
-    expect(tabs.map((t) => norm(t.textContent))).toEqual(["Needs you1", "Risk0", "Meetings0"]);
+    // PC-002 to certify, and VO-001, which was signed and has never been certified.
+    expect(tabs.map((t) => norm(t.textContent))).toEqual(["Needs you2", "Risk0", "Meetings0"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
   });
 
@@ -485,7 +486,7 @@ describe("homepage: empty project", () => {
     expect(screen.getByText("Nothing is waiting on you.")).toBeInTheDocument();
     expect(screen.getByText("0 open actions")).toBeInTheDocument();
     const text = pageText(container);
-    expect(text).toContain("Budget R 10 000 000,00 · Remaining R 10 000 000,00 · nothing certified yet");
+    expect(text).toContain("Revised sum R 10 000 000,00 · Balance still to certify R 10 000 000,00 · nothing certified yet");
     expect(text).toContain("Nothing certified yet");
     expect(text).toContain("No variations raised");
   });

@@ -3,7 +3,8 @@
  *
  * Just a chooser between the plain-English reference pages: HelpHome.tsx
  * (/help/home), HelpTasks.tsx
- * (/help/tasks), HelpFinance.tsx (/help/finance), HelpProgramme.tsx
+ * (/help/tasks), HelpFinance.tsx (/help/finance), HelpBilling.tsx
+ * (/help/billing), HelpProgramme.tsx
  * (/help/programme), HelpMeetings.tsx (/help/meetings), HelpCommunication.tsx
  * (/help/communication), HelpDocumentation.tsx (/help/documentation),
  * HelpCompliance.tsx (/help/compliance), HelpProjectHealth.tsx
@@ -11,7 +12,7 @@
  * card here whenever a new /help/<area> reference page ships.
  */
 import { Link } from "react-router-dom";
-import { House, ClipboardList, Wallet, CalendarClock, Users, MessageSquare, FileText, ShieldCheck, HeartPulse, UserCog, ChevronRight } from "lucide-react";
+import { House, ClipboardList, Wallet, Receipt, CalendarClock, Users, MessageSquare, FileText, ShieldCheck, HeartPulse, UserCog, ChevronRight } from "lucide-react";
 
 const OPTIONS = [
   {
@@ -34,6 +35,13 @@ const OPTIONS = [
     title: "Finance",
     description:
       "Cost Ledger, Variation Orders, Payment Certificates, Platform Fees — who can do what, and when.",
+  },
+  {
+    to: "/help/billing",
+    icon: Receipt,
+    title: "Billing",
+    description:
+      "Baselinq's platform fee — what it's charged on, the monthly invoice, how to pay it, and what Not invoiced, Unpaid, Overdue and Paid mean.",
   },
   {
     to: "/help/programme",

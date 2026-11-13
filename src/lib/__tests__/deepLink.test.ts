@@ -89,6 +89,46 @@ describe("resolveTabParam", () => {
     expect(resolveTabParam("Payment Certificates", [])).toBe("");
     expect(resolveTabParam(null, [])).toBe("");
   });
+
+  /*
+    Legacy keys. "Platform Fees" and "Invoices" merged into "Baselinq Billing",
+    and both old keys are in live URLs — including `?tab=invoices`, lowercase,
+    which the BACKEND writes into every invoice notification
+    (billing/notify.py::INVOICES_LINK) and which this change does not touch.
+  */
+  describe("retired tab keys", () => {
+    const MERGED = ["Cost Ledger", "Payment Certificates", "Baselinq Billing"];
+    const LEGACY = { "Platform Fees": "Baselinq Billing", Invoices: "Baselinq Billing" };
+
+    it("sends a retired key to the tab that replaced it", () => {
+      expect(resolveTabParam("Platform Fees", MERGED, LEGACY)).toBe("Baselinq Billing");
+      expect(resolveTabParam("Invoices", MERGED, LEGACY)).toBe("Baselinq Billing");
+    });
+
+    it("accepts the lowercase key the backend's notification links carry", () => {
+      expect(resolveTabParam("invoices", MERGED, LEGACY)).toBe("Baselinq Billing");
+      expect(resolveTabParam("platform+fees", MERGED, LEGACY)).toBe("Baselinq Billing");
+      expect(resolveTabParam("  PLATFORM_FEES ", MERGED, LEGACY)).toBe("Baselinq Billing");
+    });
+
+    it("still resolves the new key directly", () => {
+      expect(resolveTabParam("baselinq billing", MERGED, LEGACY)).toBe("Baselinq Billing");
+    });
+
+    it("cannot use an alias to reach a tab this viewer may not see", () => {
+      // An alias resolves against `visibleTabs`, like any direct hit. A viewer
+      // holding neither billing code has no merged tab in that list, so the
+      // legacy link lands on their ordinary default and reveals nothing.
+      const noBilling = ["Cost Ledger", "Payment Certificates"];
+      expect(resolveTabParam("Invoices", noBilling, LEGACY)).toBe("Cost Ledger");
+      expect(resolveTabParam("Platform Fees", noBilling, LEGACY)).toBe("Cost Ledger");
+      expect(resolveTabParam("Invoices", [], LEGACY)).toBe("");
+    });
+
+    it("leaves a caller that passes no aliases exactly as it was", () => {
+      expect(resolveTabParam("Invoices", MERGED)).toBe("Cost Ledger");
+    });
+  });
 });
 
 describe("findByDeepLinkId", () => {

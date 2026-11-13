@@ -1,4 +1,5 @@
-import { Toaster as Sonner, Toaster } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { retryUnlessRefused } from "@/lib/queryRetry";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StagingBanner } from "@/components/StagingBanner";
 import { lazy, Suspense } from "react";
@@ -20,10 +21,14 @@ import Unauthorized from "./pages/Unauthorized";
 import Task from "./pages/Task";
 import TaskDetails from "./pages/TaskDetails";
 import CertificatePage from "./pages/CertificatePage";
+import InvoicePage from "./pages/InvoicePage";
+import TaxInvoicePage from "./pages/TaxInvoicePage";
+import FinancialStatementPage from "./pages/FinancialStatementPage";
 import Help from "./pages/Help";
 import HelpHome from "./pages/HelpHome";
 import HelpTasks from "./pages/HelpTasks";
 import HelpFinance from "./pages/HelpFinance";
+import HelpBilling from "./pages/HelpBilling";
 import HelpProgramme from "./pages/HelpProgramme";
 import HelpMeetings from "./pages/HelpMeetings";
 import HelpCommunication from "./pages/HelpCommunication";
@@ -47,7 +52,7 @@ import ProjectDetails from "./pages/settings/projectDetails";
 import Audit from "./pages/settings/audit";
 import AuditPage from "./pages/AuditPage";
 import Billing from "./pages/settings/billing";
-import Permissions from "./pages/settings/permissions";
+import ContractPayment from "./pages/settings/contractPayment";
 import DataManagement from "./pages/settings/dataManagement";
 import Integrations from "./pages/settings/integrations";
 import Notifications from "./pages/settings/notifications";
@@ -55,6 +60,7 @@ import Security from "./pages/settings/security";
 import Site from "./pages/settings/Site";
 import AssociatedCompanies from "./pages/settings/AssociatedCompanies";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PermissionLiveSync } from "./components/PermissionLiveSync";
 import ProjectProtectedRoute from "./components/ProjectProtectedRoute";
 import CreateProject from "./pages/CreateProject";
 import EditProject from "./pages/EditProject";
@@ -67,13 +73,34 @@ import OnboardingDashboard2 from "./pages/OnboardingDashboard2";
 import SelectProject from "./pages/account/SelectProject";
 import AccountProfile from "./pages/account/AccountProfile";
 import AccountOrganization from "./pages/account/AccountOrganization";
+import AdminGuard from "./pages/account/admin/AdminGuard";
+import AdminDashboard from "./pages/account/admin/AdminDashboard";
+import AdminUsers from "./pages/account/admin/AdminUsers";
+import AdminProjects from "./pages/account/admin/AdminProjects";
+import AdminCompanies from "./pages/account/admin/AdminCompanies";
+import AdminActivity from "./pages/account/admin/AdminActivity";
+import AdminActivityDetail from "./pages/account/admin/AdminActivityDetail";
+import AdminHealth from "./pages/account/admin/AdminHealth";
+import BillingOverview from "./pages/account/admin/billing/BillingOverview";
+import BillingProjects from "./pages/account/admin/billing/BillingProjects";
+import BillingProjectDetail from "./pages/account/admin/billing/BillingProjectDetail";
+import BillingFees from "./pages/account/admin/billing/BillingFees";
+import BillingInvoices from "./pages/account/admin/billing/BillingInvoices";
+import BillingSettings from "./pages/account/admin/billing/BillingSettings";
+import BillingGuide from "./pages/account/admin/billing/BillingGuide";
 
-const queryClient = new QueryClient();
+// A 4xx is an answer, not an outage — see lib/queryRetry (QA BUG-22).
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: retryUnlessRefused } },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <PermissionLiveSync />
     <TooltipProvider>
-      <Toaster />
+      {/* ONE toaster. A second, unconfigured instance of the same sonner
+          component sat beside this one, so every toast in the app was drawn
+          twice (QA BUG-17). */}
       <Sonner
         closeButton
         visibleToasts={3}
@@ -135,14 +162,75 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          {/*
+            `viewFinance` alone, plus the staff bypass.
+
+            The list used to be ["viewFinance", "viewPlatformFees",
+            "viewInvoices"], which is OR'd — so a role with the Finance area
+            switched off but a billing code still granted reached this page and
+            got a single surviving tab. finance.platform_fees.view and
+            finance.invoices.view are now children of finance.view
+            (user/migrations/0077), so holding one without the parent is no
+            longer a state the server will resolve; admitting them here would
+            only let such a user through to an empty page instead of
+            /unauthorized.
+
+            `allowPlatformStaff` sits outside the permission list in RoleRoute,
+            so Baselinq staff still reach their own billing on projects they are
+            not members of.
+          */}
           <Route
             path="/finance"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewFinance">
+                <RoleRoute permission="viewFinance" allowPlatformStaff>
                   <ProjectProtectedRoute>
                     <Finance />
                   </ProjectProtectedRoute>
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          {/*
+            One Baselinq tax invoice as a printable document.
+
+            Same gate as the Finance page's Invoices tab: `viewInvoices`
+            (finance.invoices.view) or platform staff, who raise the bill on
+            projects they are not members of and so hold no permission there.
+
+            NO ProjectProtectedRoute, deliberately: the invoice names its own
+            project in its payload, and a staff member arriving from the admin
+            panel may have no project selected at all. The server decides
+            access to the invoice itself (billing/views.py).
+          */}
+          <Route
+            path="/finance/statement"
+            element={
+              <ProtectedRoute>
+                <RoleRoute permission="viewFinance">
+                  <ProjectProtectedRoute>
+                    <FinancialStatementPage />
+                  </ProjectProtectedRoute>
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finance/tax-invoices/:id"
+            element={
+              <ProtectedRoute>
+                <RoleRoute permission="viewFinance">
+                  <TaxInvoicePage />
+                </RoleRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/:id"
+            element={
+              <ProtectedRoute>
+                <RoleRoute permission="viewInvoices" allowPlatformStaff>
+                  <InvoicePage />
                 </RoleRoute>
               </ProtectedRoute>
             }
@@ -235,6 +323,14 @@ const App = () => (
           <Route path="/help/finance" element={
             <ProtectedRoute>
               <HelpFinance />
+            </ProtectedRoute>
+          } />
+          {/* Billing reference — Baselinq's platform fee for project users:
+              what it is charged on, the monthly invoice, paying it, and the
+              statuses. No project scope, same reasoning as /help/tasks. */}
+          <Route path="/help/billing" element={
+            <ProtectedRoute>
+              <HelpBilling />
             </ProtectedRoute>
           } />
           {/* Programme reference — who can do what in Schedule & Milestones,
@@ -389,15 +485,18 @@ const App = () => (
           />
           <Route path="/settings" element={
             <ProtectedRoute>
-              <RoleRoute permission="viewSettings">
+              {/* Settings → Billing is readable on billing.terms.view alone, and
+                  Contract & payment on finance.view, so the shell admits both;
+                  the other pages keep viewSettings. */}
+              <RoleRoute permission={["viewSettings", "viewBillingTerms", "viewPlatformFees", "viewInvoices", "viewFinance"]} allowPlatformStaff>
                 <ProjectProtectedRoute>
                   <Settings />
                 </ProjectProtectedRoute>
               </RoleRoute>
             </ProtectedRoute>
           }>
-            <Route index element={<TeamManagement />} />
-            <Route path="associated-companies" element={<AssociatedCompanies />} />
+            <Route index element={<RoleRoute permission="viewSettings"><TeamManagement /></RoleRoute>} />
+            <Route path="associated-companies" element={<RoleRoute permission="viewSettings"><AssociatedCompanies /></RoleRoute>} />
             <Route path="project-details" element={
               <RoleRoute permission="viewSettings"><ProjectDetails /></RoleRoute>
             } />
@@ -406,7 +505,10 @@ const App = () => (
             } />
             <Route path="notifications" element={<Notifications />} />
             <Route path="billing" element={
-              <RoleRoute permission="viewBilling"><Billing /></RoleRoute>
+              <RoleRoute permission={["viewBillingTerms", "viewPlatformFees", "viewInvoices"]} allowPlatformStaff><Billing /></RoleRoute>
+            } />
+            <Route path="contract-payment" element={
+              <RoleRoute permission="viewFinance"><ContractPayment /></RoleRoute>
             } />
             <Route path="integrations" element={
               <RoleRoute permission="manageIntegrations"><Integrations /></RoleRoute>
@@ -418,9 +520,18 @@ const App = () => (
             <Route path="audit" element={
               <RoleRoute permission="viewAudit"><Audit /></RoleRoute>
             } />
-            <Route path="permissions" element={
-              <RoleRoute permission="viewPermissions"><Permissions /></RoleRoute>
-            } />
+            {/*
+              `settings/permissions` is gone. It was a second permission matrix
+              with its own hardcoded copies of the descriptions, the sort order,
+              the hidden-code list and the parent/child map — and that copy had
+              already drifted: it still described the Finance area as it stood
+              before the tabs were reorganised, and its client-side cascade was
+              bypassed entirely by a direct API call.
+
+              /roles-permissions is the one matrix. It renders from the
+              permission rows themselves (group, subgroup, sort_order,
+              requires_code), so there is nothing left to keep in step.
+            */}
           </Route>
           <Route
             path="/onboarding"
@@ -441,6 +552,22 @@ const App = () => (
             <Route index element={<SelectProject />} />
             <Route path="profile" element={<AccountProfile />} />
             <Route path="organization" element={<AccountOrganization />} />
+            <Route path="admin" element={<AdminGuard />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="projects" element={<AdminProjects />} />
+              <Route path="companies" element={<AdminCompanies />} />
+              <Route path="activity" element={<AdminActivity />} />
+              <Route path="activity/:userId" element={<AdminActivityDetail />} />
+              <Route path="health" element={<AdminHealth />} />
+              <Route path="billing" element={<BillingOverview />} />
+              <Route path="billing/projects" element={<BillingProjects />} />
+              <Route path="billing/projects/:projectId" element={<BillingProjectDetail />} />
+              <Route path="billing/fees" element={<BillingFees />} />
+              <Route path="billing/invoices" element={<BillingInvoices />} />
+              <Route path="billing/settings" element={<BillingSettings />} />
+              <Route path="billing/guide" element={<BillingGuide />} />
+            </Route>
           </Route>
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />

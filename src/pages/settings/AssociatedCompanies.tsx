@@ -63,7 +63,7 @@ interface AppointedInviteEntry {
 
 
 const AssociatedCompanies = () => {
-  const { canManageAssociatedCompanies, canAddCompanyMember, canEditCompanyMember } = usePermissions();
+  const { canManageAssociatedCompanies, canEditAppointedCompany, canAddCompanyMember, canEditCompanyMember } = usePermissions();
   const queryClient = useQueryClient();
   const selectedProjectId = localStorage.getItem("selectedProjectId");
   const { isLoading } = useProject(selectedProjectId ?? undefined);
@@ -387,7 +387,7 @@ const AssociatedCompanies = () => {
                             )}
 
                             {/* Edit company — visible to company admin or managers */}
-                            {isNumericId && (canManageAssociatedCompanies || comp.admin_user_id === currentUser?.id) && (
+                            {isNumericId && (canEditAppointedCompany || comp.admin_user_id === currentUser?.id) && (
                               <button
                                 onClick={() => {
                                   setEditingCompanyId(editingCompanyId === comp.id ? null : comp.id);

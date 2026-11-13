@@ -129,9 +129,9 @@ import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoney } from "@/lib/formatCurrency";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
-import { BALANCE_LABEL, FINANCE_TAB, REVISED_SUM_DOUBLE_COUNT } from "@/lib/homeSignals";
+import { BALANCE_LABEL, FINANCE_TAB } from "@/lib/homeSignals";
 import { cn } from "@/lib/utils";
 import type { ContractTimeline, MilestoneDrift } from "@/lib/homeVisuals";
 import type { HomeData } from "@/hooks/useHomeData";
@@ -785,7 +785,7 @@ function ChangeBar({ slices }: { slices: { key: string; label: string; count: nu
                 style={{ backgroundColor: FILL[s.key] }}
               />
             )}
-            {s.value === null ? s.count : formatZAR(s.value)} {s.label.toLowerCase()}
+            {s.value === null ? s.count : formatMoney(s.value)} {s.label.toLowerCase()}
             {s.value !== null && s.count > 0 ? ` (${s.count})` : ""}
           </p>
         ))}
@@ -914,7 +914,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         name="Money"
         to={CERTIFICATES}
         linkLabel="Certificates"
-        value={money.certified === null ? null : formatZAR(money.certified)}
+        value={money.certified === null ? null : formatMoney(money.certified)}
         emptyIcon={Wallet}
         // Explicit, because this zone's `compare` line is a percentage of the
         // contract sum and reads as a figure rather than as an absence.
@@ -923,7 +923,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         compare={
           money.certifiedPct === null || money.revisedContractSum === null
             ? "certified to date"
-            : `certified — ${money.certifiedPct}% of ${formatZAR(money.revisedContractSum)}`
+            : `certified — ${money.certifiedPct}% of ${formatMoney(money.revisedContractSum)}`
         }
         badge={
           // Certified past the revised contract sum. A breach that has already
@@ -940,12 +940,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
             <Badge variant="danger">Over</Badge>
           ) : undefined
         }
-        caveat={[
-          "Cumulative certified value against the contract sum as revised by approved variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built.",
-          money.variationCount > 0 ? REVISED_SUM_DOUBLE_COUNT : null,
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        caveat="Cumulative certified value against the contract sum as revised by signed variations. A commercial measure, not physical progress — Baselinq records no measure of what has been built."
         /*
           ── THE FOOTNOTE, CUT FROM FOUR CLAUSES TO TWO FIGURES ────────────
 
@@ -982,7 +977,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
         footnote={footnoteOf([
           money.balance === null
             ? null
-            : `${formatZAR(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
+            : `${formatMoney(money.balance)} ${BALANCE_LABEL.replace(/^Balance /, "")}`,
           /*
             Retention STAYS on the face, and this is the one clause that was
             tried on a tooltip and put back. `statusBandGating.test.tsx`
@@ -995,7 +990,7 @@ export function StatusBandBlock({ data }: { data: HomeData }) {
           */
           retention.held === null
             ? null
-            : `${formatZAR(retention.held)} retention${
+            : `${formatMoney(retention.held)} retention${
                 retention.ratePct === null ? "" : ` at ${retention.ratePct}%`
               }${retentionReleaseKnown ? "" : ", gross — no releases recorded"}`,
           // The two disclosures. A series that cannot state its own

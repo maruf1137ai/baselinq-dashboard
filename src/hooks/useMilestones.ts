@@ -65,12 +65,23 @@ export interface ProgrammeBaselineDiff {
 }
 
 export interface MilestoneWithCost extends Milestone {
+  /**
+   * Construction: value certified against this phase, excl. VAT, each posted
+   * certificate counted once (backend allocate_certified_to_phases). Other
+   * disciplines: the stage's planned fee.
+   */
   contractCost: number | null;
+  /** Construction only: the phase's planned value, where one is entered. */
+  plannedValue?: number | null;
 }
 
 export interface PhaseCostsResponse {
   milestones: MilestoneWithCost[];
+  /** Construction: certified to date from certificates, excl. VAT. Otherwise: total planned fees. */
   totalContractCost: number;
+  /** Construction: certified outside every phase's dates, so the phases still reconcile. */
+  unallocatedCertified?: number | null;
+  basis?: "certified_excl_vat" | "planned_fees";
   currency: string;
 }
 

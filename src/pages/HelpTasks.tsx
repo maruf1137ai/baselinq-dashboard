@@ -95,6 +95,49 @@ const ROW_PERMISSION: Record<string, { code: string; render: (list: string) => s
     code: "task.gi.create",
     render: (list) => `Anyone holding: ${list}.`,
   },
+  // Codes added by backend user/migrations/0073 (were hardcoded role sets).
+  "Close the RFI": {
+    code: "task.rfi.close",
+    render: (list) => `The person who raised it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Sign and issue": { code: "task.si.sign", render: (list) => `Anyone holding: ${list}.` },
+  "Close the VO": {
+    code: "task.vo.close",
+    render: (list) => `The person who created it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Rate the risk (Low / Medium / High)": {
+    code: "task.ic.manage_risk",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Resend the broker email": {
+    code: "task.ic.manage_risk",
+    render: (list) => `The respondent themselves — always. Otherwise anyone holding: ${list}.`,
+  },
+  "Escalate to a formal Claim": {
+    code: "task.ic.escalate_to_claim",
+    render: (list) => `Only the contractor who originally filed the IC, and only if their role holds: ${list}.`,
+  },
+  "Close the IC": {
+    code: "task.ic.close",
+    render: (list) => `The person who filed it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Reply / assess the claim": {
+    code: "task.claim.review",
+    render: (list) =>
+      `The contractor, and for the decision (approve / reject / re-evaluate) anyone holding: ${list}.`,
+  },
+  "Sign and issue the determination": {
+    code: "task.claim.sign",
+    render: (list) => `Anyone holding: ${list}.`,
+  },
+  "Close the claim": {
+    code: "task.claim.close",
+    render: (list) => `The contractor who filed it — always. Anyone else needs to hold: ${list}.`,
+  },
+  "Close the GI": {
+    code: "task.gi.close",
+    render: (list) => `The person who issued it — always. Anyone else needs to hold: ${list}.`,
+  },
 };
 const ROW_CODES = Object.values(ROW_PERMISSION).map((c) => c.code);
 
@@ -273,7 +316,7 @@ const STATIC_SECTIONS: DocSection[] = [
     type: "GI",
     title: "GI — General Instruction",
     description:
-      "A general note between professionals, or from the Main Contractor to a subcontractor. Lighter than a Site Instruction — not contractually binding the same way.",
+      "A general note between professionals, or from the Main Contractor to a subcontractor. Lighter than a Site Instruction — not contractually binding the same way. Only roles granted \"See General Instructions\" on Roles & Permissions see GIs at all — the contractor side does not, by default.",
     rows: [
       {
         action: "Create a General Instruction",
@@ -306,7 +349,10 @@ export default function HelpTasks() {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const grants = useGrantedRoles(ROW_CODES, projectId);
-  const { data: roles } = useRoles();
+  // project_id: the roles list is readable to any member of THIS project;
+  // without it the server answers 403 to anyone lacking roles.view, and this
+  // page stayed on its static fallback for them.
+  const { data: roles } = useRoles(projectId);
 
   const roleNamesByCode = useMemo(() => {
     const map: Record<string, string> = {};

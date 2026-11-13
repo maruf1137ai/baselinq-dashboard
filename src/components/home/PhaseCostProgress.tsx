@@ -43,7 +43,7 @@ import { LineChart } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useMemo } from "react";
 
-import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoney } from "@/lib/formatCurrency";
 import { formatDate } from "@/lib/dateUtils";
 import {
   buildCostProgressCurve,
@@ -265,7 +265,7 @@ function PhaseCostProgressCard({
     const p = curve.points[0];
     const costText =
       p.cost !== null
-        ? formatZAR(p.cost)
+        ? formatMoney(p.cost)
         : curve.costHidden > 0
           ? "cost not visible to you"
           : "no cost recorded";

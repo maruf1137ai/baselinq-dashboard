@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { PCEntry } from "./paymentCertificateTable";
 import useFetch from "@/hooks/useFetch";
+import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { useMilestones } from "@/hooks/useMilestones";
 import { useS3Upload } from "@/hooks/useS3Upload";
 import { S3AttachmentSection } from "@/components/S3AttachmentSection";
-import { registerS3TaskAttachment } from "@/lib/Api";
+import { postData, registerS3TaskAttachment } from "@/lib/Api";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useDebounced } from "@/pages/account/admin/adminManage";
 import { AlertTriangle, CalendarIcon, Loader2, Minus, Plus, Trash2, X } from "lucide-react";
 import { format, parseISO, isWithinInterval } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,9 +25,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatZAR } from "@/lib/formatCurrency";
+import { formatMoney } from "@/lib/formatCurrency";
 import { formatMoneyInput, parseMoneyInput } from "@/lib/money";
-import { clampToRemaining, sumCertifiedByVo } from "@/lib/pcHistory";
+import { carryVoEntry, clampToRemaining, sumCertifiedByVo } from "@/lib/pcHistory";
+import { hasRetention } from "@/lib/retention";
 import {
   describePCSubmitError,
   extractPCIntegrityError,
@@ -35,6 +40,7 @@ import {
   clearTaskDraft,
   useTaskDraftAutosave,
 } from "@/lib/taskDrafts";
+import { computeCertificateFigures } from "@/lib/pcFigures";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -99,6 +105,11 @@ interface PCDefaults {
   currentContractValue: number;
   previouslyCertified: number;
   retentionRatePct: number;
+  /**
+   * Retention still held from this project's earlier certificates, less what
+   * has been released. Lets a release be entered even once the rate is 0.
+   */
+  retentionHeld?: number;
   vatRatePct: number;
   currency: string;
   /**
@@ -133,6 +144,13 @@ export interface CreatePCApiPayload {
   projectId: number;
   valuationPeriod: string;
   certificateDate: string;
+  /**
+   * The date the contract says this certificate is due to be issued. JBCC's
+   * payment period runs from it (25.10), not from the date it was actually
+   * issued; without it every due date fell back to the certificate date and
+   * quietly favoured a late certifier.
+   */
+  dateForIssue?: string;
   workItems: WorkLineItem[];
   voItems: VOLineItem[];
   materialsOnSite: number;
@@ -194,6 +212,7 @@ interface CreatePCDrawerProps {
 interface DraftShape {
   valuationPeriod?: string;
   certificateDate?: string;
+  dateForIssue?: string;
   workItems?: WorkLineItem[];
   voOverrides?: Record<string, { included: boolean; thisPeriod: number }>;
   materialsOnSite?: number;
@@ -204,7 +223,6 @@ interface DraftShape {
   claimedPctByMilestone?: Record<string, string>;
   retentionApplies?: boolean;
   retentionRatePctOverride?: number | null;
-  vatRatePctOverride?: number | null;
   currencyOverride?: string | null;
 }
 
@@ -218,12 +236,12 @@ interface DraftShape {
 // The `Math.abs` that used to sit here rendered a negative amount as a
 // positive one, so a sign error on a certificate was invisible. formatZAR
 // carries the sign itself.
-const fmt = (v: number) => formatZAR(v);
+const fmt = (v: number) => formatMoney(v);
 
 const pct = (v: number) =>
   isNaN(v) || !isFinite(v) ? "0.0%" : `${Math.min(v, 999).toFixed(1)}%`;
 
-const fmtCard = (v: number) => formatZAR(v);
+const fmtCard = (v: number) => formatMoney(v);
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -408,6 +426,23 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   const [certificateDate, setCertificateDate] = useState<Date | undefined>(
     new Date()
   );
+  // Empty until someone states it: copying the certificate date here would
+  // present a guess as the contractual date the payment clock runs from.
+  const [dateForIssue, setDateForIssue] = useState<Date | undefined>(undefined);
+  // The contract's certificate issue day (Settings → Contract & payment). When
+  // set, the server gives a certificate created without a date for issue that
+  // day of its valuation month; the field shows which date that will be.
+  const { data: paymentTerms } = useFetch<{ certificateIssueDay?: number | null }>(
+    isOpen && projectId ? `projects/${projectId}/payment-terms/` : "",
+    { enabled: !!(isOpen && projectId) },
+  );
+  const termsDateForIssue = useMemo(() => {
+    const day = paymentTerms?.certificateIssueDay;
+    if (!day || !valuationPeriod) return null;
+    const y = valuationPeriod.getFullYear();
+    const m = valuationPeriod.getMonth();
+    return new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+  }, [paymentTerms?.certificateIssueDay, valuationPeriod]);
 
   // Work Completed
   const [workItems, setWorkItems] = useState<WorkLineItem[]>([]);
@@ -422,9 +457,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   const { data: milestones = [] } = useMilestones(isOpen ? projectId : null);
   const [claimedPctByMilestone, setClaimedPctByMilestone] = useState<Record<string, string>>({});
 
-  const { data: voResponse, isLoading: isLoadingVOs } = useFetch<{ results: any[] }>(
-    isOpen && projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : "",
-    { enabled: !!(isOpen && projectId) }
+  // The project's variation register, every page. This read the ASSIGNMENT
+  // tasks (`tasks/tasks/?taskType=VO`), which the server scopes to the viewer's
+  // own assignments and which `useFetch` read one page of — so a QS not
+  // assigned to a variation saw "No approved variation orders" and could not
+  // certify it.
+  const { rows: voRows, isLoading: isLoadingVOs } = useProjectVariations(
+    projectId ? String(projectId) : undefined,
+    isOpen,
   );
 
   // Original/current contract value, "previously certified" (certificate
@@ -447,11 +487,18 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // means the operator has touched the field.
   const [retentionApplies, setRetentionApplies] = useState(true);
   const [retentionRatePctOverride, setRetentionRatePctOverride] = useState<number | null>(null);
-  const [vatRatePctOverride, setVatRatePctOverride] = useState<number | null>(null);
   const [currencyOverride, setCurrencyOverride] = useState<string | null>(null);
 
   const retentionRatePct = retentionRatePctOverride ?? defaults?.retentionRatePct ?? 0;
-  const vatRatePct = vatRatePctOverride ?? defaults?.vatRatePct ?? 0;
+  // Retention is optional: a project at 0% shows none of it. It still shows
+  // when the certificate being edited was itself issued with retention.
+  const showRetention =
+    hasRetention(defaults?.retentionRatePct) ||
+    (editEntry != null &&
+      (hasRetention(editEntry.retentionRatePct) || Number(editEntry.retentionAmount || 0) !== 0));
+  // VAT is a fixed, platform-wide 15% — no per-certificate override. See
+  // billing/views_config.py and Project.vat_rate.
+  const vatRatePct = defaults?.vatRatePct ?? 15;
   const currency = currencyOverride ?? defaults?.currency ?? "ZAR";
   const ratesReady = defaultsReady;
 
@@ -466,61 +513,101 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
    * anywhere noticing. The operator was shown a zero and told it came from
    * history, which is worse than showing nothing.
    *
-   * It then summed *every* prior certificate regardless of status, so a draft
-   * that was never issued, or one that was rejected, ate the remainder and the
-   * clamp below forced the entry to zero. `sumCertifiedByVo` counts only the
-   * certificates that took effect — see `@/lib/pcHistory`.
+   * It then summed *every* prior certificate regardless of status, so one that
+   * was rejected ate the remainder and the clamp below forced the entry to
+   * zero. `sumCertifiedByVo` counts the certificates the server counts —
+   * drafts included, rejected and cancelled not — see `@/lib/pcHistory`.
+   *
+   * The certificate being edited is left out, as the server leaves it out
+   * (`vo_certified_elsewhere(exclude_pc_id=…)`): its own lines are what is
+   * being changed, not something certified elsewhere.
    */
   const { data: priorPCResponse } = useFetch<{ results: any[] }>(
     isOpen && projectId ? `tasks/payment-certificates/?projectId=${projectId}` : "",
     { enabled: !!(isOpen && projectId) }
   );
+  const editingId = editEntry?.id;
   const certifiedByVo = useMemo<Record<string, number>>(
-    () => sumCertifiedByVo(priorPCResponse?.results),
-    [priorPCResponse]
+    () =>
+      sumCertifiedByVo(
+        (priorPCResponse?.results || []).filter(
+          (pc: any) => editingId == null || String(pc?.id) !== String(editingId)
+        )
+      ),
+    [priorPCResponse, editingId]
   );
 
   const approvedVOs = useMemo<VOLineItem[]>(() => {
-    return (voResponse?.results || [])
-      // The VO's OWN status lives on the nested entity. The top-level `status`
-      // on this payload is the KANBAN status, which is only ever
-      // todo | in review | done — so comparing it to "approved" never matched
-      // and this list was permanently empty. The whole VO-to-certificate link
-      // has never worked.
+    return voRows
+      // Each row IS the variation, so `status` is its contractual status
+      // (Draft … Approved / Closed), not a kanban todo / in review / done.
       //
       // "closed" is included alongside "approved": Closed is a VO's normal
       // end-of-life status after successful completion (not a cancellation —
       // see billing/accrual.py's vo_status_reverses_charge, which treats
       // Closed the same as Approved for fee purposes). A VO that's been
       // approved and then closed still represents real, certifiable value.
-      .filter((item: any) => ["approved", "closed"].includes(String(item.task?.status || "").toLowerCase()))
-      .map((item: any) => {
-        const voNumber =
-          item.task?.voNumber || item.task?.vo_number || `VO-${item.taskId}`;
-        const approvedValue = Number(item.task?.grandTotal) || 0;
+      .filter((vo: any) => ["approved", "closed"].includes(String(vo.status || "").toLowerCase()))
+      .map((vo: any) => {
+        const voNumber = vo.voNumber || vo.vo_number || `VO-${vo._id}`;
+        // EXCLUDING VAT. This certificate adds VAT itself (line 13.0), so the
+        // VO's grandTotal — which already carries its own VAT — taxed the same
+        // rand twice and over-certified by the VAT (QA BUG-04). The server
+        // computes the figure (VariationOrder.approved_value_excluding_vat)
+        // and checks against the same one; subTotal is the fallback for an
+        // older API.
+        const approvedValue = Number(vo.certifiableValue ?? vo.subTotal) || 0;
         const previouslyCertified = certifiedByVo[voNumber] || 0;
         return {
           voNumber,
-          description: item.task?.title || "",
+          description: vo.title || "",
           approvedValue,
           previouslyCertified,
-          thisPeriod: 0,
-          included: false,
+          /*
+            ── Everything owed is on the table by default ──────────────────
+
+            These two used to be `0` and `false`, so every approved variation
+            opened the drawer excluded, at zero. A variation only becomes money
+            the contractor can actually be paid when somebody REMEMBERS to tick
+            it into a certificate, and nothing anywhere said "VO-014 was
+            approved six weeks ago and has never been certified". The work was
+            done, the variation was signed, and the money simply sat.
+
+            The default is now the uncertified balance, included. A quantity
+            surveyor who does not want to certify a variation this period
+            unticks it — which is a decision they make and can be asked about,
+            rather than an omission nobody can see.
+
+            `remainingValue` is floored at zero below, so a fully-certified
+            variation defaults to excluded and contributes nothing.
+          */
+          thisPeriod: Math.max(approvedValue - previouslyCertified, 0),
+          included: Math.max(approvedValue - previouslyCertified, 0) > 0,
           // What is left to certify. Surfaced so an operator can see at a
           // glance that a fully-certified variation has nothing remaining,
           // rather than re-certifying it because the drawer showed zero.
           remainingValue: Math.max(approvedValue - previouslyCertified, 0),
         };
       });
-  }, [voResponse, certifiedByVo]);
+  }, [voRows, certifiedByVo]);
+
+  // Editing a saved draft: variations approved after it was saved arrive
+  // pre-ticked like every other uncertified variation. Name them, so the QS
+  // reviews what was added rather than finding it in the total.
+  const signedSinceDraft = useMemo(() => {
+    if (!editEntry) return [];
+    const saved = new Set((editEntry.voItems ?? []).map((v) => v.voNumber));
+    return approvedVOs.filter((vo) => vo.included && !saved.has(vo.voNumber)).map((vo) => vo.voNumber);
+  }, [editEntry, approvedVOs]);
 
   // Sync the editable VO rows with the fetched register, preserving any
-  // inclusion / amount the user has already entered for a given VO.
+  // inclusion / amount the user has already entered for a given VO — up to
+  // what is still left on it (see `carryVoEntry`).
   useEffect(() => {
     setVoItems((prev) =>
       approvedVOs.map((vo) => {
         const existing = prev.find((p) => p.voNumber === vo.voNumber);
-        return existing ? { ...vo, included: existing.included, thisPeriod: existing.thisPeriod } : vo;
+        return existing ? carryVoEntry(vo, existing) : vo;
       })
     );
   }, [approvedVOs]);
@@ -567,6 +654,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   // Retention Release (editable)
   const [retentionRelease, setRetentionRelease] = useState(0);
+  // A release stays possible while earlier certificates still hold retention,
+  // even after the project rate has gone to 0.
+  const showRetentionRelease =
+    showRetention || hasRetention(defaults?.retentionHeld) || retentionRelease > 0;
 
   const [notes, setNotes] = useState("");
 
@@ -586,34 +677,50 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   // ─── Auto-calculations ──────────────────────────────────────────────────────
 
+  /*
+    ── The project's billing terms, read so the fee can be disclosed ───────
+
+    `configured: false` is a first-class answer, not an error — a project with
+    no config accrues nothing, and the disclosure block below must stay silent
+    rather than advertise a fee that will never be charged.
+  */
+  const { data: feeConfig } = useFetch<{
+    configured: boolean;
+    enabled: boolean;
+    feeBase?: "pc_only" | "vo_only" | "both";
+    feeRatePct: number;
+    vatRatePct: number;
+    billingContactName: string;
+  }>(projectId ? `billing/projects/${projectId}/fee-config/` : "", {
+    enabled: !!projectId,
+  });
+
   const calc = useMemo(() => {
     const grossWorkValue = workItems.reduce((s, i) => s + i.thisPeriod, 0);
     const voThisPeriod = voItems
       .filter((v) => v.included)
       .reduce((s, v) => s + v.thisPeriod, 0);
-    const grossValuation = grossWorkValue + voThisPeriod + materialsOnSite;
-    const grossValuationAdjusted = grossValuation - penalties - advanceRecovery;
-    // "Net Valuation This Period" = Claim column
-    const netValuationThisPeriod = grossValuationAdjusted;
-    // Zero, not a placeholder rate, while the project's real rates are still
-    // in flight, or while the operator has switched retention off entirely.
-    const retention =
-      netValuationThisPeriod * ((ratesReady && retentionApplies ? retentionRatePct : 0) / 100);
-    const subtotal = netValuationThisPeriod - retention + retentionRelease;
-    const vat = subtotal * ((ratesReady ? vatRatePct : 0) / 100);
-    // Amount Due = Net column
-    const amountDue = subtotal + vat;
+
+    // The arithmetic lives in src/lib/pcFigures.ts so it can be tested against
+    // the server's own chain. It used to be inline here, taking retention off
+    // the CLAIM where the server takes it off the VALUATION — see that file.
+    const figures = computeCertificateFigures({
+      grossWorkValue,
+      voThisPeriod,
+      materialsOnSite,
+      penalties,
+      advanceRecovery,
+      retentionRelease,
+      retentionRatePct,
+      vatRatePct,
+      retentionApplies,
+      ratesReady,
+    });
 
     return {
       grossWorkValue,
       voThisPeriod,
-      grossValuation,
-      grossValuationAdjusted,
-      netValuationThisPeriod,
-      retention,
-      subtotal,
-      vat,
-      amountDue,
+      ...figures,
     };
   }, [
     workItems,
@@ -729,6 +836,68 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // ─── Submit ──────────────────────────────────────────────────────────────────
 
   /**
+   * What this certificate will cost if posted now — asked of the server.
+   *
+   * This used to be estimated here, and the estimate was wrong whenever it
+   * mattered: under `both` it deducted every ticked variation as if each had
+   * been charged at approval (the server deducts only those with a live
+   * charge, capped at what they were charged on), and it never knew about the
+   * project's cap. `billing/projects/<id>/pc-fee-preview/` runs the same
+   * arithmetic as the real charge (billing/accrual.py), so the two agree.
+   *
+   * The body is a string so the debounce settles on a value, not on an object
+   * that is new every render.
+   */
+  const feePreviewBody = useMemo(
+    () =>
+      JSON.stringify({
+        claimAmount: calc.netValuationThisPeriod,
+        materialsOnSite,
+        retentionRelease,
+        retentionApplies,
+        retentionRatePct,
+        // billing/fee_base.py recovers the valuation by inverting the
+        // claim_amount identity, so without these the preview computes the fee
+        // on a different valuation than posting will and the drawer understates
+        // what is about to be charged. (There is no escalation field in this
+        // drawer; the server defaults it to zero.)
+        penalties,
+        advanceRecovery,
+        voItems: voItems
+          .filter((v) => v.included)
+          .map((v) => ({ voNumber: v.voNumber, thisPeriod: v.thisPeriod, included: true })),
+      }),
+    [
+      calc.netValuationThisPeriod, materialsOnSite, retentionRelease,
+      retentionApplies, retentionRatePct, penalties, advanceRecovery, voItems,
+    ]
+  );
+  const settledFeePreviewBody = useDebounced(feePreviewBody, 400);
+  const feePreview = useQuery<{
+    applies: boolean;
+    feeAmount?: string;
+    vatAmount?: string;
+    totalAmount?: string;
+    capReached?: boolean;
+  }>({
+    queryKey: ["pc-fee-preview", projectId, settledFeePreviewBody],
+    queryFn: () =>
+      postData({
+        url: `billing/projects/${projectId}/pc-fee-preview/`,
+        data: JSON.parse(settledFeePreviewBody),
+      }),
+    enabled: !!(isOpen && projectId && feeConfig?.configured && feeConfig.enabled && ratesReady),
+    placeholderData: keepPreviousData,
+  });
+  const platformFee = {
+    fee: Number(feePreview.data?.feeAmount ?? 0),
+    vat: Number(feePreview.data?.vatAmount ?? 0),
+    total: Number(feePreview.data?.totalAmount ?? 0),
+    capReached: !!feePreview.data?.capReached,
+    pending: !feePreview.data,
+  };
+
+  /**
    * Awaits the create and only closes once the certificate exists.
    *
    * The previous version fired `onSubmit` without awaiting it and then called
@@ -751,6 +920,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       projectId: Number(projectId),
       valuationPeriod: valuationPeriod ? format(valuationPeriod, "yyyy-MM") : "",
       certificateDate: certificateDate ? format(certificateDate, "yyyy-MM-dd") : "",
+      dateForIssue: dateForIssue ? format(dateForIssue, "yyyy-MM-dd") : undefined,
       workItems,
       voItems,
       milestoneLinks: milestoneLinks.length > 0 ? milestoneLinks : undefined,
@@ -811,9 +981,16 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       onClose();
       return;
     }
+    // Approved variations arrive pre-filled at their uncertified balance. That
+    // default is not something the user typed, so an untouched drawer closes
+    // without a "Discard this draft?" prompt; only a changed variation counts.
+    const voChanged = voItems.some((v) => {
+      const seeded = approvedVOs.find((a) => a.voNumber === v.voNumber);
+      return !seeded || seeded.included !== v.included || seeded.thisPeriod !== v.thisPeriod;
+    });
     const hasContent =
       workItems.some((w) => w.description.trim() !== "" || w.thisPeriod !== 0) ||
-      voItems.some((v) => v.included) ||
+      voChanged ||
       materialsOnSite !== 0 ||
       penalties !== 0 ||
       advanceRecovery !== 0 ||
@@ -840,6 +1017,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   useTaskDraftAutosave(draftType, isOpen && !editEntry, {
     valuationPeriod: valuationPeriod?.toISOString(),
     certificateDate: certificateDate?.toISOString(),
+    dateForIssue: dateForIssue?.toISOString(),
     workItems,
     voOverrides: Object.fromEntries(
       voItems.map((v) => [v.voNumber, { included: v.included, thisPeriod: v.thisPeriod }])
@@ -852,7 +1030,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     claimedPctByMilestone,
     retentionApplies,
     retentionRatePctOverride,
-    vatRatePctOverride,
     currencyOverride,
   } satisfies DraftShape);
 
@@ -892,6 +1069,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
         : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     );
     setCertificateDate(draft?.certificateDate ? new Date(draft.certificateDate) : new Date());
+    setDateForIssue(draft?.dateForIssue ? new Date(draft.dateForIssue) : undefined);
     setWorkItems(draft?.workItems ?? []);
     setMaterialsOnSite(draft?.materialsOnSite ?? 0);
     setPenalties(draft?.penalties ?? 0);
@@ -902,7 +1080,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     setClaimedPctByMilestone(draft?.claimedPctByMilestone ?? {});
     setRetentionApplies(draft?.retentionApplies ?? true);
     setRetentionRatePctOverride(draft?.retentionRatePctOverride ?? null);
-    setVatRatePctOverride(draft?.vatRatePctOverride ?? null);
     setCurrencyOverride(draft?.currencyOverride ?? null);
     setIntegrity(null);
     setSubmitError(null);
@@ -915,7 +1092,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       setVoItems((prev) =>
         prev.map((v) => {
           const override = draft.voOverrides?.[v.voNumber];
-          return override ? { ...v, ...override } : v;
+          return override ? carryVoEntry(v, override) : v;
         })
       );
     }
@@ -936,6 +1113,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
       y && m ? new Date(y, m - 1, 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     );
     setCertificateDate(entry.certificateDate ? new Date(entry.certificateDate) : new Date());
+    setDateForIssue(entry.dateForIssue ? new Date(entry.dateForIssue) : undefined);
     setWorkItems(entry.workItems ?? []);
     setVoItems(entry.voItems ?? []);
     setMaterialsOnSite(entry.materialsOnSite ?? 0);
@@ -951,7 +1129,6 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     );
     setRetentionApplies(entry.retentionApplies ?? true);
     setRetentionRatePctOverride(entry.retentionRatePct != null ? Number(entry.retentionRatePct) : null);
-    setVatRatePctOverride(entry.vatRatePct != null ? Number(entry.vatRatePct) : null);
     setCurrencyOverride(entry.currency ?? null);
     setIntegrity(null);
     setSubmitError(null);
@@ -1043,7 +1220,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
   if (!mounted) return null;
 
-  return (
+  // Portalled to <body>: rendered in place, the drawer was a child of the
+  // tab's `space-y-4` wrapper, which gave it margin-top: 16px — the panel sat
+  // 16px below the top of the screen (the top bar showed above it) and its
+  // footer ran 16px off the bottom.
+  return createPortal(
     <>
       {/* Overlay — deliberately inert. An accidental click beside the panel
           must not lose or discard anything; the only exits are the header
@@ -1144,11 +1325,11 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             {/* ── 1. Certificate Information ──────────────────────────────────── */}
             <section>
               <SectionHeader>Certificate Information</SectionHeader>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {/* PC Number */}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1.5">
-                    PC Number
+                    PC number
                   </label>
                   <input
                     type="text"
@@ -1160,7 +1341,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 {/* Valuation Period */}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1.5">
-                    Valuation Period
+                    Valuation period
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -1191,7 +1372,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 {/* Certificate Date */}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1.5">
-                    Certificate Date
+                    Certificate date
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -1214,7 +1395,58 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </PopoverContent>
                   </Popover>
                 </div>
+                {/* Date for issue (contract) */}
+                <div>
+                  <label id="pc-date-for-issue-label" className="block text-xs text-muted-foreground mb-1.5">
+                    Date for issue
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        aria-labelledby="pc-date-for-issue-label pc-date-for-issue-value"
+                        aria-describedby="pc-date-for-issue-help"
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground border border-border rounded-md hover:bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <span id="pc-date-for-issue-value" className={dateForIssue ? undefined : "text-muted-foreground"}>
+                          {dateForIssue
+                            ? format(dateForIssue, "dd MMM yyyy")
+                            : termsDateForIssue
+                              ? `${format(termsDateForIssue, "dd MMM yyyy")} (payment terms)`
+                              : "Not set"}
+                        </span>
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateForIssue}
+                        onSelect={setDateForIssue}
+                        initialFocus
+                      />
+                      {dateForIssue && (
+                        <div className="border-t border-border p-2">
+                          <button
+                            type="button"
+                            onClick={() => setDateForIssue(undefined)}
+                            className="w-full rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            Clear date
+                          </button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
+              <p id="pc-date-for-issue-help" className="mt-2 text-xs text-muted-foreground">
+                Date for issue is the date the contract says this certificate is due. The payment
+                period runs from it, not from the date it is actually issued (JBCC 25.10).{" "}
+                {termsDateForIssue
+                  ? "Left blank, it is taken from the payment terms; pick a date only if this certificate's differs."
+                  : "Left blank, the due date is worked out from the certificate date and marked as an assumption. Set the certificate issue day in Settings → Contract & payment to fill it automatically."}
+              </p>
             </section>
 
             {/* ── 2. Work Completed ────────────────────────────────────────────── */}
@@ -1471,6 +1703,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
             {/* ── 3. Approved Variation Orders ─────────────────────────────────── */}
             <section>
               <SectionHeader>Approved Variation Orders</SectionHeader>
+              {signedSinceDraft.length > 0 && (
+                <p role="note" className="mb-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                  Approved since this draft was saved, and added at their uncertified balance:{" "}
+                  {signedSinceDraft.join(", ")}. Untick any you do not want certified this period.
+                </p>
+              )}
               <div className="rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
@@ -1511,21 +1749,29 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     {voItems.map((vo) => {
                       const clampNote = voNotes[vo.voNumber];
                       const voIssues = grouped.byVo[vo.voNumber] ?? [];
+                      // Nothing left to certify — shown before anyone ticks it.
+                      const fullyCertified =
+                        vo.previouslyCertified > 0 && (vo.remainingValue ?? 0) <= 0;
                       return (
                         <tr
                           key={vo.voNumber}
                           className={`transition-colors ${vo.included
                             ? "bg-primary/5"
-                            : "hover:bg-muted/50"
+                            : fullyCertified
+                              ? "opacity-60"
+                              : "hover:bg-muted/50"
                             }`}
                         >
                           <td className="px-3 py-3 text-center">
                             <input
                               type="checkbox"
                               checked={vo.included}
+                              // Can still be unticked if it somehow came in ticked.
+                              disabled={fullyCertified && !vo.included}
+                              title={fullyCertified ? "Fully certified on earlier certificates" : undefined}
                               onChange={() => toggleVO(vo.voNumber)}
                               aria-label={`Include ${vo.voNumber} in this certificate`}
-                              className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                              className="h-4 w-4 rounded border-border accent-primary cursor-pointer disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-3 py-3 text-primary text-sm">
@@ -1551,6 +1797,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                                     updateVOThisPeriod(vo.voNumber, v)
                                   }
                                 />
+                              ) : fullyCertified ? (
+                                <span className="text-xs text-muted-foreground pr-2 whitespace-nowrap">
+                                  Fully certified
+                                </span>
                               ) : (
                                 <span className="text-sm text-muted-foreground pr-2">
                                   —
@@ -1558,7 +1808,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                               )}
                               {vo.included && (
                                 <span className="text-xs text-muted-foreground text-right">
-                                  {fmt(vo.remainingValue ?? 0)} remaining
+                                  {fullyCertified ? "Fully certified" : `${fmt(vo.remainingValue ?? 0)} remaining`}
                                 </span>
                               )}
                               {clampNote && (
@@ -1633,13 +1883,17 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
 
             {/* ── 6. Retention, VAT & Currency ─────────────────────────────────── */}
             <section>
-              <SectionHeader>Retention, VAT &amp; Currency</SectionHeader>
+              <SectionHeader>
+                {showRetention ? <>Retention, VAT &amp; Currency</> : <>VAT &amp; Currency</>}
+              </SectionHeader>
               <p className="text-xs text-muted-foreground -mt-2 mb-3">
-                Default from this project's settings, but can be adjusted for
-                this certificate specifically — retention and VAT can vary
-                over a project's life.
+                {showRetention
+                  ? "Retention defaults from this project's settings but can be adjusted for this certificate specifically. "
+                  : ""}
+                VAT is a fixed, platform-wide rate and cannot be changed.
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className={`grid gap-4 ${showRetention ? "grid-cols-3" : "grid-cols-2"}`}>
+                {showRetention && (
                 <div>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
                     <Checkbox
@@ -1667,26 +1921,17 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     <span className="text-sm text-muted-foreground">%</span>
                   </div>
                 </div>
+                )}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1.5">
                     VAT rate
                   </label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.01"
-                      disabled={!ratesReady}
-                      aria-label="VAT rate percent"
-                      className="w-full px-3 py-2 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted/50 disabled:text-muted-foreground"
-                      value={ratesReady ? vatRatePct : ""}
-                      placeholder={ratesReady ? undefined : "—"}
-                      onChange={(e) =>
-                        setVatRatePctOverride(e.target.value === "" ? 0 : Number(e.target.value))
-                      }
-                    />
-                    <span className="text-sm text-muted-foreground">%</span>
+                  <div
+                    className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground border border-border rounded-md bg-muted/50"
+                    aria-label="VAT rate percent (fixed)"
+                  >
+                    {ratesReady ? vatRatePct : "—"}
+                    <span>%</span>
                   </div>
                 </div>
                 <div>
@@ -1780,8 +2025,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   border={penalties > 0 || advanceRecovery > 0}
                 />
 
-                {/* Retention & Release */}
+                {/* Retention & Release — hidden on a no-retention project */}
+                {showRetentionRelease && (
                 <div className="border-t border-border mt-2 pt-3 space-y-2">
+                  {showRetention && (
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">
                       {ratesReady
@@ -1794,6 +2041,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       {ratesReady ? `- ${fmt(calc.retention)}` : "—"}
                     </span>
                   </div>
+                  )}
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm text-muted-foreground">
                       Plus: Retention Release
@@ -1807,6 +2055,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Subtotal + VAT */}
                 <div className="border-t border-border mt-3 pt-3">
@@ -1835,6 +2084,57 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   </span>
                 </div>
 
+                {/*
+                  ── What Baselinq charges, said BEFORE anyone signs ────────
+
+                  Posting this certificate accrues Baselinq's platform fee
+                  automatically. Until now nothing on this screen said so: a
+                  quantity surveyor certified R4.2m and silently created a
+                  R48,300 charge against whoever pays on this project, and the
+                  first anyone heard of it was an invoice.
+
+                  That is how a dispute starts — and in South Africa a debit
+                  order can be reversed, no questions asked, for sixty days.
+                  Sticker shock is a function of surprise, not of size: a payer
+                  who watched the number accumulate certificate by certificate
+                  has already absorbed it by month end.
+
+                  Shown only when the project actually has billing configured
+                  and switched on. A project that accrues nothing says nothing,
+                  rather than advertising a fee it will never charge.
+                */}
+                {feeConfig?.configured && feeConfig.enabled && ratesReady && (
+                  <div className="border-t border-border mt-3 pt-3">
+                    <SummaryLine
+                      label={`Baselinq platform fee @ ${feeConfig.feeRatePct}%${platformFee.capReached ? " — cap reached" : ""}`}
+                      value={platformFee.fee}
+                      pending={platformFee.pending}
+                      indent
+                    />
+                    <SummaryLine
+                      label={`Plus: VAT @ ${feeConfig.vatRatePct}%`}
+                      value={platformFee.vat}
+                      pending={platformFee.pending}
+                      indent
+                      addition
+                    />
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      {feePreview.isError ? (
+                        "Fee estimate unavailable."
+                      ) : (
+                        <>
+                          {platformFee.pending ? "—" : fmt(platformFee.total)} will be charged
+                          {feeConfig.billingContactName
+                            ? ` to ${feeConfig.billingContactName}`
+                            : ""}{" "}
+                          when this certificate is posted. It is not deducted from
+                          the contractor.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+
                 {!ratesReady && (
                   <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -1846,11 +2146,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
               </div>
 
               {/* Quick reference — 3 inline cards */}
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className={`mt-4 grid gap-3 ${showRetention ? "grid-cols-3" : "grid-cols-2"}`}>
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
                   <span className="text-xs text-muted-foreground">Claim</span>
                   <span className="text-sm text-foreground tabular-nums">{fmtCard(calc.netValuationThisPeriod)}</span>
                 </div>
+                {showRetention && (
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3">
                   <span className="text-xs text-muted-foreground">
                     {ratesReady ? `Retention @ ${retentionRatePct}%` : "Retention"}
@@ -1859,6 +2160,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     {ratesReady ? fmtCard(calc.retention) : "—"}
                   </span>
                 </div>
+                )}
                 <div className="flex justify-between items-center border border-border rounded-lg px-4 py-3 bg-primary/10">
                   <span className="text-xs text-muted-foreground">Net (Amount Due)</span>
                   <span className="text-sm text-primary tabular-nums">
@@ -1935,6 +2237,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
           </div>
         </footer>
       </div>
-    </>
+    </>,
+    document.body,
   );
 };

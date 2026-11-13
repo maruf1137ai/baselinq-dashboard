@@ -40,46 +40,29 @@ import { usePost } from "@/hooks/usePost";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { cn } from "@/lib/utils";
-import { CONTRACTOR_CODES } from "@/lib/roleGroups";
 
 type TaskType = "RFI" | "SI" | "VO" | "GI" | "IC" | "DC" | "CLAIM" | "CRITICALPATHITEM" | string;
 
-// Werner rev H — role buckets used to gate every action below. Match the
-// backend's role-code sets in views_werner.py / views_signing.py so the
-// frontend hides what the backend would reject anyway.
-//
-// Previously a separate hardcoded copy of the contractor role set lived
-// here, independent from roleGroups.ts's CONTRACTOR_CODES — the two drifted
-// (this one never had MC, SE, CIDB, or SM), so a Main Contractor / Site
-// Engineer / CIDB-registered contractor couldn't see their own Close-out
-// button or escalate their own IC to a Claim. Importing the shared array
-// instead of re-declaring it means the two can't drift apart again.
-const CONTRACTOR_ROLES = new Set(CONTRACTOR_CODES);
-
-// "Professional" — broad set used for SI/GI close-out visibility below.
-// RFI→SI escalation no longer uses this: see task.rfi.escalate_to_si /
-// canEscalateRfiToSi. Still matches the backend's local PROFESSIONAL_CODES
-// in views_werner.py's CloseOutView, a separate, still-hardcoded check.
-const PROFESSIONAL_ROLES = new Set([
-  "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "CIVIL_ENG",
-  "QS", "CQS", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA",
-]);
-
-// Narrower set for SIGNING an SI — only the design professionals.
-// Matches the backend's SIGNING_ROLES["si"] in views_signing.py. The
-// previous code reused PROFESSIONAL_ROLES, which showed the Sign & Issue
-// button to QS/PM/CivilEng users who'd then get 403 on click.
-const SI_SIGN_ROLES = new Set([
-  "ARCH", "STRUCT_ENG", "MECH_ENG", "ELEC_ENG", "PRINCIPAL_AGENT", "PA",
-]);
-
-// Werner — CLIENT (project owner) is included so the creator can sign
-// VO / Claim. Matches the backend SIGNING_ROLES update. No longer used for
-// SI→VO escalation visibility — see task.si.escalate_to_vo /
-// canEscalateSiToVo above (the backend's own PM_CODES for that check never
-// included CLIENT, so this set was already wider than what escalation
-// actually allowed).
-const PM_ROLES = new Set(["CLIENT", "PM", "CPM", "PRINCIPAL_PM", "PRINCIPAL_AGENT", "PA"]);
+// Werner rev H — every action below is gated by the SAME Roles & Permissions
+// code the server checks (tasks/views_werner.py, tasks/views_signing.py;
+// seeded by backend user/migrations/0073), read from the live
+// effective-permissions payload for this project. No role-code sets: an
+// admin changing a role on the Roles & Permissions page changes these
+// buttons too.
+const CLOSE_PERMISSION: Record<string, string> = {
+  RFI: "task.rfi.close",
+  SI: "task.approve_si",
+  VO: "task.vo.close",
+  GI: "task.gi.close",
+  IC: "task.ic.close",
+  DC: "task.claim.close",
+  CLAIM: "task.claim.close",
+};
+const SIGN_PERMISSION: Record<string, string> = {
+  SI: "task.si.sign",
+  DC: "task.claim.sign",
+  CLAIM: "task.claim.sign",
+};
 
 interface Props {
   /** Task type from the API (e.g. 'RFI', 'SI', 'VO', 'IC', 'DC'). */
@@ -195,52 +178,29 @@ export function WernerTaskActions({
   // IC → Claim mitigation gate (Werner notes line 71). Contractor must
   // describe what they did to resolve the issue before escalating.
   const [mitigationOpen, setMitigationOpen] = useState(false);
+  // The escalation awaiting confirmation (its target type), or null.
+  const [escalateConfirm, setEscalateConfirm] = useState<string | null>(null);
   const [mitigationNotes, setMitigationNotes] = useState("");
   const [escalatingClaim, setEscalatingClaim] = useState(false);
 
-  // Werner rev H — derive the current user's role bucket once.
-  // Prefer the project-resolved role (ProjectTeamMember.role.code) over
-  // the user's global role — a Project Manager is usually assigned at
-  // the project level, not on the User record itself.
-  const userRoleCode = (
-    effectivePerms?.roleCode
-    || currentUser?.role?.code
-    || ""
-  ).toUpperCase();
-  const isContractor = CONTRACTOR_ROLES.has(userRoleCode);
-  const isProfessional = PROFESSIONAL_ROLES.has(userRoleCode);
-  const isPM = PM_ROLES.has(userRoleCode);
-  // RFI → SI and SI → VO escalation are now gated by real permissions
-  // (Roles & Permissions), not the hardcoded PROFESSIONAL_ROLES/PM_ROLES
-  // sets above — see task.rfi.escalate_to_si / task.si.escalate_to_vo /
-  // EscalationView.create() in tasks/views_werner.py. isProfessional/isPM
-  // themselves stay in use elsewhere on this page (SI/GI close-out, DC/
-  // Claim signing, VO close-out, risk pills below), which are unrelated and
-  // still hardcoded. Note: the backend's PM_CODES for si→vo never included
-  // CLIENT, unlike this file's own PM_ROLES — reading the live permission
-  // instead of isPM here also corrects that pre-existing mismatch (a CLIENT
-  // user could see this button and then get 403 on click).
-  const canEscalateRfiToSi = effectivePerms?.permissions?.["task.rfi.escalate_to_si"] === true;
-  const canEscalateSiToVo = effectivePerms?.permissions?.["task.si.escalate_to_vo"] === true;
+  // Live, project-scoped permission lookup — the server's own codes.
+  const has = (code?: string) => !!code && effectivePerms?.permissions?.[code] === true;
 
   // Escalation visibility per Werner spec:
-  //   RFI → SI : gated by task.rfi.escalate_to_si (see above)
-  //   SI  → VO : gated by task.si.escalate_to_vo (see above)
-  //   IC  → Claim : ONLY the contractor who filed the IC (raised_by).
-  //                 Other contractors on the project should NOT see the
-  //                 button — the backend rejects them with 403, so we
-  //                 hide it client-side to avoid the broken click path.
-  // Anyone else shouldn't see the menu entry at all so they don't even
-  // attempt the action (backend still rejects with 403 as a safety net).
+  //   RFI → SI    : task.rfi.escalate_to_si
+  //   SI  → VO    : task.si.escalate_to_vo
+  //   IC  → Claim : task.ic.escalate_to_claim AND only the contractor who
+  //                 filed the IC (raised_by) — an identity rule the backend
+  //                 also enforces.
   const isIcRaiser = !!(
     originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
   );
   const rawEscalation = ESCALATION_TARGETS[taskType];
   const canEscalateFromHere =
     !rawEscalation ? false :
-    taskType === "RFI" ? canEscalateRfiToSi :
-    taskType === "SI"  ? canEscalateSiToVo :
-    taskType === "IC"  ? (isContractor && isIcRaiser) :
+    taskType === "RFI" ? has("task.rfi.escalate_to_si") :
+    taskType === "SI"  ? has("task.si.escalate_to_vo") :
+    taskType === "IC"  ? (has("task.ic.escalate_to_claim") && isIcRaiser) :
     false;
   // Werner spec — escalation stays available while the doc is "live",
   // i.e. NOT in its terminal locked state. For SI that's anything before
@@ -250,28 +210,21 @@ export function WernerTaskActions({
   // out-of-state attempts too as a safety net.
   const escalation = canEscalateFromHere && !isLocked ? rawEscalation : undefined;
 
-  // Sign & Issue per Werner spec: SI=Architect/Engineer (narrow set —
-  // see SI_SIGN_ROLES above), DC/Claim=PM. VO has its own dedicated
-  // signing surface (see SIGNABLE_TYPES above) so it's not listed here.
-  // Uses SI_SIGN_ROLES instead of the broader PROFESSIONAL_ROLES so
-  // users like QS / CivilEng / PM don't see a button they'll get 403 on.
-  const canSignSI = SI_SIGN_ROLES.has(userRoleCode);
-  const canSignThisType =
-    taskType === "SI"    ? canSignSI :
-    taskType === "DC"    ? isPM :
-    taskType === "CLAIM" ? isPM :
-    false;
+  // Sign & Issue: task.si.sign for SI, task.claim.sign for DC / Claim. VO
+  // has its own dedicated signing surface (see SIGNABLE_TYPES above).
+  const canSignThisType = has(SIGN_PERMISSION[taskType]);
   const showSignIssue = SIGNABLE_TYPES.has(taskType) && !isSigned && canSignThisType;
 
-  // Risk pills on IC are PM-set per Werner page 13. Contractors and
-  // other professionals can VIEW the pills (read-only) but only PMs
-  // can change. We hide the interactive pills entirely for non-PMs.
-  const showRiskPills = taskType === "IC" && isPM;
+  // Risk pills on IC (Werner page 13): everyone may view the level, only
+  // task.ic.manage_risk may change it — the interactive pills are hidden
+  // otherwise.
+  const canManageIcRisk = has("task.ic.manage_risk");
+  const showRiskPills = taskType === "IC" && canManageIcRisk;
 
   // Resend broker email — visible on IC when:
   //   • Current risk is HIGH
   //   • The original broker email never went out (brokerNotified === false)
-  //   • Viewer is the PM or the respondent themselves (mirrors backend gate)
+  //   • Viewer holds task.ic.manage_risk or is the respondent (mirrors backend gate)
   // Use case: PM rated HIGH while the respondent had no broker email
   // configured. Respondent later adds one in Settings → Security and
   // hits this button so their broker actually gets the notice.
@@ -282,37 +235,21 @@ export function WernerTaskActions({
     taskType === "IC"
     && (riskLevel || "").toLowerCase() === "high"
     && brokerNotified === false
-    && (isPM || isRespondent);
+    && (canManageIcRisk || isRespondent);
 
   // ── Close-out button visibility ─────────────────────────────────────
-  // Mirrors backend CloseOutView role gates (views_werner.py:1325):
-  //   RFI / IC / Claim → originator OR contractor
-  //   SI               → originator OR task.approve_si (live permission —
-  //                       see canCloseSi below)
-  //   GI               → originator OR professional (still hardcoded)
-  //   VO               → originator OR PM
-  // Hidden when the doc is already in a terminal state.
+  // Mirrors backend CloseOutView: the originator may always close their
+  // own document; anyone else needs the type's close permission
+  // (CLOSE_PERMISSION above). Hidden when already in a terminal state.
   const isOriginator = !!(
     originatorId && currentUser?.id && String(originatorId) === String(currentUser.id)
   );
-  // SI close/verify is now gated by a real permission (Roles &
-  // Permissions), not the hardcoded PROFESSIONAL_ROLES set — see
-  // task.approve_si / CloseOutView in tasks/views_werner.py. GI still uses
-  // isProfessional below, unrelated and still hardcoded.
-  const canCloseSi = effectivePerms?.permissions?.["task.approve_si"] === true;
   const TERMINAL_STATUSES = new Set([
     "Closed", "Verified", "EOT Awarded", "Escalated to Claim", "Approved",
   ]);
   const alreadyTerminal = !!currentStatus && TERMINAL_STATUSES.has(currentStatus);
-  const canCloseOut = (() => {
-    if (alreadyTerminal) return false;
-    if (taskType === "RFI" || taskType === "IC") return isOriginator || isContractor;
-    if (taskType === "DC" || taskType === "CLAIM") return isOriginator || isContractor;
-    if (taskType === "SI") return isOriginator || canCloseSi;
-    if (taskType === "GI") return isOriginator || isProfessional;
-    if (taskType === "VO") return isOriginator || isPM;
-    return false;
-  })();
+  const closeCode = CLOSE_PERMISSION[taskType];
+  const canCloseOut = !alreadyTerminal && !!closeCode && (isOriginator || has(closeCode));
 
   // Map frontend taskType to backend entity_type for the close-out POST.
   const closeOutEntityType =
@@ -347,14 +284,16 @@ export function WernerTaskActions({
   // ── Escalation handler ──────────────────────────────────────────────
   // IC → Claim goes through a mitigation-notes modal first (Werner spec
   // requires evidence of mitigation efforts before formal escalation).
-  // Other escalations (RFI → SI, SI → VO) fire immediately.
+  // Every other escalation (RFI → SI, SI → VO) asks for confirmation: it
+  // creates a new formal document and cannot be undone from here, and it
+  // used to fire on the first click of a menu item (QA BUG-18).
   const handleEscalate = async (toType: string) => {
     if (taskType === "IC" && toType === "claim") {
       setMitigationNotes("");
       setMitigationOpen(true);
       return;
     }
-    void runEscalate(toType, {});
+    setEscalateConfirm(toType);
   };
 
   const runEscalate = async (toType: string, payload: Record<string, any>) => {
@@ -371,6 +310,7 @@ export function WernerTaskActions({
       });
       toast.success(`Escalated to ${res?.display || toType.toUpperCase()}.`);
       setMitigationOpen(false);
+      setEscalateConfirm(null);
       await onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || "Failed to escalate.");
@@ -439,6 +379,9 @@ export function WernerTaskActions({
           pin: signMethod === "pin" ? pin : undefined,
           confirmed: signMethod === "click-confirm" ? true : undefined,
         },
+        // A refused signature (wrong PIN, lock-out) is not an expired
+        // session — never refresh the token and replay it.
+        config: { skipAuthRefresh: true },
       });
       toast.success("Signed and issued.");
       setSignOpen(false);
@@ -780,6 +723,34 @@ export function WernerTaskActions({
               onClick={handleSubmitMitigation}
             >
               {escalatingClaim ? "Escalating…" : "Escalate to Claim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalation confirm (RFI → SI, SI → VO) — same Dialog shell. */}
+      <Dialog
+        open={escalateConfirm !== null}
+        onOpenChange={(o) => { if (!o && !escalatingClaim) setEscalateConfirm(null); }}
+      >
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Escalate to {escalation?.label ?? escalateConfirm?.toUpperCase()}?</DialogTitle>
+            <DialogDescription>
+              This raises a new {escalation?.label ?? escalateConfirm?.toUpperCase()} linked to this{" "}
+              {taskType}, and records the escalation on both. It cannot be undone from here.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEscalateConfirm(null)} disabled={escalatingClaim}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/40 disabled:cursor-not-allowed"
+              disabled={escalatingClaim}
+              onClick={() => { if (escalateConfirm) void runEscalate(escalateConfirm, {}); }}
+            >
+              {escalatingClaim ? "Escalating…" : `Escalate to ${escalation?.label ?? escalateConfirm?.toUpperCase()}`}
             </Button>
           </DialogFooter>
         </DialogContent>

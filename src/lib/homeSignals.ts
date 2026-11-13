@@ -56,7 +56,7 @@ import {
 } from "./homeQueueRank";
 // The app's single currency formatter. A pure function with no DOM in it, so
 // importing it here costs this file none of the testability it protects.
-import { formatZAR } from "./formatCurrency";
+import { formatMoney } from "./formatCurrency";
 
 /**
  * Finance tab labels, verbatim from `visibleTabs` in `src/pages/finance.tsx`.
@@ -68,6 +68,8 @@ import { formatZAR } from "./formatCurrency";
 export const FINANCE_TAB = {
   costLedger: "Cost Ledger",
   certificates: "Payment Certificates",
+  // The payment register lives under the Financial Position.
+  payments: "Financial Position",
   variations: "Variation Orders",
 } as const;
 
@@ -92,6 +94,8 @@ export const ROUTE = {
   /** One certificate, named. */
   certificate: (id: number | string) =>
     `${financeTab(FINANCE_TAB.certificates)}&pc=${encodeURIComponent(String(id))}`,
+  /** What is owed, due and overdue, and where a payment is recorded. */
+  payments: financeTab(FINANCE_TAB.payments),
   /** The variation list. */
   variations: financeTab(FINANCE_TAB.variations),
   /** One variation, named. */
@@ -339,6 +343,17 @@ export interface CertificateLike {
   totalPayable?: number;
   retentionAmount?: number;
   workflowState?: string;
+  /**
+   * What THIS user may do to THIS certificate right now, as the server
+   * resolved it — `may_perform_transition` in `tasks/pc_workflow.py`, emitted
+   * by `PaymentCertificateSerializer.to_representation`. Already on the wire
+   * for the list endpoint: `PaymentCertificateViewSet` serves list and detail
+   * through one serializer.
+   *
+   * It is the SAME field the Approve button on Finance renders from, which is
+   * the whole point of reading it here — see `buildCertificateQueue`.
+   */
+  availableTransitions?: string[];
   /** The certificate's own date. Real and populated; not a deadline. */
   certificateDate?: string | null;
   updatedAt?: string;
@@ -388,17 +403,33 @@ export function daysWaiting(iso: string | null | undefined, now: Date = new Date
  * Every row here used to require nothing but `finance.view`, so "Certify
  * PC-006", under a heading reading "Certificates awaiting you", rendered
  * identically for the principal agent, the contractor's QS and any finance
- * viewer on the project. The transitions are separately permissioned on the
- * server and always have been — `TRANSITION_PERMISSIONS` in
- * `tasks/pc_workflow.py` — so the row now declares the permission for the act
- * it names:
+ * viewer on the project. That was then fixed by declaring the act's own
+ * permission code on the row — `finance.approve_certificate` — and resolving
+ * it in the browser out of `permissions/effective/`.
  *
- *   Certify  `finance.approve_certificate`  PRINCIPAL_PM alone: the project's
- *                                           Designated Principal Agent, the
- *                                           single certifying role.
+ * **That fix is now gone, and deliberately.** Re-deriving "may this person
+ * certify" client-side answers a DIFFERENT question from the one the server
+ * answers, and the two drifted in both directions:
  *
- * A viewer who cannot perform the act is not shown the row, which is what the
- * panel's title claims and what it could not previously support.
+ *   - The permission code is project-wide. The server's rule is per
+ *     CERTIFICATE: `CREATOR_EXCLUDED_TRANSITIONS` means a certificate's own
+ *     author may never certify it, however much authority they hold. So a
+ *     principal agent who raised PC-034 themselves got no notification and no
+ *     Approve button, and this list still told them to "Certify PC-034".
+ *   - The reverse also happened, and is the bug that prompted this change: a
+ *     user whose Approve button the SERVER rendered, and whom the server had
+ *     notified, was missing the row here because the flag resolved false for
+ *     their session.
+ *
+ * So the row no longer asks a second question. It reads `availableTransitions`
+ * — the server's own answer for this user and this certificate, permission and
+ * creator-exclusion already applied, the identical field the Approve button on
+ * `paymentCertificateTable.tsx` renders from. The row and the button and the
+ * `pc_submitted` notification are now three renderings of one decision and
+ * cannot disagree.
+ *
+ * `finance.view` stays on `requires`: the row names a money document and links
+ * into Finance. The ACT gate is the server's, not a code in this file.
  *
  * There used to be a second row here — "Post PC-x to release payment", for
  * `workflowState === "approved"` — but approving a certificate now auto-posts
@@ -420,7 +451,17 @@ export function buildCertificateQueue(
   now: Date = new Date(),
 ): QueueItem[] {
   return certificates
-    .filter((c) => c.workflowState === "submitted")
+    .filter(
+      (c) =>
+        // The server's answer, first. `workflowState` is kept as an AND and
+        // not dropped: `approve` is only ever legal from SUBMITTED, so this
+        // narrows nothing a correct payload would have included — but it does
+        // mean a response missing `availableTransitions` (an older server, a
+        // trimmed payload) degrades to showing NOTHING rather than to showing
+        // every certificate in every state. Failing closed is the same choice
+        // `filterQueueByPermission` makes about an absent flag.
+        c.workflowState === "submitted" && (c.availableTransitions ?? []).includes("approve"),
+    )
     .map((c) => {
       const ref = c.pcNumber || `PC-${c.id}`;
       const waited = daysWaiting(c.updatedAt, now);
@@ -451,7 +492,8 @@ export function buildCertificateQueue(
         action: "Open to certify",
         waitingSince: c.updatedAt ?? null,
         subRank: 1,
-        requires: ["finance.view", "finance.approve_certificate"] as QueueRequirement[],
+        // Act gate deliberately absent — see this function's header.
+        requires: ["finance.view"] as QueueRequirement[],
       };
     });
 }
@@ -544,7 +586,7 @@ export function buildPaymentOverdueQueue(
         detail:
           [
             Number.isFinite(outstanding) && outstanding > 0
-              ? `${formatZAR(outstanding)} outstanding`
+              ? `${formatMoney(outstanding)} outstanding`
               : null,
             r.due?.dueDate ? `due ${shortDate(r.due.dueDate) ?? r.due.dueDate}` : null,
             r.due?.basisIsContractual === false
@@ -563,8 +605,10 @@ export function buildPaymentOverdueQueue(
         // The server's own due date, off `tasks/payment_terms.py`.
         date: r.due?.dueDate ?? null,
         overdue: true,
-        href: ROUTE.certificate(r.paymentCertificateId ?? 0),
-        action: "Open to record payment",
+        // Payments Status, where the payment is recorded — the certificate
+        // list has no outstanding column and no Record payment.
+        href: ROUTE.payments,
+        action: "Open payments to record it",
         waitingSince: r.due?.dueDate ?? null,
         // Ahead of certify and post: this is money already lost, and interest
         // is running on it.
@@ -1187,6 +1231,15 @@ const RISK_GROUP_TITLE: Record<string, (n: number) => string> = {
   PAYMENT_OVERDUE: (n) => `${n} certificates unpaid after certification`,
   SCHEDULE_SLIPPAGE: (n) => `${n} milestones slipped beyond plan`,
   MILESTONE_OVERDUE: (n) => `${n} milestones overdue`,
+  // The finance loop (backend risk/rules/, plan of 10 Nov 2026).
+  CERTIFICATE_LATE: (n) => `${n} certificates past their date for issue`,
+  VALUATION_COMING: (n) => `${n} certificates due for issue, not drafted`,
+  VARIATION_UNSIGNED: (n) => `${n} approved variations waiting to be signed`,
+  VARIATION_UNCERTIFIED: (n) => `${n} signed variations not yet certified`,
+  TAX_INVOICE_MISSING: (n) => `${n} certificates without a tax invoice`,
+  PAYMENT_DUE: (n) => `${n} certificates falling due`,
+  PAYMENT_UNCONFIRMED: (n) => `${n} payments awaiting the contractor's confirmation`,
+  PAIRED_NOTICE_UNSERVED: (n) => `${n} notices served for time or money but not both`,
 };
 
 const SEVERITY_RANK = { red: 0, orange: 1, green: 2 } as const;
@@ -1861,6 +1914,19 @@ export interface MoneyPosition {
   variations: number | null;
   variationCount: number;
   /**
+   * Approved but not yet signed: not in the contract sum, so not in
+   * `variations`. Reported so a screen can say "R 1 200 000 approved, awaiting
+   * signature (3)" instead of a bare "—" beside a register showing them.
+   */
+  awaitingSignatureCount?: number;
+  awaitingSignatureValue?: number;
+  /**
+   * True when the payload carried the agreed original (`total_budget`) beside
+   * the amended contract value, so revised = original + signed variations
+   * holds exactly. False on an older payload, where that cannot be shown.
+   */
+  originalAgreed?: boolean;
+  /**
    * How many of `variationCount` carried no `grand_total`.
    *
    * Each of those contributes R0 to `variations`, hence to
@@ -1879,8 +1945,16 @@ export interface MoneyPosition {
    * original would be a guess wearing a total's clothes.
    */
   revisedContractSum: number | null;
-  /** Value certified to date — posted certificates only. */
+  /**
+   * Certified to date: posted certificates plus Cost Ledger credits linked to
+   * no certificate — the one definition the Financial Position also reads
+   * (backend cost_ledger/totals.py).
+   */
   certified: number | null;
+  /** The certificates' share of `certified`, so a screen can say what the rest is. */
+  certifiedFromCertificates?: number | null;
+  /** Unlinked Cost Ledger credits inside `certified`; null when the ledger was not read. */
+  manualCredits?: number | null;
   retentionHeld: number | null;
   /**
    * **Balance still to certify** — revised contract sum, less what has been
@@ -1954,7 +2028,14 @@ export interface VariationLike {
    * are read so this function does not depend on which route supplied the row.
    */
   grandTotal?: number | null;
-  task?: { grandTotal?: number } | null;
+  task?: { grandTotal?: number; certifiableValue?: number | null; subTotal?: number | null } | null;
+  /**
+   * What a payment certificate may certify — the value EXCLUDING VAT
+   * (`VariationOrder.approved_value_excluding_vat`). A certificate adds VAT
+   * itself, so "still to certify" is measured against this, not grandTotal.
+   */
+  certifiableValue?: number | null;
+  subTotal?: number | null;
   /**
    * `VariationOrder.signed_at` — set only by sign-and-issue
    * (`tasks/views_signing.py`), never by a generic status PATCH. A VO whose
@@ -1965,6 +2046,86 @@ export interface VariationLike {
    * disagrees with the Cost Ledger showing the same project.
    */
   signedAt?: string | null;
+  /** `VariationOrder.vo_number` — the reference a QS knows it by. */
+  voNumber?: string | null;
+  /** Row id, so the queue row can link to the variation itself. */
+  id?: number | string | null;
+}
+
+/**
+ * Variations approved and signed, and never certified.
+ *
+ * ── Why this is a queue row and not a report ────────────────────────────
+ *
+ * A variation becomes money the contractor can be paid only when somebody
+ * ticks it into a payment certificate. Until this, that was a thing a person
+ * had to REMEMBER: the drawer opened every approved variation excluded and at
+ * zero, nothing anywhere said "VO-014 was signed six weeks ago and has never
+ * appeared on a certificate", and the work simply sat unpaid.
+ *
+ * The certificate drawer now defaults every uncertified variation in, which
+ * fixes the common case. This catches the rest — a variation signed between
+ * certificates, or unticked once and then forgotten.
+ *
+ * `money`, not `forfeiture`: nothing is lost by delay, the contractor is
+ * simply not being paid for work already instructed and signed for. That
+ * ranks it below a notice deadline and above ordinary paperwork, which is
+ * where it belongs.
+ *
+ * Deliberately NOT a JBCC clock. No contract period is being counted here and
+ * none is claimed — `daysWaiting` since signature is a management fact, not a
+ * contractual one, so the row carries no `clock` and no `countdownLabel`.
+ */
+export function buildUncertifiedVariationQueue(
+  variations: VariationLike[],
+  certifiedByVo: Record<string, number>,
+  now: Date = new Date(),
+): QueueItem[] {
+  return variations
+    .filter((v) => {
+      // Signed, not merely status-flipped — the same gate billing and the
+      // cost ledger both apply before they will count a variation at all.
+      if (!v.signedAt) return false;
+      const status = String(v.status || "").toLowerCase();
+      if (!["approved", "closed"].includes(status)) return false;
+      const ref = v.voNumber || "";
+      if (!ref) return false;
+      const value = certifiableValue(v);
+      if (value <= 0) return false;
+      return (certifiedByVo[ref] ?? 0) < value;
+    })
+    .map((v) => {
+      const ref = v.voNumber as string;
+      const value = certifiableValue(v);
+      const certified = certifiedByVo[ref] ?? 0;
+      const outstanding = value - certified;
+      const waited = daysWaiting(v.signedAt, now);
+      return {
+        key: `vo-uncertified:${ref}`,
+        kind: "variation" as const,
+        headline:
+          certified > 0
+            ? `${ref} is part-certified — ${formatMoney(outstanding)} still to certify`
+            : `${ref} was signed and has never been certified`,
+        detail:
+          waited !== null
+            ? `Signed ${waited} day${waited === 1 ? "" : "s"} ago · ${formatMoney(value)} approved`
+            : `${formatMoney(value)} approved`,
+        consequence: "money" as const,
+        pressure: "none" as const,
+        daysRemaining: null,
+        clock: null,
+        date: null,
+        overdue: false,
+        // By reference: the Variation Orders tab matches `?vo=` against the VO
+        // number or the task id, and a row's `id` may be either record's pk.
+        href: ROUTE.variation(ref),
+        action: "Certify it",
+        waitingSince: v.signedAt ?? null,
+        amount: outstanding,
+        requires: ["finance.view"],
+      };
+    });
 }
 
 const APPROVED_VO = new Set(["done", "approved", "completed"]);
@@ -1972,6 +2133,21 @@ const APPROVED_VO = new Set(["done", "approved", "completed"]);
 /** The value on a variation, whichever route it arrived by. */
 export function variationValue(v: VariationLike): number {
   return v.task?.grandTotal ?? v.grandTotal ?? 0;
+}
+
+/**
+ * What may still be certified against a variation: its value EXCLUDING VAT,
+ * as the server computes it. Falls back to the ex-VAT subtotal, then to the
+ * gross figure for a payload from before the server sent either.
+ */
+export function certifiableValue(v: VariationLike): number {
+  return (
+    v.certifiableValue ??
+    v.task?.certifiableValue ??
+    v.subTotal ??
+    v.task?.subTotal ??
+    variationValue(v)
+  );
 }
 
 /**
@@ -1989,25 +2165,6 @@ export function variationIsPriced(v: VariationLike): boolean {
   const raw = v.task?.grandTotal ?? v.grandTotal;
   return typeof raw === "number" && Number.isFinite(raw);
 }
-
-/**
- * **The revised contract sum can count a variation twice, and both screens
- * that print it must say so.**
- *
- * `tasks/views_signing.py::_apply_vo_to_project` adds an approved variation's
- * amount into `project.contract_value` AND leaves the variation's status
- * APPROVED, in one transaction. So a variation signed through that flow is
- * inside both operands of `contractSum + variationsTotal`, and nothing on
- * either payload distinguishes the signed population from the rest — it cannot
- * be corrected client-side, only disclosed.
- *
- * This string lives here, beside the figure, because it was previously stated
- * on Project Health (`projectPosition.ts`) and NOT on Home, which printed the
- * same number — as "certified — N% of R X" and as the certified curve's
- * dashed ceiling — in silence. One caveat, one wording, both screens.
- */
-export const REVISED_SUM_DOUBLE_COUNT =
-  "May double-count any variation signed through the sign-and-issue flow — the server adds those to the original sum as well.";
 
 /** A certificate counts as certified once it is posted. */
 export function certificateIsCertified(c: CertificateLike): boolean {
@@ -2092,9 +2249,28 @@ export function summariseMoney(
    */
   manualDebitsTotal?: number | null,
 ): MoneyPosition {
-  const rawSum = project?.contractValue ?? project?.contract_value;
-  const parsedSum = rawSum === null || rawSum === undefined || rawSum === "" ? NaN : Number(rawSum);
-  const contractSum = Number.isFinite(parsedSum) && parsedSum > 0 ? parsedSum : null;
+  const positive = (raw: unknown) => {
+    const n = raw === null || raw === undefined || raw === "" ? NaN : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  /*
+    THE ORIGINAL IS THE SUM AGREED, AND THE REVISED SUM IS THE SERVER'S.
+
+    `contractSum` read `project.contract_value`, which the server AMENDS each
+    time a variation is signed (tasks/views_signing.py). So once anything was
+    signed, "Original contract sum" showed the amended figure, and the revised
+    sum added the signed variations a second time. The agreed original is
+    `total_budget` (captured when the project is set up, fixed once work is
+    certified — project/serializers.py), and the revised sum is
+    `contract_value` itself. Signed variations are the difference between
+    the two, so nothing is counted twice. (Client decision, 10 Nov 2026: the
+    original agreed amount is always shown.)
+  */
+  const amended = positive(project?.contractValue ?? project?.contract_value);
+  const agreed = positive(project?.totalBudget ?? project?.total_budget);
+  // A payload with no agreed original (an older API) keeps the old reading:
+  // contract_value as the original, plus the signed register.
+  const contractSum = agreed ?? amended;
 
   /** True when the list answered. `[]` answered; `null`/`undefined` did not. */
   const certificatesKnown = Array.isArray(certificates);
@@ -2104,6 +2280,9 @@ export function summariseMoney(
     (v) => APPROVED_VO.has((v.status || "").toLowerCase()) && !!v.signedAt,
   );
   const variationsTotal = approvedVos.reduce((s, v) => s + variationValue(v), 0);
+  const awaitingSignature = (variations ?? []).filter(
+    (v) => APPROVED_VO.has((v.status || "").toLowerCase()) && !v.signedAt,
+  );
 
   const certifiedCerts = (certificates ?? []).filter(certificateIsCertified);
   const certifiedFromCertificates = certifiedCerts.reduce((s, c) => s + certifiedValueOf(c), 0);
@@ -2116,7 +2295,13 @@ export function summariseMoney(
   // the variations could not be read at all, because an unknown addend makes
   // an unknown sum.
   const revisedContractSum =
-    contractSum === null || !variationsKnown ? null : contractSum + variationsTotal;
+    agreed !== null && amended !== null
+      ? amended
+      : contractSum === null || !variationsKnown
+        ? null
+        : contractSum + variationsTotal;
+  const signedVariations =
+    agreed !== null && amended !== null ? amended - agreed : null;
 
   // Every figure below is guarded on the inputs it is built from, not on the
   // shape of the arithmetic. `revisedContractSum !== null` alone is NOT enough
@@ -2129,15 +2314,26 @@ export function summariseMoney(
 
   return {
     contractSum,
-    variations: variationsKnown && approvedVos.length > 0 ? variationsTotal : null,
+    variations:
+      signedVariations !== null && (signedVariations !== 0 || approvedVos.length > 0)
+        ? signedVariations
+        : variationsKnown && approvedVos.length > 0
+          ? variationsTotal
+          : null,
     variationCount: approvedVos.length,
+    originalAgreed: agreed !== null && amended !== null,
+    awaitingSignatureCount: awaitingSignature.length,
+    awaitingSignatureValue: awaitingSignature.reduce((s, v) => s + variationValue(v), 0),
     // Zero when the list did not answer at all: an unread list has no unpriced
     // rows to report, and reporting one would be a fact about nothing.
     variationsUnpriced: variationsKnown
       ? approvedVos.filter((v) => !variationIsPriced(v)).length
       : 0,
     revisedContractSum,
-    certified: certificatesKnown && certifiedCerts.length > 0 ? certified : null,
+    certified:
+      certificatesKnown && (certifiedCerts.length > 0 || (manualCreditsTotal ?? 0) > 0) ? certified : null,
+    certifiedFromCertificates: certificatesKnown ? certifiedFromCertificates : null,
+    manualCredits: manualCreditsTotal ?? null,
     retentionHeld: certificatesKnown && certifiedCerts.length > 0 ? retentionHeld : null,
     // Revised sum LESS CERTIFIED, and nothing else. Retention is inside the
     // certified figure already — see the field's comment for the server chain

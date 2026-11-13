@@ -17,22 +17,31 @@
  */
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUsePermissions = vi.fn();
 const mockUsePermission = vi.fn();
 const mockUseFetch = vi.fn();
+const mockUseVariations = vi.fn();
 
 vi.mock("@/hooks/usePermissions", () => ({
   usePermissions: () => mockUsePermissions(),
 }));
 vi.mock("@/hooks/usePermission", () => ({
   usePermission: (code: string) => mockUsePermission(code),
+  usePermissionOr: (code: string) => mockUsePermission(code),
+  // Baselinq staff are covered in financeStaff.test.tsx.
+  useIsPlatformStaff: () => false,
 }));
 vi.mock("@/hooks/useFetch", () => ({
   default: (...args: unknown[]) => mockUseFetch(...args),
+}));
+// The register is the project's variations (tasks/variation-orders/), read
+// through the hook Home shares — not the viewer's assignment tasks.
+vi.mock("@/hooks/useProjectVariations", () => ({
+  useProjectVariations: () => mockUseVariations(),
 }));
 
 // The page's chrome and its three sibling tabs are stubbed: this suite is
@@ -41,11 +50,17 @@ vi.mock("@/hooks/useFetch", () => ({
 vi.mock("@/components/DashboardLayout", () => ({
   DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
+vi.mock("@/components/finance/financialPositionTab", () => ({
+  default: () => <div data-testid="financial-position" />,
+}));
 vi.mock("@/components/finance/costLadger", () => ({
   default: () => <div data-testid="cost-ledger" />,
 }));
-vi.mock("@/components/finance/platformFees", () => ({
-  default: () => <div data-testid="platform-fees" />,
+vi.mock("@/components/finance/baselinqBilling", () => ({
+  default: () => <div data-testid="baselinq-billing" />,
+}));
+vi.mock("@/components/finance/payments", () => ({
+  default: () => <div data-testid="payments" />,
 }));
 vi.mock("@/components/finance/paymentCertificate", () => ({
   default: ({ certificateParam }: { certificateParam?: string | null }) => (
@@ -55,20 +70,22 @@ vi.mock("@/components/finance/paymentCertificate", () => ({
 
 import Finance from "@/pages/finance";
 
-/** Two variation orders, as the VO list endpoint returns them. */
-const VO_RESPONSE = {
-  count: 2,
-  results: [
-    { taskId: 43, status: "open", update_at: "2026-08-01", task: { voNumber: "VO-001", title: "Rock excavation", grandTotal: 125000 } },
-    { taskId: 44, status: "done", update_at: "2026-08-02", task: { voNumber: "VO-002", title: "Revised roof detail", grandTotal: 88000 } },
-  ],
-};
+/** Two variation orders, as tasks/variation-orders/ returns them (task = the wrapping assignment task). */
+const VO_ROWS = [
+  { _id: "7", projectId: "1", voNumber: "VO-001", title: "Rock excavation", grandTotal: 125000, status: "Draft", updatedAt: "2026-08-01", task: { _id: 43 } },
+  { _id: "8", projectId: "1", voNumber: "VO-002", title: "Revised roof detail", grandTotal: 88000, status: "Approved", updatedAt: "2026-08-02", task: { _id: 44 } },
+];
+const variations = (rows: unknown[]) => ({ rows, records: [], isLoading: false, isError: false, refetch: vi.fn() });
 
 const renderFinance = (url: string) =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter initialEntries={[url]}>
-        <Finance />
+        <Routes>
+          <Route path="/finance" element={<Finance />} />
+          {/* Baselinq's billing moved here; old Finance links redirect to it. */}
+          <Route path="/settings/billing" element={<div data-testid="settings-billing" />} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -76,7 +93,8 @@ const renderFinance = (url: string) =>
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.setItem("selectedProjectId", "1");
-  mockUseFetch.mockReturnValue({ data: VO_RESPONSE, isLoading: false });
+  mockUseFetch.mockReturnValue({ data: { count: 0, results: [] }, isLoading: false });
+  mockUseVariations.mockReturnValue(variations(VO_ROWS));
   mockUsePermissions.mockReturnValue({ canViewFinance: true, canEditFinance: true });
   mockUsePermission.mockReturnValue(true);
 });
@@ -96,18 +114,28 @@ describe("/finance?tab=", () => {
     expect(screen.getByTestId("payment-certificates")).toHaveAttribute("data-pc-param", "12");
   });
 
+  it.each(["/finance?tab=Payments", "/finance?tab=Payments%20Status"])(
+    "%s lands on the Financial Position, where the payment register now is",
+    (url) => {
+      renderFinance(url);
+      expect(screen.getByRole("tab", { name: "Financial Position" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("financial-position")).toBeInTheDocument();
+      expect(screen.queryByTestId("payment-certificates")).not.toBeInTheDocument();
+    },
+  );
+
   it("falls back to the first visible tab for a tab key that no longer exists", () => {
     renderFinance("/finance?tab=Forecast");
-    expect(screen.getByRole("tab", { name: "Cost Ledger" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Financial Position" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByTestId("cost-ledger")).toBeInTheDocument();
+    expect(screen.getByTestId("financial-position")).toBeInTheDocument();
   });
 
-  it("behaves exactly as before when no parameter is present", () => {
+  it("opens on the Financial Position when no parameter is present", () => {
     renderFinance("/finance");
-    expect(screen.getByRole("tab", { name: "Cost Ledger" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Financial Position" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -117,6 +145,9 @@ describe("/finance?tab=", () => {
 describe("/finance?tab= and the permission gate", () => {
   it("refuses a viewer without finance.view, parameters or not", () => {
     mockUsePermissions.mockReturnValue({ canViewFinance: false, canEditFinance: false });
+    // …and without the platform-tab codes either: those tabs have their own
+    // codes now, so a role holding only them would (correctly) see them.
+    mockUsePermission.mockReturnValue(false);
 
     const withLink = renderFinance("/finance?tab=Payment%20Certificates&pc=12");
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
@@ -131,19 +162,43 @@ describe("/finance?tab= and the permission gate", () => {
     expect(plain.container.innerHTML).toBe(refusedViaLink);
   });
 
-  it("will not open Platform Fees for a viewer who lacks the code for it", () => {
-    // finance.view yes, finance.approve_payment no — so Platform Fees is not
-    // in the page's own tab list, and a link naming it lands on Cost Ledger.
-    mockUsePermission.mockImplementation((code: string) => code !== "finance.approve_payment");
+  it("hides Baselinq Billing when finance.view is off, even holding a billing code", () => {
+    // The billing codes are children of finance.view now (user/migrations/0077):
+    // holding finance.invoices.view while the Finance area is switched off is a
+    // state the server will not resolve, so the client must not show the tab
+    // either. One Finance tab surviving the switch that closes the area was the
+    // bug this change fixed. The staff bypass (financeStaff.test.tsx) is the
+    // only way the tab appears without finance.view.
+    mockUsePermissions.mockReturnValue({ canViewFinance: false, canEditFinance: false });
+    mockUsePermission.mockImplementation((code: string) => code === "finance.invoices.view");
 
-    renderFinance("/finance?tab=Platform%20Fees");
+    renderFinance("/finance");
 
-    expect(screen.queryByRole("tab", { name: "Platform Fees" })).not.toBeInTheDocument();
-    expect(screen.queryByTestId("platform-fees")).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Cost Ledger" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.queryByTestId("baselinq-billing")).not.toBeInTheDocument();
+  });
+
+  it("has no Baselinq Billing tab: Baselinq's own bill lives in Settings → Billing", () => {
+    renderFinance("/finance");
+    expect(screen.queryByRole("tab", { name: "Baselinq Billing" })).not.toBeInTheDocument();
+  });
+});
+
+/*
+  Baselinq's billing moved to Settings → Billing. `?tab=invoices` — lowercase —
+  is hard-coded in the BACKEND's invoice notification links, and the other keys
+  were shipped and shared, so each still lands where the invoice now is.
+*/
+describe("/finance?tab= legacy billing keys", () => {
+  it.each([
+    "/finance?tab=Baselinq%20Billing",
+    "/finance?tab=Platform%20Fees",
+    "/finance?tab=Invoices",
+    "/finance?tab=invoices",
+    "/finance?tab=platform+fees",
+  ])("%s redirects to Settings → Billing", async (url) => {
+    renderFinance(url);
+    expect(await screen.findByTestId("settings-billing")).toBeInTheDocument();
   });
 });
 
@@ -176,10 +231,7 @@ describe("/finance?vo=", () => {
     // project, this user's request simply did not include it. Identical to a
     // stale id by design — the page has no way to tell them apart and must not
     // guess, so it says nothing about the record either way.
-    mockUseFetch.mockReturnValue({
-      data: { count: 1, results: [VO_RESPONSE.results[0]] },
-      isLoading: false,
-    });
+    mockUseVariations.mockReturnValue(variations([VO_ROWS[0]]));
 
     renderFinance("/finance?tab=Variation%20Orders&vo=VO-002");
 
@@ -189,5 +241,14 @@ describe("/finance?vo=", () => {
     expect(document.querySelector("[data-highlighted]")).toBeNull();
     // And no error surface anywhere.
     expect(screen.queryByText(/not found/i)).not.toBeInTheDocument();
+  });
+});
+
+
+describe("the variation register", () => {
+  it("says the register failed to load instead of showing an empty list", () => {
+    mockUseVariations.mockReturnValue({ ...variations([]), isError: true });
+    renderFinance("/finance?tab=Variation%20Orders");
+    expect(screen.getByRole("alert")).toHaveTextContent("The variation register could not be loaded");
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  carryVoEntry,
   certificateConsumesRemainder,
   clampToRemaining,
   sumCertifiedByVo,
@@ -18,9 +19,18 @@ describe("certificateConsumesRemainder", () => {
     }
   });
 
-  it("does not let a draft or a rejected certificate eat the remainder", () => {
-    for (const s of ["draft", "Draft", "rejected", "REJECTED", "cancelled", "void"]) {
+  it("does not let a rejected or cancelled certificate eat the remainder", () => {
+    for (const s of ["rejected", "REJECTED", "cancelled", "void"]) {
       expect(certificateConsumesRemainder({ approvalStatus: s })).toBe(false);
+    }
+  });
+
+  it("counts a draft, as the server's over-certification check does", () => {
+    // tasks/pc_integrity.py::vo_certified_elsewhere excludes only rejected and
+    // cancelled certificates. Two drafts must not each claim the whole VO.
+    for (const s of ["draft", "Draft"]) {
+      expect(certificateConsumesRemainder({ approvalStatus: s })).toBe(true);
+      expect(certificateConsumesRemainder({ workflowState: s })).toBe(true);
     }
   });
 
@@ -40,15 +50,30 @@ describe("certificateConsumesRemainder", () => {
 });
 
 describe("sumCertifiedByVo", () => {
-  it("sums only the certificates that took effect", () => {
+  it("sums the certificates the server counts — drafts in, rejected out", () => {
     const totals = sumCertifiedByVo([
       cert("approved", [{ voNumber: "VO-001", thisPeriod: 100 }]),
       cert("pending", [{ voNumber: "VO-001", thisPeriod: 50 }]),
-      // Neither of these was ever issued.
       cert("draft", [{ voNumber: "VO-001", thisPeriod: 1000 }]),
+      // Rejected: never certified anything.
       cert("rejected", [{ voNumber: "VO-001", thisPeriod: 1000 }]),
     ]);
-    expect(totals["VO-001"]).toBe(150);
+    expect(totals["VO-001"]).toBe(1150);
+  });
+
+  it("skips a line that was unticked on its certificate", () => {
+    const totals = sumCertifiedByVo([
+      {
+        approvalStatus: "approved",
+        voItems: [
+          { voNumber: "VO-004", thisPeriod: 500, included: false },
+          { voNumber: "VO-004", thisPeriod: 70, included: true },
+          // Absent means included — older rows predate the checkbox.
+          { voNumber: "VO-004", thisPeriod: 30 },
+        ],
+      },
+    ]);
+    expect(totals["VO-004"]).toBe(100);
   });
 
   it("reads the snake_case shape as well as the camelCase one", () => {
@@ -102,5 +127,44 @@ describe("clampToRemaining", () => {
 
   it("does not clamp when the remainder is unknown", () => {
     expect(clampToRemaining("VO-001", 999_999, undefined)).toEqual({ value: 999_999 });
+  });
+});
+
+describe("carryVoEntry", () => {
+  // The fresh row as the drawer builds it: the remainder, ticked if anything is left.
+  const fresh = (remaining: number) => ({
+    voNumber: "VO-204",
+    included: remaining > 0,
+    thisPeriod: remaining,
+    remainingValue: remaining,
+  });
+
+  it("unticks a variation that turned out to be fully certified", () => {
+    // Ticked at the full 200 before the earlier certificates had loaded.
+    expect(carryVoEntry(fresh(0), { included: true, thisPeriod: 200 })).toMatchObject({
+      included: false,
+      thisPeriod: 0,
+    });
+  });
+
+  it("falls back to the remainder when the kept amount is now too much", () => {
+    expect(carryVoEntry(fresh(60_000), { included: true, thisPeriod: 100_000 })).toMatchObject({
+      included: true,
+      thisPeriod: 60_000,
+    });
+  });
+
+  it("keeps an amount and tick that still fit", () => {
+    expect(carryVoEntry(fresh(60_000), { included: false, thisPeriod: 25_000 })).toMatchObject({
+      included: false,
+      thisPeriod: 25_000,
+    });
+  });
+
+  it("keeps a correcting negative entry", () => {
+    expect(carryVoEntry(fresh(0), { included: true, thisPeriod: -5_000 })).toMatchObject({
+      included: true,
+      thisPeriod: -5_000,
+    });
   });
 });

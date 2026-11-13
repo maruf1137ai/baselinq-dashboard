@@ -29,7 +29,7 @@ import { PermissionKey } from "@/lib/roleUtils";
 
 const navItems: {
   title: string;
-  items: { id: number; title: string; url: string; icon: React.ReactNode; permission?: PermissionKey }[];
+  items: { id: number; title: string; url: string; icon: React.ReactNode; permission?: PermissionKey | PermissionKey[] }[];
 }[] = [
   {
     title: "Project",
@@ -66,11 +66,19 @@ const navItems: {
     title: "Configuration",
     items: [
       {
+        id: 11,
+        title: "Contract & Payment",
+        url: "/settings/contract-payment",
+        icon: <FileText className="h-4 w-4 text-current" />,
+        permission: "viewFinance",
+      },
+      {
         id: 4,
         title: "Billing",
         url: "/settings/billing",
         icon: <CreditCard className="h-4 w-4 text-current" />,
-        permission: "viewBilling",
+        // Fees and invoices live on this page too, so either opens it.
+        permission: ["viewBillingTerms", "viewPlatformFees", "viewInvoices"],
       },
       {
         id: 5,
@@ -151,7 +159,9 @@ export function Sidebar() {
         <div className="menu p-3">
           {navItems?.map((item, index) => {
             const visibleItems = item.items.filter(
-              (i) => !i.permission || can(i.permission)
+              (i) =>
+                !i.permission ||
+                (Array.isArray(i.permission) ? i.permission.some((p) => can(p)) : can(i.permission))
             );
             if (visibleItems.length === 0) return null;
 

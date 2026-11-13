@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { postData } from "@/lib/Api";
+import { formatDay, todayIso } from "@/lib/timeBarEvents";
 
 interface TaskDCProps {
   formFields: any;
@@ -23,13 +24,33 @@ interface TaskDCProps {
  */
 export const TaskDC: React.FC<TaskDCProps> = ({ formFields, onRefresh }) => {
   const [noticeDateInput, setNoticeDateInput] = useState("");
+  const [awarenessDateInput, setAwarenessDateInput] = useState("");
   const [issuingNotice, setIssuingNotice] = useState(false);
 
   if (!formFields) return null;
 
+  const today = todayIso();
+  // JBCC cl 23.4.2 and 26.5 run from AWARENESS, not from the notice. The
+  // notice clocks used to start from the notice date — the act they exist
+  // to prompt — so the awareness date is now asked for with it.
+  const dateProblem =
+    noticeDateInput && noticeDateInput > today
+      ? "The date notice was given cannot be in the future."
+      : awarenessDateInput && noticeDateInput && awarenessDateInput > noticeDateInput
+        ? "The date of awareness cannot be after the date notice was given."
+        : null;
+
   const handleIssueNotice = async () => {
+    if (!awarenessDateInput) {
+      toast.error("Pick the date the contractor became aware of the delay");
+      return;
+    }
     if (!noticeDateInput) {
       toast.error("Pick the date notice was given");
+      return;
+    }
+    if (dateProblem) {
+      toast.error(dateProblem);
       return;
     }
     if (!formFields.entityId) {
@@ -40,12 +61,13 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields, onRefresh }) => {
     try {
       await postData({
         url: `tasks/claims/${formFields.entityId}/issue-notice/`,
-        data: { notice_date: noticeDateInput },
+        data: { notice_date: noticeDateInput, awareness_date: awarenessDateInput },
       });
       toast.success("Notice recorded");
       if (onRefresh) onRefresh();
     } catch (error: any) {
-      toast.error(error?.response?.data?.notice_date || error?.response?.data?.error || "Failed to record notice");
+      const body = error?.response?.data;
+      toast.error(body?.awareness_date || body?.notice_date || body?.error || "Failed to record notice");
     } finally {
       setIssuingNotice(false);
     }
@@ -77,7 +99,8 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields, onRefresh }) => {
         {formFields.noticeDate ? (
           <div className="flex items-center gap-2 flex-wrap mt-2">
             <span className="text-sm text-foreground">
-              Notice given on {formFields.noticeDate}
+              {formFields.awarenessDate ? `Aware ${formatDay(formFields.awarenessDate)} · ` : ""}
+              Notice given on {formatDay(formFields.noticeDate)}
             </span>
             {formFields.clauseReferenceVerified ? (
               <Badge variant="outline" className="text-xs">
@@ -95,20 +118,46 @@ export const TaskDC: React.FC<TaskDCProps> = ({ formFields, onRefresh }) => {
             )}
           </div>
         ) : (
-          <div className="flex items-end gap-2 mt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="dc-notice-date" className="text-xs">Date notice was given</Label>
-              <Input
-                id="dc-notice-date"
-                type="date"
-                value={noticeDateInput}
-                onChange={(e) => setNoticeDateInput(e.target.value)}
-                className="w-48"
-              />
+          <div className="mt-2 space-y-1.5">
+            <div className="flex items-end gap-2 flex-wrap">
+              <div className="space-y-1.5">
+                <Label htmlFor="dc-awareness-date" className="text-xs">Date the contractor became aware</Label>
+                <Input
+                  id="dc-awareness-date"
+                  type="date"
+                  max={noticeDateInput || today}
+                  value={awarenessDateInput}
+                  onChange={(e) => setAwarenessDateInput(e.target.value)}
+                  className="w-48"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dc-notice-date" className="text-xs">Date notice was given</Label>
+                <Input
+                  id="dc-notice-date"
+                  type="date"
+                  max={today}
+                  value={noticeDateInput}
+                  onChange={(e) => setNoticeDateInput(e.target.value)}
+                  className="w-48"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={handleIssueNotice}
+                disabled={issuingNotice || !awarenessDateInput || !noticeDateInput || Boolean(dateProblem)}
+              >
+                {issuingNotice ? "Recording..." : "Issue Notice"}
+              </Button>
             </div>
-            <Button size="sm" onClick={handleIssueNotice} disabled={issuingNotice}>
-              {issuingNotice ? "Recording..." : "Issue Notice"}
-            </Button>
+            {dateProblem ? (
+              <p className="text-xs text-red-700">{dateProblem}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                The notice periods run from the date of awareness. Baselinq records the notice as
+                served on the date given and says whether that was in time.
+              </p>
+            )}
           </div>
         )}
       </div>

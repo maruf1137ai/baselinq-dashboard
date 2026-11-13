@@ -65,12 +65,13 @@ const PERM_DESCRIPTIONS: Record<string, string> = {
   // Finance
   "finance.view":            "View-only access to every Finance page — Cost Ledger, Payment Certificates, Variation Orders, project budget.",
   "finance.edit":            "Edit everything in Finance — cost ledger entries, payment certificates, variation orders, project budget.",
-  // Shows/hides the Platform Fees tab (cost_ledger's _can_view_platform_fees)
-  // — borrowed for that purpose, per frontend/src/pages/finance.tsx's own
-  // comment. The name still comes from its other job, reversing an
-  // already-recorded payment (tasks/views_payments.py's
-  // PaymentReceiptReverseView), but no screen in the app exposes that action.
-  "finance.approve_payment": "View the Platform Fees tab on the Finance page.",
+  // Reverses an already-recorded payment (tasks/views_payments.py's
+  // PaymentReceiptReverseView); no screen in the app exposes that action yet.
+  "finance.approve_payment": "Reverse a recorded payment (API only).",
+  // Platform billing — own codes since user/migrations/0072.
+  "finance.platform_fees.view": "View the Platform Fees tab on the Finance page.",
+  "finance.invoices.view":      "View Baselinq's invoices on the Invoices tab.",
+  "billing.terms.view":         "View the billing terms under Settings → Billing.",
   // Meetings
   "meeting.schedule": "Can schedule new meetings. Without this, the Schedule Meeting button is hidden.",
   "meeting.update":   "Can update meeting status — cancel, mark completed, mark cancelled, confirm no-show.",
@@ -123,6 +124,8 @@ interface Permission {
   description: string;
   is_system: boolean;
   is_project_scoped: boolean;
+  /** Code this one depends on; "" or absent if it stands alone. See parentMap. */
+  requires_code?: string;
 }
 
 /**
@@ -577,15 +580,34 @@ function MatrixGrid({
     return matrix[roleId]?.[code] ?? false;
   };
 
+  /**
+   * child code -> parent code.
+   *
+   * Prefers `requires_code` from the permission row, which is what the SERVER
+   * enforces (permissions.core._apply_requirements) and what the Roles &
+   * Permissions page renders. `PERMISSION_PARENTS` below it is the old
+   * hardcoded copy, kept only as a fallback for any code the API has not
+   * declared yet — it had already drifted out of step once, describing a
+   * Finance area that no longer existed, which is the whole reason the
+   * hierarchy now lives on the rows.
+   */
+  const parentMap: Record<string, string> = useMemo(() => {
+    const out: Record<string, string> = { ...PERMISSION_PARENTS };
+    for (const p of permissions) {
+      if (p.requires_code) out[p.code] = p.requires_code;
+    }
+    return out;
+  }, [permissions]);
+
   // A permission is disabled when its parent gate is unchecked OR itself disabled (recursive)
   const isDisabled = (roleId: number, code: string): boolean => {
-    const parent = PERMISSION_PARENTS[code];
+    const parent = parentMap[code];
     if (!parent) return false;
     return !effective(roleId, parent) || isDisabled(roleId, parent);
   };
 
   const getAllDescendants = (code: string): string[] => {
-    const children = Object.entries(PERMISSION_PARENTS)
+    const children = Object.entries(parentMap)
       .filter(([, parent]) => parent === code)
       .map(([child]) => child);
     return children.flatMap((child) => [child, ...getAllDescendants(child)]);

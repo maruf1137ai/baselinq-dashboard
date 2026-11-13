@@ -38,6 +38,7 @@ import useFetch from "@/hooks/useFetch";
 import { usePagedList } from "@/hooks/usePagedList";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProject } from "@/hooks/useProjects";
+import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { resolveFinanceAccess, summariseMoney, type CertificateLike } from "@/lib/homeSignals";
 import { retentionPosition, summariseVariations, toVariationRecord } from "@/lib/homeIndicators";
@@ -76,6 +77,7 @@ export function invalidateProjectCommercials(queryClient: QueryClient, projectId
   queryClient.invalidateQueries({ queryKey: ["commercials-certificates", projectId] });
   queryClient.invalidateQueries({ queryKey: ["commercials-vo-tasks", projectId] });
   queryClient.invalidateQueries({ queryKey: ["project-variation-orders", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["variation-certification", projectId] });
 }
 
 export function useProjectCommercials(projectId: string | undefined) {
@@ -119,10 +121,12 @@ export function useProjectCommercials(projectId: string | undefined) {
   // `tasks/payment_terms.py` resolves the contractual period, applies the SA
   // working-day calendar where the period is in working days, and reports the
   // basis it counted from.
-  const payments = useFetch<ProjectPaymentSummaryLike>(
-    wants ? `projects/${projectId}/payments/` : "",
-    { enabled: wants },
-  );
+  //
+  // Through `useProjectPayments` rather than a URL written out here: Home and
+  // Finance → Payments read the same endpoint, and a third hand-built copy of
+  // the URL and its gate is how the three come to disagree about who may ask
+  // for it.
+  const payments = useProjectPayments<ProjectPaymentSummaryLike>(projectId, canViewFinance);
 
   /**
    * Manual Cost Ledger credit entries not already counted via a real posted

@@ -14,9 +14,8 @@
  * we just invalidate the shared unread summary and let the normal REST path
  * produce the numbers, so counting and permissions stay in one place.
  *
- * Mount this EXACTLY ONCE (it lives in useNotifications, which
- * DashboardHeader mounts once). Falls back silently to polling if the
- * socket can't be established.
+ * Mount this EXACTLY ONCE (components/PermissionLiveSync.tsx, at the app
+ * root). Falls back silently to polling if the socket can't be established.
  */
 import { useEffect, useRef } from "react";
 import { getWsBase } from "@/lib/ws";
@@ -120,22 +119,46 @@ export function useUserEventSocket(onPing?: () => void) {
       };
     };
 
+    // Mounted at the app root, so it exists before anyone signs in. Follow the
+    // signed-in identity (not the access token, which rotates on refresh):
+    // login connects, logout disconnects, an account switch reconnects as the
+    // new user. Nothing in the app dispatches an event on login, so this
+    // checks localStorage on a short timer — a string compare, no request.
+    const currentUserId = () => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null")?.id ?? null;
+      } catch {
+        return null;
+      }
+    };
+    let connectedAs = currentUserId();
     connect();
 
-    // A token change (login / logout / account switch) needs a new socket:
-    // the old one is authenticated as the previous user.
     const reconnectForNewUser = () => {
+      connectedAs = currentUserId();
       attempt = 0;
-      ws?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      const old = ws;
       ws = null;
+      if (old) {
+        old.onclose = null;
+        old.onerror = null;
+        old.onmessage = null;
+        old.close();
+        setSocketHealthy(false);
+      }
       connect();
     };
     window.addEventListener("user-change", reconnectForNewUser);
+    const identityWatch = setInterval(() => {
+      if (currentUserId() !== connectedAs) reconnectForNewUser();
+    }, 3000);
 
     return () => {
       stopped = true;
       setSocketHealthy(false);
       window.removeEventListener("user-change", reconnectForNewUser);
+      clearInterval(identityWatch);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
     };

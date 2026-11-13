@@ -49,3 +49,54 @@ export function formatZAR(value: number): string {
     .replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
   return value < 0 ? `R${NBSP}-${formatted}` : `R${NBSP}${formatted}`;
 }
+
+// ── Project currencies (client meeting, 10 Nov 2026) ─────────────────────
+//
+// A contract outside South Africa is certified and paid in its own currency —
+// Rwandan francs, US dollars. Contract money follows the selected project's
+// currency; Baselinq's own fee is invoiced in rand and keeps `formatZAR`.
+// Same grouping and decimal comma as `formatZAR`, so a rand project renders
+// exactly as before.
+
+/** Symbols where one is clearer than the code; the code otherwise. */
+const SYMBOL: Record<string, string> = {
+  ZAR: "R",
+  USD: "US$",
+  EUR: "€",
+  GBP: "£",
+  BWP: "P",
+  NAD: "N$",
+  KES: "KSh",
+};
+
+/** ISO minor units for currencies that have none worth printing. */
+const ZERO_DECIMALS = new Set(["RWF", "UGX", "TZS", "MWK"]);
+
+let activeCurrency = "ZAR";
+
+/** Set by the layout from the selected project (CurrencySync). */
+export function setActiveCurrency(code?: string | null) {
+  activeCurrency = (code || "ZAR").toUpperCase();
+}
+
+export function getActiveCurrency(): string {
+  return activeCurrency;
+}
+
+export function currencySymbol(code: string = activeCurrency): string {
+  return SYMBOL[code.toUpperCase()] ?? code.toUpperCase();
+}
+
+/**
+ * Contract money, in the selected project's currency unless one is given.
+ * `formatZAR` for a rand amount, so nothing changes on a rand project.
+ */
+export function formatMoney(value: number, currency: string = activeCurrency): string {
+  const code = (currency || "ZAR").toUpperCase();
+  if (code === "ZAR") return formatZAR(value);
+  const digits = ZERO_DECIMALS.has(code) ? 0 : 2;
+  const [whole, fraction] = Math.abs(value).toFixed(digits).split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP) + (fraction ? `,${fraction}` : "");
+  const symbol = currencySymbol(code);
+  return value < 0 ? `${symbol}${NBSP}-${grouped}` : `${symbol}${NBSP}${grouped}`;
+}

@@ -1,10 +1,18 @@
 /**
- * Platform Fees — the screen a client reads when they query their bill.
+ * The fee-charge derivation — the half of Baselinq Billing a client reads when
+ * they query their bill.
  *
  * Baselinq charges the employer 1% + VAT on approved commercial flow. Until
  * now that only surfaced as rows in the Cost Ledger under the supplier
  * "Baselinq Platform Fee" — a number with no total and no explanation. This
- * tab is the explanation.
+ * section is the explanation.
+ *
+ * IT IS A SECTION, NOT A TAB, as of the Baselinq Billing merge. "Platform
+ * Fees" and "Invoices" were one story told twice — the same total on both, and
+ * a dead "Invoiced · BLQ-0007" string on each charge row pointing at the other
+ * tab. The tab, the fetch, the permission gates and the summary strip now live
+ * in `baselinqBilling.tsx`; this file owns the derivation and nothing else, so
+ * no figure on that tab is rendered from two places.
  *
  * The design brief here is unusual: decoration is worth nothing and
  * justification is worth everything. Every figure must be checkable with a
@@ -24,16 +32,15 @@
  * `totalAmount` across the array gives a wrong answer, so nothing here does.
  */
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronRight as DisclosureChevron, FileText, Lock, Receipt, RotateCcw, SearchX } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, ChevronRight as DisclosureChevron, FileText, Receipt, RotateCcw, SearchX } from "lucide-react";
 import { FinanceToolbar } from "./FinanceToolbar";
 
-import useFetch from "@/hooks/useFetch";
-import { usePermission } from "@/hooks/usePermission";
-import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatZAR } from "@/lib/formatCurrency";
+import { CHARGE_STATE, invoicePath, type ChargeBillingState } from "@/lib/platformBilling";
 import {
   basisShape,
   capView,
@@ -58,7 +65,6 @@ export interface FeeConfig {
   configured: boolean;
   enabled: boolean;
   feeBase: string;
-  feeBaseIsPlaceholder: boolean;
   feeRatePct: number;
   vatRatePct: number;
   capAmount: number | null;
@@ -88,6 +94,16 @@ export interface FeeCharge {
   costLedgerEntryId: number | null;
   basisDetail: Record<string, any>;
   createdAt: string | null;
+  /** Where the fee stands on Baselinq's invoices (billing/serializers.py::charge_billing_state). */
+  billingState?: ChargeBillingState;
+  /**
+   * The invoice the fee sits on, from the same serializer as `billingState`
+   * (charge_billing_state returns `invoiceId` beside `invoiceNumber`). It is
+   * what turns "Invoiced · BLQ-0007" from a string naming another tab into a
+   * link to that invoice's document at /invoices/:id.
+   */
+  invoiceId?: number | null;
+  invoiceNumber?: string | null;
 }
 
 export interface FeeTotals {
@@ -119,35 +135,6 @@ const EVENT_LABEL: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 /* Small presentational pieces                                         */
 /* ------------------------------------------------------------------ */
-
-/**
- * The app's stat card, as defined by ProjectStatusCard and
- * DocumentSummaryCards: a `bg-muted/50` shell carrying the label, with the
- * figure sitting in a raised `bg-card` well at text-3xl. This rolled its own
- * shape — bordered card, text-xs label, text-2xl value — which made the
- * Platform Fees row a different size from the Cost Ledger row one tab away.
- */
-const StatCard: React.FC<{
-  label: string;
-  value: string;
-  meta?: React.ReactNode;
-}> = ({ label, value, meta }) => (
-  // h-full + flex so the shell fills the grid row, and the white well below
-  // grows to take whatever height is left. Each card carries a different
-  // amount of supporting text — two lines under the fee, none under VAT, a
-  // progress bar under the cap — and without this the four white wells size
-  // themselves independently and the row reads as ragged.
-  <div className="bg-muted/50 rounded-xl p-2 min-w-0 h-full flex flex-col">
-    <p className="text-sm text-gray2 mb-2 px-0.5">{label}</p>
-    <div className="bg-card px-3 py-2.5 rounded-md flex-1">
-      <p className="text-2xl font-normal text-foreground tabular-nums">{value}</p>
-      {/* Reserved rather than conditional: the VAT card has no meta, and if
-          its slot collapses that card's figure sits at a different height
-          from the other three. */}
-      <div className="text-xs text-muted-foreground mt-2 min-h-[1rem]">{meta}</div>
-    </div>
-  </div>
-);
 
 /** Label/value pair inside a derivation well. */
 const FigureItem: React.FC<{ label: string; value: string; emphasis?: boolean }> = ({
@@ -358,6 +345,42 @@ const BasisDetailView: React.FC<{
 
 const COLUMNS = 9;
 
+/**
+ * Whether this fee has been invoiced and paid. Only for live debits — a credit
+ * and a reversed debit already say what they are. A fee on an invoice Baselinq
+ * has not issued yet reads as not invoiced: the project never sees drafts.
+ *
+ * When the charge names an issued invoice, the badge IS that invoice: it links
+ * to the tax invoice at /invoices/:id. Before the Baselinq Billing merge this
+ * read "Invoiced · BLQ-0007" as dead text, and the reader's only recourse was
+ * to leave for another tab and find the number by eye. `stopPropagation` so
+ * following it does not also toggle the row's derivation open behind it.
+ */
+const BillingStateBadge: React.FC<{ charge: FeeCharge }> = ({ charge }) => {
+  if (charge.status !== "active" || !charge.billingState) return null;
+  const state = charge.billingState === "draft" ? "not_invoiced" : charge.billingState;
+  const s = CHARGE_STATE[state];
+  const named = state !== "not_invoiced" && charge.invoiceNumber;
+  const badge = (
+    <Badge variant={s.variant}>
+      {s.label}
+      {named ? ` · ${charge.invoiceNumber}` : ""}
+    </Badge>
+  );
+
+  if (!named || !charge.invoiceId) return badge;
+  return (
+    <Link
+      to={invoicePath(charge.invoiceId)}
+      onClick={(e) => e.stopPropagation()}
+      title={`Open tax invoice ${charge.invoiceNumber}`}
+      className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:opacity-80 transition-opacity"
+    >
+      {badge}
+    </Link>
+  );
+};
+
 const ChargeRow: React.FC<{
   charge: FeeCharge;
   expanded: boolean;
@@ -410,6 +433,7 @@ const ChargeRow: React.FC<{
             )}
             {isSuperseded && <Badge variant="neutral">Reversed</Badge>}
             {charge.capReached && <Badge variant="warning">Cap reached</Badge>}
+            <BillingStateBadge charge={charge} />
           </div>
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
@@ -450,6 +474,9 @@ const ChargeRow: React.FC<{
                 shape={shape}
                 charge={charge}
               />
+              {charge.reversalReason && (
+                <p className="text-xs text-muted-foreground mt-2">Reason: {charge.reversalReason}</p>
+              )}
             </Well>
           </td>
         </tr>
@@ -481,6 +508,54 @@ function foldTotals(charges: FeeCharge[]) {
     }
   }
   return { fee, vat, total: fee + vat, credited };
+}
+
+/**
+ * Where the fees stand on Baselinq's invoices, folded off the charges.
+ *
+ * This is the fallback the Baselinq Billing summary strip uses for a viewer who
+ * holds `finance.platform_fees.view` and NOT `finance.invoices.view` — they can
+ * see what has accrued and where it stands, which the server tells them on the
+ * charge, but they may not read the invoices themselves.
+ *
+ * `billingState` is the SERVER's derivation (billing/serializers.py::
+ * charge_billing_state), never re-derived here. Only `active` charges count: a
+ * `reversal` is a credit and a `reversed` debit has been credited back, so
+ * neither is owed.
+ *
+ * Returns null when NO charge carries the field — an older payload, or a
+ * project whose fees predate it. The strip then renders nothing rather than
+ * reporting R 0,00 outstanding, which would read as "nothing is owed".
+ */
+export function chargeBillingPosition(charges: readonly FeeCharge[]) {
+  const live = charges.filter((c) => c.status === "active");
+  if (!live.some((c) => !!c.billingState)) return null;
+
+  const where = (states: ChargeBillingState[]) =>
+    live.filter((c) => c.billingState && states.includes(c.billingState));
+  const sum = (rows: FeeCharge[]) => rows.reduce((t, c) => t + c.totalAmount, 0);
+
+  const notInvoiced = where(["not_invoiced", "draft"]);
+  const invoicedUnpaid = where(["invoiced", "overdue"]);
+  const overdue = where(["overdue"]);
+
+  // The oldest uninvoiced fee's accrual date — the same fact the invoices
+  // payload calls `earliestUninvoicedOn`, so the strip's "accruing since" copy
+  // is honest on either source. Null when nothing is uninvoiced.
+  const earliest = notInvoiced
+    .map((c) => c.createdAt)
+    .filter((d): d is string => !!d)
+    .sort()[0] ?? null;
+
+  return {
+    notInvoiced: sum(notInvoiced),
+    notInvoicedCount: notInvoiced.length,
+    earliestUninvoicedOn: earliest,
+    invoicedUnpaid: sum(invoicedUnpaid),
+    invoicedUnpaidCount: invoicedUnpaid.length,
+    overdue: sum(overdue),
+    overdueCount: overdue.length,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -518,28 +593,23 @@ const TableHead: React.FC = () => (
 );
 
 /* ------------------------------------------------------------------ */
-/* Main                                                                */
+/* The section                                                         */
 /* ------------------------------------------------------------------ */
 
-const PlatformFees: React.FC = () => {
-  const projectId = localStorage.getItem("selectedProjectId") || "";
-  const numericProjectId = parseInt(projectId, 10) || null;
-
-  // PERMISSION — see the TODO at the tab gate in src/pages/finance.tsx.
-  // Repeated here so the component is not safe only by virtue of where it is
-  // mounted, but this remains a client-side gate over a server endpoint that
-  // does not enforce it.
-  const canView = usePermission("finance.approve_payment", numericProjectId);
-
+/**
+ * The fee derivation, over a payload its parent has already fetched and
+ * already gated on `finance.platform_fees.view`.
+ *
+ * It takes `data` rather than fetching: the Baselinq Billing tab needs the
+ * same payload to compute its summary strip, and two components reading the
+ * same endpoint is how the figure on the strip and the figure in the table
+ * come to disagree.
+ */
+export const FeeChargesSection: React.FC<{ data: FeesResponse }> = ({ data }) => {
   const [view, setView] = useState<"charges" | "statements">("charges");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<number | null>(null);
-
-  const { data, isLoading, isError } = useFetch<FeesResponse>(
-    projectId && canView ? `cost-ledger/fees/?project_id=${projectId}` : "",
-    { enabled: !!projectId && canView }
-  );
 
   const charges = useMemo(() => data?.calculatedFees ?? [], [data]);
 
@@ -584,63 +654,15 @@ const PlatformFees: React.FC = () => {
     setExpanded(null);
   };
 
-  /* ---- gates ---- */
-
-  if (!canView) {
-    return (
-      <main className="pt-6">
-        <EmptyState
-          icon={Lock}
-          title="Platform fees are not visible to your role"
-          description="The platform fee is billed to the employer. Ask a project administrator if you need sight of it."
-        />
-      </main>
-    );
-  }
-
-  if (!projectId) {
-    return (
-      <main className="pt-6">
-        <EmptyState
-          icon={Receipt}
-          title="No project selected"
-          description="Platform fees are billed per project. Select a project to see what has accrued on it."
-        />
-      </main>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <main className="pt-6">
-        <AwesomeLoader compact message="Totalling platform fees" />
-      </main>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <main className="pt-6">
-        <EmptyState
-          icon={Receipt}
-          title="Platform fees could not be loaded"
-          description="The fee ledger did not respond. Charges remain recorded against the cost ledger."
-        />
-      </main>
-    );
-  }
-
   const { config, totals } = data;
 
   if (!config.configured) {
     return (
-      <main className="pt-6">
-        <EmptyState
-          icon={Receipt}
-          title="Billing is not enabled for this project"
-          description="No fee configuration here, so nothing has accrued and nothing will."
-        />
-      </main>
+      <EmptyState
+        icon={Receipt}
+        title="Billing is not enabled for this project"
+        description="No fee configuration here, so nothing has accrued and nothing will."
+      />
     );
   }
 
@@ -650,58 +672,58 @@ const PlatformFees: React.FC = () => {
       : null;
 
   return (
-    <main className="pt-6 space-y-4">
-      {/* Header stats. Four across only from xl: these values are full ZAR
-          amounts, ~4x longer than the counts a summary row usually carries,
-          and at the canonical text-3xl they need the width. */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 items-stretch">
-        <StatCard
-          label="Fee excluding VAT"
-          value={formatZAR(totals.feeExVat)}
-          meta={`Charged at ${pct(config.feeRatePct)} of approved commercial flow`}
-        />
-        <StatCard label={`VAT at ${pct(config.vatRatePct)}`} value={formatZAR(totals.vat)} />
-        <StatCard
-          label="Total charged"
-          value={formatZAR(totals.total)}
-          meta={
-            totals.reversed > 0
-              ? `${formatZAR(totals.reversed)} credited back separately`
-              : "No credits raised"
-          }
-        />
-        {totals.cap === null ? (
-          <StatCard
-            label="Fee cap"
-            value="None set"
-            meta="Fees accrue without a ceiling on this project"
-          />
-        ) : (
-          <StatCard
-            label="Cap headroom"
-            value={formatZAR(Math.max(totals.capRemaining ?? 0, 0))}
-            meta={
-              <div className="space-y-1.5">
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${
-                      totals.capReached ? "bg-amber-500" : "bg-primary"
-                    }`}
-                    style={{ width: `${capUsagePct ?? 0}%` }}
-                  />
-                </div>
-                <p className="tabular-nums">
-                  {formatZAR(totals.feeExVat)} of {formatZAR(totals.cap)}
-                  {totals.capReached ? " — cap reached" : ""}
-                </p>
-              </div>
-            }
-          />
-        )}
-      </div>
+    <div className="space-y-4">
+      {/*
+        The lifetime figures and what the client is signed up to, in one well.
 
-      {/* Configuration line — what the client is actually signed up to */}
-      <div className="bg-muted/50 rounded-xl p-4">
+        THEY USED TO BE FOUR STAT CARDS, and that is what made this tab and the
+        Invoices tab the same story told twice: "Total charged" carried a meta
+        line reading "<x> invoiced and unpaid · <y> not yet invoiced" — exactly
+        the two questions the Baselinq Billing summary strip now answers once,
+        above, with no figure rendered from two places. What is left here is
+        what only the derivation can say: what has been charged in total since
+        the job started, how much of that is VAT, what has been credited back,
+        and where the fee stands against the project's cap.
+      */}
+      <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+          <p className="text-sm text-foreground tabular-nums">
+            {formatZAR(totals.total)} charged since the project started
+            <span className="text-xs text-muted-foreground ml-2">
+              ({formatZAR(totals.feeExVat)} fee + {formatZAR(totals.vat)} VAT at{" "}
+              {pct(config.vatRatePct)})
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {totals.reversed > 0
+              ? `${formatZAR(totals.reversed)} credited back separately`
+              : "No credits raised"}
+          </p>
+        </div>
+
+        {totals.cap === null ? (
+          <p className="text-xs text-muted-foreground">
+            No fee cap on this project — fees accrue without a ceiling.
+          </p>
+        ) : (
+          <div className="space-y-1.5 max-w-sm">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${
+                  totals.capReached ? "bg-amber-500" : "bg-primary"
+                }`}
+                style={{ width: `${capUsagePct ?? 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {formatZAR(totals.feeExVat)} of the {formatZAR(totals.cap)} cap
+              {totals.capReached
+                ? " — cap reached"
+                : `, ${formatZAR(Math.max(totals.capRemaining ?? 0, 0))} headroom`}
+            </p>
+          </div>
+        )}
+
         <p className="text-sm text-foreground leading-relaxed">
           The platform fee is {pct(config.feeRatePct)} plus VAT on{" "}
           {strategyLabel(config.feeBase)?.toLowerCase() ??
@@ -710,7 +732,7 @@ const PlatformFees: React.FC = () => {
           from that certificate's base so the same rand is charged once and the effective rate stays
           at {pct(config.feeRatePct)}.
         </p>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2">
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
           {!config.enabled && (
             <p className="text-xs text-muted-foreground">
               Billing is configured but currently paused — no new fees are accruing.
@@ -720,11 +742,6 @@ const PlatformFees: React.FC = () => {
             <p className="text-xs text-muted-foreground">
               Billing contact: {config.billingContactName}
               {config.billingContactEmail ? ` (${config.billingContactEmail})` : ""}
-            </p>
-          )}
-          {config.feeBaseIsPlaceholder && (
-            <p className="text-xs text-muted-foreground">
-              The fee base on this project is a shipped default, not a negotiated term.
             </p>
           )}
         </div>
@@ -914,8 +931,9 @@ const PlatformFees: React.FC = () => {
         its sign. The fee total counts live charges only — a charge that has been reversed drops out
         of the total and out of the cap, and its credit is reported separately.
       </p>
-    </main>
+
+    </div>
   );
 };
 
-export default PlatformFees;
+export default FeeChargesSection;

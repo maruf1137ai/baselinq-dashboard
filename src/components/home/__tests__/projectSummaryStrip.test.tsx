@@ -75,18 +75,18 @@ describe("the project summary strip", () => {
     expect(screen.queryByText(/Setup .*complete/i)).not.toBeInTheDocument();
   });
 
-  it("shows budget, certified and remaining with finance access", () => {
+  it("shows the revised sum, certified and the balance with finance access, in Finance's words", () => {
     renderStrip({ canViewFinance: true, money: MONEY_FULL });
-    expect(screen.getByText("Budget")).toBeInTheDocument();
+    expect(screen.getByText("Revised sum")).toBeInTheDocument();
     expect(screen.getByText(/· Certified/)).toBeInTheDocument();
-    expect(screen.getByText(/· Remaining/)).toBeInTheDocument();
+    expect(screen.getByText(/· Balance still to certify/)).toBeInTheDocument();
     expect(screen.getByText(/\(14%\)/)).toBeInTheDocument();
   });
 
   it("renders no money at all without finance access", () => {
     // The figures are absent, not zeroed — and the LABEL must go with them.
     renderStrip({ canViewFinance: false, money: MONEY_FULL });
-    expect(screen.queryByText("Budget")).not.toBeInTheDocument();
+    expect(screen.queryByText("Revised sum")).not.toBeInTheDocument();
     expect(screen.queryByText(/Certified/)).not.toBeInTheDocument();
   });
 

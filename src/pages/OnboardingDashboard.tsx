@@ -28,7 +28,7 @@ import {
   Lock,
   Info,
 } from "lucide-react";
-import { hasPermission } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectsHealth } from "@/hooks/useProjectsHealth";
 import { HealthBadge } from "@/components/HealthBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -113,8 +113,10 @@ const OnboardingDashboard = () => {
       console.error("Error fetching user role:", error);
     }
   };
-  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
-  const canEditOrg = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+  // organization.edit (Roles & Permissions, account-wide) — the server's rule.
+  const canEditOrganization = usePermissions().can("editOrganization");
+  const isAdmin = user?.account_type === 'organisation' || canEditOrganization;
+  const canEditOrg = user?.account_type === 'organisation' || canEditOrganization;
 
   const [formData, setFormData] = useState({
     name: "",

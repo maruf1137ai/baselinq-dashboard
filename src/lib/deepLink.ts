@@ -45,15 +45,33 @@ function normaliseTabKey(value: string): string {
  * parameter is absent, blank, unknown, or names a tab this viewer cannot see.
  * With no visible tabs at all the result is "", which is what the page did
  * before deep links existed.
+ *
+ * `aliases` maps a RETIRED tab key to the tab that replaced it, because a tab
+ * key that has ever been in a URL never stops arriving: links sit in mail
+ * archives and in chat histories, and `?tab=invoices` is hard-coded in the
+ * backend's own notification links (billing/notify.py::INVOICES_LINK, which
+ * spells it lowercase). An alias resolves exactly like a direct hit — against
+ * `visibleTabs`, the already permission-filtered list — so a legacy key cannot
+ * reach a tab this viewer may not see; it falls back like any unknown value.
  */
 export function resolveTabParam(
   param: string | null | undefined,
   visibleTabs: readonly string[],
+  aliases: Readonly<Record<string, string>> = {},
 ): string {
   const fallback = visibleTabs[0] ?? "";
   if (!param || !param.trim()) return fallback;
   const wanted = normaliseTabKey(param);
-  return visibleTabs.find((tab) => normaliseTabKey(tab) === wanted) ?? fallback;
+  const pick = (name: string) =>
+    visibleTabs.find((tab) => normaliseTabKey(tab) === normaliseTabKey(name));
+
+  const direct = visibleTabs.find((tab) => normaliseTabKey(tab) === wanted);
+  if (direct) return direct;
+
+  const aliased = Object.entries(aliases).find(
+    ([legacy]) => normaliseTabKey(legacy) === wanted,
+  )?.[1];
+  return (aliased ? pick(aliased) : undefined) ?? fallback;
 }
 
 /**

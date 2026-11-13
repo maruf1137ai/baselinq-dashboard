@@ -14,7 +14,7 @@
  *     "nothing needs you".
  */
 import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, type QueryClient } from "@tanstack/react-query";
 
 import useFetch from "@/hooks/useFetch";
 import { usePagedList } from "@/hooks/usePagedList";
@@ -29,6 +29,7 @@ import {
   buildPaymentOverdueQueue,
   homeVerdict,
   buildObligationQueue,
+  buildUncertifiedVariationQueue,
   buildRejectedCertificateQueue,
   groupRiskSignals,
   buildRsvpQueue,
@@ -75,8 +76,10 @@ import {
   summariseMilestoneDrift,
 } from "@/lib/homeVisuals";
 import { summariseProjectSetup } from "@/lib/homeSetup";
+import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useProjectVariations } from "@/hooks/useProjectVariations";
 import { isMeetingPast } from "@/lib/dateUtils";
+import { sumCertifiedByVo } from "@/lib/pcHistory";
 
 interface RiskSignal {
   id: number;
@@ -137,6 +140,35 @@ const on = (enabled: boolean) => ({ enabled });
  */
 const listOf = <T,>(payload: any): T[] =>
   Array.isArray(payload) ? payload : (payload?.results ?? []);
+
+/**
+ * Invalidates every query the Home page reads for one project.
+ *
+ * ── Why this has to exist ─────────────────────────────────────────────────
+ *
+ * The queries below are keyed by a plain string — `["home-certificates", id]`
+ * — and NOT by their URL. `paymentCertificateTable.tsx`'s own invalidation
+ * after a certificate transition matches on `queryKey[0].startsWith(
+ * "tasks/payment-certificates")`, so it never touched any of them. With
+ * `usePagedList`'s `staleTime: 60_000` that left Home serving the PRE-
+ * transition certificate list: submit a certificate and the bell notification
+ * arrives live, while "Certify PC-033" is absent from "What needs you"
+ * because Home is still holding the copy where PC-033 was a draft.
+ *
+ * This is the identical bug `invalidateProjectCommercials` was written to fix
+ * for Project Health's Financial Overview, which is why this mirrors it rather
+ * than inventing a second shape: one exported helper, declared beside the keys
+ * it must match, so a call site can never drift from them by re-guessing.
+ *
+ * `home-projects` is keyed by USER, not project, so it is left to
+ * `ProjectSetupDialog`'s own prefix invalidation — a certificate transition
+ * does not change which projects a person belongs to.
+ */
+export function invalidateHomeData(queryClient: QueryClient, projectId: string) {
+  queryClient.invalidateQueries({ queryKey: ["home-certificates", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["home-vo-tasks", projectId] });
+  queryClient.invalidateQueries({ queryKey: ["home-meetings", projectId] });
+}
 
 export function useHomeData(projectId: string | undefined) {
   const { data: currentUser, isLoading: loadingCurrentUser } = useCurrentUser();
@@ -270,11 +302,14 @@ export function useHomeData(projectId: string | undefined) {
    *
    * Same `finance.view` gate as the two reads above — the server enforces it
    * independently at `tasks/views_payments.py:386.
+   *
+   * The URL and that gate live in `useProjectPayments`, which Project Health
+   * and Finance → Payments also call: one declaration of what is asked for and
+   * when, rather than three copies of the string with three copies of this
+   * paragraph beside them. The type parameter keeps this file reading the
+   * shape `homeSignals` models.
    */
-  const payments = useFetch<PaymentSummaryLike>(
-    wantsMoney ? `projects/${projectId}/payments/` : "",
-    on(wantsMoney),
-  );
+  const payments = useProjectPayments<PaymentSummaryLike>(projectId, wantsMoney);
   /**
    * Manual Cost Ledger credit entries not already counted via a real posted
    * certificate's own claim_amount (`linked_pc`/`linked_vo` both null) — see
@@ -495,6 +530,14 @@ export function useHomeData(projectId: string | undefined) {
     return merged;
   }, [variationRecords.records, variationList]);
 
+  // Whether each money source was read in FULL — see the note above `money`
+  // below for why a failed or truncated read must not be treated as empty.
+  const certificatesReadable = !certificates.isError && !certificates.truncated;
+  // EITHER variation source failing makes the approved-variation total short,
+  // and the revised contract sum is built on it.
+  const variationsReadable =
+    !variations.isError && !variations.truncated && !variationRecords.isError;
+
   // Every source contributes independently, so one failing endpoint costs its
   // own rows and not the queue. Order here is irrelevant — `rankQueue` is the
   // only thing that decides what a user sees first, and it is tested on its
@@ -518,15 +561,53 @@ export function useHomeData(projectId: string | undefined) {
       ...buildRsvpQueue(meetingList),
       ...buildMeetingActionQueue(meetingsWithActions),
       ...buildTaskQueue(taskList),
+      /*
+        Variations signed and never certified.
+
+        The certificate drawer now defaults every uncertified variation in, so
+        the common case is handled at the point of work. This catches the rest
+        — one signed between certificates, or unticked once and forgotten —
+        because until now nothing anywhere said "VO-014 was signed six weeks
+        ago and the contractor has not been paid for it".
+      */
+      //
+      // Fed the merged variation RECORDS, not `variationList`. That list is
+      // the assignment-task wrapper, which carries `voNumber` and `signedAt`
+      // under `.task` — so every row failed the builder's top-level checks and
+      // the alert never fired (QA BUG-14). It also only runs when both
+      // sources were read in full: a partial list would report a variation
+      // "never certified" because the certificate that certified it was not
+      // fetched.
+      ...(variationsReadable && certificatesReadable
+        ? buildUncertifiedVariationQueue(
+            variationRecordList.map((v) => ({
+              id: v.id,
+              voNumber: v.ref,
+              status: v.status ?? undefined,
+              signedAt: v.signedAt,
+              grandTotal: v.value,
+              certifiableValue: v.certifiable,
+            })),
+            sumCertifiedByVo(certificateList as any),
+          )
+        : []),
     ];
-    // ── Gating, now down to the ACT and not just the module ──────────────
+    // ── Gating: the module here, the ACT on the server ───────────────────
     //
     // The module gates are unchanged: finance rows need finance.view,
-    // compliance rows need compliance.view. What is new is that a certificate
-    // row also declares the permission for the transition it names, so
-    // "Certify PC-006" reaches the principal agent and not the contractor's
-    // QS. Those codes are the server's own `TRANSITION_PERMISSIONS`; see
-    // `buildCertificateQueue`.
+    // compliance rows need compliance.view.
+    //
+    // The ACT gates are a different matter. A row that names a transition used
+    // to declare that transition's permission code and have it resolved here,
+    // out of the project-wide permission map. The CERTIFICATE row no longer
+    // does: "may this person certify THIS certificate" is a question only the
+    // server can answer, because the answer includes creator-exclusion, and a
+    // project-wide flag cannot express "everything except the one you wrote
+    // yourself". It reads the server's `availableTransitions` instead — see
+    // `buildCertificateQueue`, which documents both directions the two drifted.
+    //
+    // The remaining act codes (post / prepare / time-bar) are still resolved
+    // here. They have no per-object rule behind them.
     //
     // Every finance flag here has been through `resolveFinanceAccess`, and
     // `canManageTimeBars` gets the same fail-closed-while-loading treatment
@@ -539,7 +620,15 @@ export function useHomeData(projectId: string | undefined) {
         canViewFinance,
         canViewCompliance,
         canEditFinance,
-        canCertify: canCertifyCertificate,
+        // `canCertify` is deliberately NOT passed any more. The certificate
+        // row no longer declares `finance.approve_certificate`: it is built
+        // from the server's own per-certificate `availableTransitions`
+        // instead, which already applies that permission AND the
+        // creator-exclusion rule a project-wide flag cannot express. See
+        // `buildCertificateQueue`. The flag itself is still resolved above and
+        // still returned from this hook — other callers read it — and
+        // `filterQueueByPermission` still maps the code, so a future row that
+        // declares it keeps working (and fails closed until someone passes it).
         canPostCertificate,
         canPrepareCertificate,
         canManageTimeBars,
@@ -553,10 +642,12 @@ export function useHomeData(projectId: string | undefined) {
     meetingList,
     meetingsWithActions,
     taskList,
+    variationRecordList,
+    variationsReadable,
+    certificatesReadable,
     canViewFinance,
     canViewCompliance,
     canEditFinance,
-    canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
     canManageTimeBars,
@@ -581,11 +672,8 @@ export function useHomeData(projectId: string | undefined) {
   // over the first five hundred of an unknown number of certificates is not a
   // total. It cannot happen at PAGE_LIMIT on any project this platform has,
   // and it is guarded anyway rather than trusted not to.
-  const certificatesReadable = !certificates.isError && !certificates.truncated;
-  // EITHER variation source failing makes the approved-variation total short,
-  // and the revised contract sum is built on it.
-  const variationsReadable =
-    !variations.isError && !variations.truncated && !variationRecords.isError;
+  // (`certificatesReadable` / `variationsReadable` are declared above the
+  // queue, which uses them too.)
 
   const money = useMemo(
     () =>
@@ -962,6 +1050,11 @@ export function useHomeData(projectId: string | undefined) {
      * to scope the certificate rows: the acts those rows name are
      * `finance.approve_certificate`, `finance.post_certificate` and
      * `finance.create_certificate`, which are the three flags below.
+     *
+     * `canCertifyCertificate` is still resolved and still exposed for other
+     * callers, but it no longer gates the "Certify PC-x" row — that row is
+     * built from the server's per-certificate `availableTransitions`. See the
+     * gating note above `filterQueueByPermission`.
      */
     canApprovePayment,
     canCertifyCertificate,

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { User as UserIcon, Mail, MapPin, Briefcase, Save, Loader2, LayoutDashboard, ChevronDown, Lock, Info, Eye, EyeOff, Building2, UserPlus, Trash2, X } from "lucide-react";
-import { hasPermission } from "@/lib/roleUtils";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useRoles } from "@/hooks/useRoles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -58,7 +58,9 @@ const AccountProfile = () => {
   const navigate = useNavigate();
   const { roles } = useRoles();
   const [isSaving, setIsSaving] = useState(false);
-  const isAdmin = user?.account_type === 'organisation' || hasPermission(user?.role?.code, 'manageSettings');
+  // organization.edit (Roles & Permissions, account-wide) — the server's rule.
+  const canEditOrganization = usePermissions().can("editOrganization");
+  const isAdmin = user?.account_type === 'organisation' || canEditOrganization;
 
   const [pwForm, setPwForm] = useState({ old_password: "", new_password: "", new_password_confirm: "" });
   const [isSavingPw, setIsSavingPw] = useState(false);

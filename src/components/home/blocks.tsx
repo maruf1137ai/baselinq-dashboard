@@ -76,8 +76,8 @@ import { ArrowRight, CalendarClock, CheckCircle2, ShieldAlert, ShieldQuestion, X
 
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatZAR } from "@/lib/formatCurrency";
-import { FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
+import { formatMoney } from "@/lib/formatCurrency";
+import { BALANCE_LABEL, FINANCE_TAB, riskGroupHref } from "@/lib/homeSignals";
 import { formatDate as formatDateUk } from "@/lib/dateUtils";
 import { SETUP_LABELS } from "@/lib/homeSetup";
 import { cn } from "@/lib/utils";
@@ -1092,7 +1092,11 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap shrink-0">
+      {/* min-w-0 / max-w-full, not shrink-0: with the budget strip fully
+          populated this group is wider than the card at desktop widths, and
+          shrink-0 pushed it past the edge instead of letting it wrap
+          (QA BUG-25). */}
+      <div className="flex items-center gap-3 flex-wrap min-w-0 max-w-full">
         {days !== null && (
           // The old summary's own three-step scale, restored verbatim: past
           // the date is red, inside a month is orange, otherwise green. This
@@ -1117,14 +1121,14 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
           // read as unrelated figures.
           <span
             className="text-xs font-medium px-3 py-1 rounded-md border bg-card text-foreground border-border tabular-nums"
-            title="Budget is the contract sum as recorded, revised by approved variations. Certified is the value of certificates signed to date. Remaining is the difference. All ex-VAT. Certified is not the same as paid."
+            title="The revised contract sum: the original as agreed plus signed variations. Certified is the value certified to date. The balance is what is still to certify. All excl. VAT, and the same names Finance uses. Certified is not the same as paid."
           >
-            <span className="text-muted-foreground font-normal">Budget{" "}</span>
-            {formatZAR(budget)}
+            <span className="text-muted-foreground font-normal">Revised sum{" "}</span>
+            {formatMoney(budget)}
             {certified !== null && (
               <>
                 <span className="text-muted-foreground font-normal">{" · Certified "}</span>
-                {formatZAR(certified)}
+                {formatMoney(certified)}
                 {certifiedPct !== null && (
                   <span className="text-muted-foreground font-normal">{" (" + certifiedPct + "%)"}</span>
                 )}
@@ -1132,8 +1136,8 @@ export function ProjectSummaryBlock({ data }: { data: HomeData }) {
             )}
             {remaining !== null && (
               <>
-                <span className="text-muted-foreground font-normal">{" · Remaining "}</span>
-                {formatZAR(remaining)}
+                <span className="text-muted-foreground font-normal">{` · ${BALANCE_LABEL} `}</span>
+                <span className={remaining < 0 ? "text-destructive" : undefined}>{formatMoney(remaining)}</span>
               </>
             )}
             {certified === null && (

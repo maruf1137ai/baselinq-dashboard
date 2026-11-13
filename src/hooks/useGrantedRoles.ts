@@ -32,9 +32,12 @@ export function useGrantedRoles(
   const { data } = useQuery<GrantedRolesResponse>({
     queryKey: ["granted-roles", key, projectId ?? null],
     enabled: codes.length > 0 && !!projectId,
-    // Cheap and read-only, but changes the moment an admin edits the matrix —
-    // same staleness budget as useAutoCcRoles.
-    staleTime: 5 * 60 * 1000,
+    // Changes the moment an admin edits the matrix. A permissions push only
+    // reaches the users whose OWN role changed, so a Help page read by anyone
+    // else relies on these: short freshness, re-read on returning to the tab.
+    // The matrix save itself invalidates this key (invalidatePermissionQueries).
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const qs = new URLSearchParams({ codes: key });
       if (projectId) qs.set("project_id", projectId);

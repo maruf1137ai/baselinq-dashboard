@@ -1,7 +1,8 @@
 /**
  * /programme?milestone=<milestoneId>.
  *
- * The link opens the Milestones tab and marks the phase it names. What it must
+ * The link opens the Schedule (chart and phase list, one view since the
+ * Milestones tab was folded in) and marks the phase it names. What it must
  * never do is narrow the list: a phase that has been deleted, or one on a
  * project this viewer is not a member of, has to leave the programme looking
  * exactly as it does with no parameter — every phase still listed, nothing
@@ -83,13 +84,14 @@ beforeEach(() => {
 });
 
 describe("/programme?milestone=", () => {
-  it("opens the Schedule tab as before when there is no parameter", () => {
+  it("opens the Schedule, chart and phase list together, when there is no parameter", () => {
     renderProgramme("/programme");
     expect(screen.getByTestId("timeline")).toBeInTheDocument();
-    expect(screen.queryByText("Earthworks")).not.toBeInTheDocument();
+    expect(screen.getByText("Earthworks")).toBeInTheDocument();
+    expect(document.querySelector("[data-highlighted]")).toBeNull();
   });
 
-  it("opens the Milestones tab and marks the phase the link names", () => {
+  it("marks the phase the link names", () => {
     renderProgramme("/programme?milestone=m2");
 
     const row = screen.getByText("Superstructure").closest("[data-highlighted]");

@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 
 import { PERMISSIONS_CHANGED_EVENT } from "./useUserEventSocket";
 import { useCurrentUser } from "./useCurrentUser";
 import { useEffectivePermissions } from "./useEffectivePermissions";
+import { useSelectedProjectId } from "./useSelectedProject";
 import { PermissionKey } from "@/lib/roleUtils";
 
 /**
@@ -17,7 +18,9 @@ import { PermissionKey } from "@/lib/roleUtils";
  * Finance is gated by three codes:
  *   finance.view             → read-only access to every Finance page
  *   finance.edit             → edit everything in Finance (cost ledger, payment certs, VOs, budget)
- *   finance.approve_payment  → final sign-off on payment certificates (independent)
+ *   finance.approve_payment  → reverse a recorded payment (API only)
+ * Platform billing has its own read codes: finance.platform_fees.view,
+ * finance.invoices.view and billing.terms.view.
  *
  * Some legacy flag names map to multiple codes (OR semantics) so the right
  * users can still pass route gates. While permissions are loading, all flags
@@ -35,7 +38,6 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   viewSettings:        ["settings.view", "settings.edit", "project.edit"],
   editSettings:        "settings.edit",
   // Settings — read-only views: settings.view OR settings.edit (NOT project.edit alone)
-  viewBilling:         ["settings.view", "settings.edit"],
   viewPermissions:     ["settings.view", "settings.edit"],
   // Settings — edit-anything-non-project actions: settings.edit only
   editTeamRoles:       "settings.edit",
@@ -76,50 +78,75 @@ const FLAG_TO_CODE: Record<PermissionKey, string | readonly string[]> = {
   // only — no isOrgAdmin bypass, unlike every settings.* flag above.
   viewRolesPermissions: ["roles.view", "roles.edit"],
   editRolesPermissions: "roles.edit",
+  // Platform billing — own codes since user/migrations/0072. Read-only by
+  // design: acting on Baselinq's invoice / fee terms is Baselinq staff only.
+  viewPlatformFees: "finance.platform_fees.view",
+  viewInvoices:     "finance.invoices.view",
+  viewBillingTerms: "billing.terms.view",
+  // Account-wide (user/migrations/0074): who may change the company profile.
+  editOrganization: "organization.edit",
 };
 
 /**
- * Refetch this user's permissions the moment an admin changes them.
+ * Every cached answer that a Roles & Permissions change can make wrong —
+ * used by the live push AND by the matrix mutations, so the two cannot drift.
  *
- * Without it the change lands on the server and the browser keeps the old
- * answer until something else forces a refetch — the button stays until the
- * API refuses it, which reads as a bug rather than a permission.
- *
- * Lives here rather than in the socket hook so every page that asks about
- * permissions gets it, not only the ones that open a socket for some other
- * reason.
+ * That is ALL of them, not a list: any server answer can depend on a
+ * permission — the gates (effective-perms, the matrix, Help's granted-roles,
+ * unread counts) but also the DATA a page lists (the folders a role may see,
+ * the tasks task.view_all reveals, per-document edit flags). A hand-kept list
+ * missed the folder list, which kept a granted/revoked folder until reload
+ * (caught in QA). Marking everything stale refetches only what is on screen;
+ * the rest refetches when next used.
  */
-function useInvalidateOnPermissionChange() {
+export function invalidatePermissionQueries(qc: QueryClient) {
+  qc.invalidateQueries();
+}
+
+/**
+ * Refetch permissions the moment an admin changes them.
+ *
+ * Mounted ONCE at the app root (components/PermissionLiveSync.tsx), not per
+ * page: it used to live inside usePermissions(), so a page that never called
+ * that hook — the Help pages — never heard the change and needed a reload.
+ */
+export function useInvalidateOnPermissionChange() {
   const qc = useQueryClient();
   useEffect(() => {
-    const handler = () => {
-      qc.invalidateQueries({ queryKey: ["effective-perms"] });
-      // Roles & Permissions is showing the very matrix that changed.
-      qc.invalidateQueries({ queryKey: ["role-matrix"] });
-      // A surface just hidden or revealed changes how many unreads the
-      // bell/sidebar should be counting — see unread_summary's permission
-      // filter on the backend.
-      qc.invalidateQueries({ queryKey: ["unread-summary"] });
-      // Per-document userPermissions (canEdit/canDelete/canUploadVersion)
-      // are embedded in the document list/detail responses, not derived
-      // client-side — an open Documents page needs a refetch too, or its
-      // Edit/Delete controls keep reflecting the permission that was just
-      // revoked.
-      qc.invalidateQueries({ queryKey: ["document"] });
-      qc.invalidateQueries({ queryKey: ["documents"] });
-    };
+    const handler = () => invalidatePermissionQueries(qc);
     window.addEventListener(PERMISSIONS_CHANGED_EVENT, handler);
     return () => window.removeEventListener(PERMISSIONS_CHANGED_EVENT, handler);
   }, [qc]);
 }
 
 export function usePermissions() {
-  useInvalidateOnPermissionChange();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const isOrgAdmin = user?.account_type === "organisation";
 
-  const projectId =
-    parseInt(localStorage.getItem("selectedProjectId") || "0") || null;
+  /**
+   * The project these permissions are resolved FOR, and it must be the one the
+   * rest of the app is showing.
+   *
+   * This used to read `localStorage.getItem("selectedProjectId")` directly,
+   * during render, with no subscription to the `project-change` event the
+   * sidebar and the project picker dispatch — so a component tree that did not
+   * otherwise re-render kept serving the PREVIOUS project's permissions, or,
+   * before a project had been written at all, resolved with no project.
+   *
+   * Resolving with no project is not a smaller answer, it is a DIFFERENT one:
+   * `permissions.core._user_role_code` falls back to the account-level role
+   * when there is no project, and the same person is deliberately allowed to
+   * hold different roles on different jobs. A user who is Principal / PM on
+   * this project but a QS account-wide therefore lost
+   * `finance.approve_certificate` — the server granted it (hence their Approve
+   * button and their "awaiting certification" notification) while this map
+   * denied it, and Home's "What needs you" dropped the certificate row.
+   *
+   * `useSelectedProjectId` is the shared subscription that exists for exactly
+   * this class of bug. Use it rather than re-reading the key here.
+   */
+  const selectedProjectId = useSelectedProjectId();
+  const projectId = parseInt(selectedProjectId || "0") || null;
 
   const { data: effectivePerms, isLoading: permsLoading } =
     useEffectivePermissions(projectId);
@@ -192,6 +219,12 @@ export function usePermissions() {
   // it — only the Home "Needs You" queue and TimeBarsTab's own buttons
   // gate on this flag.
   const canManageTimeBars = perm("risk.timebar.manage");
+  // Recording that a notice was served (or withdrawing that record). Under
+  // JBCC the CONTRACTOR serves notices for time and money on the principal
+  // agent, so `risk.timebar.serve` (user/migrations/0080) is held by the
+  // contractor roles as well as the PM / PA set. `risk.timebar.manage` still
+  // implies it, exactly as the server's _may_record_service does.
+  const canRecordTimeBarService = perm("risk.timebar.serve") || canManageTimeBars;
 
   // Folder filing — create/delete a folder (documents/permissions.py::
   // can_manage_folders, backed by document.manage). Read directly, like
@@ -229,7 +262,6 @@ export function usePermissions() {
     canEditTeamRoles:      canEditSettings,
     canManageTeam:         canEditSettings,
     canManageSettings:     canEditSettings,
-    canViewBilling:        canReadSettingsCore,
     canManageIntegrations: canEditSettings,
     canViewPermissions:    canReadSettingsCore,
     canEditPermissions:    canEditSettings,
@@ -238,6 +270,11 @@ export function usePermissions() {
     canRemoveTeamMember:   canManageTeamMembers,
     canEditTeamMember:     canManageTeamMembers,
     canManageAssociatedCompanies: canEditSettings,
+    // Editing one appointed company — the server's own rule
+    // (project/views.py update_appointed_company): organisation account, or
+    // project.companies.manage on this project. The company's own admin is
+    // checked at the call site.
+    canEditAppointedCompany: isOrgAdmin || perm("project.companies.manage"),
     canAddCompanyMember:          canEditSettings,
     canEditCompanyMember:         canEditSettings,
     // Project
@@ -250,8 +287,9 @@ export function usePermissions() {
     // Documents — inline folder-filing actions (not a route gate)
     canManageFolders,
     // Meetings — 2 flags
-    canScheduleMeeting:    isOrgAdmin || perm("meeting.schedule"),
-    canUpdateMeeting:      isOrgAdmin || perm("meeting.update"),
+    // No isOrgAdmin bypass: the server checks only these codes (meetings/views.py).
+    canScheduleMeeting:    perm("meeting.schedule"),
+    canUpdateMeeting:      perm("meeting.update"),
     // Finance — 3 primary flags
     canViewFinance,
     canEditFinance,
@@ -260,8 +298,10 @@ export function usePermissions() {
     canCertifyCertificate,
     canPostCertificate,
     canPrepareCertificate,
-    // Risk / notice deadlines — serve or cancel a time-bar clock
+    // Risk / notice deadlines — cancel a time-bar clock (and record service)
     canManageTimeBars,
+    // Risk / notice deadlines — record or withdraw service of a notice
+    canRecordTimeBarService,
     // Legacy finance flags — all collapse to view/edit
     canViewCostLedger:         canViewFinance,
     canEditCostLedger:         canEditFinance,

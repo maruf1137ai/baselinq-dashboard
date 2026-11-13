@@ -34,7 +34,7 @@ npm run dev                 # runs on port 5173 by default
 
 ## Before opening a PR
 
-- [ ] `npx tsc --noEmit` passes with zero errors
+- [ ] `npm run typecheck` passes with zero errors
 - [ ] App loads and the happy path of your change works
 - [ ] No `.env`, secrets, or large binary files committed
 - [ ] Diff is < 1000 lines (split otherwise)
@@ -59,7 +59,7 @@ Use this template in the body:
 ## Test plan
 - [ ] <specific thing to click / verify>
 - [ ] <edge case>
-- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run typecheck` passes
 
 ## Screenshots
 <before / after for UI changes>

@@ -5,6 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatDate } from "@/lib/utils";
 import { getContractValueDisplay, getContractEndDateDisplay } from "@/lib/projectContract";
+import { parseRetentionRate } from "@/lib/retention";
 import { useProjects, useProject, useUpdateProject } from "@/hooks/useProjects";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import React, { useState, useEffect } from "react";
@@ -166,6 +167,8 @@ const ProjectDetails = () => {
   const project = fetchedProject || projects.find((p: any) => (p._id || p.id) == selectedProjectId);
 
   const selectedProject = project;
+  // The original contract sum is fixed once work is certified (server rule).
+  const originalSumLocked = Boolean((selectedProject as any)?.originalContractValueLocked);
 
   const isProjectCreator = !!currentUser?.id && String(project?.userId) === String(currentUser.id);
   const canEditProject = canEditByRole || isProjectCreator;
@@ -265,9 +268,12 @@ const ProjectDetails = () => {
         longitude: formData.longitude ? parseFloat(formData.longitude).toFixed(8) : null,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
-        total_budget: formData.total_budget ? Number(formData.total_budget) : undefined,
+        // Never sent once fixed: the server would refuse the save.
+        total_budget:
+          !originalSumLocked && formData.total_budget ? Number(formData.total_budget) : undefined,
         vat_rate: formData.vat_rate ? Number(formData.vat_rate) : undefined,
-        retention_rate: formData.retention_rate ? Number(formData.retention_rate) : undefined,
+        // Always sent: blank or 0 is a real "no retention", not "unchanged".
+        retention_rate: parseRetentionRate(formData.retention_rate),
         principal_agent_mandate: formData.principal_agent_mandate ? Number(formData.principal_agent_mandate) : undefined,
       } as any);
       queryClient.invalidateQueries({ queryKey: ["project", String(selectedProjectId)] });
@@ -509,16 +515,29 @@ const ProjectDetails = () => {
                 </PopoverContent>
               </Popover>
             </Field>
-            <Field label="Total Budget">
+            {/* The sum agreed when the contract was let. Every finance screen
+                shows it beside the revised sum, and the server fixes it once a
+                certificate is posted or a variation signed. */}
+            <Field label="Original contract sum (agreed)">
               <Input
                 type="text"
                 inputMode="numeric"
-                readOnly={!canEditProject}
+                readOnly={!canEditProject || originalSumLocked}
                 value={formatWithCommas(formData.total_budget)}
                 onChange={(e) => handleNumericInput("total_budget", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
+                className={cn(
+                  INPUT_CLS,
+                  (!canEditProject || originalSumLocked) && "bg-muted/50 cursor-not-allowed",
+                )}
                 placeholder="e.g. 5,000,000"
+                aria-describedby={originalSumLocked ? "original-sum-locked" : undefined}
               />
+              {originalSumLocked && (
+                <p id="original-sum-locked" className="text-xs text-muted-foreground ml-0.5">
+                  Fixed: work has been certified or a variation signed against it. Changes to the
+                  contract value go through a signed instruction.
+                </p>
+              )}
             </Field>
             <Field label="PA Mandate (Max VO ZAR)">
               <Input
@@ -566,12 +585,11 @@ const ProjectDetails = () => {
             <Field label="VAT Rate (%)">
               <Input
                 type="text"
-                inputMode="decimal"
-                readOnly={!canEditProject}
-                value={formatWithCommas(formData.vat_rate)}
-                onChange={(e) => handleNumericInput("vat_rate", e.target.value)}
-                className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
-                placeholder="e.g. 15"
+                readOnly
+                disabled
+                value="15"
+                className={cn(INPUT_CLS, "bg-muted/50 cursor-not-allowed")}
+                title="Fixed, platform-wide VAT rate — not editable."
               />
             </Field>
             <Field label="Retention Rate (%)">
@@ -582,7 +600,7 @@ const ProjectDetails = () => {
                 value={formatWithCommas(formData.retention_rate)}
                 onChange={(e) => handleNumericInput("retention_rate", e.target.value)}
                 className={cn(INPUT_CLS, !canEditProject && "bg-muted/50 cursor-not-allowed")}
-                placeholder="e.g. 5"
+                placeholder="0 = no retention"
               />
             </Field>
             <Field label="Description" colSpan>

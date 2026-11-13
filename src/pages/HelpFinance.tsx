@@ -26,7 +26,13 @@
  *                                     (CREATOR_EXCLUDED_TRANSITIONS)
  *   - PC draft edit/delete (creator-only, Draft-only) → backend/tasks/views.py
  *                                     (PaymentCertificateViewSet._draft_edit_guard)
- *   - Platform Fees visibility     → backend/cost_ledger/views.py (_can_view_platform_fees)
+ *   - Platform Fees visibility     → backend/cost_ledger/views.py (_can_view_platform_fees,
+ *                                     finance.platform_fees.view)
+ *   - Invoices / billing terms     → backend/billing/views.py (finance.invoices.view),
+ *                                     backend/billing/views_config.py (billing.terms.view);
+ *                                     acting on them is Baselinq administrators only
+ *                                     (permissions.core.is_billing_admin). The full
+ *                                     billing story is HelpBilling.tsx (/help/billing).
  *
  * Update this page whenever those rules change.
  *
@@ -50,12 +56,13 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 import { useGrantedRoles } from "@/hooks/useGrantedRoles";
 import { useRoles } from "@/hooks/useRolePermissions";
 import { useSelectedProjectId } from "@/hooks/useSelectedProject";
 import { formatRoleList, unionRoleCodes } from "@/lib/formatRoleList";
 
-type Row = { action: string; who: string; when: string; note?: string };
+type Row = { action: string; who: string; when: string; note?: string; youCan?: boolean };
 
 interface FinanceSection {
   type: string;
@@ -76,7 +83,9 @@ const ROW_PERMISSION: Record<string, string[]> = {
   "Submit for Certification": ["finance.create_certificate"],
   Cancel: ["finance.create_certificate"],
   "Approve / Reject": ["finance.approve_certificate"],
-  "View Platform Fees": ["finance.approve_payment"],
+  "View Platform Fees": ["finance.platform_fees.view"],
+  "View Baselinq's invoices": ["finance.invoices.view"],
+  "View the billing terms": ["billing.terms.view"],
 };
 const ROW_CODES = [...new Set(Object.values(ROW_PERMISSION).flat())];
 
@@ -181,14 +190,54 @@ const STATIC_SECTIONS: FinanceSection[] = [
     rows: [
       {
         action: "View Platform Fees",
-        who: "Client/Owner, Client Project Manager, Project Manager, Consultant Quantity Surveyor, Quantity Surveyor, Contracts Manager.",
+        who: "The roles granted \"View the Platform Fees tab\" on Roles & Permissions.",
         when: "Anytime.",
-        note: "If your role isn't in that list, the tab shows \"Platform fees are not visible to your role\" rather than an error.",
+        note: "Without it the fee derivation on Settings → Billing is not shown at all.",
+      },
+      {
+        action: "Reverse (credit back) a charge",
+        who: "Baselinq administrators only — never a role on the project.",
+        when: "While the charge is live. A reason is required, and the credit lands on the next invoice.",
+        note: "Each fee shows whether it is Not invoiced, Invoiced, Overdue or Paid. See the Billing reference for what each means.",
+      },
+    ],
+  },
+  {
+    type: "INVOICES",
+    title: "Invoices",
+    description:
+      "Baselinq's monthly invoice for the platform fee: what is to pay, what is overdue, and what will be on the next invoice. The project reads and pays them; Baselinq raises them.",
+    rows: [
+      {
+        action: "View Baselinq's invoices",
+        who: "The roles granted \"View Baselinq invoices\" on Roles & Permissions.",
+        when: "Anytime.",
+        note: "Without it the invoice list on Settings → Billing is not shown at all.",
+      },
+      {
+        action: "Issue, cancel or mark an invoice paid",
+        who: "Baselinq administrators only — never a role on the project.",
+        when: "Once a month: Baselinq issues one invoice listing every fee not yet invoiced, and marks it paid when the bank transfer arrives.",
+        note: "How to pay, and what Unpaid / Overdue / Paid mean, is in the Billing reference.",
+      },
+    ],
+  },
+  {
+    type: "BILLING",
+    title: "Billing terms",
+    description:
+      "Settings → Billing: the fee rate, VAT, what the fee is charged on, any cap, and the billing contact.",
+    rows: [
+      {
+        action: "View the billing terms",
+        who: "The roles granted \"View billing terms\" on Roles & Permissions.",
+        when: "Anytime.",
       },
       {
         action: "Change the fee rate, cap, or basis",
-        who: "Nobody on the project — not even Client/Owner.",
-        when: "Never, from this app. Only Baselinq's own staff can change these terms.",
+        who: "Baselinq administrators only — nobody on the project, not even Client/Owner.",
+        when: "Never, from a project role. The standard rate is 1%; a different rate (0.5%–1%) can be agreed for a project. VAT is always 15%.",
+        note: "A rate change applies only to fees recorded after it — nothing already charged is repriced.",
       },
     ],
   },
@@ -205,7 +254,13 @@ export default function HelpFinance() {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const grants = useGrantedRoles(ROW_CODES, projectId);
-  const { data: roles } = useRoles();
+  // project_id: the roles list is readable to any member of THIS project;
+  // without it the server answers 403 to anyone lacking roles.view, and this
+  // page stayed on its static fallback for them.
+  const { data: roles } = useRoles(projectId);
+  // The reader's own answer on THIS project, from the same live payload every
+  // gate in the app reads — refreshed by the permissions push.
+  const { data: effective } = useEffectivePermissions(projectId ? Number(projectId) : null);
 
   const roleNamesByCode = useMemo(() => {
     const map: Record<string, string> = {};
@@ -223,10 +278,13 @@ export default function HelpFinance() {
         const codes = ROW_PERMISSION[row.action];
         if (!codes) return row;
         const roleCodes = unionRoleCodes(...codes.map((c) => grants[c]));
-        return { ...row, who: `Anyone holding: ${formatRoleList(roleCodes, roleNamesByCode)}.` };
+        const youCan = effective
+          ? codes.some((c) => effective.permissions?.[c] === true)
+          : undefined;
+        return { ...row, who: `Anyone holding: ${formatRoleList(roleCodes, roleNamesByCode)}.`, youCan };
       }),
     }));
-  }, [grants, roleNamesByCode]);
+  }, [grants, roleNamesByCode, effective]);
 
   // Back goes to wherever the user actually came from — the Help hub, a
   // deep link out of /finance, anywhere — rather than always dumping them on
@@ -255,7 +313,8 @@ export default function HelpFinance() {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
           Plain-English guide to who can do what in Cost Ledger, Variation
-          Orders, Payment Certificates and Platform Fees. If a button isn't
+          Orders, Payment Certificates, Platform Fees, Invoices and billing
+          terms, read live from this project's Roles & Permissions. If a button isn't
           showing for you, this page explains why — every action is gated by
           your role, and Payment Certificates additionally check that you
           didn't raise the certificate you're trying to act on.
@@ -296,7 +355,17 @@ export default function HelpFinance() {
                     {s.rows.map((r, i) => (
                       <tr key={i} className="border-t border-border align-top">
                         <td className="px-4 py-3 text-foreground">{r.action}</td>
-                        <td className="px-4 py-3 text-foreground leading-relaxed">{r.who}</td>
+                        <td className="px-4 py-3 text-foreground leading-relaxed">
+                          {r.who}
+                          {r.youCan !== undefined && (
+                            <p
+                              className={`mt-1 text-xs ${r.youCan ? "text-green-700" : "text-muted-foreground"}`}
+                              data-testid="help-you-can"
+                            >
+                              {r.youCan ? "You can, on this project." : "You can't, on this project."}
+                            </p>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-foreground leading-relaxed">
                           {r.when}
                           {r.note && (

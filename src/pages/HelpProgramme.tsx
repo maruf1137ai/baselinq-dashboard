@@ -70,7 +70,7 @@ const STATIC_SECTIONS: ProgrammeSection[] = [
     type: "SCHEDULE",
     title: "Schedule & Milestones",
     description:
-      "Phases and milestones grouped by discipline (Construction, Architectural, Engineering, Quantity Surveying, Other). The Schedule tab shows the timeline; the Milestones tab shows the list.",
+      "Phases and milestones grouped by discipline (Construction, Architectural, Engineering, Quantity Surveying, Other). The Schedule shows the timeline and, beneath it, the list of phases to edit.",
     rows: [
       {
         action: "View the Programme page at all",
@@ -163,7 +163,10 @@ export default function HelpProgramme() {
   const navigate = useNavigate();
   const projectId = useSelectedProjectId();
   const grants = useGrantedRoles(ROW_CODES, projectId);
-  const { data: roles } = useRoles();
+  // project_id: the roles list is readable to any member of THIS project;
+  // without it the server answers 403 to anyone lacking roles.view, and this
+  // page stayed on its static fallback for them.
+  const { data: roles } = useRoles(projectId);
 
   const roleNamesByCode = useMemo(() => {
     const map: Record<string, string> = {};
