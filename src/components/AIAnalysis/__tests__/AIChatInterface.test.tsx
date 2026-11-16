@@ -61,6 +61,40 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
 });
 
+describe("VO price ranges", () => {
+  // The backend still attaches its AI price ranges to a VO message. They cite no source (the
+  // model's general knowledge), so the chat no longer draws them as a table.
+  const priceBreakdown = {
+    schema_version: 2,
+    status: "ai_estimate",
+    label: "AI estimate — not verified",
+    disclaimer: "Indicative ranges produced by an AI model from general knowledge.",
+    source: "ai_estimate",
+    currency: "ZAR",
+    total_claimed: 45000,
+    counts: { estimated: 1, not_verified: 0, above_range: 1, within_range: 0, below_range: 0 },
+    items: [{
+      index: 1, description: "Concrete 30 MPa", quantity: 25, claimed_unit_rate: 1800, claimed_total: 45000,
+      status: "ai_estimate", estimate: { unit: "m³", low: 1400, typical: 1600, high: 1750, basis: "Ready-mix." },
+      position: "above_range", variance_vs_estimate_pct: 12.5, note: "",
+    }],
+  };
+
+  it("are not shown under a VO message", async () => {
+    api.fetchData.mockResolvedValue(welcome({ content: "I've reviewed VO-015.", price_breakdown: priceBreakdown }));
+    render(
+      <MemoryRouter>
+        <AIChatInterface taskType="VO" data={{ id: 9, type: "VO" }} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("I've reviewed VO-015.");
+    expect(screen.queryByRole("region", { name: "AI price estimates" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/R 1,400\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText("AI estimate — not verified")).not.toBeInTheDocument();
+  });
+});
+
 describe("the analysis as a chat message", () => {
   it("rides on Linq's opening message — one message, not two", async () => {
     api.fetchData.mockResolvedValue(welcome());

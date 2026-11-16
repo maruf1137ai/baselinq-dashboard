@@ -87,6 +87,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { taskAnalysisEndpoint } from "@/lib/taskAiAnalysis";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { RequestInfoDialog } from "@/components/commons/RequestInfoDialog";
@@ -328,8 +329,6 @@ export default function TaskDetails() {
     link: false,
     bulletList: false,
   });
-  const [aiResponse, setAiResponse] = useState<string>("");
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [isReplySubmitLoading, setIsReplySubmitLoading] = useState(false);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
@@ -481,13 +480,6 @@ export default function TaskDetails() {
   // 202: a background job, polled. 409 document_processing: the contract is being indexed — retried
   // automatically for as long as the chat stays open.
   const handleAnalyzeWithAi = async (force = false, retry = false) => {
-    const endpointMap: Record<string, string> = {
-      VO: "ai_analysis/vo/",
-      RFI: "ai_analysis/rfi/",
-      CPI: "ai_analysis/cpi/",
-      SI: "ai_analysis/si/",
-      DC: "ai_analysis/dc/",
-    };
     if (!retry) analysisRetries.current = 0;
     setShowAiChat(true);
     aiChatOpenRef.current = true;
@@ -495,7 +487,7 @@ export default function TaskDetails() {
     setAnalysisError(null);
     if (!retry) setAnalysisStage(null);
 
-    const endpoint = endpointMap[displayTask?.type];
+    const endpoint = taskAnalysisEndpoint(displayTask?.type);
     if (!endpoint) {
       setAnalysisError(`AI analysis isn't available for ${displayTask?.type || "this"} tasks.`);
       setIsAnalyzeLoading(false);
@@ -528,31 +520,6 @@ export default function TaskDetails() {
       setAnalysisError(body.message || (typeof body.error === "string" ? body.error : null)
         || "The analysis couldn't be completed. Please try again.");
       setIsAnalyzeLoading(false);
-    }
-  };
-
-  const fetchAIResponse = async () => {
-    if (!currentTask) {
-      toast.error("No task selected");
-      return;
-    }
-
-    setIsLoadingAI(true);
-    if (editor) {
-      editor.commands.setContent("");
-    }
-
-    try {
-      const dummyResponse = "AI response generation is currently unavailable.";
-      setIsLoadingAI(false);
-      setAiResponse(dummyResponse);
-      if (editor) {
-        editor.commands.setContent(dummyResponse);
-      }
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      toast.error("Failed to generate AI response");
-      setIsLoadingAI(false);
     }
   };
 
@@ -3020,15 +2987,6 @@ export default function TaskDetails() {
 
                 {/* Editor */}
                 <div className="bg-muted rounded-lg border-border focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent relative">
-                  {isLoadingAI && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/50 rounded-lg">
-                      <div className="ai-orb-loader">
-                        <div className="ai-orb-wave" />
-                        <div className="ai-orb-wave" />
-                        <div className="ai-orb-wave" />
-                      </div>
-                    </div>
-                  )}
                   <EditorContent
                     editor={editor}
                     className="text-sm text-muted-foreground"
@@ -3253,9 +3211,11 @@ export default function TaskDetails() {
                         ring as everything else. The icon dropped `animate-pulse`
                         too: a pulsing mark on a resting control reads as a
                         stalled spinner. */}
-                    {/* One button for every task type: it opens the Linq chat and runs the checked,
-                        structured analysis inside it, so the verdict and the conversation about it
-                        stay together. (It used to open a modal, with a second button for the chat.) */}
+                    {/* One button: it opens the Linq chat and runs the checked, structured analysis
+                        inside it, so the verdict and the conversation about it stay together. (It
+                        used to open a modal, with a second button for the chat.) Shown only for the
+                        task types the chat and the analysis accept; on a GI or an IC both fail. */}
+                    {taskAnalysisEndpoint(displayTask?.type) && (
                     <Button
                       variant={showAiChat ? "default" : "outline"}
                       onClick={() => {
@@ -3274,6 +3234,7 @@ export default function TaskDetails() {
                       <AiMark />
                       {showAiChat ? "Close Linq AI" : "Analyze with AI"}
                     </Button>
+                    )}
 
                     {/* Werner spec rev H — additive task actions:
                         + Action (escalation), Sign & Issue, Risk pills.

@@ -8,7 +8,6 @@ import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from "@/hooks/useA
 import { toast } from "sonner";
 import { AIMarkdown } from "./AIMarkdown";
 import { AnswerFeedback } from "./AnswerFeedback";
-import { PriceBreakdown } from "./PriceBreakdown";
 import { LegacyPriceNotice } from "./LegacyPriceNotice";
 import { RFIAnalysisSummary } from "./RFIAnalysisSummary";
 import { CitationPill } from "./CitationPill";
@@ -238,10 +237,10 @@ export function AIChatInterface({ taskType, data, analysis }: AIChatInterfacePro
           )}
         </div>
 
-        {/* VO: labelled AI price estimates; RFI: inline analysis summary; older VO gets a notice. */}
+        {/* RFI: inline analysis summary; an older VO message gets a notice. The VO table of AI
+            price ranges is no longer shown: they were uncited guesses, not rates from any source. */}
         {msg.role === 'assistant' && (
           <div className="w-full">
-            <PriceBreakdown priceData={msg.price_breakdown} />
             <RFIAnalysisSummary data={msg.price_breakdown} />
             {msg.price_check_legacy && <LegacyPriceNotice />}
           </div>

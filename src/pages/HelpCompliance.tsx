@@ -57,8 +57,8 @@
  * Rows listed in ROW_PERMISSION have a LIVE "who" — computed from the
  * matching permission code's current grants (Roles & Permissions), via
  * GrantedRolesView (backend/permissions/auto_cc.py) and useGrantedRoles.
- * "Open the Compliance page" (compliance.view) and the "Analyse with AI"
- * button stay static on purpose — compliance.view only gates the frontend
+ * "Open the Compliance page" (compliance.view) and the "Find obligations in a
+ * document" button stay static on purpose — compliance.view only gates the frontend
  * route (no backend check exists for it, see the IMPORTANT note above), and
  * the AI button's real target doesn't cleanly map to a single code either.
  */
@@ -163,7 +163,7 @@ const STATIC_SECTIONS: ComplianceSection[] = [
           "This only ever drafts text onto the obligation — the platform never sends or serves a notice on your behalf. There's no dispatch step; someone still has to take the drafted wording and issue it themselves.",
       },
       {
-        action: "\"Analyse with AI\" button on this page",
+        action: "\"Find obligations in a document\" button on this page",
         who: "Anyone who can open the page.",
         when: "Anytime.",
         note:

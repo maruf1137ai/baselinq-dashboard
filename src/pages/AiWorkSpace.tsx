@@ -14,7 +14,6 @@ import { fetchData, postData, getPresignedUrl, uploadFileToPresignedUrl } from '
 import { ASYNC_AI, jobStatusLabel, resolveAIJob, type AIJob } from '@/hooks/useAIJob';
 import { AIMarkdown } from '@/components/AIAnalysis/AIMarkdown';
 import { AnswerFeedback } from '@/components/AIAnalysis/AnswerFeedback';
-import { PriceBreakdown } from '@/components/AIAnalysis/PriceBreakdown';
 import { LegacyPriceNotice } from '@/components/AIAnalysis/LegacyPriceNotice';
 import { CitationPill } from '@/components/AIAnalysis/CitationPill';
 import { shownSources, type ChatSource } from '@/types/citation';
@@ -426,8 +425,8 @@ const AiWorkSpace = () => {
                                 {message.content}
                               </AIMarkdown>
                             </div>
-                            {/* VO: labelled AI price estimates; older messages get a notice instead */}
-                            <PriceBreakdown priceData={message.price_breakdown} />
+                            {/* Older VO messages carry a notice about their unverified prices. The
+                                table of uncited AI price ranges is no longer shown. */}
                             {message.price_check_legacy && <LegacyPriceNotice />}
                             {/* Citations: one chip per source with its verification status (Part 5) */}
                             {shownSources(message.sources).length > 0 && (
