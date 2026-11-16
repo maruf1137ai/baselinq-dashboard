@@ -78,6 +78,35 @@ describe("ApproveConfirmDialog", () => {
     expect(text()).toMatch(/platform fee of 1% \(plus VAT\)/);
   });
 
+  it("shows no figure the server did not compute", () => {
+    // Valuation 100 000, retention 5% (5 000), penalties 10 000, advance
+    // recovery 20 000. The server's chain: subtotal 85 000, VAT 12 750, total
+    // payable 77 750. Claim less retention (70 000 − 5 000 = 65 000) is on no
+    // line of the certificate, and the dialog used to show it as one.
+    render(
+      <ApproveConfirmDialog
+        entry={{
+          ...ENTRY,
+          claimAmount: 70000,
+          retentionAmount: 5000,
+          penalties: 10000,
+          advanceRecovery: 20000,
+          vatAmount: 12750,
+          totalPayable: 77750,
+          netAmount: 77750,
+        } as PCEntry}
+        open
+        onOpenChange={() => {}}
+        isSubmitting={false}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(text()).toContain("R 77 750,00");
+    expect(text()).toContain("R 12 750,00");
+    expect(text()).not.toContain("R 65 000,00");
+    expect(text()).not.toMatch(/Claim less retention/);
+  });
+
   it("sends nothing until the authority box is ticked and Approve is pressed", () => {
     const onConfirm = open();
     const approve = screen.getByRole("button", { name: /approve and post/i });
