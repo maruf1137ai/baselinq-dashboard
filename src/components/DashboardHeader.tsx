@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
-import { CreateDocumentDialog } from "./header/createDocument";
 import CreateRequestButton from "./header/CreateRequestButton";
 import AiButton from "./AiButton";
 import NavbarWeather from "./NavbarWeather";

@@ -27,10 +27,6 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import SideBar from "../icons/SideBar";
-import NewChat from "../icons/NewChat";
-import Explorer from "../icons/Explorer";
-import NewDoc from "../icons/NewDoc";
 import InviteMember from "../icons/InviteMember";
 
 import { useNavigate, useParams } from "react-router-dom";
