@@ -779,6 +779,35 @@ export default function CreateProject() {
     }
   }, [user, clientForm.company_name]);
 
+  // 2. "Your Organisation" step: the organisation owner's company details are
+  // already on file, so start from them instead of a blank form. Owner is the
+  // organisation's own account (account_type "organisation"), the same test
+  // the backend uses before letting anyone edit the company record. Only fills
+  // while the step is still empty, so nothing the user typed is overwritten.
+  useEffect(() => {
+    if (!user || isClientOrContractor) return;
+    if (user.account_type !== "organisation" || !user.organization) return;
+    if (appointedForm.company_name) return;
+
+    const org = user.organization;
+    const profile = user.profile;
+    setAppointedForm((prev) => ({
+      ...prev,
+      company_name: org.name || prev.company_name,
+      company_registration: org.company_reg_number || prev.company_registration,
+      vat_number: org.vat_number || prev.vat_number,
+      office_number: profile?.phone_number || prev.office_number,
+      physical_address: {
+        street: profile?.address || prev.physical_address.street,
+        city: profile?.city || prev.physical_address.city,
+        province: profile?.state || prev.physical_address.province,
+        postal_code: profile?.postal_code || prev.physical_address.postal_code,
+      },
+    }));
+    // Runs once the user loads; appointedForm.company_name is the "still empty" guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // ── Derived values ─────────────────────────────────────────────────────────
 
   const budget = parseBudget(form.total_budget);
