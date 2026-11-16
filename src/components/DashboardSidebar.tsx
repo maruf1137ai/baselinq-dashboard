@@ -275,7 +275,7 @@ export function DashboardSidebar() {
           <div className="h-16 shrink-0 flex items-center px-3 border-b border-border">
             {location.pathname.startsWith("/account") ? (
               <div
-                className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 cursor-pointer hover:bg-card transition-colors group"
+                className="flex-1 min-w-0 p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 cursor-pointer hover:bg-card transition-colors group"
                 onClick={() => navigate("/account")}
               >
                 <div className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 group-hover:scale-105 transition-transform">
@@ -290,7 +290,7 @@ export function DashboardSidebar() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="w-full p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 hover:bg-card transition-colors cursor-pointer outline-none">
+                  <div className="flex-1 min-w-0 p-2 border border-border rounded-lg flex items-center gap-2.5 bg-white/50 hover:bg-card transition-colors cursor-pointer outline-none">
                     <div
                       className="h-8 w-8 bg-[#121212] rounded-md flex items-center justify-center shrink-0 shadow-sm border border-border/10 hover:scale-105 transition-transform"
                       onClick={(e) => { e.stopPropagation(); navigate("/"); }}
