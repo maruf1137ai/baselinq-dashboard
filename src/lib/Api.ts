@@ -617,6 +617,18 @@ export const downloadAdminExport = async (path: "users" | "projects", params: Ad
   URL.revokeObjectURL(url);
 };
 
+/**
+ * The cost ledger as CSV. Through the authenticated client, so an expired
+ * access token is refreshed rather than failing the export.
+ */
+export const downloadCostLedgerExport = async (projectId: string | number): Promise<Blob> => {
+  const res = await api.get("cost-ledger/export/", {
+    params: { project_id: projectId },
+    responseType: "blob",
+  });
+  return res.data as Blob;
+};
+
 export interface AdminCompanyRow {
   id: number;
   name: string;
@@ -1388,6 +1400,16 @@ export const uploadFileToPresignedUrl = async (
 
 let refreshPromise: Promise<string> | null = null;
 
+/**
+ * Get a new access token, once per tab however many requests are waiting.
+ *
+ * Refresh tokens rotate and the old one is blacklisted, and every tab shares
+ * the tokens in localStorage. With a 15-minute access token, two tabs often
+ * refresh at the same moment with the same refresh token: the second is
+ * refused as blacklisted. That used to sign the user out of every tab. Now,
+ * if the stored refresh token changed while ours was in flight, another tab
+ * won the race and its new access token is used instead.
+ */
 const refreshAccessToken = (): Promise<string> => {
   if (refreshPromise) return refreshPromise;
 
@@ -1406,6 +1428,14 @@ const refreshAccessToken = (): Promise<string> => {
         localStorage.setItem('refresh', res.data.refresh);
       }
       return newAccess;
+    })
+    .catch(error => {
+      const storedRefresh = localStorage.getItem('refresh');
+      const storedAccess = localStorage.getItem('access');
+      if (storedRefresh && storedRefresh !== refresh && storedAccess) {
+        return storedAccess;
+      }
+      throw error;
     })
     .finally(() => {
       refreshPromise = null;
@@ -1436,9 +1466,9 @@ api.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
 
-    // If the request that failed WAS the refresh token request → logout immediately
-    if (originalRequest.url.includes('auth/token/refresh/')) {
-      forceLogin();
+    // The refresh request itself failed: refreshAccessToken decides whether
+    // that is a dead session (sign out, below) or another tab's rotation.
+    if (originalRequest?.url?.includes('auth/token/refresh/')) {
       return Promise.reject(error);
     }
 
@@ -1447,6 +1477,15 @@ api.interceptors.response.use(
     if (shouldRefreshOn401(error)) {
       originalRequest._retry = true;
 
+      // Another request or tab has already refreshed since this one was
+      // sent: replay with the stored token instead of refreshing again.
+      const storedAccess = localStorage.getItem('access');
+      const sentAuth = originalRequest.headers?.['Authorization'];
+      if (storedAccess && sentAuth && sentAuth !== 'Bearer ' + storedAccess) {
+        originalRequest.headers['Authorization'] = 'Bearer ' + storedAccess;
+        return api(originalRequest);
+      }
+
       try {
         const newAccess = await refreshAccessToken();
         originalRequest.headers['Authorization'] = 'Bearer ' + newAccess;
@@ -1454,7 +1493,7 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        // If refresh fails → logout gracefully
+        // The session is over (expired, revoked, or the company suspended).
         forceLogin();
         return Promise.reject(refreshError);
       }
