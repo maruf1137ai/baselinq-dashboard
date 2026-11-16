@@ -76,6 +76,7 @@ const PUBLIC_AUTH_PATHS = [
   'auth/register/',
   'auth/check-email/',
   'auth/password/reset/',
+  'auth/two-step/verify/',
 ];
 
 /**
@@ -259,8 +260,32 @@ export const loginUser = async ({
   password: string;
 }) => {
   const res = await api.post("auth/login/", { email, password });
-  return res.data; // { message, user, tokens: { access, refresh } }
+  // { message, user, tokens: { access, refresh }, twoStep }, or, when a code
+  // is needed first, { twoStep: "code_required" | "setup_required", preAuthToken }
+  return res.data;
 };
+
+// ── Two-step sign-in (backend twostep/) ──────────────────────────────────
+// The setup calls work signed in, or mid-sign-in with the pre-auth token
+// the password step returned (setup_required).
+export const getTwoStepStatus = async () => (await api.get("auth/two-step/status/")).data;
+
+export const startTwoStepSetup = async (preAuthToken?: string) =>
+  (await api.post("auth/two-step/setup/", preAuthToken ? { preAuthToken } : {})).data;
+
+export const confirmTwoStepSetup = async (code: string, preAuthToken?: string) =>
+  (await api.post("auth/two-step/setup/confirm/", preAuthToken ? { code, preAuthToken } : { code })).data;
+
+export const verifyTwoStep = async (
+  preAuthToken: string,
+  entry: { code: string } | { recoveryCode: string },
+) => (await api.post("auth/two-step/verify/", { preAuthToken, ...entry })).data;
+
+export const regenerateTwoStepRecoveryCodes = async (code: string) =>
+  (await api.post("auth/two-step/recovery-codes/", { code })).data;
+
+export const disableTwoStep = async (code: string) =>
+  (await api.post("auth/two-step/disable/", { code })).data;
 
 export interface RegisterPayload {
   // credentials
@@ -510,6 +535,8 @@ export interface AdminUserDetail extends AdminUserRow {
   loginLockedUntil: string | null;
   signingPinSet: boolean;
   signingPinLockedUntil: string | null;
+  /** Absent until the backend two-step branch is deployed. */
+  twoStepEnrolled?: boolean;
   activeDaysLast30: number;
   invitationsSent: number;
   projects: { id: number; name: string; number: string; status: string; role: string; isActive: boolean; owner: boolean }[];
@@ -518,7 +545,7 @@ export interface AdminUserDetail extends AdminUserRow {
 }
 
 export type AdminUserAction =
-  | "deactivate" | "reactivate" | "unlock" | "clear_pin"
+  | "deactivate" | "reactivate" | "unlock" | "clear_pin" | "reset_two_step"
   | "grant_staff" | "revoke_staff" | "grant_superuser" | "revoke_superuser";
 
 export interface AdminInvitationRow {

@@ -1,16 +1,15 @@
 // hooks/useLogin.ts
 import { useMutation } from "@tanstack/react-query";
 import { loginUser } from "@/lib/Api";
-import { storeTokens } from "@/lib/authSession";
+import { loginNext, saveSession } from "@/lib/twoStep";
 
 export const useLogin = () => {
   return useMutation({
     mutationFn: loginUser,
     onSuccess: (data) => {
-      // console.log(data);
-      // Save tokens and user data
-      storeTokens(data.tokens);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // When a two-step code is needed first there are no tokens yet: the
+      // sign-in page finishes the session after the code.
+      if (loginNext(data) === "signed_in") saveSession(data);
     },
   });
 };

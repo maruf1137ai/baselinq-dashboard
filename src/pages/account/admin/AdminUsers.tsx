@@ -87,6 +87,11 @@ const ACTION_COPY: Record<AdminUserAction, Omit<PendingAction, "run">> = {
     description: "They will set a new PIN the next time they sign — a PIN is required before approving a Variation Order.",
     confirmLabel: "Clear PIN",
   },
+  reset_two_step: {
+    title: "Reset two-step sign-in?",
+    description: "For a user who lost their phone and recovery codes. Their set-up and codes are removed and they are signed out everywhere; they set it up again at their next sign-in. Check who is asking before you do this.",
+    confirmLabel: "Reset two-step", destructive: true, reasonRequired: true,
+  },
   grant_staff: { title: "Make this user Baselinq staff?", description: "Staff can read billing on every project, but cannot change it.", confirmLabel: "Make staff" },
   revoke_staff: { title: "Remove staff access?", description: "They keep their normal access to their own projects.", confirmLabel: "Remove staff", destructive: true },
   grant_superuser: {
@@ -135,6 +140,7 @@ function UserDrawer({ userId, onClose }: { userId: number | null; onClose: () =>
       )}
       {d.isLocked && <Button size="sm" variant="outline" onClick={() => ask("unlock")}><Unlock className="h-4 w-4 mr-1.5" />Unlock</Button>}
       {d.signingPinSet && <Button size="sm" variant="outline" onClick={() => ask("clear_pin")}>Clear PIN</Button>}
+      {d.twoStepEnrolled && <Button size="sm" variant="outline" onClick={() => ask("reset_two_step")}>Reset two-step</Button>}
       {d.isSuperuser ? (
         <Button size="sm" variant="outline" onClick={() => ask("revoke_superuser")}>Remove superuser</Button>
       ) : (

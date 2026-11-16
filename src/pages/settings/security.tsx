@@ -21,6 +21,7 @@ import { usePost } from "@/hooks/usePost";
 import { usePatch } from "@/hooks/usePatch";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageBody, PageHeader } from "@/components/ui/page-header";
+import TwoStepCard from "@/components/settings/TwoStepCard";
 
 const Security = () => {
   const queryClient = useQueryClient();
@@ -166,6 +167,8 @@ const Security = () => {
           </Link>
         }
       />
+
+      <TwoStepCard email={profile?.email} />
 
       {/* ── Signing PIN card ────────────────────────────────────────────── */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
