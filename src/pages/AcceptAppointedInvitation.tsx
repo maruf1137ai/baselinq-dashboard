@@ -7,6 +7,7 @@ import { Plus, X, Building2, User, Eye, EyeOff, Check, ChevronRight, ArrowRight,
 import { cn } from "@/lib/utils";
 import { acceptAppointedInvitation, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { isSignedInAs, loginUrlFor } from "@/lib/invitationSignIn";
+import { refreshCookieRequestConfig, storeTokens } from "@/lib/authSession";
 
 // No session: a new invitee has none, and a stale one from someone else on
 // this browser must not be sent along. An existing account accepts through
@@ -206,9 +207,10 @@ export default function AcceptAppointedInvitation() {
         await acceptAppointedInvitation(token!, payload);
         toast.success("Details submitted. You've joined the project.");
       } else {
-        const res = await api.post(`/auth/accept-appointed-invitation/${token}/`, payload);
-        localStorage.setItem("access", res.data.tokens.access);
-        localStorage.setItem("refresh", res.data.tokens.refresh);
+        // Cookie mode: credentials and the header, so the refresh token
+        // arrives as the HttpOnly cookie.
+        const res = await api.post(`/auth/accept-appointed-invitation/${token}/`, payload, refreshCookieRequestConfig());
+        storeTokens(res.data.tokens);
         localStorage.setItem("user", JSON.stringify(res.data.user));
         toast.success("Account created and details submitted!");
       }

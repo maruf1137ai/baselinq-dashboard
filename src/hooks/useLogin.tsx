@@ -1,6 +1,7 @@
 // hooks/useLogin.ts
 import { useMutation } from "@tanstack/react-query";
 import { loginUser } from "@/lib/Api";
+import { storeTokens } from "@/lib/authSession";
 
 export const useLogin = () => {
   return useMutation({
@@ -8,8 +9,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       // console.log(data);
       // Save tokens and user data
-      localStorage.setItem("access", data.tokens.access);
-      localStorage.setItem("refresh", data.tokens.refresh);
+      storeTokens(data.tokens);
       localStorage.setItem("user", JSON.stringify(data.user));
     },
   });

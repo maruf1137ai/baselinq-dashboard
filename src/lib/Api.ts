@@ -1,5 +1,13 @@
 import axios, { type AxiosRequestConfig } from "axios";
 
+import {
+  clearTokens,
+  cookieMode,
+  getAccessToken,
+  getStoredRefreshToken,
+  hasSession,
+  storeTokens,
+} from "./authSession";
 import { loginUrlFor, safeNextPath } from "./invitationSignIn";
 
 // Project types
@@ -91,12 +99,21 @@ export const isPublicAuthRequest = (url: string = ''): boolean =>
  */
 type SessionConfig = AxiosRequestConfig & { withSession?: boolean };
 
+/** Auth endpoints set, read or clear the refresh cookie (backend user/refresh_cookie.py). */
+export const isAuthRequest = (url: string = ''): boolean => /^\/?auth\//.test(url);
+
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("access");
+    const token = getAccessToken();
     const wantsSession = (config as SessionConfig).withSession === true || !isPublicAuthRequest(config.url);
     if (token && !config.headers.Authorization && wantsSession) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Cookie mode: auth calls carry the cookie (cross-site, so credentials)
+    // and ask for it with the header the backend's CSRF check requires.
+    if (cookieMode() && isAuthRequest(config.url)) {
+      config.withCredentials = true;
+      config.headers["X-Refresh-Cookie"] = "1";
     }
   }
   return config;
@@ -114,6 +131,7 @@ export const forcedLoginUrl = (currentPath: string = ''): string => {
 };
 
 const forceLogin = () => {
+  clearTokens();
   localStorage.clear();
   window.location.href = forcedLoginUrl(window.location.pathname);
 };
@@ -1412,8 +1430,9 @@ let refreshPromise: Promise<string> | null = null;
  */
 const refreshAccessToken = (): Promise<string> => {
   if (refreshPromise) return refreshPromise;
+  if (cookieMode()) return refreshFromCookie();
 
-  const refresh = localStorage.getItem('refresh');
+  const refresh = getStoredRefreshToken();
   if (!refresh) {
     forceLogin();
     return Promise.reject(new Error('No refresh token available'));
@@ -1442,6 +1461,58 @@ const refreshAccessToken = (): Promise<string> => {
     });
 
   return refreshPromise;
+};
+
+/**
+ * Cookie mode: the refresh token is an HttpOnly cookie shared by every tab,
+ * and it rotates on use. Two tabs refreshing at once would send the same
+ * cookie and the second would be refused, so tabs take turns through a Web
+ * Lock; the second then sends the cookie the first was given. Browsers
+ * without Web Locks retry once after a refusal for the same reason.
+ */
+const refreshFromCookie = (): Promise<string> => {
+  const once = () =>
+    api.post('auth/token/refresh/', {}).then(res => {
+      storeTokens({ access: res.data.access });
+      return res.data.access as string;
+    });
+  const locks = typeof navigator !== 'undefined' ? (navigator as any).locks : undefined;
+  const run: Promise<string> = locks?.request
+    ? locks.request('baselinq-token-refresh', once)
+    : once().catch(() => new Promise<string>(resolve => setTimeout(resolve, 300)).then(once));
+  refreshPromise = run.finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+};
+
+/**
+ * Cookie mode, on page load: the access token was only in memory, so a
+ * reload has none. Get one from the cookie before the app renders, so every
+ * screen and socket starts signed in. A dead session is cleared, and the
+ * protected routes then send the user to sign in.
+ */
+export const bootstrapSession = async (): Promise<void> => {
+  if (!cookieMode() || getAccessToken()) return;
+  // Switching on: a session the old build left in localStorage hands its
+  // refresh token over once, and gets the cookie back, so nobody has to
+  // sign in again on the day the flag is turned on.
+  const legacyRefresh = localStorage.getItem('refresh');
+  if (legacyRefresh) {
+    try {
+      const res = await api.post('auth/token/refresh/', { refresh: legacyRefresh });
+      storeTokens({ access: res.data.access });
+    } catch {
+      clearTokens();
+    }
+    return;
+  }
+  if (!hasSession()) return;
+  try {
+    await refreshAccessToken();
+  } catch {
+    clearTokens();
+  }
 };
 
 /**
@@ -1479,7 +1550,7 @@ api.interceptors.response.use(
 
       // Another request or tab has already refreshed since this one was
       // sent: replay with the stored token instead of refreshing again.
-      const storedAccess = localStorage.getItem('access');
+      const storedAccess = getAccessToken();
       const sentAuth = originalRequest.headers?.['Authorization'];
       if (storedAccess && sentAuth && sentAuth !== 'Bearer ' + storedAccess) {
         originalRequest.headers['Authorization'] = 'Bearer ' + storedAccess;

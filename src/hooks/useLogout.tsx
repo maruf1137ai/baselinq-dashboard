@@ -1,6 +1,7 @@
 // Custom logout hook for Django authentication
 import { useMutation } from "@tanstack/react-query";
 import { logoutUser } from "@/lib/Api";
+import { clearTokens } from "@/lib/authSession";
 
 /**
  * Everything in localStorage that belongs to the signed-in user. Clearing it
@@ -11,9 +12,10 @@ import { logoutUser } from "@/lib/Api";
  * superuser going straight to the Admin panel) was labelled with the previous
  * user's project role — "Employer" on a superadmin.
  */
-const USER_KEYS = ["access", "refresh", "user", "userRole", "selectedProjectId", "projectLocation"];
+const USER_KEYS = ["access", "refresh", "session", "user", "userRole", "selectedProjectId", "projectLocation"];
 
 export const clearUserSession = () => {
+  clearTokens();
   USER_KEYS.forEach((key) => localStorage.removeItem(key));
 };
 

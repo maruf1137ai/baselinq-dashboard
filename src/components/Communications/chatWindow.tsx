@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getAccessToken } from "@/lib/authSession";
 
 const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesChange }: { channel: any, projectName?: string, taskDetails?: any, onMessagesChange?: (m: any[]) => void }) => {
   const [message, setMessage] = useState("");
@@ -516,7 +517,7 @@ const ChatWindow = ({ channel, projectName = "Project", taskDetails, onMessagesC
 
     const connectWs = () => {
       if (stopped || !channel?.id) return;
-      const token = localStorage.getItem("access");
+      const token = getAccessToken();
       if (!token) return;
 
       const wsBase = getWsBase();

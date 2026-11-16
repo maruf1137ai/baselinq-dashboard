@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLogin } from "@/hooks/useLogin";
 import { safeNextPath } from "@/lib/invitationSignIn";
 import { cn } from "@/lib/utils";
+import { storeTokens } from "@/lib/authSession";
 
 const INPUT_CLS =
   "w-full px-4 py-3 bg-muted/50 border border-transparent rounded-xl text-sm text-[#1A1A1A] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6c5ce7]/20 focus:border-[#6c5ce7]/30 focus:bg-card transition-all";
@@ -37,8 +38,7 @@ const LoginPage = () => {
       { email, password },
       {
         onSuccess: (data) => {
-          localStorage.setItem("access", data.tokens.access);
-          localStorage.setItem("refresh", data.tokens.refresh);
+          storeTokens(data.tokens);
           localStorage.setItem("user", JSON.stringify(data.user));
           const selectedProjectId = localStorage.getItem("selectedProjectId");
           navigate(nextPath ?? "/account");
