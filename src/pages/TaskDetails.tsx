@@ -96,7 +96,7 @@ import { toast } from "sonner";
 import useFetch from "@/hooks/useFetch";
 import { postData, patchData, getPresignedUrl, uploadFileToPresignedUrl } from "@/lib/Api";
 import { formatDate, formatDateOrNoDate, formatDateTime, formatTime } from "@/lib/dateUtils";
-import { formatMoney } from "@/lib/formatCurrency";
+import { platformFeeSummary } from "@/lib/platformFee";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateProjectCommercials } from "@/hooks/useProjectCommercials";
 import { TaskContentRenderer } from "@/components/TaskComponents/TaskContentRenderer";
@@ -1783,7 +1783,7 @@ export default function TaskDetails() {
               const fee = signed?.platform_fee;
               toast.success(
                 fee
-                  ? `Variation Order approved and signed. Baselinq platform fee ${formatMoney(fee.feeAmount)} + VAT ${formatMoney(fee.vatAmount)} accrued — invoiced at month end.`
+                  ? `Variation Order approved and signed. ${platformFeeSummary(fee)} accrued — invoiced at month end.`
                   : "Variation Order approved and signed.",
               );
               await refetchTask();
@@ -2237,7 +2237,7 @@ export default function TaskDetails() {
                       const billed = fee.billingState && fee.billingState !== "not_invoiced";
                       return (
                         <p className="text-xs text-muted-foreground">
-                          Baselinq platform fee {formatMoney(fee.feeAmount)} + VAT {formatMoney(fee.vatAmount)}{" "}
+                          {platformFeeSummary(fee)}{" "}
                           {billed
                             ? `— on invoice ${fee.invoiceNumber || "(draft)"}`
                             : "accrued — invoiced at month end"}

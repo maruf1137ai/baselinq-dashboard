@@ -264,6 +264,27 @@ describe("FinancialPositionView", () => {
     expect(screen.queryByText(/\(1%\)/)).not.toBeInTheDocument();
   });
 
+  it("shows Baselinq's fee in rand on a project in another currency", async () => {
+    const { setActiveCurrency } = await import("@/lib/formatCurrency");
+    setActiveCurrency("USD");
+    try {
+      draw({
+        ...DATA,
+        fees: {
+          items: [{ source: "PC-006", baseExclVat: "1000000.00", feeRatePct: "1", totalInclVat: "11500.00", state: "invoiced", invoiceId: null, invoiceNumber: null, dueOn: null }],
+          totals: { accruedInclVat: "11500.00", invoicedInclVat: "11500.00", paidInclVat: "0.00", outstandingInclVat: "11500.00" },
+        },
+      });
+      // The fee is invoiced in rand; the certificate it is a share of is not.
+      expect(screen.getByText(/^R\s11\s500,00$/, { selector: "span.font-medium" })).toBeInTheDocument();
+      expect(screen.getByText(/R\s0,00 paid · R\s11\s500,00 invoiced and unpaid/)).toBeInTheDocument();
+      expect(screen.getByText(/1% of US\$\s1\s000\s000,00/)).toBeInTheDocument();
+      expect(screen.queryByText(/US\$\s11\s500,00/)).not.toBeInTheDocument();
+    } finally {
+      setActiveCurrency("ZAR");
+    }
+  });
+
   it("shows a rand equivalent for a project in another currency, saying the rate, day and source", async () => {
     const { setActiveCurrency } = await import("@/lib/formatCurrency");
     setActiveCurrency("USD");

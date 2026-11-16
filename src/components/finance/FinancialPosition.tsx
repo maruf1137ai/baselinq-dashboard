@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/dateUtils";
 import { formatMoney, formatZAR, getActiveCurrency } from "@/lib/formatCurrency";
+import { formatFee } from "@/lib/platformFee";
 import { BALANCE_LABEL } from "@/lib/homeSignals";
 import { fetchData } from "@/lib/Api";
 import { Pager, pageOf } from "@/components/ui/pager";
@@ -743,9 +744,9 @@ export function FinancialPositionView({ data, linkable = true }: { data: Financi
               footer={fees.footer}
             >
               <p className="text-sm">
-                <span className="tabular-nums font-medium">{zar(data.fees.totals.accruedInclVat)}</span>{" "}
+                <span className="tabular-nums font-medium">{formatFee(data.fees.totals.accruedInclVat)}</span>{" "}
                 <span className="text-muted-foreground">
-                  accrued incl. VAT · {zar(data.fees.totals.paidInclVat)} paid · {zar(data.fees.totals.outstandingInclVat)} invoiced and unpaid
+                  accrued incl. VAT · {formatFee(data.fees.totals.paidInclVat)} paid · {formatFee(data.fees.totals.outstandingInclVat)} invoiced and unpaid
                   {sameFeeState && ` · ${FEE_STATE[sameFeeState].label.toLowerCase()}`}
                 </span>
               </p>
@@ -764,7 +765,7 @@ export function FinancialPositionView({ data, linkable = true }: { data: Financi
                         )}
                       </span>
                       <span className="flex items-center gap-2">
-                        <span className="whitespace-nowrap tabular-nums">{zar(f.totalInclVat)}</span>
+                        <span className="whitespace-nowrap tabular-nums">{formatFee(f.totalInclVat)}</span>
                         {!sameFeeState && (
                           <Badge variant={FEE_STATE[f.state].variant} className="w-28 justify-center">
                             {FEE_STATE[f.state].label}

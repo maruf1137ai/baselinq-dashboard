@@ -43,6 +43,7 @@ import {
   useTaskDraftAutosave,
 } from "@/lib/taskDrafts";
 import { computeCertificateFigures } from "@/lib/pcFigures";
+import { formatFee } from "@/lib/platformFee";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -367,6 +368,8 @@ interface SummaryLineProps {
   doubleBorder?: boolean;
   /** Renders "—" instead of a figure — used while a rate is still unknown. */
   pending?: boolean;
+  /** Defaults to the project's currency; Baselinq's fee passes `formatFee` (rand). */
+  format?: (v: number) => string;
 }
 
 const SummaryLine: React.FC<SummaryLineProps> = ({
@@ -379,6 +382,7 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
   border,
   doubleBorder,
   pending,
+  format = fmt,
 }) => (
   <div
     className={`flex justify-between items-center py-2 ${doubleBorder
@@ -400,10 +404,10 @@ const SummaryLine: React.FC<SummaryLineProps> = ({
       {pending
         ? "—"
         : deduction
-          ? `- ${fmt(value)}`
+          ? `- ${format(value)}`
           : addition
-            ? `+ ${fmt(value)}`
-            : fmt(value)}
+            ? `+ ${format(value)}`
+            : format(value)}
     </span>
   </div>
 );
@@ -2140,12 +2144,14 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       label={`Baselinq platform fee @ ${feeConfig.feeRatePct}%${platformFee.capReached ? " — cap reached" : ""}`}
                       value={platformFee.fee}
                       pending={platformFee.pending}
+                      format={formatFee}
                       indent
                     />
                     <SummaryLine
                       label={`Plus: VAT @ ${feeConfig.vatRatePct}%`}
                       value={platformFee.vat}
                       pending={platformFee.pending}
+                      format={formatFee}
                       indent
                       addition
                     />
@@ -2154,7 +2160,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                         "Fee estimate unavailable."
                       ) : (
                         <>
-                          {platformFee.pending ? "—" : fmt(platformFee.total)} will be charged
+                          {platformFee.pending ? "—" : formatFee(platformFee.total)} will be charged
                           {feeConfig.billingContactName
                             ? ` to ${feeConfig.billingContactName}`
                             : ""}{" "}
