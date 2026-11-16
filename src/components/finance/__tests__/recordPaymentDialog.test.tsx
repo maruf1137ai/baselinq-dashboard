@@ -111,3 +111,68 @@ describe("recording a payment", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/reported NOT GENUINE\. Do not pay into them/);
   });
 });
+
+describe("after the server warns about a recorded payment", () => {
+  const warned = {
+    warnings: [{ code: "near_duplicate", message: "A receipt of R 1 748 000,00 was already recorded on 10 Nov 2026." }],
+  };
+  const props = {
+    onOpenChange: () => {},
+    certificateId: 48,
+    projectId: 45,
+    pcNumber: "PC-004",
+    serverToday: "2026-11-10",
+  };
+
+  it("keeps the warnings on screen when the refetch changes the outstanding amount", async () => {
+    postData.mockResolvedValueOnce(warned);
+    const client = new QueryClient();
+    const view = render(
+      <QueryClientProvider client={client}>
+        <RecordPaymentDialog open outstanding="1748000.00" {...props} />
+      </QueryClientProvider>,
+    );
+    attachProof();
+    fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
+    expect(await screen.findByText(/was already recorded on 10 Nov 2026/)).toBeInTheDocument();
+
+    // The invalidated payment position comes back with the receipt counted.
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <RecordPaymentDialog open outstanding="0.00" serverToday="2026-11-11" {...props} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(/was already recorded on 10 Nov 2026/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Record payment" })).not.toBeInTheDocument();
+  });
+
+  it("starts afresh, with the new outstanding amount, when opened again", async () => {
+    postData.mockResolvedValueOnce(warned);
+    const client = new QueryClient();
+    const view = render(
+      <QueryClientProvider client={client}>
+        <RecordPaymentDialog open outstanding="1748000.00" {...props} />
+      </QueryClientProvider>,
+    );
+    attachProof();
+    fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
+    await screen.findByText(/was already recorded on 10 Nov 2026/);
+
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <RecordPaymentDialog open={false} outstanding="500000.00" {...props} />
+      </QueryClientProvider>,
+    );
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <RecordPaymentDialog open outstanding="500000.00" {...props} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByText(/was already recorded on 10 Nov 2026/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record payment" })).toBeDisabled();
+    expect((screen.getByRole("textbox", { name: /amount received/i }) as HTMLInputElement).value).toMatch(/500.?000/);
+  });
+});

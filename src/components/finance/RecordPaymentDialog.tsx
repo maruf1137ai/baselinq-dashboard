@@ -15,7 +15,7 @@
  * these are kept on screen until dismissed, naming the receipt they clash
  * with. The departure from the house pattern is deliberate.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
@@ -144,8 +144,16 @@ export default function RecordPaymentDialog({
   const [busy, setBusy] = useState(false);
   const [warnings, setWarnings] = useState<{ code?: string; message: string }[]>([]);
 
+  // Reset the form only as the dialog OPENS, never while it stays open. A
+  // successful record invalidates the payment queries, so `outstanding` and
+  // `serverToday` change moments later; resetting on that wiped the server's
+  // warnings (near-duplicate, over-certified) and put the form back with a
+  // fresh amount, inviting a second receipt for the same money.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opening) return;
     // Default to the full outstanding balance: paying a certificate in full is
     // the ordinary case, and a part payment is a deliberate edit rather than
     // something the user has to type out every time.
