@@ -27,7 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatMoney } from "@/lib/formatCurrency";
+import { currencySymbol, formatMoney } from "@/lib/formatCurrency";
 import { formatMoneyInput, parseMoneyInput } from "@/lib/money";
 import { carryVoEntry, clampToRemaining, sumCertifiedByVo } from "@/lib/pcHistory";
 import { hasRetention } from "@/lib/retention";
@@ -45,8 +45,6 @@ import {
 import { computeCertificateFigures } from "@/lib/pcFigures";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-const CURRENCIES = ["ZAR", "USD", "EUR", "GBP"] as const;
 
 export interface WorkLineItem {
   id: string;
@@ -272,6 +270,8 @@ const SectionHeader: React.FC<{ children: React.ReactNode }> = ({
 const CurrencyInput: React.FC<{
   value: number;
   onChange: (v: number) => void;
+  /** The certificate's currency: its symbol is the affix and may be typed. */
+  currency: string;
   disabled?: boolean;
   className?: string;
   "aria-label"?: string;
@@ -279,6 +279,7 @@ const CurrencyInput: React.FC<{
 }> = ({
   value,
   onChange,
+  currency,
   disabled = false,
   className = "",
   invalid = false,
@@ -291,7 +292,7 @@ const CurrencyInput: React.FC<{
     // Follow the parent whenever it disagrees with what is on screen — a
     // clamped entry has to be visible the moment it happens.
     React.useEffect(() => {
-      const shown = parseMoneyInput(raw);
+      const shown = parseMoneyInput(raw, currency);
       if (shown !== null && shown !== value) {
         setRaw(value === 0 ? "" : formatMoneyInput(value));
         setUnreadable(false);
@@ -317,7 +318,7 @@ const CurrencyInput: React.FC<{
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const next = e.target.value;
       setRaw(next);
-      const parsed = parseMoneyInput(next);
+      const parsed = parseMoneyInput(next, currency);
       if (parsed === null) {
         setUnreadable(true);
         return; // keep the stored value; do not invent one
@@ -336,7 +337,7 @@ const CurrencyInput: React.FC<{
           } ${disabled ? "bg-muted/50" : ""} ${className}`}
       >
         <span className="px-2.5 py-1.5 text-sm text-muted-foreground bg-muted/50 border-r border-border select-none">
-          R
+          {currencySymbol(currency)}
         </span>
         <input
           type="text"
@@ -501,6 +502,10 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
   // VAT is a fixed, platform-wide 15% — no per-certificate override. See
   // billing/views_config.py and Project.vat_rate.
   const vatRatePct = defaults?.vatRatePct ?? 15;
+  // The currency is the project's and is not picked here: every total the
+  // certificate feeds (financial position, fee base) reads it in the project's
+  // currency. The override only carries an existing certificate's own currency
+  // when it is edited, so saving it never changes how it reads.
   const currency = currencyOverride ?? defaults?.currency ?? "ZAR";
   const ratesReady = defaultsReady;
 
@@ -1094,7 +1099,9 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
     setClaimedPctByMilestone(draft?.claimedPctByMilestone ?? {});
     setRetentionApplies(draft?.retentionApplies ?? true);
     setRetentionRatePctOverride(draft?.retentionRatePctOverride ?? null);
-    setCurrencyOverride(draft?.currencyOverride ?? null);
+    // Not restored: a draft saved when the currency could be picked would
+    // otherwise create this certificate in a currency the project is not in.
+    setCurrencyOverride(null);
     setIntegrity(null);
     setSubmitError(null);
     setIsSubmitting(false);
@@ -1558,6 +1565,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                               </span>
                             ) : (
                               <CurrencyInput
+                                currency={currency}
                                 aria-label="Contract value"
                                 value={item.contractValue}
                                 onChange={(v) =>
@@ -1571,6 +1579,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                           </td>
                           <td className="px-3 py-2 w-36">
                             <CurrencyInput
+                              currency={currency}
                               aria-label="Amount certified this period"
                               value={item.thisPeriod}
                               onChange={(v) =>
@@ -1810,6 +1819,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                             <div className="flex flex-col items-end gap-1">
                               {vo.included ? (
                                 <CurrencyInput
+                                  currency={currency}
                                   aria-label={`Amount certified this period for ${vo.voNumber}`}
                                   value={vo.thisPeriod}
                                   invalid={voIssues.length > 0}
@@ -1867,6 +1877,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   Unfixed materials delivered but not yet incorporated
                 </label>
                 <CurrencyInput
+                  currency={currency}
                   aria-label="Unfixed materials delivered but not yet incorporated"
                   value={materialsOnSite}
                   onChange={setMaterialsOnSite}
@@ -1882,6 +1893,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       Contractual Penalties / Deductions
                     </label>
                     <CurrencyInput
+                      currency={currency}
                       aria-label="Contractual penalties / deductions"
                       value={penalties}
                       onChange={setPenalties}
@@ -1892,6 +1904,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                       Advance Payment Recovery
                     </label>
                     <CurrencyInput
+                      currency={currency}
                       aria-label="Advance payment recovery"
                       value={advanceRecovery}
                       onChange={setAdvanceRecovery}
@@ -1910,7 +1923,8 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                 {showRetention
                   ? "Retention defaults from this project's settings but can be adjusted for this certificate specifically. "
                   : ""}
-                VAT is a fixed, platform-wide rate and cannot be changed.
+                VAT is a fixed, platform-wide rate and cannot be changed. The
+                currency is the project's.
               </p>
               <div className={`grid gap-4 ${showRetention ? "grid-cols-3" : "grid-cols-2"}`}>
                 {showRetention && (
@@ -1958,16 +1972,12 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                   <label className="block text-xs text-muted-foreground mb-1.5">
                     Currency
                   </label>
-                  <select
-                    value={currency}
-                    disabled={!ratesReady}
-                    onChange={(e) => setCurrencyOverride(e.target.value)}
-                    className="w-full px-3 py-2 text-sm text-foreground border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-muted/50 disabled:text-muted-foreground bg-card"
+                  <div
+                    className="px-3 py-2 text-sm text-muted-foreground border border-border rounded-md bg-muted/50"
+                    aria-label="Currency (the project's)"
                   >
-                    {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    {ratesReady ? currency : "—"}
+                  </div>
                 </div>
               </div>
             </section>
@@ -2068,6 +2078,7 @@ export const CreatePCDrawer: React.FC<CreatePCDrawerProps> = ({
                     </span>
                     <div className="w-36">
                       <CurrencyInput
+                        currency={currency}
                         aria-label="Retention release"
                         value={retentionRelease}
                         onChange={setRetentionRelease}
