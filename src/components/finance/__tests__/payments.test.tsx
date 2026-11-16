@@ -34,6 +34,19 @@ vi.mock("@/hooks/useProjectPayments", () => ({
     return { ...fetchState, refetch: vi.fn() };
   },
 }));
+/** The single-certificate payment position, which alone carries payeeAccounts. */
+const positionState: { data: any; isError: boolean } = { data: undefined, isError: false };
+let positionUrls: string[] = [];
+vi.mock("@/hooks/useFetch", () => ({
+  default: (url: string, options: { enabled?: boolean } = {}) => {
+    if (url && options.enabled !== false) positionUrls.push(url);
+    return url && options.enabled !== false
+      ? { ...positionState, isLoading: false, refetch: vi.fn() }
+      : { data: undefined, isLoading: false, isError: false, refetch: vi.fn() };
+  },
+}));
+const toastError = vi.fn();
+vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a), success: vi.fn() } }));
 vi.mock("@/hooks/usePermissions", () => ({
   usePermissions: () => ({
     canViewFinance: financeView,
@@ -60,12 +73,19 @@ vi.mock("../RecordPaymentDialog", () => ({
     pcNumber,
     outstanding,
     serverToday,
+    payeeAccounts,
   }: {
     pcNumber: string;
     outstanding: string;
     serverToday?: string;
+    payeeAccounts?: { status: string }[];
   }) => (
-    <div data-testid="record-dialog">{`${pcNumber}:${outstanding}:${serverToday ?? "none"}`}</div>
+    <div data-testid="record-dialog">
+      {`${pcNumber}:${outstanding}:${serverToday ?? "none"}`}
+      <span data-testid="payee-accounts">
+        {payeeAccounts ? payeeAccounts.map((a) => a.status).join(",") : "absent"}
+      </span>
+    </div>
   ),
 }));
 
@@ -169,6 +189,10 @@ beforeEach(() => {
   fetchState.isLoading = false;
   fetchState.isError = false;
   lastRequest = null;
+  positionState.data = undefined;
+  positionState.isError = false;
+  positionUrls = [];
+  toastError.mockClear();
   perms = {};
   financeView = true;
 });
@@ -298,6 +322,33 @@ describe("the Payments tab", () => {
       fireEvent.click(screen.getAllByRole("button", { name: /record payment/i })[0]);
       expect(screen.getByTestId("record-dialog")).toHaveTextContent("2026-11-09");
       expect(screen.getByTestId("record-dialog")).not.toHaveTextContent("none");
+    });
+
+    it("hands the dialog the contractor's account, so a changed or reported one is warned about", () => {
+      // Found in review, 13 Nov 2026. The register's summary carries no bank
+      // details, so the "changed / not verified / reported NOT GENUINE"
+      // warning never appeared on this path. It comes from the certificate's
+      // own payment position, as it does on View position.
+      positionState.data = {
+        payeeAccounts: [{ holder: "Ndlovu Construction", status: "reported", account: null, change: null, check: null }],
+      };
+      draw();
+      fireEvent.click(screen.getAllByRole("button", { name: /record payment/i })[0]);
+      expect(positionUrls).toContain("payment-certificates/48/payment/");
+      expect(screen.getByTestId("payee-accounts")).toHaveTextContent("reported");
+    });
+
+    it("says so when the contractor's account could not be loaded", () => {
+      positionState.isError = true;
+      draw();
+      fireEvent.click(screen.getAllByRole("button", { name: /record payment/i })[0]);
+      expect(screen.getByTestId("payee-accounts")).toHaveTextContent("absent");
+      expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/bank details/));
+    });
+
+    it("does not fetch a certificate's position until a payment is being recorded", () => {
+      draw();
+      expect(positionUrls).toEqual([]);
     });
 
     it("hands the full working to PaymentPositionSection", () => {
