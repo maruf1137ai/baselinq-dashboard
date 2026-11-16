@@ -4,7 +4,7 @@
  * the browser prints it, as CertificatePage and InvoicePage do.
  */
 import { useSearchParams } from "react-router-dom";
-import { Printer, X } from "lucide-react";
+import { Lock, Printer, SearchX, X } from "lucide-react";
 
 import { AwesomeLoader } from "@/components/commons/AwesomeLoader";
 import {
@@ -13,6 +13,7 @@ import {
   type FinancialPositionData,
 } from "@/components/finance/FinancialPosition";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import useFetch from "@/hooks/useFetch";
 import { contractFormLabel } from "@/lib/contractForms";
 import { setActiveCurrency } from "@/lib/formatCurrency";
@@ -24,10 +25,13 @@ export default function FinancialStatementPage() {
   // still the server's decision.
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId") || localStorage.getItem("selectedProjectId") || "";
-  const { data, isLoading, isError } = useFetch<FinancialPositionData & { currency?: string }>(
+  const { data, isLoading, isError, error } = useFetch<FinancialPositionData & { currency?: string }>(
     projectId ? `projects/${projectId}/financial-position/` : "",
     { enabled: !!projectId },
   );
+  // The route checks only that someone is signed in; the server checks the
+  // linked project. Its answer is shown as an answer, not as an outage.
+  const status = Number((error as { status?: number } | null)?.status);
   // Printed outside the app's layout, so it takes its currency from the payload.
   setActiveCurrency(data?.currency);
 
@@ -54,8 +58,26 @@ export default function FinancialStatementPage() {
               Print or save as PDF
             </Button>
           </div>
-          {isLoading ? (
+          {!projectId ? (
+            <EmptyState
+              icon={SearchX}
+              title="This link does not name a project"
+              description="Open the statement from the project's Finance page, or from the link in the email."
+            />
+          ) : isLoading ? (
             <AwesomeLoader message="Loading the statement" />
+          ) : isError && status === 403 ? (
+            <EmptyState
+              icon={Lock}
+              title="This statement is not visible to your role"
+              description="The financial position is visible to people with finance access on the project."
+            />
+          ) : isError && status === 404 ? (
+            <EmptyState
+              icon={SearchX}
+              title="This project could not be found"
+              description="It may no longer exist, or you are not on its team."
+            />
           ) : isError || !data ? (
             <FinancialPositionError />
           ) : (

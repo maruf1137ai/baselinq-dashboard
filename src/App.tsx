@@ -192,26 +192,24 @@ const App = () => (
             }
           />
           {/*
-            One Baselinq tax invoice as a printable document.
+            Documents an email links to: the financial statement, a Baselinq
+            invoice and a contractor tax invoice. Signed in, and nothing else.
 
-            Same gate as the Finance page's Invoices tab: `viewInvoices`
-            (finance.invoices.view) or platform staff, who raise the bill on
-            projects they are not members of and so hold no permission there.
-
-            NO ProjectProtectedRoute, deliberately: the invoice names its own
-            project in its payload, and a staff member arriving from the admin
-            panel may have no project selected at all. The server decides
-            access to the invoice itself (billing/views.py).
+            Each names its own project (the statement in `?projectId=`, the
+            invoices in their payload), which need not be the project selected
+            in this browser. RoleRoute and ProjectProtectedRoute check the
+            SELECTED project, so a user with finance access on the document's
+            project was sent to /unauthorized from a link in their own inbox,
+            and a staff member from the admin panel may have no project
+            selected at all. The server checks the document's own project
+            (tasks/views_payments.py, tasks/views_tax_invoices.py,
+            billing/views.py) and each page shows its refusal or not-found.
           */}
           <Route
             path="/finance/statement"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewFinance">
-                  <ProjectProtectedRoute>
-                    <FinancialStatementPage />
-                  </ProjectProtectedRoute>
-                </RoleRoute>
+                <FinancialStatementPage />
               </ProtectedRoute>
             }
           />
@@ -219,9 +217,7 @@ const App = () => (
             path="/finance/tax-invoices/:id"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewFinance">
-                  <TaxInvoicePage />
-                </RoleRoute>
+                <TaxInvoicePage />
               </ProtectedRoute>
             }
           />
@@ -229,9 +225,7 @@ const App = () => (
             path="/invoices/:id"
             element={
               <ProtectedRoute>
-                <RoleRoute permission="viewInvoices" allowPlatformStaff>
-                  <InvoicePage />
-                </RoleRoute>
+                <InvoicePage />
               </ProtectedRoute>
             }
           />

@@ -15,13 +15,12 @@
  *
  * ── Permission ────────────────────────────────────────────────────────────
  *
- * Gated in `App.tsx` on `finance.invoices.view` OR platform staff, exactly as
- * the Finance page's Invoices tab is (finance.tsx:58-60): Baselinq staff raise
- * the bill on projects they are not members of, so they hold no project
- * permission there. The server gates `billing/invoices/{id}/` independently
- * (billing/views.py), which is what actually decides it — a route guard keyed
- * on the SELECTED project cannot be the authority on an invoice belonging to
- * another one.
+ * `App.tsx` checks only that someone is signed in. The server gates
+ * `billing/invoices/{id}/` on the invoice's own project (billing/views.py):
+ * `finance.invoices.view` there, or Baselinq staff. A route guard keyed on the
+ * SELECTED project cannot be the authority on an invoice belonging to another
+ * one, and sent people to /unauthorized from the link in their own email. The
+ * page shows the server's 403 and 404 below.
  *
  * No `ProjectProtectedRoute`: an invoice names its own project, and a staff
  * member opening one from the admin panel may have no project selected at all.
