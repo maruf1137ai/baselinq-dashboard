@@ -101,7 +101,9 @@ describe("user invitation, existing account", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Accept & Join Project" }));
 
     expect(await screen.findByTestId("account-page")).toBeInTheDocument();
-    expect(mockAcceptInvitation).toHaveBeenCalledWith("tok123", expect.any(Object));
+    // With the session: the server accepts an existing account only as the
+    // signed-in invitee, and the invitation endpoints otherwise go without one.
+    expect(mockAcceptInvitation).toHaveBeenCalledWith("tok123", expect.any(Object), { asSignedInUser: true });
     expect(localStorage.getItem("access")).toBe("access-token");
   });
 });

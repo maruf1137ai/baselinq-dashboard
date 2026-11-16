@@ -1,4 +1,6 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
+
+import { loginUrlFor, safeNextPath } from "./invitationSignIn";
 
 // Project types
 export interface ProjectDocument {
@@ -68,18 +70,53 @@ const PUBLIC_AUTH_PATHS = [
   'auth/password/reset/',
 ];
 
+/**
+ * An invitation's details and its accept, which the invitation page calls
+ * before anyone has signed in. Matched exactly, so the organisation and admin
+ * invitation endpoints keep their session.
+ *
+ * A stale token left in this browser failed the page's first read with 401;
+ * the refresh failed too, the session was cleared, and the invitee landed on
+ * /login with no way back to the invitation.
+ */
+const PUBLIC_INVITATION_PATH = /(?:^|\/)auth\/invitations\/[^/?#]+\/(?:accept\/)?(?:[?#]|$)/;
+
 export const isPublicAuthRequest = (url: string = ''): boolean =>
-  PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+  PUBLIC_AUTH_PATHS.some((path) => url.includes(path)) || PUBLIC_INVITATION_PATH.test(url);
+
+/**
+ * Request config. `withSession` sends the stored token to a public endpoint
+ * that also serves a signed-in caller: an existing account accepts an
+ * invitation only while signed in as the invitee.
+ */
+type SessionConfig = AxiosRequestConfig & { withSession?: boolean };
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access");
-    if (token && !config.headers.Authorization && !isPublicAuthRequest(config.url)) {
+    const wantsSession = (config as SessionConfig).withSession === true || !isPublicAuthRequest(config.url);
+    if (token && !config.headers.Authorization && wantsSession) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
   return config;
 });
+
+/**
+ * Where a session that cannot be refreshed is sent: /login, and back to the
+ * page it was on only when that page is an invitation (the `safeNextPath`
+ * allow-list /login itself applies). Any other path is dropped, so this can
+ * never become an open redirect.
+ */
+export const forcedLoginUrl = (currentPath: string = ''): string => {
+  const next = safeNextPath(currentPath);
+  return next ? loginUrlFor(next) : '/login';
+};
+
+const forceLogin = () => {
+  localStorage.clear();
+  window.location.href = forcedLoginUrl(window.location.pathname);
+};
 
 const handleError = (error) => {
   // Surface the backend-provided message (e.g. DRF `error`/`detail`) so toasts
@@ -815,8 +852,17 @@ export interface AcceptInvitationPayload {
 // request. An existing account must already be signed in as the invitee (the
 // backend refuses with 403 `sign_in_required` / `wrong_account` otherwise) and
 // keeps the session it has.
-export const acceptInvitation = async (token: string, payload: AcceptInvitationPayload) => {
-  const res = await api.post(`auth/invitations/${token}/accept/`, payload);
+//
+// `asSignedInUser` is for that existing account. A new account sends no
+// session: it has none, and one left in this browser by somebody else would
+// fail the request with 401 before the view runs.
+export const acceptInvitation = async (
+  token: string,
+  payload: AcceptInvitationPayload,
+  { asSignedInUser = false }: { asSignedInUser?: boolean } = {},
+) => {
+  const config: SessionConfig = { withSession: asSignedInUser };
+  const res = await api.post(`auth/invitations/${token}/accept/`, payload, config);
   return res.data as { message: string; user: object; tokens?: { access: string; refresh: string } };
 };
 
@@ -1347,8 +1393,7 @@ const refreshAccessToken = (): Promise<string> => {
 
   const refresh = localStorage.getItem('refresh');
   if (!refresh) {
-    localStorage.clear();
-    window.location.href = '/login';
+    forceLogin();
     return Promise.reject(new Error('No refresh token available'));
   }
 
@@ -1393,8 +1438,7 @@ api.interceptors.response.use(
 
     // If the request that failed WAS the refresh token request → logout immediately
     if (originalRequest.url.includes('auth/token/refresh/')) {
-      localStorage.clear();
-      window.location.href = '/login';
+      forceLogin();
       return Promise.reject(error);
     }
 
@@ -1411,8 +1455,7 @@ api.interceptors.response.use(
 
       } catch (refreshError) {
         // If refresh fails → logout gracefully
-        localStorage.clear();
-        window.location.href = '/login';
+        forceLogin();
         return Promise.reject(refreshError);
       }
     }

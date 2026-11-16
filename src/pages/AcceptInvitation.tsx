@@ -107,7 +107,7 @@ export default function AcceptInvitation() {
 
   const acceptMutation = useMutation({
     mutationFn: (payload: Parameters<typeof acceptInvitation>[1]) =>
-      acceptInvitation(token!, payload),
+      acceptInvitation(token!, payload, { asSignedInUser: isExistingUser }),
     onSuccess: (data) => {
       // A new account is signed in by the accept itself. An existing account
       // was already signed in, and keeps that session.
