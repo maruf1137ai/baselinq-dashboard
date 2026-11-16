@@ -1,23 +1,23 @@
 // Django API project hooks
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getProjects,
+  fetchData,
   getProject,
   createProject,
   updateProject,
   deleteProject,
   ProjectData,
 } from "@/lib/Api";
+import { fetchAllPages } from "@/lib/fetchAllPages";
+import { pageUrl } from "@/hooks/useAllPages";
 
 export const useProjects = () => {
   return useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const response = await getProjects();
-      // API returns { count, next, previous, results }
-      // Extract the results array
-      return response?.results || [];
-    },
+    // Every page. `projects/` is paged at twenty, and this read the first
+    // page only, so a user's 21st project was missing from every screen
+    // that picks from this list (the weather widget, Edit project, Site).
+    queryFn: async () => (await fetchAllPages<any>((page) => pageUrl("projects/", page), fetchData)).rows,
   });
 };
 

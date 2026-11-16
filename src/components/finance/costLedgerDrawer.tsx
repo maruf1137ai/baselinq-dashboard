@@ -13,7 +13,7 @@ import {
 import { postData, patchData } from "@/lib/Api";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -70,11 +70,13 @@ export function CostLedgerDrawer({
   // lives nested under `item.task.status` (the top-level `status` is the
   // kanban status: todo | in review | done), so filtering has to happen
   // here, client-side, same as createPCDrawer.tsx's approvedVOs.
-  const { data: voResponse } = useFetch<{ results: any[] }>(
-    projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : ""
+  // Every page: the list is paged at twenty, so a project's 21st variation
+  // could not be linked to a cost entry.
+  const { data: voResponse, isError: voError } = useAllPages<any>(
+    projectId ? `tasks/tasks/?taskType=VO&project=${projectId}` : null
   );
 
-  const approvedVOs = (voResponse?.results || [])
+  const approvedVOs = (voResponse?.rows || [])
     // "closed" included alongside "approved" — see createPCDrawer.tsx's
     // approvedVOs for why (Closed is completion, not cancellation).
     .filter((item: any) => ["approved", "closed"].includes(String(item.task?.status || "").toLowerCase()))
@@ -318,7 +320,11 @@ export function CostLedgerDrawer({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Only approved Variation Orders can be linked.</p>
+              {voError ? (
+                <p role="alert" className="text-xs text-destructive">Variation Orders couldn't be loaded. Close and reopen to try again.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Only approved Variation Orders can be linked.</p>
+              )}
             </div>
           </div>
 

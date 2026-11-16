@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { updateProfile } from "@/lib/Api";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { Button } from "@/components/ui/button";
@@ -88,12 +88,16 @@ const OnboardingDashboard = () => {
   const queryClient = useQueryClient();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { setUserRole } = useUserRoleStore();
-  const { data: projectsData, isLoading: projectsLoading } = useFetch(
-    user?.id ? `projects/?userId=${user.id}` : "",
-    { enabled: !!user?.id }
-  );
+  // Every page: the list is paged at twenty, so a user's 21st project was
+  // never offered here.
+  const {
+    data: projectsData,
+    isLoading: projectsLoading,
+    isError: projectsError,
+    refetch: refetchProjects,
+  } = useAllPages<any>(user?.id ? `projects/?userId=${user.id}` : null);
 
-  const projects: any[] = projectsData?.results || projectsData || [];
+  const projects: any[] = projectsData?.rows ?? [];
   const { healthMap } = useProjectsHealth();
 
   const [activeTab, setActiveTab] = useState<Tab>("project");
@@ -314,6 +318,13 @@ const OnboardingDashboard = () => {
             {projectsLoading ? (
               <div className="flex items-center justify-center py-20">
                 <AwesomeLoader message="Loading projects" />
+              </div>
+            ) : projectsError ? (
+              <div className="border border-border rounded-xl bg-card p-12 flex flex-col items-center gap-3 text-center" role="alert">
+                <p className="text-sm text-destructive">Your projects couldn't be loaded.</p>
+                <Button variant="outline" className="h-8 text-xs rounded-lg" onClick={() => void refetchProjects()}>
+                  Try again
+                </Button>
               </div>
             ) : projects.length === 0 ? (
               <div className="border border-border rounded-xl bg-card shadow-sm p-12 text-center flex flex-col items-center gap-4">

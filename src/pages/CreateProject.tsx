@@ -48,7 +48,7 @@ import { COMPANY_TYPES } from "@/lib/roleUtils";
 import { INPUT_BASE, INPUT_ERROR, SELECT_BASE } from "@/lib/constants";
 import { parseRetentionRate } from "@/lib/retention";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { fetchCurrentWeather, isWeatherConfigured } from "@/lib/weather";
 import {
@@ -707,8 +707,13 @@ export default function CreateProject() {
   };
 
   const { data: user } = useCurrentUser();
-  const { data: orgUsersData } = useFetch<{ results: OrgUser[] }>('auth/users/?my_org=true&page_size=500');
-  const orgUsers: OrgUser[] = orgUsersData?.results || [];
+  // Every page: `page_size=500` was ignored by the server, so only the first
+  // twenty users of the company could be picked.
+  const { data: orgUsersData, isError: orgUsersError } = useAllPages<OrgUser>('auth/users/?my_org=true');
+  const orgUsers: OrgUser[] = orgUsersData?.rows || [];
+  useEffect(() => {
+    if (orgUsersError) toast.error("Your company's users couldn't be loaded. Reload the page to try again.");
+  }, [orgUsersError]);
   // CIDB is the role code real "Contractor" signups actually get (see
   // user/serializers.py's ROLE_MAP) — CONTRACTOR alone missed most of them.
   const CLIENT_ROLE_CODES = ['CLIENT', 'OWNER', 'CONTRACTOR', 'CIDB'];

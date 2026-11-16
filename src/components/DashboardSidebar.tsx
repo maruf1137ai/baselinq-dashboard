@@ -37,7 +37,7 @@ import Document2 from "./icons/Document2";
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // Django auth hook
 import { useLogout } from "@/hooks/useLogout"; // Django logout hook
 import { fetchData } from "@/lib/Api";
-import useFetch from "@/hooks/useFetch";
+import { useAllPages } from "@/hooks/useAllPages";
 import { useUserRoleStore } from "@/store/useUserRoleStore";
 import { PermissionKey } from "@/lib/roleUtils";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -118,8 +118,11 @@ export function DashboardSidebar() {
   // gets a Settings entry — straight to the one page it can open.
   const canViewBillingOnly =
     !canViewSettings && (canOne("viewBillingTerms") || canOne("viewPlatformFees") || canOne("viewInvoices"));
-  const { data: projectsData, isLoading } = useFetch(`projects/?userId=${user?.id}`, { enabled: !!user?.id })
-  const projects = projectsData?.results || [];
+  // Every page: the list is paged at twenty, and a user's 21st project was
+  // missing from the switcher (and, when selected, was cleared below as
+  // "not an accessible project").
+  const { data: projectsData, isLoading } = useAllPages<any>(user?.id ? `projects/?userId=${user.id}` : null);
+  const projects = projectsData?.rows || [];
   const { logout } = useLogout(); // Django logout hook
   const navigate = useNavigate();
   const { userRole, setUserRole, clearUserRole } = useUserRoleStore();
@@ -207,7 +210,7 @@ export function DashboardSidebar() {
         clearUserRole();
       }
       // navigate("/create-project");
-    } else if (selectedProjectId && projects.length > 0 && !projects.some((p: any) => String(p._id || p.id) === selectedProjectId)) {
+    } else if (selectedProjectId && projects.length > 0 && !projectsData?.truncated && !projects.some((p: any) => String(p._id || p.id) === selectedProjectId)) {
       // Clear selection if it doesn't match any accessible project
       localStorage.removeItem("selectedProjectId");
       localStorage.removeItem("projectLocation");
